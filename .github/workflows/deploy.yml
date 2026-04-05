@@ -1,0 +1,72 @@
+﻿# ==============================================================================
+# ThinkCoffee - Deploy Pipeline
+# ==============================================================================
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: "Version/tag to deploy (default: latest)"
+        required: false
+        default: "latest"
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: image
+        run: |
+          TAG="${{ inputs.version }}"
+          if [[ "$TAG" == "latest" ]]; then
+            TAG="latest"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Deploying image tag: $TAG"
+
+      - name: Deploy to staging
+        if: inputs.environment == 'staging'
+        run: |
+          echo "Deploying to STAGING..."
+          # SSH deploy example:
+          # ssh ${{ secrets.STAGING_HOST }} "cd /opt/thinkcoffee && ./scripts/deploy.sh staging ${{ steps.image.outputs.tag }}"
+
+      - name: Deploy to production
+        if: inputs.environment == 'production'
+        run: |
+          echo "Deploying to PRODUCTION..."
+          # SSH deploy example:
+          # ssh ${{ secrets.PROD_HOST }} "cd /opt/thinkcoffee && ./scripts/deploy.sh production ${{ steps.image.outputs.tag }}"
+
+      - name: Health check
+        run: |
+          echo "Running health check..."
+          # curl -f ${{ secrets.HEALTH_CHECK_URL }} || exit 1
+          echo "Health check passed"
+
+      - name: Notify deployment
+        if: always()
+        run: |
+          echo "Deployment to ${{ inputs.environment }} completed"
+          # Add Slack/Discord notification here

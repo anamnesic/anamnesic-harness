@@ -212,10 +212,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private _sendState() {
     if (!this._view) return;
     const project = this._getProject();
-    const runningAgents = this._agentService ? this._agentService.getRunning() : [];
 
     if (this._activePipelineId && project) {
       // ─── Chat mode: viewing a specific pipeline ───
+      // Only show agents running in THIS pipeline
+      const runningAgents = this._agentService
+        ? this._agentService.getRunning(this._activePipelineId)
+        : [];
       const pipeline = this._pipelines.get(project.id, this._activePipelineId);
       const chat = this._getOrCreatePipelineChat(this._activePipelineId);
       const msgs = chat.getHistory(200);
@@ -233,6 +236,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       });
     } else {
       // ─── List mode: show all pipelines ───
+      // Get all running agents and group by pipelineId for per-card indicators
+      const allRunning = this._agentService ? this._agentService.getRunning() : [];
       const pipelines = project ? this._pipelines.list(project.id) : [];
       const serialized = pipelines
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -244,6 +249,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           currentPhase: p.currentPhase,
           totalPhases: p.phases.length,
           completedPhases: p.phases.filter(ph => ph.status === 'completed' || ph.status === 'approved').length,
+          runningAgents: allRunning.filter(a => a.pipelineId === p.id),
         }));
       this._view.webview.postMessage({
         command: 'state',
@@ -252,7 +258,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           pipelines: serialized,
           project: project ? { id: project.id, name: project.name } : null,
           agents: AGENT_META,
-          runningAgents,
+          runningAgents: allRunning,
           modelConfig: loadAgentConfig(),
         },
       });
@@ -1405,6 +1411,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
       progressHtml += '</div>';
 
+      // Per-pipeline running agents indicator
+      let agentChipsHtml = '';
+      if (p.runningAgents && p.runningAgents.length > 0) {
+        const chips = p.runningAgents.map(function(a) {
+          var initials = AGENT_INITIALS[a.role] || '??';
+          var color = AGENT_COLORS[a.role] || '#9ca3af';
+          var secs = Math.round((a.elapsed || 0) / 1000);
+          return '<span class="chip" style="background:' + color + '33;color:' + color + ';font-size:10px;padding:1px 5px;">' + initials + ' ' + secs + 's</span>';
+        }).join('');
+        agentChipsHtml = '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">' + chips + '</div>';
+      }
+
       card.innerHTML =
         '<div class="pl-objective">' + escHtml(p.objective) + '</div>' +
         '<div class="pl-meta">' +
@@ -1412,7 +1430,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           '<span>' + p.completedPhases + '/' + p.totalPhases + ' fases</span>' +
           '<span>' + date + '</span>' +
         '</div>' +
-        progressHtml;
+        progressHtml +
+        agentChipsHtml;
       pipelineCards.appendChild(card);
     }
   }
@@ -1670,7 +1689,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
       if (msg.data.mode === 'list') {
         showListView(msg.data.pipelines);
-        renderRunningAgents(msg.data.runningAgents);
+        renderRunningAgents([]); // In list mode, per-card indicators handle this
       } else {
         showChatView();
         renderPipeline(msg.data.pipeline);

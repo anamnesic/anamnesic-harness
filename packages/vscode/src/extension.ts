@@ -14,13 +14,13 @@ import {
   saveAgentConfig,
   setAgentModel,
   applyQualityPreset,
-  AVAILABLE_MODELS,
   DEFAULT_AGENT_MODELS,
   QUALITY_PRESETS,
 } from '@thinkcoffee/core';
 import type { Project, AgentRole, QualityPreset } from '@thinkcoffee/core';
 import { ChatViewProvider } from './chat/ChatViewProvider';
 import { AgentService } from './agents/AgentService';
+import { discoverModels } from './agents/ModelRegistry';
 import fs from 'fs';
 import path from 'path';
 
@@ -75,6 +75,9 @@ export async function activate(context: vscode.ExtensionContext) {
   contextService = new ContextService(db);
   decisionService = new DecisionService(db);
   pipelineService = new PipelineService();
+
+  // Pre-warm model discovery cache (non-blocking)
+  discoverModels().catch(() => {});
 
   // ─── Auto-bind project to workspace ────────────────────────
   const wsRoot = getWorkspaceRoot();
@@ -531,7 +534,8 @@ export async function activate(context: vscode.ExtensionContext) {
         if (role === 'product-manager') continue; // Always opus
 
         const currentModel = config.models[role] || DEFAULT_AGENT_MODELS[role];
-        const items = AVAILABLE_MODELS.map(m => ({
+        const dynamicModels = await discoverModels();
+        const items = dynamicModels.map(m => ({
           label: m.label,
           description: `${m.family} (${m.tier})`,
           picked: m.family === currentModel,

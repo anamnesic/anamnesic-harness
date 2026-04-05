@@ -1,7 +1,7 @@
-version: "3.9"
+﻿version: "3.9"
 
 services:
-  # ─── MCP Server ─────────────────────────────────────────────
+  # --- MCP Server (Production) -----------------------------------------------
   mcp-server:
     build:
       context: .
@@ -26,7 +26,18 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - thinkcoffee-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   thinkcoffee_data:
     driver: local
+
+networks:
+  thinkcoffee-network:
+    driver: bridge

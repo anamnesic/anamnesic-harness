@@ -1,0 +1,58 @@
+﻿# ==============================================================================
+# ThinkCoffee CLI - Dockerfile
+# ==============================================================================
+# Build: docker build -f Dockerfile.cli -t thinkcoffee/cli:latest .
+# Run:   docker run -v \$(pwd):/workspace thinkcoffee/cli export
+# ==============================================================================
+
+FROM node:20-alpine AS builder
+
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY tsconfig.base.json ./
+COPY packages/core/package.json ./packages/core/
+COPY packages/cli/package.json ./packages/cli/
+
+RUN pnpm install --frozen-lockfile
+
+COPY packages/core/src ./packages/core/src
+COPY packages/core/tsconfig.json ./packages/core/
+COPY packages/cli/src ./packages/cli/src
+COPY packages/cli/tsconfig.json ./packages/cli/
+
+RUN pnpm build:core && pnpm build:cli
+
+# --- Production ---------------------------------------------------------------
+FROM node:20-alpine AS production
+
+LABEL org.opencontainers.image.title="ThinkCoffee CLI"
+LABEL org.opencontainers.image.description="AI Context Management CLI"
+
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+RUN addgroup -S thinkcoffee && adduser -S thinkcoffee -G thinkcoffee
+
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/core/package.json ./packages/core/
+COPY packages/cli/package.json ./packages/cli/
+
+RUN pnpm install --frozen-lockfile --prod && pnpm store prune
+
+COPY --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --from=builder /app/packages/cli/dist ./packages/cli/dist
+
+RUN chown -R thinkcoffee:thinkcoffee /app
+
+USER thinkcoffee
+
+ENV NODE_ENV=production
+
+WORKDIR /workspace
+
+ENTRYPOINT ["node", "/app/packages/cli/dist/index.js"]
+CMD ["--help"]

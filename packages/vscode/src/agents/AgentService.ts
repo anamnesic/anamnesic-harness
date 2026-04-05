@@ -2,8 +2,10 @@ import * as vscode from 'vscode';
 import {
   ChatService, PipelineService, ContextService, DecisionService,
   AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent,
-  DEFAULT_AGENT_MODELS, AVAILABLE_MODELS,
+  DEFAULT_AGENT_MODELS,
+  recordModelFailure, getModelFailureCounts,
 } from '@thinkcoffee/core';
+import { discoverModels, getCachedModels, type DiscoveredModel } from './ModelRegistry';
 import type {
   AgentRole, Pipeline, AgentTask, ChatMessage, AgentModelConfig, PMModelAssignment, PhaseTemplate,
 } from '@thinkcoffee/core';
@@ -70,8 +72,12 @@ ${ctx.task.title}: ${ctx.task.description}
   return base + prev + feedback;
 }
 
-function buildPMAutoAssignPrompt(objective: string, phases: { name: string; agents: AgentRole[] }[]): string {
-  const models = AVAILABLE_MODELS.map(m => `- \`${m.family}\` (${m.label}, tier: ${m.tier})`).join('\n');
+function buildPMAutoAssignPrompt(
+  objective: string,
+  phases: { name: string; agents: AgentRole[] }[],
+  availableModels: DiscoveredModel[],
+): string {
+  const models = availableModels.map(m => `- \`${m.family}\` (${m.label}, tier: ${m.tier})`).join('\n');
   const agents = phases.flatMap(p => p.agents).map(a => `- ${a}: ${AGENT_META[a].description}`).join('\n');
 
   return `Voce e o Product Manager (rodando em claude-opus-4.6).
@@ -377,19 +383,27 @@ export class AgentService {
   }
 
   /** Get currently running agents */
-  getRunning(): { role: AgentRole; taskId: string; elapsed: number }[] {
-    const pipelineAgents = Array.from(this._running.values()).map(r => ({
+  getRunning(pipelineId?: string): { role: AgentRole; taskId: string; pipelineId: string; elapsed: number }[] {
+    let entries = Array.from(this._running.values());
+    if (pipelineId) {
+      entries = entries.filter(r => r.pipelineId === pipelineId);
+    }
+    const result = entries.map(r => ({
       role: r.role,
       taskId: r.taskId,
+      pipelineId: r.pipelineId,
       elapsed: Date.now() - r.startedAt,
     }));
-    // Include direct invocations
-    for (const role of this._directInvocations) {
-      if (!pipelineAgents.some(a => a.role === role)) {
-        pipelineAgents.push({ role, taskId: `direct-${role}`, elapsed: 0 });
+    // Include direct invocations (tied to _activePipelineLoop)
+    const directPid = this._activePipelineLoop || '';
+    if (!pipelineId || pipelineId === directPid) {
+      for (const role of this._directInvocations) {
+        if (!result.some(a => a.role === role)) {
+          result.push({ role, taskId: `direct-${role}`, pipelineId: directPid, elapsed: 0 });
+        }
       }
     }
-    return pipelineAgents;
+    return result;
   }
 
   /** Stop a running agent */
@@ -525,9 +539,11 @@ export class AgentService {
         return null;
       }
 
+      const dynamicModels = await discoverModels();
       const prompt = buildPMAutoAssignPrompt(
         pipeline.objective,
         pipeline.phases.map(p => ({ name: p.name, agents: p.agents })),
+        dynamicModels,
       );
 
       const messages = [vscode.LanguageModelChatMessage.User(prompt)];
@@ -1166,18 +1182,32 @@ export class AgentService {
 
   // ─── Model rotation on rejection ────────────────────────
 
-  /** Pick a different model for an agent, preferring higher tiers. */
+  /**
+   * Pick a different model for an agent, penalizing models with failure history.
+   * Score = tierRank - (failures * penalty). Higher score wins.
+   */
   private _pickAlternativeModel(role: AgentRole, currentModel: string): string {
     const tierRank: Record<string, number> = { premium: 4, code: 3, standard: 2, fast: 1 };
-    const candidates = AVAILABLE_MODELS
-      .filter(m => m.family !== currentModel && m.family !== 'claude-opus-4.6') // Never steal PM's model
-      .sort((a, b) => (tierRank[b.tier] || 0) - (tierRank[a.tier] || 0));
+    const failureCounts = getModelFailureCounts(role);
+
+    const candidates = getCachedModels()
+      .filter(m => m.family !== currentModel && m.family !== 'claude-opus-4.6')
+      .map(m => {
+        const tier = tierRank[m.tier] || 0;
+        const failures = failureCounts[m.family] || 0;
+        // Each failure costs 0.5 points; heavily penalize repeat offenders
+        const score = tier - (failures * 0.5);
+        return { ...m, score, failures };
+      })
+      .sort((a, b) => b.score - a.score);
 
     if (candidates.length === 0) return currentModel;
 
-    // Prefer a model from a different vendor for diversity
-    const currentVendorPrefix = currentModel.split('-')[0]; // e.g. "claude", "gpt", "gemini"
-    const diffVendor = candidates.find(m => !m.family.startsWith(currentVendorPrefix));
+    // Among top-scored, prefer a different vendor for diversity
+    const topScore = candidates[0].score;
+    const topTier = candidates.filter(c => c.score >= topScore - 0.5);
+    const currentVendorPrefix = currentModel.split('-')[0];
+    const diffVendor = topTier.find(m => !m.family.startsWith(currentVendorPrefix));
     return (diffVendor || candidates[0]).family;
   }
 
@@ -1258,9 +1288,13 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
           type: 'info',
         });
       } else {
-        // PM rejects the individual task — switch the agent's model and retry
+        // PM rejects the individual task — record failure, switch model and retry
         const config = loadAgentConfig();
         const currentModel = getModelForAgent(agentRole, config);
+
+        // Record this model's failure for future reference
+        recordModelFailure(currentModel, agentRole, task.title, result.feedback);
+
         const newModel = this._pickAlternativeModel(agentRole, currentModel);
 
         if (newModel && newModel !== currentModel) {
@@ -1279,7 +1313,7 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
           type: 'info',
         });
 
-        // Reset task to pending so the phase won't complete yet
+        // Reset task to pending and fix pipeline/phase status if already advanced
         const p = this._pipelines.get(projectId, pipelineId);
         if (p) {
           const phase = p.phases[p.currentPhase];
@@ -1287,6 +1321,14 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
           if (t) {
             t.status = 'pending';
             t.output = `[PM FEEDBACK] ${result.feedback}\n\n[OUTPUT ANTERIOR]\n${(t.output || '').substring(0, 2000)}`;
+            // If phase/pipeline was already advanced, revert to in-progress
+            if (phase.status === 'awaiting-approval' || phase.status === 'approved' || phase.status === 'completed') {
+              phase.status = 'in-progress';
+            }
+            if (p.status === 'completed') {
+              p.status = 'active';
+              p.completedAt = undefined;
+            }
             this._pipelines.save(p);
           }
         }

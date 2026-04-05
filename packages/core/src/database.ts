@@ -3,11 +3,12 @@ import { Project } from './entities/Project';
 import { ContextEntry } from './entities/ContextEntry';
 import { Decision } from './entities/Decision';
 import { ApiKey } from './entities/ApiKey';
+import { SyncConfig } from './entities/SyncConfig';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
 
-const ALL_ENTITIES = [Project, ContextEntry, Decision, ApiKey];
+const ALL_ENTITIES = [Project, ContextEntry, Decision, ApiKey, SyncConfig];
 
 export interface DatabaseOptions {
   /** Full path to the SQLite database file. Defaults to ~/.thinkcoffee/data.sqlite */

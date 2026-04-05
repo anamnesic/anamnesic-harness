@@ -5,10 +5,13 @@ export { getDatabase, closeDatabase } from './database';
 export type { DatabaseOptions } from './database';
 
 // Entities
-export { Project, ContextEntry, Decision, ApiKey } from './entities';
+export { Project, ContextEntry, Decision, ApiKey, SyncConfig } from './entities';
+export type { SyncTarget, SyncTrigger } from './entities/SyncConfig';
 
 // Services
-export { ProjectService, ContextService, DecisionService, ApiKeyService } from './services';
+export { ProjectService, ContextService, DecisionService, ApiKeyService, SyncConfigService, AutoSyncService } from './services';
+export type { CreateSyncConfigInput, UpdateSyncConfigInput, SyncResult } from './services/SyncConfigService';
+export type { AutoSyncStatus } from './services/AutoSyncService';
 
 // Export
 export { exportProject, getExportFilename } from './export';
@@ -32,6 +35,7 @@ export type { Pipeline, PipelinePhase, AgentTask, AgentRole, PhaseStatus, TaskSt
 export {
   loadAgentConfig, saveAgentConfig, getModelForAgent, setAgentModel,
   applyQualityPreset, isQualityPreset,
+  recordModelFailure, getModelFailureCounts, loadModelFailures,
   DEFAULT_AGENT_MODELS, AVAILABLE_MODELS, QUALITY_PRESETS,
 } from './agent-config';
-export type { AgentModelConfig, PMModelAssignment, ModelFamily, QualityPreset } from './agent-config';
+export type { AgentModelConfig, PMModelAssignment, ModelFamily, QualityPreset, ModelFailureEntry, ModelFailureHistory } from './agent-config';

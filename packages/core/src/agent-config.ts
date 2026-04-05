@@ -206,3 +206,77 @@ export function applyQualityPreset(preset: QualityPreset): AgentModelConfig {
 export function isQualityPreset(mode: string): mode is QualityPreset {
   return mode in QUALITY_PRESETS;
 }
+
+// ─── Model Failure History ───────────────────────────────────
+
+/** A record of a model failing/being rejected for a role */
+export interface ModelFailureEntry {
+  model: string;
+  role: string;
+  taskTitle: string;
+  feedback: string;
+  timestamp: string;
+}
+
+/** Full failure history keyed by model family */
+export interface ModelFailureHistory {
+  /** model family -> array of failures */
+  failures: Record<string, ModelFailureEntry[]>;
+}
+
+function getFailureHistoryPath(): string {
+  return path.join(os.homedir(), '.thinkcoffee', 'model-failures.json');
+}
+
+/** Load model failure history */
+export function loadModelFailures(): ModelFailureHistory {
+  const p = getFailureHistoryPath();
+  try {
+    if (fs.existsSync(p)) {
+      return JSON.parse(fs.readFileSync(p, 'utf-8'));
+    }
+  } catch { /* ignore */ }
+  return { failures: {} };
+}
+
+/** Record a model failure/rejection */
+export function recordModelFailure(
+  model: string,
+  role: string,
+  taskTitle: string,
+  feedback: string,
+): void {
+  const history = loadModelFailures();
+  if (!history.failures[model]) history.failures[model] = [];
+
+  history.failures[model].push({
+    model,
+    role,
+    taskTitle,
+    feedback: feedback.substring(0, 500),
+    timestamp: new Date().toISOString(),
+  });
+
+  // Keep at most 50 entries per model to avoid unbounded growth
+  if (history.failures[model].length > 50) {
+    history.failures[model] = history.failures[model].slice(-50);
+  }
+
+  const filePath = getFailureHistoryPath();
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(history, null, 2), 'utf-8');
+}
+
+/** Get failure count per model, optionally filtered by role */
+export function getModelFailureCounts(role?: string): Record<string, number> {
+  const history = loadModelFailures();
+  const counts: Record<string, number> = {};
+  for (const [model, entries] of Object.entries(history.failures)) {
+    const filtered = role ? entries.filter(e => e.role === role) : entries;
+    if (filtered.length > 0) {
+      counts[model] = filtered.length;
+    }
+  }
+  return counts;
+}
