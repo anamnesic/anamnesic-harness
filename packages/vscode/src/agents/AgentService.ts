@@ -33,6 +33,25 @@ interface AgentContext {
   rejectionFeedback?: string;
 }
 
+// ─── Agent Label Helper ──────────────────────────────────────
+
+const AGENT_SIGLA: Record<AgentRole, string> = {
+  'product-manager': 'PM',
+  'architect': 'AR',
+  'backend': 'BE',
+  'frontend': 'FE',
+  'devops': 'DO',
+  'qa': 'QA',
+  'code-review': 'CR',
+};
+
+/** Build agent label as "SIGLA - model_family" */
+function agentLabel(role: AgentRole, modelOverride?: string): string {
+  const sigla = AGENT_SIGLA[role] || role.substring(0, 2).toUpperCase();
+  const model = modelOverride || getModelForAgent(role);
+  return `${sigla} - ${model}`;
+}
+
 // ─── System Prompts ──────────────────────────────────────────
 
 function buildSystemPrompt(role: AgentRole, ctx: AgentContext): string {
@@ -335,7 +354,7 @@ async function handleToolCall(
         fs.writeFileSync(abs, input.content, 'utf-8');
         chat.send({
           sender: agentRole,
-          senderLabel: AGENT_META[agentRole].label,
+          senderLabel: agentLabel(agentRole),
           content: `Arquivo escrito: \`${input.path}\``,
           type: 'code',
         });
@@ -380,7 +399,7 @@ async function handleToolCall(
         });
         chat.send({
           sender: agentRole,
-          senderLabel: AGENT_META[agentRole].label,
+          senderLabel: agentLabel(agentRole),
           content: `\`${input.command}\`\n\n\`\`\`\n${(output || '(no output)').trim().substring(0, 2000)}\n\`\`\``,
           type: 'code',
         });
@@ -482,7 +501,7 @@ export class AgentService {
   async planPhases(objective: string): Promise<PhaseTemplate[] | null> {
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: 'PM (Opus)',
+      senderLabel: agentLabel('product-manager'),
       content: 'Analisando o objetivo para planejar as fases da pipeline...',
       type: 'info',
     });
@@ -544,7 +563,7 @@ export class AgentService {
 
       this._chat.send({
         sender: 'product-manager',
-        senderLabel: 'PM (Opus)',
+        senderLabel: agentLabel('product-manager'),
         content: `Pipeline planejada com **${phases.length} fases**:\n\n${report}`,
         type: 'response',
       });
@@ -568,7 +587,7 @@ export class AgentService {
   async pmSelectMode(objective: string): Promise<QualityPreset | null> {
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: 'PM (Opus)',
+      senderLabel: agentLabel('product-manager'),
       content: 'Analisando objetivo para decidir o modo de qualidade...',
       type: 'info',
     });
@@ -616,7 +635,7 @@ export class AgentService {
 
       this._chat.send({
         sender: 'product-manager',
-        senderLabel: 'PM (Opus)',
+        senderLabel: agentLabel('product-manager'),
         content: `Modo selecionado: **${presetData.label}** (${presetData.subtitle})\n\n> ${result.reason}\n\nPM deste pipeline: \`${config.models['product-manager']}\` (custo: ${presetData.costRange.min}x-${presetData.costRange.max}x)`,
         type: 'response',
       });
@@ -645,7 +664,7 @@ export class AgentService {
 
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: `PM (${pmModel})`,
+      senderLabel: agentLabel('product-manager', pmModel),
       content: 'Atribuindo modelos aos agentes dentro do tier de custo...',
       type: 'info',
     });
@@ -702,7 +721,7 @@ export class AgentService {
 
       this._chat.send({
         sender: 'product-manager',
-        senderLabel: `PM (${pmModel})`,
+        senderLabel: agentLabel('product-manager', pmModel),
         content: `Modelos atribuidos pelo PM:\n\n${report}\n\n- **Product Manager**: \`${pmModel}\``,
         type: 'response',
       });
@@ -807,7 +826,7 @@ export class AgentService {
         model = fallback[0];
         this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: `${modelFamily} indisponivel para ${AGENT_META[role].label}. Usando ${fallback[0].family}.`,
+          content: `${modelFamily} indisponivel para ${agentLabel(role)}. Usando ${fallback[0].family}.`,
           type: 'info',
         });
       } else {
@@ -816,7 +835,7 @@ export class AgentService {
     } catch (err: any) {
       this._pipelines.failTask(ctx.projectId, pipelineId, task.id, err.message);
       this._chat.send({
-        sender: role, senderLabel: AGENT_META[role].label,
+        sender: role, senderLabel: agentLabel(role),
         content: `Falha ao iniciar: ${err.message}`,
         type: 'error',
       });
@@ -833,7 +852,7 @@ export class AgentService {
     // Announce in chat
     this._chat.send({
       sender: role,
-      senderLabel: AGENT_META[role].label,
+      senderLabel: agentLabel(role),
       content: `Iniciando: **${task.title}** (modelo: \`${model.family}\`)`,
       type: 'info',
     });
@@ -874,7 +893,7 @@ export class AgentService {
           for (const chunk of chunks) {
             this._chat.send({
               sender: role,
-              senderLabel: AGENT_META[role].label,
+              senderLabel: agentLabel(role),
               content: chunk,
               type: 'response',
             });
@@ -910,7 +929,7 @@ export class AgentService {
             });
             this._chat.send({
               sender: role,
-              senderLabel: AGENT_META[role].label,
+              senderLabel: agentLabel(role),
               content: `@${input.agent} ${input.message}`,
               type: 'request',
               mentions: [input.agent],
@@ -936,7 +955,7 @@ export class AgentService {
 
       this._chat.send({
         sender: role,
-        senderLabel: AGENT_META[role].label,
+        senderLabel: agentLabel(role),
         content: `Tarefa concluida: **${task.title}**`,
         type: 'info',
       });
@@ -955,7 +974,7 @@ export class AgentService {
           : err.message || String(err);
         this._pipelines.failTask(ctx.projectId, pipelineId, task.id, errMsg);
         this._chat.send({
-          sender: role, senderLabel: AGENT_META[role].label,
+          sender: role, senderLabel: agentLabel(role),
           content: `Erro: ${errMsg}`,
           type: 'error',
         });
@@ -1047,7 +1066,7 @@ export class AgentService {
     } catch (err: any) {
       this._chat.send({
         sender: 'system', senderLabel: 'System',
-        content: `Erro ao selecionar modelo para ${AGENT_META[role].label}: ${err.message}`,
+        content: `Erro ao selecionar modelo para ${agentLabel(role)}: ${err.message}`,
         type: 'error',
       });
       return;
@@ -1055,7 +1074,7 @@ export class AgentService {
 
     this._chat.send({
       sender: role,
-      senderLabel: AGENT_META[role].label,
+      senderLabel: agentLabel(role),
       content: `Processando... (modelo: \`${model.family}\`)`,
       type: 'info',
     });
@@ -1098,7 +1117,7 @@ export class AgentService {
           for (const chunk of chunks) {
             this._chat.send({
               sender: role,
-              senderLabel: AGENT_META[role].label,
+              senderLabel: agentLabel(role),
               content: chunk,
               type: 'response',
             });
@@ -1130,7 +1149,7 @@ export class AgentService {
         ? `LM Error (${err.code}): ${err.message}`
         : err.message || String(err);
       this._chat.send({
-        sender: role, senderLabel: AGENT_META[role].label,
+        sender: role, senderLabel: agentLabel(role),
         content: `Erro: ${errMsg}`,
         type: 'error',
       });
@@ -1166,7 +1185,7 @@ export class AgentService {
 
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: 'PM (Opus)',
+      senderLabel: agentLabel('product-manager'),
       content: 'Assumindo supervisao da pipeline. Vou acompanhar cada fase e avaliar os resultados.',
       type: 'info',
     });
@@ -1180,7 +1199,7 @@ export class AgentService {
         if (pipeline.status === 'completed' || pipeline.status === 'failed') {
           this._chat.send({
             sender: 'product-manager',
-            senderLabel: 'PM (Opus)',
+            senderLabel: agentLabel('product-manager'),
             content: pipeline.status === 'completed'
               ? 'Pipeline concluida com sucesso! Todas as fases foram aprovadas.'
               : 'Pipeline falhou. Verifique os erros nos logs dos agentes.',
@@ -1221,7 +1240,7 @@ export class AgentService {
               }
               this._chat.send({
                 sender: 'product-manager',
-                senderLabel: 'PM (Opus)',
+                senderLabel: agentLabel('product-manager'),
                 content: 'Pipeline abortada pelo PM devido a falhas criticas.',
                 type: 'info',
               });
@@ -1254,7 +1273,7 @@ export class AgentService {
 
             this._chat.send({
               sender: 'product-manager',
-              senderLabel: 'PM (Opus)',
+              senderLabel: agentLabel('product-manager'),
               content: `Fase **${phase.name}** aprovada pelo PM.${p.status === 'completed' ? '\n\nPipeline concluida!' : ''}`,
               type: 'info',
             });
@@ -1273,7 +1292,7 @@ export class AgentService {
 
             this._chat.send({
               sender: 'product-manager',
-              senderLabel: 'PM (Opus)',
+              senderLabel: agentLabel('product-manager'),
               content: `Fase **${phase.name}** rejeitada. Agentes vao refazer com feedback:\n\n${review.feedback}`,
               type: 'info',
             });
@@ -1366,8 +1385,8 @@ export class AgentService {
 
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: 'PM (Opus)',
-      content: `Revisando tarefa de ${AGENT_META[agentRole].label}: **${task.title}**...`,
+      senderLabel: agentLabel('product-manager'),
+      content: `Revisando tarefa de ${agentLabel(agentRole)}: **${task.title}**...`,
       type: 'info',
     });
 
@@ -1380,7 +1399,7 @@ export class AgentService {
 
       const prompt = `Voce e o Product Manager (PM) supervisando a pipeline: "${pipeline.objective}"
 
-## Agente: ${AGENT_META[agentRole].label}
+## Agente: ${agentLabel(agentRole)}
 ## Tarefa: ${task.title}
 ## Descricao: ${task.description}
 
@@ -1420,8 +1439,8 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
       if (result.approved) {
         this._chat.send({
           sender: 'product-manager',
-          senderLabel: 'PM (Opus)',
-          content: `Tarefa aprovada (${AGENT_META[agentRole].label}): ${result.summary || 'OK'}`,
+          senderLabel: agentLabel('product-manager'),
+          content: `Tarefa aprovada (${agentLabel(agentRole)}): ${result.summary || 'OK'}`,
           type: 'info',
         });
       } else {
@@ -1445,8 +1464,8 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
 
         this._chat.send({
           sender: 'product-manager',
-          senderLabel: 'PM (Opus)',
-          content: `Tarefa rejeitada (${AGENT_META[agentRole].label}): ${result.feedback}\n\nAgente vai refazer.${modelMsg}`,
+          senderLabel: agentLabel('product-manager'),
+          content: `Tarefa rejeitada (${agentLabel(agentRole)}): ${result.feedback}\n\nAgente vai refazer.${modelMsg}`,
           type: 'info',
         });
 
@@ -1507,7 +1526,7 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
 
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: 'PM (Opus)',
+      senderLabel: agentLabel('product-manager'),
       content: `Detectei ${failedTasks.length} tarefa(s) com falha na fase **${phase.name}**. Avaliando...`,
       type: 'info',
     });
@@ -1563,7 +1582,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
 
       this._chat.send({
         sender: 'product-manager',
-        senderLabel: 'PM (Opus)',
+        senderLabel: agentLabel('product-manager'),
         content: `Decisao do PM: **${result.decision}** — ${result.reason || ''}`,
         type: 'info',
       });
@@ -1618,7 +1637,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
 
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: 'PM (Opus)',
+      senderLabel: agentLabel('product-manager'),
       content: 'Pipeline concluida. Iniciando workflow Git: criando branch, commit e PR...',
       type: 'info',
     });
@@ -1644,7 +1663,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       } catch {
         this._chat.send({
           sender: 'product-manager',
-          senderLabel: 'PM (Opus)',
+          senderLabel: agentLabel('product-manager'),
           content: 'Workspace nao e um repositorio Git. Pulando workflow Git.',
           type: 'info',
         });
@@ -1667,7 +1686,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
         } catch (err: any) {
           this._chat.send({
             sender: 'product-manager',
-            senderLabel: 'PM (Opus)',
+            senderLabel: agentLabel('product-manager'),
             content: `Erro ao criar branch: ${err.message}`,
             type: 'error',
           });
@@ -1683,7 +1702,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       if (!status) {
         this._chat.send({
           sender: 'product-manager',
-          senderLabel: 'PM (Opus)',
+          senderLabel: agentLabel('product-manager'),
           content: 'Nenhuma alteracao detectada para commit. Branch criada mas sem mudancas.',
           type: 'info',
         });
@@ -1696,7 +1715,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
 
       this._chat.send({
         sender: 'product-manager',
-        senderLabel: 'PM (Opus)',
+        senderLabel: agentLabel('product-manager'),
         content: `Branch **${branchName}** criada com commit.\nBase: ${baseBranch}`,
         type: 'info',
       });
@@ -1716,14 +1735,14 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
 
           this._chat.send({
             sender: 'product-manager',
-            senderLabel: 'PM (Opus)',
+            senderLabel: agentLabel('product-manager'),
             content: `PR criado com sucesso! Branch: **${branchName}** -> ${baseBranch}`,
             type: 'info',
           });
         } catch {
           this._chat.send({
             sender: 'product-manager',
-            senderLabel: 'PM (Opus)',
+            senderLabel: agentLabel('product-manager'),
             content: `Push feito. PR nao criado automaticamente (gh CLI nao disponivel). Crie manualmente: **${branchName}** -> ${baseBranch}`,
             type: 'info',
           });
@@ -1731,7 +1750,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       } catch (pushErr: any) {
         this._chat.send({
           sender: 'product-manager',
-          senderLabel: 'PM (Opus)',
+          senderLabel: agentLabel('product-manager'),
           content: `Branch e commit criados localmente. Push falhou: ${pushErr.message}\n\nExecute manualmente:\n\`git push -u origin ${branchName}\``,
           type: 'info',
         });
@@ -1739,7 +1758,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
     } catch (err: any) {
       this._chat.send({
         sender: 'product-manager',
-        senderLabel: 'PM (Opus)',
+        senderLabel: agentLabel('product-manager'),
         content: `Erro no workflow Git: ${err.message}`,
         type: 'error',
       });
@@ -1763,7 +1782,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
 
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: 'PM (Opus)',
+      senderLabel: agentLabel('product-manager'),
       content: `Revisando fase **${phase.name}**...`,
       type: 'info',
     });
@@ -1837,7 +1856,7 @@ NAO seja excessivamente exigente — foque em bloqueios reais.`;
       const jsonMatch = fullText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         this._chat.send({
-          sender: 'product-manager', senderLabel: 'PM (Opus)',
+          sender: 'product-manager', senderLabel: agentLabel('product-manager'),
           content: 'Nao consegui gerar review estruturado. Aprovando fase.',
           type: 'info',
         });

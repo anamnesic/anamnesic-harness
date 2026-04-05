@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, applyQualityPreset, isQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
+import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
 import type { ChatMessage, Pipeline, AgentRole } from '@thinkcoffee/core';
 import type { AgentService } from '../agents/AgentService';
 import { execSync } from 'child_process';
@@ -478,7 +478,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const chat = this._getOrCreatePipelineChat(p.id);
     chat.send({
       sender: 'product-manager',
-      senderLabel: AGENT_META['product-manager'].label,
+      senderLabel: `PM - ${getModelForAgent('product-manager')}`,
       content: `Pipeline criada com **${p.phases.length} fases**:\n\n${p.phases.map((ph, i) => `${i + 1}. **${ph.name}** — ${ph.agents.map(a => AGENT_META[a].label).join(', ')}`).join('\n')}\n\nA primeira fase **${p.phases[0].name}** ja esta ativa. Use \`/run\` para iniciar os agentes.`,
       type: 'response',
     });
