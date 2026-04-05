@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
+import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, applyQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
 import type { ChatMessage, Pipeline, AgentRole } from '@thinkcoffee/core';
 import type { AgentService } from '../agents/AgentService';
 import { execSync } from 'child_process';
@@ -67,6 +67,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         case 'reject': this._rejectPhase(msg.feedback); break;
         case 'createPipeline': this._createPipeline(msg.objective); break;
         case 'refreshPipeline': this._sendState(); break;
+        case 'changeMode': this._changeMode(msg.mode); break;
       }
     });
 
@@ -84,6 +85,21 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   /** Force refresh from outside */
   refresh() { this._sendState(); }
+
+  /** Change quality preset mode from webview dropdown */
+  private _changeMode(mode: string) {
+    const presets = ['cafe-soluvel', 'coado-com-carinho', 'espresso-duplo'] as const;
+    if (presets.includes(mode as any)) {
+      applyQualityPreset(mode as any);
+      this._chat.send({
+        sender: 'system',
+        senderLabel: 'Sistema',
+        content: `Modo alterado para **${QUALITY_PRESETS[mode as keyof typeof QUALITY_PRESETS].label}** — ${QUALITY_PRESETS[mode as keyof typeof QUALITY_PRESETS].subtitle}`,
+        type: 'info',
+      });
+      this._sendState();
+    }
+  }
 
   /** Show/hide typing indicator for an agent */
   sendTyping(role: AgentRole, label: string, active: boolean) {
@@ -724,6 +740,47 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     30% { transform: translateY(-4px); opacity: 1; }
   }
 
+  /* ─── Mode selector ─────────────────────────────────────── */
+  .mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+    flex-shrink: 0;
+  }
+  .mode-bar label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+  }
+  .mode-select {
+    flex: 1;
+    font-size: 11px;
+    font-family: var(--vscode-font-family, sans-serif);
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    outline: none;
+    cursor: pointer;
+  }
+  .mode-select:focus { border-color: var(--vscode-focusBorder); }
+  .mode-select option {
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+  }
+  .mode-subtitle {
+    font-size: 9px;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* ─── Send button states ────────────────────────────────── */
   .send-btn.sending {
     opacity: 0.5;
@@ -867,6 +924,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <button class="btn-reject" id="rejectBtn">Reject</button>
   </div>
 
+  <div class="mode-bar" id="modeBar">
+    <label>Modo:</label>
+    <select class="mode-select" id="modeSelect">
+      <option value="cafe-soluvel">Cafe Soluvel</option>
+      <option value="coado-com-carinho">Coado com Carinho</option>
+      <option value="espresso-duplo">Espresso Duplo</option>
+    </select>
+    <span class="mode-subtitle" id="modeSubtitle">Rapido e sem frescura</span>
+  </div>
+
   <div class="agents-bar" id="agentsBar">
     <div class="dot"></div>
     <div class="agent-chips" id="agentChips"></div>
@@ -934,6 +1001,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   const typingIndicator = document.getElementById('typingIndicator');
   const typingAvatar = document.getElementById('typingAvatar');
   const typingLabel = document.getElementById('typingLabel');
+  const modeSelect = document.getElementById('modeSelect');
+  const modeSubtitle = document.getElementById('modeSubtitle');
+
+  const MODE_SUBTITLES = {
+    'cafe-soluvel': 'Rapido e sem frescura',
+    'coado-com-carinho': 'Equilibrado, pro dia a dia',
+    'espresso-duplo': 'Premium, nivel barista',
+  };
+
+  modeSelect.addEventListener('change', () => {
+    const mode = modeSelect.value;
+    modeSubtitle.textContent = MODE_SUBTITLES[mode] || '';
+    vscode.postMessage({ command: 'changeMode', mode });
+  });
 
   let currentAgents = {};
 
@@ -1148,6 +1229,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         showTyping(first.role, agentLabel + ' trabalhando...');
       } else {
         hideTyping();
+      }
+      // Sync mode dropdown
+      if (msg.data.modelConfig && msg.data.modelConfig.mode) {
+        const m = msg.data.modelConfig.mode;
+        if (modeSelect.value !== m && MODE_SUBTITLES[m]) {
+          modeSelect.value = m;
+          modeSubtitle.textContent = MODE_SUBTITLES[m] || '';
+        }
       }
       // Reset send button
       sendBtn.classList.remove('sending');
