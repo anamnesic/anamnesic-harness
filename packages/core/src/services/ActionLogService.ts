@@ -1,30 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-
-export interface ActionLogEntry {
-  id: string; // UUID
-  timestamp: string; // ISO 8601
-  pipelineId: string;
-  phaseIndex: number;
-  taskId: string;
-  agent: 'backend' | 'frontend' | 'architect' | 'qa';
-  tool: string; // e.g., 'write_file', 'run_command'
-  input: any;
-  result: {
-    success: boolean;
-    output?: string;
-    error?: string;
-  };
-  durationMs: number;
-  dryRun: boolean;
-  filesAffected?: string[];
-  commandInfo?: {
-    command: string;
-    exitCode?: number;
-    riskLevel: 'safe' | 'moderate' | 'destructive' | 'blocked';
-    userDecision?: 'accepted' | 'rejected' | 'auto-blocked' | 'timeout';
-  };
-}
+import crypto from 'node:crypto';
+import { ActionLogEntry } from '../types/safety-net.js';
+export type { ActionLogEntry };
 
 export class ActionLogService {
   private logsBaseDir: string;

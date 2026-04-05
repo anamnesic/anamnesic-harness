@@ -193,17 +193,17 @@ export class FileWatcherService extends EventEmitter {
     if (!project) return null;
 
     const [contextCount, decisionCount] = await Promise.all([
-      contextRepo.count({ where: { projectId } }),
-      decisionRepo.count({ where: { projectId } }),
+      contextRepo.count({ where: { project: { id: projectId } } }),
+      decisionRepo.count({ where: { project: { id: projectId } } }),
     ]);
 
     const lastContext = await contextRepo.findOne({
-      where: { projectId },
+      where: { project: { id: projectId } },
       order: { updatedAt: 'DESC' },
     });
 
     const lastDecision = await decisionRepo.findOne({
-      where: { projectId },
+      where: { project: { id: projectId } },
       order: { updatedAt: 'DESC' },
     });
 

@@ -155,7 +155,7 @@ export async function writeFile(
 
     // Create snapshot before modifying existing file
     if (fileExists && ctx.snapshotService) {
-      await ctx.snapshotService.createSnapshot(
+      await ctx.snapshotService.snapshotFile(
         ctx.pipelineId,
         ctx.phaseIndex,
         ctx.phaseName,
@@ -164,7 +164,7 @@ export async function writeFile(
       );
     } else if (!fileExists && ctx.snapshotService) {
       // Record creation for rollback
-      await ctx.snapshotService.recordFileCreation(
+      await ctx.snapshotService.recordCreatedFile(
         ctx.pipelineId,
         ctx.phaseIndex,
         ctx.phaseName,
@@ -237,7 +237,7 @@ export async function deleteFile(
 
     // Create snapshot before deletion
     if (ctx.snapshotService) {
-      await ctx.snapshotService.createSnapshot(
+      await ctx.snapshotService.snapshotFile(
         ctx.pipelineId,
         ctx.phaseIndex,
         ctx.phaseName,
