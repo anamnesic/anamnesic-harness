@@ -14,6 +14,8 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { buildCodeMap } from './CodeMap';
+import { getOllamaClient, reloadOllamaClient, toOllamaTools, type OllamaChatMessage, type OllamaToolCall } from './OllamaClient';
+import { loadOllamaConfig, saveOllamaConfig } from '@thinkcoffee/core';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -986,6 +988,12 @@ export class AgentService {
   // ─── Run a single agent ─────────────────────────────────
 
   private async _runAgent(task: AgentTask, ctx: AgentContext, pipelineId: string): Promise<void> {
+    // ── Ollama path: if enabled, use local model instead of VS Code API ──
+    const ollamaClient = getOllamaClient();
+    if (ollamaClient.isEnabled) {
+      return this._runAgentViaOllama(task, ctx, pipelineId);
+    }
+
     const role = task.agent;
     const config = loadAgentConfig();
     const modelFamily = getModelForAgent(role, config);
@@ -1006,13 +1014,24 @@ export class AgentService {
     try {
       const models = await vscode.lm.selectChatModels({ vendor: 'copilot', family: effectiveFamily });
       if (!models.length) {
-        // Fallback to any available model
-        const fallback = await vscode.lm.selectChatModels({ vendor: 'copilot' });
-        if (!fallback.length) throw new Error('Nenhum modelo Copilot disponivel');
-        model = fallback[0];
+        // Fallback: prefer models within the active preset's cost range
+        const allModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+        if (!allModels.length) throw new Error('Nenhum modelo Copilot disponivel');
+
+        const maxCost = presetData?.costRange.max ?? Infinity;
+        const ranked = presetData?.ranking ?? [];
+        const affordable = allModels.filter(m => getModelCost(m.family) <= maxCost);
+        const pool = affordable.length ? affordable : allModels; // absolute last resort
+
+        // Prefer models from the preset ranking (order matters)
+        const byRanking = ranked
+          .map(fam => pool.find(m => m.family === fam))
+          .filter(Boolean) as vscode.LanguageModelChat[];
+        model = byRanking[0] ?? pool[0];
+
         this._pipelineChat(pipelineId).send({
           sender: 'system', senderLabel: 'System',
-          content: `${effectiveFamily} indisponivel para ${agentLabel(role)}. Usando ${fallback[0].family}.`,
+          content: `${effectiveFamily} indisponivel para ${agentLabel(role)}. Usando ${model.family} (custo: ${getModelCost(model.family)}x).`,
           type: 'info',
         });
       } else {
@@ -1259,13 +1278,33 @@ export class AgentService {
     const config = loadAgentConfig();
     const modelFamily = getModelForAgent(role, config);
 
+    // Cost tier guard for direct invocations too
+    const directPreset = isQualityPreset(config.mode) ? config.mode as QualityPreset : undefined;
+    const directPresetData = directPreset ? QUALITY_PRESETS[directPreset] : null;
+    let directFamily = modelFamily;
+    if (directPresetData && config.mode !== 'auto') {
+      const cost = getModelCost(modelFamily);
+      if (cost > directPresetData.costRange.max) {
+        directFamily = directPresetData.models[role] || modelFamily;
+      }
+    }
+
     let model: vscode.LanguageModelChat;
     try {
-      const models = await vscode.lm.selectChatModels({ vendor: 'copilot', family: modelFamily });
+      const models = await vscode.lm.selectChatModels({ vendor: 'copilot', family: directFamily });
       if (!models.length) {
-        const fallback = await vscode.lm.selectChatModels({ vendor: 'copilot' });
-        if (!fallback.length) throw new Error('Nenhum modelo Copilot disponivel');
-        model = fallback[0];
+        const allModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+        if (!allModels.length) throw new Error('Nenhum modelo Copilot disponivel');
+
+        const maxCost = directPresetData?.costRange.max ?? Infinity;
+        const ranked = directPresetData?.ranking ?? [];
+        const affordable = allModels.filter(m => getModelCost(m.family) <= maxCost);
+        const pool = affordable.length ? affordable : allModels;
+
+        const byRanking = ranked
+          .map(fam => pool.find(m => m.family === fam))
+          .filter(Boolean) as vscode.LanguageModelChat[];
+        model = byRanking[0] ?? pool[0];
       } else {
         model = models[0];
       }
@@ -1906,6 +1945,136 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
     phase.status = 'in-progress';
     pipeline.status = 'active';
     this._pipelines.save(pipeline);
+  }
+
+  // ─── Ollama Agent Execution ──────────────────────────────
+
+  /**
+   * Run an agent via Ollama instead of VS Code Copilot API.
+   * Supports the same tool loop (read_file, write_file, etc.)
+   * using Ollama's OpenAI-compatible tool calling.
+   */
+  private async _runAgentViaOllama(task: AgentTask, ctx: AgentContext, pipelineId: string): Promise<void> {
+    const role = task.agent;
+    const ollamaClient = getOllamaClient();
+
+    this._pipelines.startTask(ctx.projectId, pipelineId, task.id);
+
+    const cts = new vscode.CancellationTokenSource();
+    this._running.set(task.id, { role, taskId: task.id, pipelineId, cts, startedAt: Date.now() });
+    this._onAgentStateChange.fire();
+
+    this._pipelineChat(pipelineId).send({
+      sender: role,
+      senderLabel: `${AGENT_SIGLA[role] || role.substring(0, 2).toUpperCase()} - ${ollamaClient.family}`,
+      content: `Iniciando: **${task.title}** (modelo: \`${ollamaClient.family}\`)`,
+      type: 'info',
+    });
+
+    const workspace = ctx.workspace;
+    const tools = getAgentTools(workspace);
+    const ollamaTools = toOllamaTools(tools);
+    const systemPrompt = buildSystemPrompt(role, ctx);
+    const kickoff = `Execute sua tarefa agora.\n\nTarefa: ${task.title}\n${task.description}\n\nIMPORTANTE: Voce DEVE usar write_file para criar os arquivos. NAO apenas descreva em texto o que faria — use as ferramentas para LER o codigo existente e ESCREVER os arquivos no workspace. Comece lendo a estrutura com list_files e read_file, depois crie/edite arquivos com write_file.`;
+
+    const messages: OllamaChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: kickoff },
+    ];
+
+    const abortCtrl = new AbortController();
+    cts.token.onCancellationRequested(() => abortCtrl.abort());
+
+    try {
+      let fullOutput = '';
+      const filesWritten: string[] = [];
+      let toolCallRounds = 0;
+      const MAX_TOOL_ROUNDS = 15;
+
+      while (toolCallRounds < MAX_TOOL_ROUNDS) {
+        const result = await ollamaClient.chatWithTools(messages, ollamaTools, abortCtrl.signal);
+
+        if (result.text) {
+          fullOutput += result.text;
+          const chunks = splitMessage(result.text, 3000);
+          for (const chunk of chunks) {
+            this._pipelineChat(pipelineId).send({
+              sender: role,
+              senderLabel: `${AGENT_SIGLA[role] || role.substring(0, 2).toUpperCase()} - ${ollamaClient.family}`,
+              content: chunk,
+              type: 'response',
+            });
+          }
+        }
+
+        // No tool calls — done
+        if (!result.toolCalls.length) break;
+
+        toolCallRounds++;
+
+        // Add assistant message with tool calls
+        messages.push({
+          role: 'assistant',
+          content: result.text || '',
+          tool_calls: result.toolCalls,
+        });
+
+        // Execute each tool call
+        for (const tc of result.toolCalls) {
+          const fnName = tc.function.name;
+          const fnArgs = tc.function.arguments;
+
+          // Check @mentions
+          if (fnName === 'mention_agent') {
+            this._pendingMentions.push({
+              from: role,
+              to: fnArgs.agent as AgentRole,
+              message: fnArgs.message as string,
+              pipelineId,
+            });
+          }
+
+          // Create a fake ToolCallPart for the handler
+          const fakeToolCall = {
+            callId: crypto.randomUUID(),
+            name: fnName,
+            input: fnArgs,
+          } as unknown as vscode.LanguageModelToolCallPart;
+
+          const toolResult = await handleToolCall(fakeToolCall, workspace, this._pipelineChat(pipelineId), role);
+
+          // Send tool result back to Ollama
+          messages.push({ role: 'tool', content: toolResult });
+
+          if (fnName === 'write_file' && fnArgs.path && toolResult.startsWith('File written:')) {
+            filesWritten.push(fnArgs.path as string);
+          }
+          fullOutput += `\n[tool:${fnName}] ${toolResult}\n`;
+        }
+      }
+
+      this._pipelines.completeTask(ctx.projectId, pipelineId, task.id, fullOutput, filesWritten.length > 0 ? filesWritten : undefined);
+      this._pipelines.saveAgentHistory(ctx.projectId, pipelineId, task.id, this._contexts, this._decisions).catch(() => {});
+
+      this._pipelineChat(pipelineId).send({
+        sender: role,
+        senderLabel: `${AGENT_SIGLA[role] || role.substring(0, 2).toUpperCase()} - ${ollamaClient.family}`,
+        content: `Tarefa concluida: **${task.title}**`,
+        type: 'info',
+      });
+    } catch (err: any) {
+      this._pipelines.failTask(ctx.projectId, pipelineId, task.id, err.message);
+      this._pipelineChat(pipelineId).send({
+        sender: role,
+        senderLabel: `${AGENT_SIGLA[role] || role.substring(0, 2).toUpperCase()} - ${ollamaClient.family}`,
+        content: `Erro (Ollama): ${err.message}`,
+        type: 'error',
+      });
+    } finally {
+      this._running.delete(task.id);
+      cts.dispose();
+      this._onAgentStateChange.fire();
+    }
   }
 
   // ─── Pipeline Finalization (Organizer + Git) ─────────────

@@ -38,7 +38,7 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
       'git': 'gpt-4.1',                           // Git operations, free
       'dead-code': 'gpt-4.1',                      // Dead code analysis, free
       'troubleshooter': 'gpt-4.1',             // Fix problems, free
-      'backend': 'gpt-5.4-mini',               // Mini capaz para code (REMOVIDO Grok)
+      'backend': 'gpt-5.4-mini',               // Mini capaz pra code, free
       'frontend': 'gpt-4.1',                   // Bom geral, free
       'devops': 'gpt-5.4-mini',                // Mini capaz
       'qa': 'claude-haiku-4.5',                // Analise rapida
@@ -48,7 +48,7 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
       'claude-sonnet-4',     // Melhor raciocinio free
       'gpt-4o',              // Forte raciocinio geral
       'gpt-4.1',             // Solido
-      'gpt-5.4-mini',        // Mini capaz (substituiu grok-code-fast-1)
+      'gpt-5.4-mini',        // Mini capaz
       'gpt-5-mini',          // Mini alternativo
       'claude-haiku-4.5',    // Rapido
       'gemini-3-flash',      // Flash rapido
@@ -155,6 +155,8 @@ export const AVAILABLE_MODELS = [
   { family: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', tier: 'premium', vendor: 'copilot', cost: 1 as CostMultiplier },
   // Microsoft — Raptor
   { family: 'raptor-mini', label: 'Raptor mini (Preview)', tier: 'fast', vendor: 'copilot', cost: 0 as CostMultiplier },
+  // xAI — Grok
+  { family: 'grok-3-mini', label: 'Grok 3 mini', tier: 'fast', vendor: 'copilot', cost: 0 as CostMultiplier },
 ] as const;
 
 export type ModelFamily = typeof AVAILABLE_MODELS[number]['family'];
@@ -211,10 +213,17 @@ export function saveAgentConfig(config: AgentModelConfig): void {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 }
 
-/** Get model family for a specific agent */
+/** Get model family for a specific agent — respects active preset when role is missing from saved config */
 export function getModelForAgent(role: AgentRole, config?: AgentModelConfig): string {
   const cfg = config || loadAgentConfig();
-  return cfg.models[role] || DEFAULT_AGENT_MODELS[role];
+  if (cfg.models[role]) return cfg.models[role];
+
+  // If preset is active, use the preset's model for this role (NOT the default espresso-duplo)
+  if (isQualityPreset(cfg.mode)) {
+    const presetModel = QUALITY_PRESETS[cfg.mode]?.models[role];
+    if (presetModel) return presetModel;
+  }
+  return DEFAULT_AGENT_MODELS[role];
 }
 
 /** Update a single agent's model */
@@ -345,4 +354,45 @@ export function getModelFailureCounts(role?: string): Record<string, number> {
     }
   }
   return counts;
+}
+
+// ─── Ollama Configuration ────────────────────────────────────
+
+export interface OllamaConfig {
+  /** Whether Ollama is enabled as provider */
+  enabled: boolean;
+  /** Ollama API endpoint (default: http://localhost:11434) */
+  endpoint: string;
+  /** Model to use for all agents when Ollama is enabled (e.g. llama3, codellama, mistral) */
+  model: string;
+}
+
+const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
+  enabled: false,
+  endpoint: 'http://localhost:11434',
+  model: 'llama3',
+};
+
+function getOllamaConfigPath(): string {
+  return path.join(os.homedir(), '.thinkcoffee', 'ollama-config.json');
+}
+
+/** Load Ollama configuration */
+export function loadOllamaConfig(): OllamaConfig {
+  const p = getOllamaConfigPath();
+  try {
+    if (fs.existsSync(p)) {
+      const raw = JSON.parse(fs.readFileSync(p, 'utf-8'));
+      return { ...DEFAULT_OLLAMA_CONFIG, ...raw };
+    }
+  } catch { /* ignore */ }
+  return { ...DEFAULT_OLLAMA_CONFIG };
+}
+
+/** Save Ollama configuration */
+export function saveOllamaConfig(config: OllamaConfig): void {
+  const p = getOllamaConfigPath();
+  const dir = path.dirname(p);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(config, null, 2), 'utf-8');
 }

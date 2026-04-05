@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
-import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
+import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS, loadOllamaConfig, saveOllamaConfig } from '@thinkcoffee/core';
 import type { ChatMessage, Pipeline, AgentRole } from '@thinkcoffee/core';
 import type { AgentService } from '../agents/AgentService';
+import { reloadOllamaClient } from '../agents/OllamaClient';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -30,6 +31,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private _activePipelineId: string | null = null;
   /** Auto-approve phases without user confirmation */
   private _autoApprove = true;
+  /** Ollama local model toggle */
+  private _ollamaEnabled = false;
 
   /** Returns the chat service for the active pipeline (or global default) */
   private get _activeChat(): ChatService {
@@ -84,6 +87,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         case 'refreshPipeline': this._sendState(); break;
         case 'changeMode': this._changeMode(msg.mode); break;
         case 'setAutoApprove': this._autoApprove = !!msg.enabled; break;
+        case 'setOllama': {
+          const cfg = loadOllamaConfig();
+          cfg.enabled = !!msg.enabled;
+          saveOllamaConfig(cfg);
+          this._ollamaEnabled = cfg.enabled;
+          reloadOllamaClient();
+          this._activeChat.send({
+            sender: 'system',
+            senderLabel: 'Sistema',
+            content: cfg.enabled
+              ? `Ollama **ativado** (modelo: \`${cfg.model}\`, endpoint: \`${cfg.endpoint}\`)`
+              : 'Ollama **desativado** — usando modelos Copilot.',
+            type: 'info',
+          });
+          this._sendState();
+          break;
+        }
         case 'switchPipeline': this._switchToPipeline(msg.pipelineId); break;
         case 'retryPipeline': this._retryPipelineById(msg.pipelineId); break;
         case 'backToList': this._backToList(); break;
@@ -250,6 +270,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           agents: AGENT_META,
           runningAgents: [],
           modelConfig: { mode: 'cafe-soluvel', models: {} },
+          ollamaEnabled: loadOllamaConfig().enabled,
         },
       });
     }
@@ -284,6 +305,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           agents: AGENT_META,
           runningAgents,
           modelConfig: loadAgentConfig(),
+          ollamaEnabled: loadOllamaConfig().enabled,
         },
       });
     } else {
@@ -312,6 +334,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           agents: AGENT_META,
           runningAgents: allRunning,
           modelConfig: loadAgentConfig(),
+          ollamaEnabled: loadOllamaConfig().enabled,
         },
       });
     }
@@ -1114,6 +1137,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   .toggle-switch input:checked + .toggle-track {
     background: #22c55e;
   }
+  .ollama-toggle input:checked + .toggle-track {
+    background: #8b5cf6;
+  }
   .toggle-thumb {
     position: absolute;
     top: 2px;
@@ -1445,6 +1471,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           <span class="toggle-thumb"></span>
         </label>
       </div>
+      <div class="autoapprove-wrap">
+        <label for="ollamaToggle" title="Usar modelos locais via Ollama">Ollama</label>
+        <label class="toggle-switch ollama-toggle" title="Usar modelos locais via Ollama">
+          <input type="checkbox" id="ollamaToggle">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
     </div>
   </div>
 
@@ -1469,6 +1503,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   const modeSelect = document.getElementById('modeSelect');
   const modeSubtitle = document.getElementById('modeSubtitle');
   const autoApproveToggle = document.getElementById('autoApproveToggle');
+  const ollamaToggle = document.getElementById('ollamaToggle');
   const pipelineList = document.getElementById('pipelineList');
   const pipelineCards = document.getElementById('pipelineCards');
   const inputArea = document.querySelector('.input-area');
@@ -1479,6 +1514,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   autoApproveToggle.addEventListener('change', () => {
     autoApproveEnabled = autoApproveToggle.checked;
     vscode.postMessage({ command: 'setAutoApprove', enabled: autoApproveEnabled });
+  });
+
+  ollamaToggle.addEventListener('change', () => {
+    vscode.postMessage({ command: 'setOllama', enabled: ollamaToggle.checked });
   });
 
   backBtn.addEventListener('click', () => {
@@ -1828,6 +1867,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           modeSelect.value = MODE_SUBTITLES[m] ? m : 'auto';
           modeSubtitle.textContent = MODE_SUBTITLES[modeSelect.value] || '';
         }
+      }
+      // Sync Ollama toggle
+      if (typeof msg.data.ollamaEnabled === 'boolean') {
+        ollamaToggle.checked = msg.data.ollamaEnabled;
       }
       // Reset send button
       sendBtn.classList.remove('sending');
