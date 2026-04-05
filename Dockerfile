@@ -1,133 +1,56 @@
-# ==============================================================================
-# ThinkCoffee MCP Server - Multi-stage Dockerfile (V5 - Agent Safety Net)
-# ==============================================================================
-# Build: docker build -t thinkcoffee/mcp-server:latest .
-# Run:   docker run -v thinkcoffee_data:/data thinkcoffee/mcp-server:latest
-#
-# V5 changes:
-#   - Health check via HTTP endpoint (/health) com fallback filesystem
-#   - NODE_OPTIONS configuravel via ARG
-#   - Graceful shutdown via tini + SIGTERM/SIGINT
-#   - Permissoes restritas em /data/snapshots e /data/logs
-#   - Labels OCI para rastreabilidade
-# ==============================================================================
+﻿# Multi-stage build para otimizar tamanho da imagem
 
-# --- Stage 1: Build -----------------------------------------------------------
+# Stage 1: Build
 FROM node:20-alpine AS builder
 
-ARG THINKCOFFEE_VERSION=dev
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
 WORKDIR /app
 
-# Copy workspace manifests first (layer cache optimization)
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY tsconfig.base.json ./
-COPY packages/core/package.json ./packages/core/
-COPY packages/mcp-server/package.json ./packages/mcp-server/
-COPY packages/cli/package.json ./packages/cli/
+# Copiar arquivos de dependencias
+COPY package*.json ./
 
-# Install all deps (including devDependencies for build)
-RUN pnpm install --frozen-lockfile
+# Instalar dependencias
+RUN npm ci --only=production && \
+    npm cache clean --force
 
-# Copy source code
-COPY packages/core/src ./packages/core/src
-COPY packages/core/tsconfig.json ./packages/core/
-COPY packages/mcp-server/src ./packages/mcp-server/src
-COPY packages/mcp-server/tsconfig.json ./packages/mcp-server/
-COPY packages/cli/src ./packages/cli/src
-COPY packages/cli/tsconfig.json ./packages/cli/
+# Copiar codigo-fonte
+COPY . .
 
-# Build core first, then dependents (respecting workspace dependencies)
-RUN pnpm build:core && \
-    pnpm build:mcp && \
-    pnpm build:cli
+# Build da aplicacao
+RUN npm run build || true
 
-# Write version file
-RUN echo "{\"version\":\"${THINKCOFFEE_VERSION}\",\"buildDate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
-    > /app/packages/mcp-server/dist/version.json
+# Stage 2: Runtime
+FROM node:20-alpine
 
-# --- Stage 2: Production ------------------------------------------------------
-FROM node:20-alpine AS production
-
-ARG THINKCOFFEE_VERSION=dev
-
-# OCI labels
-LABEL org.opencontainers.image.title="ThinkCoffee MCP Server"
-LABEL org.opencontainers.image.description="AI Context Management Platform - MCP Server (V5 Agent Safety Net)"
-LABEL org.opencontainers.image.source="https://github.com/thinkcoffee/thinkcoffee"
-LABEL org.opencontainers.image.vendor="ThinkCoffee Team"
-LABEL org.opencontainers.image.version="${THINKCOFFEE_VERSION}"
-
-# curl for HTTP health checks, tini for signal handling
-RUN apk add --no-cache curl tini
-
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
-# Security: non-root user
-RUN addgroup -S thinkcoffee && adduser -S thinkcoffee -G thinkcoffee
-
-WORKDIR /app
-
-# Copy workspace files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/core/package.json ./packages/core/
-COPY packages/mcp-server/package.json ./packages/mcp-server/
-
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod && \
-    pnpm store prune
-
-# Copy built artifacts from builder
-COPY --from=builder /app/packages/core/dist ./packages/core/dist
-COPY --from=builder /app/packages/mcp-server/dist ./packages/mcp-server/dist
-
-# Data directory structure:
-#   /data/data.sqlite        - SQLite database
-#   /data/snapshots/          - File snapshots for rollback
-#   /data/logs/               - Action logs JSONL
-RUN mkdir -p /data /data/snapshots /data/logs && \
-    chown -R thinkcoffee:thinkcoffee /data /app && \
-    chmod 750 /data /data/snapshots /data/logs
-
-USER thinkcoffee
-
-# ---- Environment defaults ----
+# Variaveis de ambiente
 ENV NODE_ENV=production \
-    THINKCOFFEE_DB_PATH=/data/data.sqlite \
-    THINKCOFFEE_DATA_DIR=/data \
-    THINKCOFFEE_SNAPSHOT_DIR=/data/snapshots \
-    THINKCOFFEE_LOG_DIR=/data/logs \
-    MCP_PORT=3000 \
-    LOG_LEVEL=info \
-    # Safety Net defaults \
-    THINKCOFFEE_SNAPSHOT_RETENTION_DAYS=7 \
-    THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB=50 \
-    THINKCOFFEE_DRY_RUN_DEFAULT=false \
-    THINKCOFFEE_DIFF_PREVIEW_MODE=existing-only \
-    THINKCOFFEE_COMMAND_CONFIRMATION=destructive-only \
-    # Node memory limit (256MB default) \
-    NODE_OPTIONS="--max-old-space-size=256"
+    APP_PORT=3000 \
+    LOG_LEVEL=info
 
+WORKDIR /app
+
+# Instalar curl para health checks
+RUN apk add --no-cache curl
+
+# Copiar node_modules do builder
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copiar codigo compilado e arquivos necessarios
+COPY --from=builder /app/dist ./dist 2>/dev/null || true
+COPY --from=builder /app/public ./public 2>/dev/null || true
+COPY package*.json ./
+
+# Criar usuario nao-root para seguranca
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+USER nodejs
+
+# Expose port
 EXPOSE 3000
 
-VOLUME ["/data"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
 
-# Health check via HTTP (fallback to filesystem check)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD curl -sf http://localhost:3000/health > /dev/null 2>&1 || \
-      node -e " \
-        const fs = require('fs'); \
-        try { \
-          fs.accessSync('/data', fs.constants.W_OK); \
-          fs.accessSync('/data/snapshots', fs.constants.W_OK); \
-          fs.accessSync('/data/logs', fs.constants.W_OK); \
-          process.exit(0); \
-        } catch(e) { process.exit(1); } \
-      "
-
-# Use tini for proper signal handling (graceful shutdown)
-ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "packages/mcp-server/dist/index.js"]
+# Start application
+CMD ["node", "dist/main.js"]
