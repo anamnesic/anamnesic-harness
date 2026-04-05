@@ -30,6 +30,29 @@ export class ProjectService {
     });
   }
 
+  /** Find a project linked to a workspace directory */
+  async findByWorkspace(workspacePath: string) {
+    const all = await this.list();
+    // metadata is simple-json, stored as string — compare workspace field
+    return all.find(p => {
+      if (!p.metadata) return false;
+      const ws = (p.metadata as any).workspace;
+      return ws && this._normalizePath(ws) === this._normalizePath(workspacePath);
+    }) || null;
+  }
+
+  /** Link a project to a workspace directory */
+  async linkWorkspace(id: string, workspacePath: string) {
+    const project = await this.get(id);
+    if (!project) throw new Error(`Project not found: ${id}`);
+    project.metadata = { ...(project.metadata || {}), workspace: workspacePath };
+    return this.repo.save(project);
+  }
+
+  private _normalizePath(p: string): string {
+    return p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  }
+
   async create(input: CreateProjectInput) {
     const project = this.repo.create(input);
     return this.repo.save(project);

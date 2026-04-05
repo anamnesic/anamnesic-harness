@@ -31,6 +31,10 @@
           "name": "Projects"
         },
         {
+          "id": "thinkcoffee.pipeline",
+          "name": "Pipeline"
+        },
+        {
           "id": "thinkcoffee.context",
           "name": "Context"
         },
@@ -88,6 +92,30 @@
       {
         "command": "thinkcoffee.openChat",
         "title": "ThinkCoffee: Open AI Chat"
+      },
+      {
+        "command": "thinkcoffee.createPipeline",
+        "title": "ThinkCoffee: Create Pipeline"
+      },
+      {
+        "command": "thinkcoffee.approvePhase",
+        "title": "ThinkCoffee: Approve Phase"
+      },
+      {
+        "command": "thinkcoffee.rejectPhase",
+        "title": "ThinkCoffee: Reject Phase"
+      },
+      {
+        "command": "thinkcoffee.viewTaskOutput",
+        "title": "ThinkCoffee: View Task Output"
+      },
+      {
+        "command": "thinkcoffee.refreshPipeline",
+        "title": "ThinkCoffee: Refresh Pipeline"
+      },
+      {
+        "command": "thinkcoffee.openOtherProject",
+        "title": "ThinkCoffee: Open Other Project"
       }
     ],
     "menus": {
@@ -119,6 +147,33 @@
           "command": "thinkcoffee.createProject",
           "when": "view == thinkcoffee.projects",
           "group": "navigation"
+        },
+        {
+          "command": "thinkcoffee.openOtherProject",
+          "when": "view == thinkcoffee.projects",
+          "group": "navigation"
+        },
+        {
+          "command": "thinkcoffee.createPipeline",
+          "when": "view == thinkcoffee.pipeline",
+          "group": "navigation"
+        },
+        {
+          "command": "thinkcoffee.refreshPipeline",
+          "when": "view == thinkcoffee.pipeline",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "thinkcoffee.approvePhase",
+          "when": "viewItem == phase-awaiting",
+          "group": "inline"
+        },
+        {
+          "command": "thinkcoffee.rejectPhase",
+          "when": "viewItem == phase-awaiting",
+          "group": "inline"
         }
       ]
     }

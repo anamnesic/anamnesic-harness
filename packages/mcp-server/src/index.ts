@@ -11,8 +11,10 @@ import {
   exportProject,
   ExportFormat,
   ChatService,
+  PipelineService,
+  AGENT_META,
 } from '@thinkcoffee/core';
-import type { ChatMessage } from '@thinkcoffee/core';
+import type { ChatMessage, AgentRole } from '@thinkcoffee/core';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -110,10 +112,24 @@ async function main() {
   const contexts = new ContextService(db);
   const decisions = new DecisionService(db);
   const chat = new ChatService('default');
+  const pipelines = new PipelineService();
+
+  // ─── Helpers ───────────────────────────────────────────────
+
+  /** Resolve project by ID or name */
+  async function findProject(idOrName: string) {
+    let project = await projects.get(idOrName);
+    if (!project) project = await projects.findByName(idOrName);
+    return project;
+  }
+
+  function notFound(entity: string, id: string) {
+    return { content: [{ type: 'text' as const, text: `${entity} not found: ${id}` }] };
+  }
 
   const server = new McpServer({
     name: 'thinkcoffee',
-    version: '1.1.0',
+    version: '2.0.0',
   });
 
   // ─── Resources ───────────────────────────────────────────────
@@ -744,6 +760,282 @@ async function main() {
         if (replyTo) chat.markRead(replyTo);
         return { content: [{ type: 'text', text: `Command failed:\n${errOutput}` }] };
       }
+    }
+  );
+
+  // ─── Pipeline / Agent Tools ─────────────────────────────────
+
+  const agentRoles = ['product-manager', 'architect', 'backend', 'frontend', 'devops', 'qa', 'code-review'] as const;
+
+  server.tool(
+    'pipeline_create',
+    'Create a new development pipeline from an objective. This starts the PM agent phase automatically.',
+    {
+      projectId: z.string().describe('Project ID'),
+      objective: z.string().describe('The development goal, e.g. "criar sistema de login com OAuth"'),
+    },
+    async ({ projectId, objective }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const ws = getWorkspaceRoot() || process.cwd();
+      const p = pipelines.create(project.id, objective, ws);
+      chat.send({
+        sender: 'system',
+        senderLabel: 'Pipeline',
+        content: `New pipeline created: **${objective}**\n\nPhase 1/5: **Planning** (Product Manager)\nPipeline ID: \`${p.id}\``,
+        type: 'info',
+      });
+      return { content: [{ type: 'text', text: `Pipeline created: ${p.id}\n\nObjective: ${objective}\nStatus: ${p.status}\nCurrent phase: ${p.phases[0].name}\n\nThe Product Manager agent should now start working on requirements.` }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_status',
+    'Get the current status of a pipeline including all phases and tasks.',
+    {
+      projectId: z.string().describe('Project ID'),
+      pipelineId: z.string().optional().describe('Pipeline ID (optional — uses active pipeline if omitted)'),
+    },
+    async ({ projectId, pipelineId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const p = pipelineId
+        ? pipelines.get(project.id, pipelineId)
+        : pipelines.getActive(project.id);
+      if (!p) return { content: [{ type: 'text', text: 'No active pipeline found. Create one with pipeline_create.' }] };
+      return { content: [{ type: 'text', text: pipelines.getStatusSummary(project.id, p.id) }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_list',
+    'List all pipelines for a project.',
+    { projectId: z.string().describe('Project ID') },
+    async ({ projectId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const list = pipelines.list(project.id);
+      if (!list.length) return { content: [{ type: 'text', text: 'No pipelines yet.' }] };
+      const lines = list.map(p => `- [${p.status}] ${p.objective} (${p.id})`).join('\n');
+      return { content: [{ type: 'text', text: `Pipelines (${list.length}):\n\n${lines}` }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_my_tasks',
+    'Get your current tasks in the active pipeline. Use this to check what work you need to do.',
+    {
+      projectId: z.string().describe('Project ID'),
+      agent: z.enum(agentRoles).describe('Your agent role'),
+      pipelineId: z.string().optional().describe('Pipeline ID (optional)'),
+    },
+    async ({ projectId, agent, pipelineId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const p = pipelineId
+        ? pipelines.get(project.id, pipelineId)
+        : pipelines.getActive(project.id);
+      if (!p) return { content: [{ type: 'text', text: 'No active pipeline.' }] };
+
+      const tasks = pipelines.getAgentTasks(project.id, p.id, agent as AgentRole);
+      if (!tasks.length) return { content: [{ type: 'text', text: `No tasks for ${AGENT_META[agent as AgentRole].label} in the current phase (${p.phases[p.currentPhase].name}).` }] };
+
+      const lines = tasks.map(t => {
+        let line = `- [${t.status}] ${t.title} (${t.id})\n  ${t.description.split('\n')[0]}`;
+        if (t.output) line += `\n  Output: ${t.output.substring(0, 150)}...`;
+        return line;
+      }).join('\n');
+
+      return { content: [{ type: 'text', text: `Your tasks in phase "${p.phases[p.currentPhase].name}":\n\n${lines}` }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_start_task',
+    'Start working on a task. Call this before you begin your work.',
+    {
+      projectId: z.string().describe('Project ID'),
+      taskId: z.string().describe('Task ID to start'),
+      pipelineId: z.string().optional().describe('Pipeline ID (optional)'),
+    },
+    async ({ projectId, taskId, pipelineId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const pid = pipelineId || pipelines.getActive(project.id)?.id;
+      if (!pid) return { content: [{ type: 'text', text: 'No active pipeline.' }] };
+
+      const p = pipelines.startTask(project.id, pid, taskId);
+      if (!p) return notFound('Pipeline', pid);
+
+      const task = p.phases.flatMap(ph => ph.tasks).find(t => t.id === taskId);
+      if (task) {
+        chat.send({
+          sender: 'system',
+          senderLabel: 'Pipeline',
+          content: `**${AGENT_META[task.agent].label}** started: ${task.title}`,
+          type: 'info',
+        });
+      }
+      return { content: [{ type: 'text', text: `Task started: ${taskId}` }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_complete_task',
+    'Complete a task with your output/deliverables. Include a summary of what you produced and any files created/modified.',
+    {
+      projectId: z.string().describe('Project ID'),
+      taskId: z.string().describe('Task ID to complete'),
+      output: z.string().describe('Summary of what was produced (markdown supported)'),
+      artifacts: z.array(z.string()).optional().describe('List of file paths created or modified'),
+      pipelineId: z.string().optional().describe('Pipeline ID (optional)'),
+    },
+    async ({ projectId, taskId, output, artifacts, pipelineId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const pid = pipelineId || pipelines.getActive(project.id)?.id;
+      if (!pid) return { content: [{ type: 'text', text: 'No active pipeline.' }] };
+
+      const p = pipelines.completeTask(project.id, pid, taskId, output, artifacts);
+      if (!p) return notFound('Pipeline', pid);
+
+      const task = p.phases.flatMap(ph => ph.tasks).find(t => t.id === taskId);
+      const phase = p.phases[p.currentPhase];
+
+      if (task) {
+        chat.send({
+          sender: 'system',
+          senderLabel: 'Pipeline',
+          content: `**${AGENT_META[task.agent].label}** completed: ${task.title}\n\n${output.substring(0, 300)}${output.length > 300 ? '...' : ''}`,
+          type: 'response',
+        });
+      }
+
+      if (phase?.status === 'awaiting-approval') {
+        chat.send({
+          sender: 'system',
+          senderLabel: 'Pipeline',
+          content: `Phase **${phase.name}** is complete and awaiting programmer approval.\n\nUse \`pipeline_approve\` or the VS Code extension to review and approve.`,
+          type: 'request',
+        });
+      }
+
+      return { content: [{ type: 'text', text: `Task completed. Phase status: ${phase?.status || 'unknown'}` }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_fail_task',
+    'Report that a task has failed. Include the reason and enough context for the issue to be resolved.',
+    {
+      projectId: z.string().describe('Project ID'),
+      taskId: z.string().describe('Task ID'),
+      reason: z.string().describe('Why the task failed'),
+      pipelineId: z.string().optional().describe('Pipeline ID (optional)'),
+    },
+    async ({ projectId, taskId, reason, pipelineId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const pid = pipelineId || pipelines.getActive(project.id)?.id;
+      if (!pid) return { content: [{ type: 'text', text: 'No active pipeline.' }] };
+
+      const p = pipelines.failTask(project.id, pid, taskId, reason);
+      chat.send({
+        sender: 'system',
+        senderLabel: 'Pipeline',
+        content: `Task failed: ${reason}`,
+        type: 'error',
+      });
+      return { content: [{ type: 'text', text: `Task marked as failed. Pipeline status: ${p?.status}` }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_approve',
+    'Approve the current phase and advance to the next one. Only the programmer should do this after reviewing the deliverables.',
+    {
+      projectId: z.string().describe('Project ID'),
+      pipelineId: z.string().optional().describe('Pipeline ID (optional)'),
+    },
+    async ({ projectId, pipelineId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const pid = pipelineId || pipelines.getActive(project.id)?.id;
+      if (!pid) return { content: [{ type: 'text', text: 'No active pipeline.' }] };
+
+      const p = pipelines.approvePhase(project.id, pid);
+      if (!p) return notFound('Pipeline', pid);
+
+      const nextPhase = p.phases[p.currentPhase];
+      const msg = p.status === 'completed'
+        ? 'Pipeline completed! All phases approved.'
+        : `Phase approved. Next: **${nextPhase.name}** (${nextPhase.agents.map(a => AGENT_META[a].label).join(', ')})`;
+
+      chat.send({
+        sender: 'system',
+        senderLabel: 'Pipeline',
+        content: msg,
+        type: 'info',
+      });
+
+      return { content: [{ type: 'text', text: msg }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_reject',
+    'Reject the current phase with feedback. Tasks will be reset so agents can redo them.',
+    {
+      projectId: z.string().describe('Project ID'),
+      feedback: z.string().describe('What needs to be changed or improved'),
+      pipelineId: z.string().optional().describe('Pipeline ID (optional)'),
+    },
+    async ({ projectId, feedback, pipelineId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const pid = pipelineId || pipelines.getActive(project.id)?.id;
+      if (!pid) return { content: [{ type: 'text', text: 'No active pipeline.' }] };
+
+      const p = pipelines.rejectPhase(project.id, pid, feedback);
+      if (!p) return notFound('Pipeline', pid);
+
+      chat.send({
+        sender: 'programmer',
+        senderLabel: 'You',
+        content: `Phase rejected. Feedback:\n\n${feedback}`,
+        type: 'request',
+      });
+
+      return { content: [{ type: 'text', text: `Phase rejected and reset. Agents should address the feedback and retry.` }] };
+    }
+  );
+
+  server.tool(
+    'pipeline_get_phase_output',
+    'Get the full output from all completed tasks in a specific phase. Useful for agents that need to read previous phase deliverables.',
+    {
+      projectId: z.string().describe('Project ID'),
+      phaseIndex: z.number().min(0).max(4).describe('Phase index (0=Planning, 1=Architecture, 2=Implementation, 3=Testing, 4=Code Review)'),
+      pipelineId: z.string().optional().describe('Pipeline ID (optional)'),
+    },
+    async ({ projectId, phaseIndex, pipelineId }) => {
+      const project = await findProject(projectId);
+      if (!project) return notFound('Project', projectId);
+      const pid = pipelineId || pipelines.getActive(project.id)?.id;
+      if (!pid) return { content: [{ type: 'text', text: 'No active pipeline.' }] };
+
+      const p = pipelines.get(project.id, pid);
+      if (!p) return notFound('Pipeline', pid);
+
+      const phase = p.phases[phaseIndex];
+      if (!phase) return { content: [{ type: 'text', text: `Phase ${phaseIndex} not found.` }] };
+
+      const outputs = phase.tasks
+        .filter(t => t.output)
+        .map(t => `## ${AGENT_META[t.agent].label}: ${t.title}\n\n${t.output}\n\nArtifacts: ${(t.artifacts || []).join(', ') || 'none'}`)
+        .join('\n\n---\n\n');
+
+      return { content: [{ type: 'text', text: outputs || `Phase "${phase.name}" has no output yet.` }] };
     }
   );
 

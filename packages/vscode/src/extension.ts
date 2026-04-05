@@ -8,8 +8,10 @@ import {
   getExportFilename,
   ExportFormat,
   ChatService,
+  PipelineService,
+  AGENT_META,
 } from '@thinkcoffee/core';
-import type { Project, ContextEntry, Decision } from '@thinkcoffee/core';
+import type { Project, ContextEntry, Decision, Pipeline, PipelinePhase, AgentTask, AgentRole } from '@thinkcoffee/core';
 import { ChatPanel } from './chat/ChatPanel';
 import fs from 'fs';
 import path from 'path';
@@ -17,8 +19,23 @@ import path from 'path';
 let projectService: ProjectService;
 let contextService: ContextService;
 let decisionService: DecisionService;
+let pipelineService: PipelineService;
+
+/** The project bound to the current workspace (auto-created on activate) */
+let activeProject: Project | null = null;
 
 // ─── Helpers ─────────────────────────────────────────────────
+
+/** Get the workspace-bound project. Falls back to pickProject if no workspace. */
+async function getProject(): Promise<Project | undefined> {
+  if (activeProject) {
+    // Refresh to get latest relations
+    const fresh = await projectService.get(activeProject.id);
+    if (fresh) return fresh;
+  }
+  return pickProject();
+}
+
 async function pickProject(): Promise<Project | undefined> {
   const projects = await projectService.list();
   if (!projects.length) {
@@ -48,10 +65,41 @@ export async function activate(context: vscode.ExtensionContext) {
   projectService = new ProjectService(db);
   contextService = new ContextService(db);
   decisionService = new DecisionService(db);
+  pipelineService = new PipelineService();
+
+  // ─── Auto-bind project to workspace ────────────────────────
+  const wsRoot = getWorkspaceRoot();
+  if (wsRoot) {
+    let project = await projectService.findByWorkspace(wsRoot);
+    if (!project) {
+      // Auto-create a project for this workspace
+      const name = path.basename(wsRoot);
+      project = await projectService.create({ name, description: `Project for ${name}` });
+      await projectService.linkWorkspace(project.id, wsRoot);
+      project = await projectService.get(project.id) || project;
+    }
+    activeProject = project;
+  }
+
+  // Status bar — show active project
+  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
+  statusBar.command = 'thinkcoffee.openChat';
+  if (activeProject) {
+    statusBar.text = `$(coffee) ${activeProject.name}`;
+    statusBar.tooltip = `ThinkCoffee: ${activeProject.name} (${activeProject.id})`;
+  } else {
+    statusBar.text = '$(coffee) ThinkCoffee';
+    statusBar.tooltip = 'No workspace project';
+  }
+  statusBar.show();
+  context.subscriptions.push(statusBar);
 
   // Tree data providers
   const projectProvider = new ProjectTreeProvider();
   vscode.window.registerTreeDataProvider('thinkcoffee.projects', projectProvider);
+
+  const pipelineProvider = new PipelineTreeProvider();
+  vscode.window.registerTreeDataProvider('thinkcoffee.pipeline', pipelineProvider);
 
   // Commands
   context.subscriptions.push(
@@ -65,13 +113,18 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!name) return;
       const description = await vscode.window.showInputBox({ prompt: 'Project description (optional)' });
       const project = await projectService.create({ name, description: description || undefined });
-      vscode.window.showInformationMessage(`Project created: ${project.name} (${project.id})`);
+      // Link to current workspace
+      if (root) {
+        await projectService.linkWorkspace(project.id, root);
+        activeProject = await projectService.get(project.id) || project;
+      }
+      vscode.window.showInformationMessage(`Project created: ${project.name} (linked to workspace)`);
       projectProvider.refresh();
     }),
 
     // ─── Add Context ─────────────────────────────────────────
     vscode.commands.registerCommand('thinkcoffee.addContext', async () => {
-      const project = await pickProject();
+      const project = await getProject();
       if (!project) return;
 
       const key = await vscode.window.showInputBox({ prompt: 'Context key (short label)' });
@@ -99,7 +152,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const project = await pickProject();
+      const project = await getProject();
       if (!project) return;
 
       const doc = await vscode.workspace.openTextDocument(fileUri);
@@ -133,7 +186,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const project = await pickProject();
+      const project = await getProject();
       if (!project) return;
 
       const selection = editor.document.getText(editor.selection);
@@ -168,7 +221,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const project = await pickProject();
+      const project = await getProject();
       if (!project) return;
 
       const IGNORE = new Set(['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', 'coverage', '.cache', 'target']);
@@ -212,7 +265,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // ─── Add Decision ────────────────────────────────────────
     vscode.commands.registerCommand('thinkcoffee.addDecision', async () => {
-      const project = await pickProject();
+      const project = await getProject();
       if (!project) return;
 
       const title = await vscode.window.showInputBox({ prompt: 'Decision title' });
@@ -228,7 +281,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // ─── Sync Context ────────────────────────────────────────
     vscode.commands.registerCommand('thinkcoffee.syncContext', async () => {
-      const project = await pickProject();
+      const project = await getProject();
       if (!project) return;
 
       const workspaceRoot = getWorkspaceRoot();
@@ -254,7 +307,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // ─── Export Context ──────────────────────────────────────
     vscode.commands.registerCommand('thinkcoffee.exportContext', async () => {
-      const project = await pickProject();
+      const project = await getProject();
       if (!project) return;
 
       const format = await vscode.window.showQuickPick(
@@ -297,6 +350,119 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('thinkcoffee.viewContext', (item?: ContextTreeItem) => {
       if (!item?.entry) return;
       ContextViewerPanel.show(context.extensionUri, item.entry);
+    }),
+
+    // ─── Pipeline: Create ────────────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.createPipeline', async () => {
+      const project = await getProject();
+      if (!project) return;
+
+      const objective = await vscode.window.showInputBox({
+        prompt: 'What should be built? (objective)',
+        placeHolder: 'e.g. criar sistema de login com OAuth',
+      });
+      if (!objective) return;
+
+      const ws = getWorkspaceRoot() || '';
+      const p = pipelineService.create(project.id, objective, ws);
+      vscode.window.showInformationMessage(`Pipeline created: ${p.objective}`);
+      pipelineProvider.refresh();
+    }),
+
+    // ─── Pipeline: Approve Phase ─────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.approvePhase', async (item?: PipelinePhaseItem) => {
+      let projectId: string | undefined;
+      let pipelineId: string | undefined;
+
+      if (item) {
+        projectId = item.pipeline.projectId;
+        pipelineId = item.pipeline.id;
+      } else {
+        const project = await getProject();
+        if (!project) return;
+        projectId = project.id;
+        const active = pipelineService.getActive(projectId);
+        if (!active) { vscode.window.showWarningMessage('No active pipeline.'); return; }
+        pipelineId = active.id;
+      }
+
+      const p = pipelineService.approvePhase(projectId, pipelineId);
+      if (!p) return;
+
+      const nextPhase = p.phases[p.currentPhase];
+      const msg = p.status === 'completed'
+        ? 'Pipeline completed! All phases done.'
+        : `Approved! Next: ${nextPhase.name} (${nextPhase.agents.map(a => AGENT_META[a].label).join(', ')})`;
+      vscode.window.showInformationMessage(msg);
+      pipelineProvider.refresh();
+    }),
+
+    // ─── Pipeline: Reject Phase ──────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.rejectPhase', async (item?: PipelinePhaseItem) => {
+      let projectId: string | undefined;
+      let pipelineId: string | undefined;
+
+      if (item) {
+        projectId = item.pipeline.projectId;
+        pipelineId = item.pipeline.id;
+      } else {
+        const project = await getProject();
+        if (!project) return;
+        projectId = project.id;
+        const active = pipelineService.getActive(projectId);
+        if (!active) { vscode.window.showWarningMessage('No active pipeline.'); return; }
+        pipelineId = active.id;
+      }
+
+      const feedback = await vscode.window.showInputBox({
+        prompt: 'Feedback for the agents (what needs to change)',
+        placeHolder: 'Explain what needs improvement...',
+      });
+      if (!feedback) return;
+
+      pipelineService.rejectPhase(projectId, pipelineId, feedback);
+      vscode.window.showInformationMessage('Phase rejected. Agents will redo with your feedback.');
+      pipelineProvider.refresh();
+    }),
+
+    // ─── Pipeline: View Task Output ──────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.viewTaskOutput', (item?: PipelineTaskItem) => {
+      if (!item?.task) return;
+      TaskOutputPanel.show(context.extensionUri, item.task, item.pipeline);
+    }),
+
+    // ─── Pipeline: Refresh ───────────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.refreshPipeline', () => pipelineProvider.refresh()),
+
+    // ─── Open Another Project in New Window ──────────────────
+    vscode.commands.registerCommand('thinkcoffee.openOtherProject', async () => {
+      const all = await projectService.list();
+      const others = all.filter(p => !activeProject || p.id !== activeProject.id);
+      if (!others.length) {
+        vscode.window.showInformationMessage('No other projects. Each workspace creates its own project.');
+        return;
+      }
+
+      const selected = await vscode.window.showQuickPick(
+        others.map(p => {
+          const ws = (p.metadata as any)?.workspace;
+          return {
+            label: p.name,
+            description: ws ? path.basename(ws) : 'no workspace',
+            detail: ws || 'Not linked to a folder',
+            workspace: ws as string | undefined,
+          };
+        }),
+        { placeHolder: 'Select a project to open in a new window' }
+      );
+      if (!selected) return;
+
+      if (selected.workspace && fs.existsSync(selected.workspace)) {
+        const uri = vscode.Uri.file(selected.workspace);
+        await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+      } else {
+        vscode.window.showWarningMessage(`Project "${selected.label}" has no linked workspace folder.`);
+      }
     })
   );
 }
@@ -305,7 +471,7 @@ export function deactivate() {}
 
 // --- Tree Data Provider ---
 
-type TreeNode = ProjectTreeItem | SectionTreeItem | ContextTreeItem | DecisionTreeItem;
+type TreeNode = SectionTreeItem | ContextTreeItem | DecisionTreeItem;
 
 class ProjectTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private _onDidChange = new vscode.EventEmitter<TreeNode | undefined>();
@@ -317,17 +483,18 @@ class ProjectTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
   async getChildren(element?: TreeNode): Promise<TreeNode[]> {
     if (!element) {
-      const projects = await projectService.list();
-      return projects.map(p => new ProjectTreeItem(p));
-    }
+      // Show only the workspace-bound project's sections directly
+      const project = activeProject
+        ? await projectService.get(activeProject.id)
+        : null;
+      if (!project) return [];
 
-    if (element instanceof ProjectTreeItem) {
-      const items: SectionTreeItem[] = [];
-      const ctxCount = element.project.contextEntries?.length || 0;
-      const decCount = element.project.decisions?.length || 0;
-      items.push(new SectionTreeItem('context', `Context (${ctxCount})`, element.project));
-      items.push(new SectionTreeItem('decisions', `Decisions (${decCount})`, element.project));
-      return items;
+      const ctxCount = project.contextEntries?.length || 0;
+      const decCount = project.decisions?.length || 0;
+      return [
+        new SectionTreeItem('context', `Context (${ctxCount})`, project),
+        new SectionTreeItem('decisions', `Decisions (${decCount})`, project),
+      ];
     }
 
     if (element instanceof SectionTreeItem) {
@@ -343,15 +510,6 @@ class ProjectTreeProvider implements vscode.TreeDataProvider<TreeNode> {
     }
 
     return [];
-  }
-}
-
-class ProjectTreeItem extends vscode.TreeItem {
-  constructor(public readonly project: Project) {
-    super(project.name, vscode.TreeItemCollapsibleState.Collapsed);
-    this.description = project.status;
-    this.tooltip = project.description || project.name;
-    this.contextValue = 'project';
   }
 }
 
@@ -610,6 +768,273 @@ class ContextViewerPanel {
   <div class="content">${body}</div>
 
   <div class="id-line">ID: ${esc(entry.id)}</div>
+</body>
+</html>`;
+  }
+}
+
+// ─── Pipeline Tree Provider ──────────────────────────────────
+
+type PipelineNode = PipelineItem | PipelinePhaseItem | PipelineTaskItem;
+
+class PipelineTreeProvider implements vscode.TreeDataProvider<PipelineNode> {
+  private _onDidChange = new vscode.EventEmitter<PipelineNode | undefined>();
+  readonly onDidChangeTreeData = this._onDidChange.event;
+
+  refresh() { this._onDidChange.fire(undefined); }
+
+  async getTreeItem(element: PipelineNode) { return element; }
+
+  async getChildren(element?: PipelineNode): Promise<PipelineNode[]> {
+    if (!element) {
+      // Root: list all active pipelines across projects
+      const projects = await projectService.list();
+      const items: PipelineItem[] = [];
+      for (const proj of projects) {
+        const list = pipelineService.list(proj.id);
+        for (const p of list) {
+          items.push(new PipelineItem(p, proj.name));
+        }
+      }
+      if (!items.length) return [];
+      return items;
+    }
+
+    if (element instanceof PipelineItem) {
+      return element.pipeline.phases.map(ph => new PipelinePhaseItem(ph, element.pipeline));
+    }
+
+    if (element instanceof PipelinePhaseItem) {
+      return element.phase.tasks.map(t => new PipelineTaskItem(t, element.pipeline));
+    }
+
+    return [];
+  }
+}
+
+const PHASE_STATUS_ICONS: Record<string, string> = {
+  'pending': '$(circle-outline)',
+  'in-progress': '$(loading~spin)',
+  'awaiting-approval': '$(bell)',
+  'approved': '$(check)',
+  'completed': '$(check-all)',
+  'failed': '$(error)',
+};
+
+const TASK_STATUS_ICONS: Record<string, string> = {
+  'pending': '$(circle-outline)',
+  'in-progress': '$(loading~spin)',
+  'completed': '$(check)',
+  'failed': '$(error)',
+  'blocked': '$(lock)',
+};
+
+class PipelineItem extends vscode.TreeItem {
+  constructor(public readonly pipeline: Pipeline, projectName: string) {
+    super(pipeline.objective, vscode.TreeItemCollapsibleState.Expanded);
+    this.description = `${projectName} [${pipeline.status}]`;
+    this.tooltip = `Objective: ${pipeline.objective}\nStatus: ${pipeline.status}\nPhase: ${pipeline.phases[pipeline.currentPhase]?.name || 'done'}`;
+    this.contextValue = pipeline.status === 'completed' ? 'pipeline-done' : 'pipeline-active';
+    this.iconPath = pipeline.status === 'completed'
+      ? new vscode.ThemeIcon('check-all', new vscode.ThemeColor('charts.green'))
+      : new vscode.ThemeIcon('rocket', new vscode.ThemeColor('charts.blue'));
+  }
+}
+
+class PipelinePhaseItem extends vscode.TreeItem {
+  constructor(public readonly phase: PipelinePhase, public readonly pipeline: Pipeline) {
+    super(
+      `${phase.order + 1}. ${phase.name}`,
+      phase.tasks.length ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
+    );
+
+    const agentNames = phase.agents.map(a => AGENT_META[a].label).join(', ');
+    this.description = `[${phase.status}] ${agentNames}`;
+    this.tooltip = `${phase.name}\nAgents: ${agentNames}\nParallel: ${phase.parallel}\nStatus: ${phase.status}`;
+
+    // Color-coded icons
+    const colorMap: Record<string, string> = {
+      'pending': 'disabledForeground',
+      'in-progress': 'charts.blue',
+      'awaiting-approval': 'charts.yellow',
+      'approved': 'charts.green',
+      'completed': 'charts.green',
+      'failed': 'charts.red',
+    };
+    const iconMap: Record<string, string> = {
+      'pending': 'circle-outline',
+      'in-progress': 'sync~spin',
+      'awaiting-approval': 'bell',
+      'approved': 'check',
+      'completed': 'check-all',
+      'failed': 'error',
+    };
+
+    this.iconPath = new vscode.ThemeIcon(
+      iconMap[phase.status] || 'circle-outline',
+      new vscode.ThemeColor(colorMap[phase.status] || 'foreground')
+    );
+
+    this.contextValue = phase.status === 'awaiting-approval' ? 'phase-awaiting' : `phase-${phase.status}`;
+  }
+}
+
+class PipelineTaskItem extends vscode.TreeItem {
+  constructor(public readonly task: AgentTask, public readonly pipeline: Pipeline) {
+    super(
+      `${AGENT_META[task.agent].label}: ${task.title}`,
+      vscode.TreeItemCollapsibleState.None
+    );
+
+    this.description = `[${task.status}]`;
+    this.tooltip = `${task.description}\n\nStatus: ${task.status}${task.output ? '\n\nOutput:\n' + task.output.substring(0, 500) : ''}`;
+
+    const colorMap: Record<string, string> = {
+      'pending': 'disabledForeground',
+      'in-progress': 'charts.blue',
+      'completed': 'charts.green',
+      'failed': 'charts.red',
+      'blocked': 'charts.orange',
+    };
+    const iconMap: Record<string, string> = {
+      'pending': 'circle-outline',
+      'in-progress': 'sync~spin',
+      'completed': 'check',
+      'failed': 'error',
+      'blocked': 'lock',
+    };
+
+    this.iconPath = new vscode.ThemeIcon(
+      iconMap[task.status] || 'circle-outline',
+      new vscode.ThemeColor(colorMap[task.status] || 'foreground')
+    );
+
+    this.contextValue = task.output ? 'task-with-output' : 'task';
+    if (task.output) {
+      this.command = {
+        command: 'thinkcoffee.viewTaskOutput',
+        title: 'View Output',
+        arguments: [this],
+      };
+    }
+  }
+}
+
+// ─── Task Output Panel ───────────────────────────────────────
+
+class TaskOutputPanel {
+  private static panels = new Map<string, vscode.WebviewPanel>();
+
+  static show(extensionUri: vscode.Uri, task: AgentTask, pipeline: Pipeline) {
+    const existing = this.panels.get(task.id);
+    if (existing) {
+      existing.reveal();
+      existing.webview.html = this._getHtml(task, pipeline);
+      return;
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      'thinkcoffeeTask',
+      `${AGENT_META[task.agent].label}: ${task.title}`,
+      vscode.ViewColumn.One,
+      { enableScripts: false }
+    );
+
+    panel.webview.html = this._getHtml(task, pipeline);
+    this.panels.set(task.id, panel);
+    panel.onDidDispose(() => this.panels.delete(task.id));
+  }
+
+  private static _getHtml(task: AgentTask, pipeline: Pipeline): string {
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    let body = esc(task.output || 'No output yet.');
+    body = body.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) =>
+      `<pre class="code-block"><code>${code.trimEnd()}</code></pre>`
+    );
+    body = body.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    body = body.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    body = body.replace(/\n/g, '<br>');
+    body = body.replace(/<pre class="code-block"><code>([\s\S]*?)<\/code><\/pre>/g, (_m, code) =>
+      `<pre class="code-block"><code>${(code as string).replace(/<br>/g, '\n')}</code></pre>`
+    );
+
+    const artifacts = (task.artifacts || []).map(a => `<li>${esc(a)}</li>`).join('');
+    const artifactsHtml = artifacts ? `<h3>Artifacts</h3><ul>${artifacts}</ul>` : '';
+
+    const statusColors: Record<string, string> = {
+      'pending': '#6b7280',
+      'in-progress': '#3b82f6',
+      'completed': '#22c55e',
+      'failed': '#ef4444',
+      'blocked': '#f59e0b',
+    };
+
+    return /*html*/`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    padding: 20px 28px;
+    line-height: 1.6;
+  }
+  .header { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--vscode-panel-border); }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .subtitle { font-size: 12px; color: var(--vscode-descriptionForeground); }
+
+  .meta { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; padding: 10px 14px; background: var(--vscode-input-background); border-radius: 6px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { font-size: 10px; text-transform: uppercase; color: var(--vscode-descriptionForeground); font-weight: 600; }
+  .meta-value { font-size: 13px; }
+
+  .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; color: #fff; }
+
+  h3 { font-size: 14px; margin: 16px 0 8px; }
+  .content { line-height: 1.7; }
+  .code-block { background: var(--vscode-textCodeBlock-background); padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0; font-family: var(--vscode-editor-font-family, monospace); font-size: 12px; }
+  .inline-code { background: var(--vscode-textCodeBlock-background); padding: 1px 5px; border-radius: 3px; font-family: var(--vscode-editor-font-family, monospace); }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; font-family: var(--vscode-editor-font-family, monospace); font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>${esc(AGENT_META[task.agent].label)}: ${esc(task.title)}</h1>
+    <div class="subtitle">${esc(pipeline.objective)}</div>
+  </div>
+
+  <div class="meta">
+    <div class="meta-item">
+      <span class="meta-label">Agent</span>
+      <span class="meta-value">${esc(AGENT_META[task.agent].label)}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Status</span>
+      <span class="status-badge" style="background: ${statusColors[task.status] || '#6b7280'}">${task.status}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Started</span>
+      <span class="meta-value">${task.startedAt ? new Date(task.startedAt).toLocaleString() : 'Not started'}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Completed</span>
+      <span class="meta-value">${task.completedAt ? new Date(task.completedAt).toLocaleString() : '-'}</span>
+    </div>
+  </div>
+
+  <h3>Task Description</h3>
+  <div class="content" style="margin-bottom: 16px;">${esc(task.description).replace(/\n/g, '<br>')}</div>
+
+  <h3>Output</h3>
+  <div class="content">${body}</div>
+
+  ${artifactsHtml}
 </body>
 </html>`;
   }
