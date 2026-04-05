@@ -67,10 +67,19 @@ importers:
 
   packages/vscode:
     dependencies:
+      bindings:
+        specifier: '*'
+        version: 1.5.0
+      file-uri-to-path:
+        specifier: '*'
+        version: 1.0.0
+      sqlite3:
+        specifier: ^5.1.7
+        version: 5.1.7
+    devDependencies:
       '@thinkcoffee/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
       '@types/node':
         specifier: ^20.19.39
         version: 20.19.39

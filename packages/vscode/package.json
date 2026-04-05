@@ -123,13 +123,16 @@
     "build": "node esbuild.js",
     "build:tsc": "tsc",
     "dev": "tsc --watch",
-    "package": "node esbuild.js && vsce package --no-dependencies",
+    "package": "node esbuild.js && vsce package --allow-missing-repository",
     "vscode:prepublish": "node esbuild.js"
   },
   "dependencies": {
-    "@thinkcoffee/core": "workspace:*"
+    "sqlite3": "^5.1.7",
+    "bindings": "*",
+    "file-uri-to-path": "*"
   },
   "devDependencies": {
+    "@thinkcoffee/core": "workspace:*",
     "@types/node": "^20.19.39",
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.7.1",

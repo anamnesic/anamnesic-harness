@@ -21,7 +21,6 @@ const CATEGORIES = ['architecture', 'requirements', 'dependencies', 'standards',
 
 // ─── Workspace sandbox helpers ─────────────────────────────────
 function getWorkspaceRoot(): string | null {
-  // --workspace=<path> arg or THINKCOFFEE_WORKSPACE env
   const argIdx = process.argv.findIndex(a => a.startsWith('--workspace='));
   if (argIdx !== -1) return process.argv[argIdx].split('=')[1];
   if (process.argv.includes('--workspace') && process.argv[process.argv.indexOf('--workspace') + 1]) {
@@ -37,7 +36,6 @@ function requireWorkspace(): string {
   return path.resolve(root);
 }
 
-/** Resolve a relative path within the workspace, preventing path traversal */
 function safePath(workspaceRoot: string, relativePath: string): string {
   const resolved = path.resolve(workspaceRoot, relativePath);
   if (!resolved.startsWith(workspaceRoot + path.sep) && resolved !== workspaceRoot) {
@@ -62,6 +60,50 @@ const IGNORE_DIRS = new Set([
   'target', 'bin', 'obj', '.gradle',
 ]);
 
+// ─── Project templates ────────────────────────────────────────
+const PROJECT_TEMPLATES: Record<string, { contexts: { key: string; value: string; category: string; priority: number }[] }> = {
+  'flutter-app': {
+    contexts: [
+      { key: 'Stack', value: 'Flutter (frontend) + backend a definir. Arquitetura por módulos funcionais.', category: 'architecture', priority: 4 },
+      { key: 'Módulos', value: 'auth, core, features (um por domínio), shared/widgets', category: 'architecture', priority: 3 },
+      { key: 'Estado', value: 'Gerenciamento de estado: a definir (Bloc / Riverpod / Provider)', category: 'requirements', priority: 3 },
+      { key: 'Plataformas alvo', value: 'Android, iOS, Desktop — definir prioridade', category: 'requirements', priority: 2 },
+    ],
+  },
+  'backend-api': {
+    contexts: [
+      { key: 'Stack', value: 'API REST. Linguagem/framework a definir.', category: 'architecture', priority: 4 },
+      { key: 'Auth', value: 'Autenticação JWT ou OAuth2 — a definir', category: 'requirements', priority: 4 },
+      { key: 'Banco de dados', value: 'Relacional ou NoSQL — a definir conforme domínio', category: 'architecture', priority: 3 },
+      { key: 'Padrão de resposta', value: '{ data, error, meta } em todas as rotas', category: 'standards', priority: 3 },
+    ],
+  },
+  'artigo-academico': {
+    contexts: [
+      { key: 'Formatação', value: 'ABNT NBR 6023/6024/10520. Fonte Times New Roman 12, espaço 1,5.', category: 'standards', priority: 4 },
+      { key: 'Estrutura', value: 'Introdução → Referencial Teórico → Metodologia → Resultados → Conclusão → Referências', category: 'requirements', priority: 4 },
+      { key: 'Resumo', value: 'Resumo e Abstract obrigatórios. Palavras-chave: 3–5.', category: 'requirements', priority: 3 },
+      { key: 'Ferramentas', value: 'LaTeX ou Word com plugin ABNT. Gerenciador: Zotero ou Mendeley.', category: 'dependencies', priority: 2 },
+    ],
+  },
+  'electron-app': {
+    contexts: [
+      { key: 'Stack', value: 'Electron + React + TypeScript. SQLite local ou PostgreSQL remoto.', category: 'architecture', priority: 4 },
+      { key: 'Processos', value: 'Main process (Node): acesso a FS, DB, IPC. Renderer process (React): UI apenas.', category: 'architecture', priority: 4 },
+      { key: 'IPC', value: 'Comunicação via ipcMain/ipcRenderer com preload script. Sem expor Node ao renderer.', category: 'standards', priority: 3 },
+      { key: 'Distribuição', value: 'electron-builder. Auto-update via electron-updater.', category: 'dependencies', priority: 3 },
+    ],
+  },
+  'visual-novel': {
+    contexts: [
+      { key: 'Engine', value: "Engine a definir (Ren'Py, Unity, Godot ou custom)", category: 'architecture', priority: 4 },
+      { key: 'Narrativa', value: 'Sistema de escolhas com histórico de decisões afetando rota. Múltiplos finais.', category: 'requirements', priority: 4 },
+      { key: 'Personagens', value: 'Definir protagonistas, NPCs e sistema de afinidade/relações', category: 'general', priority: 3 },
+      { key: 'Assets', value: 'Sprites, backgrounds, BGM, SFX — pipeline de produção a definir', category: 'dependencies', priority: 2 },
+    ],
+  },
+};
+
 async function main() {
   const db = await getDatabase();
   const projects = new ProjectService(db);
@@ -71,11 +113,10 @@ async function main() {
 
   const server = new McpServer({
     name: 'thinkcoffee',
-    version: '1.0.0',
+    version: '1.1.0',
   });
 
   // ─── Resources ───────────────────────────────────────────────
-  // List all projects
   server.resource(
     'projects',
     'thinkcoffee://projects',
@@ -91,7 +132,6 @@ async function main() {
     }
   );
 
-  // Project context (all entries as markdown)
   server.resource(
     'project-context',
     new ResourceTemplate('thinkcoffee://projects/{projectId}/context', { list: undefined }),
@@ -99,7 +139,6 @@ async function main() {
       const projectId = String(variables.projectId);
       const project = await projects.get(projectId);
       if (!project) return { contents: [{ uri: uri.href, text: 'Project not found' }] };
-
       const md = exportProject(project, 'markdown');
       return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text: md }] };
     }
@@ -132,6 +171,31 @@ async function main() {
   );
 
   server.tool(
+    'create_project_from_template',
+    'Create a project pre-populated with context from a template. Available: flutter-app, backend-api, artigo-academico, electron-app, visual-novel',
+    {
+      name: z.string().describe('Project name'),
+      description: z.string().optional().describe('Project description'),
+      template: z.enum(['flutter-app', 'backend-api', 'artigo-academico', 'electron-app', 'visual-novel']).describe('Template to use'),
+    },
+    async ({ name, description, template }) => {
+      const project = await projects.create({ name, description });
+      const tpl = PROJECT_TEMPLATES[template];
+      const added: string[] = [];
+      for (const ctx of tpl.contexts) {
+        await contexts.create({ projectId: project.id, ...ctx } as any);
+        added.push(`[${ctx.category}] ${ctx.key}`);
+      }
+      return {
+        content: [{
+          type: 'text',
+          text: `Project created from template "${template}": ${project.name} (${project.id})\n\nPre-populated contexts:\n${added.map(a => `- ${a}`).join('\n')}`,
+        }],
+      };
+    }
+  );
+
+  server.tool(
     'get_project',
     'Get full project details including all context entries and decisions',
     { projectId: z.string().describe('Project ID or name') },
@@ -139,9 +203,23 @@ async function main() {
       let project = await projects.get(projectId);
       if (!project) project = await projects.findByName(projectId);
       if (!project) return { content: [{ type: 'text', text: `Project not found: ${projectId}` }] };
-
       const md = exportProject(project, 'markdown');
       return { content: [{ type: 'text', text: md }] };
+    }
+  );
+
+  server.tool(
+    'update_project',
+    'Update a project: rename, change description, or change status (active, archived, inactive)',
+    {
+      projectId: z.string().describe('Project ID'),
+      name: z.string().optional().describe('New project name'),
+      description: z.string().optional().describe('New project description'),
+      status: z.enum(['active', 'archived', 'inactive']).optional().describe('New status'),
+    },
+    async ({ projectId, ...updates }) => {
+      const project = await projects.update(projectId, updates);
+      return { content: [{ type: 'text', text: `Project updated: ${project.name} [${project.status}]` }] };
     }
   );
 
@@ -169,6 +247,33 @@ async function main() {
     async ({ projectId, key, value, category, priority }) => {
       const entry = await contexts.create({ projectId, key, value, category, priority });
       return { content: [{ type: 'text', text: `Context added: [${entry.category}] ${entry.key} (priority: ${entry.priority})` }] };
+    }
+  );
+
+  server.tool(
+    'bulk_add_context',
+    'Add multiple context entries to a project in a single call',
+    {
+      projectId: z.string().describe('Project ID'),
+      entries: z.array(z.object({
+        key: z.string().describe('Short label'),
+        value: z.string().describe('Context content'),
+        category: z.enum(CATEGORIES).default('general'),
+        priority: z.number().min(1).max(4).default(1),
+      })).describe('Array of context entries to add'),
+    },
+    async ({ projectId, entries }) => {
+      const added: string[] = [];
+      for (const e of entries) {
+        const entry = await contexts.create({ projectId, ...e });
+        added.push(`[${entry.category}] ${entry.key} (priority: ${entry.priority})`);
+      }
+      return {
+        content: [{
+          type: 'text',
+          text: `Added ${added.length} context entries:\n${added.map(a => `- ${a}`).join('\n')}`,
+        }],
+      };
     }
   );
 
@@ -208,11 +313,32 @@ async function main() {
     async ({ projectId, query }) => {
       const results = await contexts.search(projectId, query);
       if (!results.length) return { content: [{ type: 'text', text: `No results for "${query}"` }] };
-
       const text = results.map(e =>
         `**[${e.category}] ${e.key}** (priority: ${e.priority})\n${e.value}`
       ).join('\n\n---\n\n');
       return { content: [{ type: 'text', text }] };
+    }
+  );
+
+  server.tool(
+    'search_all_projects',
+    'Search context entries across ALL projects by keyword. Useful to find patterns or reuse across projects.',
+    {
+      query: z.string().describe('Search keyword'),
+      category: z.enum(CATEGORIES).optional().describe('Optionally filter by category'),
+    },
+    async ({ query, category }) => {
+      const all = await projects.list();
+      const results: string[] = [];
+      for (const project of all) {
+        const entries = await contexts.search(project.id, query);
+        const filtered = category ? entries.filter(e => e.category === category) : entries;
+        for (const e of filtered) {
+          results.push(`**[${project.name}]** [${e.category}] ${e.key} (priority: ${e.priority})\n${e.value}`);
+        }
+      }
+      if (!results.length) return { content: [{ type: 'text', text: `No results for "${query}" across any project.` }] };
+      return { content: [{ type: 'text', text: `Found ${results.length} result(s) across all projects:\n\n${results.join('\n\n---\n\n')}` }] };
     }
   );
 
@@ -226,7 +352,6 @@ async function main() {
     async ({ projectId, category }) => {
       const entries = await contexts.listByProject(projectId, category);
       if (!entries.length) return { content: [{ type: 'text', text: 'No context entries found.' }] };
-
       const text = entries.map(e =>
         `- **[${e.category}] ${e.key}** (id: ${e.id}, priority: ${e.priority}): ${e.value.substring(0, 120)}${e.value.length > 120 ? '...' : ''}`
       ).join('\n');
@@ -289,7 +414,6 @@ async function main() {
     async ({ projectId }) => {
       const decs = await decisions.listByProject(projectId);
       if (!decs.length) return { content: [{ type: 'text', text: 'No decisions recorded.' }] };
-
       const text = decs.map(d =>
         `- **${d.title}** [${d.status}] (id: ${d.id}): ${d.description.substring(0, 120)}${d.description.length > 120 ? '...' : ''}`
       ).join('\n');
@@ -308,7 +432,6 @@ async function main() {
     async ({ projectId, format }) => {
       const project = await projects.get(projectId);
       if (!project) return { content: [{ type: 'text', text: `Project not found: ${projectId}` }] };
-
       const output = exportProject(project, format as ExportFormat);
       return { content: [{ type: 'text', text: output }] };
     }
@@ -332,7 +455,6 @@ async function main() {
         if (fs.statSync(abs).isDirectory()) return { content: [{ type: 'text', text: `Path is a directory: ${filePath}` }] };
         const ext = path.extname(abs).toLowerCase();
         if (BINARY_EXTENSIONS.has(ext)) return { content: [{ type: 'text', text: `Binary file (${ext}): ${filePath}` }] };
-
         const raw = fs.readFileSync(abs, 'utf-8');
         const lines = raw.split('\n');
         const start = Math.max(1, startLine || 1);
@@ -383,10 +505,11 @@ async function main() {
         const abs = safePath(root, filePath);
         if (!fs.existsSync(abs)) return { content: [{ type: 'text', text: `File not found: ${filePath}` }] };
         const raw = fs.readFileSync(abs, 'utf-8');
-        const count = raw.split(oldString).length - 1;
+        const parts = raw.split(oldString);
+        const count = parts.length - 1;
         if (count === 0) return { content: [{ type: 'text', text: `String not found in ${filePath}. Check for exact whitespace/indentation match.` }] };
         if (count > 1) return { content: [{ type: 'text', text: `String found ${count} times in ${filePath}. Must be unique — include more context lines.` }] };
-        fs.writeFileSync(abs, raw.replace(oldString, newString), 'utf-8');
+        fs.writeFileSync(abs, parts.join(newString), 'utf-8');
         return { content: [{ type: 'text', text: `Edited: ${filePath} (replaced 1 occurrence)` }] };
       } catch (e: any) {
         return { content: [{ type: 'text', text: `Error: ${e.message}` }] };
@@ -406,10 +529,8 @@ async function main() {
         const root = requireWorkspace();
         const abs = safePath(root, dirPath);
         if (!fs.existsSync(abs)) return { content: [{ type: 'text', text: `Directory not found: ${dirPath}` }] };
-
         const results: string[] = [];
         const MAX = 500;
-
         function walk(dir: string, prefix: string) {
           if (results.length >= MAX) return;
           const entries = fs.readdirSync(dir, { withFileTypes: true })
@@ -454,7 +575,6 @@ async function main() {
         const regex = new RegExp(pattern, 'gi');
         const extensions = filePattern ? new Set(filePattern.split(',').map(e => e.trim().startsWith('.') ? e.trim() : `.${e.trim()}`)) : null;
         const matches: string[] = [];
-
         function search(dir: string) {
           if (matches.length >= maxResults) return;
           let entries: fs.Dirent[];
@@ -501,7 +621,6 @@ async function main() {
       try {
         const root = requireWorkspace();
         const lines: string[] = [path.basename(root) + '/'];
-
         function tree(dir: string, prefix: string, depth: number) {
           if (depth >= maxDepth) return;
           let entries: fs.Dirent[];
@@ -640,7 +759,6 @@ async function main() {
       if (!project) {
         return { messages: [{ role: 'user', content: { type: 'text', text: `Project "${projectId}" not found.` } }] };
       }
-
       const md = exportProject(project, 'markdown');
       return {
         messages: [{
@@ -661,7 +779,6 @@ async function main() {
     async ({ projectId }) => {
       const entries = await contexts.listByProject(projectId, 'architecture');
       const decs = await decisions.listByProject(projectId);
-
       const parts: string[] = ['# Architecture Context', ''];
       if (entries.length) {
         for (const e of entries) {
@@ -674,7 +791,6 @@ async function main() {
           parts.push(`### ${d.title}`, '', d.description, '');
         }
       }
-
       return {
         messages: [{
           role: 'user',
