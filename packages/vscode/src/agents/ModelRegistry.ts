@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AVAILABLE_MODELS } from '@thinkcoffee/core';
+import { AVAILABLE_MODELS, type CostMultiplier } from '@thinkcoffee/core';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -9,6 +9,7 @@ export interface DiscoveredModel {
   tier: 'premium' | 'code' | 'standard' | 'fast';
   vendor: string;
   maxInputTokens: number;
+  costMultiplier: CostMultiplier;
 }
 
 // ─── Tier inference from family name ─────────────────────────
@@ -53,6 +54,21 @@ function inferLabel(family: string): string {
     .join(' ');
 }
 
+function inferCostMultiplier(family: string, tier: DiscoveredModel['tier']): CostMultiplier {
+  // Check hardcoded list first
+  const known = AVAILABLE_MODELS.find(m => m.family === family);
+  if (known) return known.cost;
+
+  // Infer from tier
+  const tierCostMap: Record<string, CostMultiplier> = {
+    premium: 3,
+    code: 1,
+    standard: 0.5,
+    fast: 0,
+  };
+  return tierCostMap[tier] ?? 0;
+}
+
 // ─── Registry ────────────────────────────────────────────────
 
 let _cachedModels: DiscoveredModel[] | null = null;
@@ -83,12 +99,14 @@ export async function discoverModels(force = false): Promise<DiscoveredModel[]> 
       if (seen.has(model.family)) continue;
       seen.add(model.family);
 
+      const tier = inferTier(model.family, model.maxInputTokens);
       discovered.push({
         family: model.family,
         label: inferLabel(model.family),
-        tier: inferTier(model.family, model.maxInputTokens),
+        tier,
         vendor: model.vendor,
         maxInputTokens: model.maxInputTokens,
+        costMultiplier: inferCostMultiplier(model.family, tier),
       });
     }
 
@@ -122,5 +140,6 @@ function _fallbackModels(): DiscoveredModel[] {
     tier: m.tier as DiscoveredModel['tier'],
     vendor: m.vendor,
     maxInputTokens: 0,
+    costMultiplier: m.cost,
   }));
 }

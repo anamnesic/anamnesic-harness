@@ -36,6 +36,7 @@ export {
   loadAgentConfig, saveAgentConfig, getModelForAgent, setAgentModel,
   applyQualityPreset, isQualityPreset,
   recordModelFailure, getModelFailureCounts, loadModelFailures,
+  getModelCost, getModelsByCostRange, getPresetRanking, getPMModelForPreset,
   DEFAULT_AGENT_MODELS, AVAILABLE_MODELS, QUALITY_PRESETS,
 } from './agent-config';
-export type { AgentModelConfig, PMModelAssignment, ModelFamily, QualityPreset, ModelFailureEntry, ModelFailureHistory } from './agent-config';
+export type { AgentModelConfig, PMModelAssignment, ModelFamily, QualityPreset, CostMultiplier, ModelFailureEntry, ModelFailureHistory } from './agent-config';

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, applyQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
+import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, applyQualityPreset, isQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
 import type { ChatMessage, Pipeline, AgentRole } from '@thinkcoffee/core';
 import type { AgentService } from '../agents/AgentService';
 import { execSync } from 'child_process';
@@ -456,10 +456,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
-    // PM plans the phases dynamically via Opus
+    // Step 1: PM (Opus) selects the quality mode based on project analysis
+    if (this._agentService) {
+      const config = loadAgentConfig();
+      if (config.mode === 'auto' || config.mode === 'manual') {
+        this._systemMsg('PM (Opus) esta analisando o objetivo para definir o modo de qualidade...', 'info');
+        await this._agentService.pmSelectMode(obj);
+      }
+    }
+
+    // Step 2: PM plans the phases dynamically
     let customPhases = null;
     if (this._agentService) {
-      // Switch to a temporary chat so PM messages appear (will be re-routed after pipeline creation)
       this._systemMsg(`PM esta planejando as fases para: **${obj}**`, 'info');
       customPhases = await this._agentService.planPhases(obj);
     }
@@ -478,10 +486,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     // Switch to the new pipeline chat
     this._switchToPipeline(p.id);
 
-    // Start PM oversight loop (auto-runs all phases)
+    // Step 3: Auto-assign models within the selected mode's cost tier, then run
     if (this._agentService) {
       const config = loadAgentConfig();
-      if (config.mode === 'auto') {
+      if (config.mode === 'auto' || isQualityPreset(config.mode)) {
         await this._agentService.autoAssignModels(p);
       }
       this._agentService.runPipeline(project.id, p.id);

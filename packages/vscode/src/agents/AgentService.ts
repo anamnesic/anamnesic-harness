@@ -2,12 +2,13 @@ import * as vscode from 'vscode';
 import {
   ChatService, PipelineService, ContextService, DecisionService,
   AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent,
-  DEFAULT_AGENT_MODELS,
+  DEFAULT_AGENT_MODELS, QUALITY_PRESETS,
+  applyQualityPreset, isQualityPreset, getPMModelForPreset,
   recordModelFailure, getModelFailureCounts,
 } from '@thinkcoffee/core';
 import { discoverModels, getCachedModels, type DiscoveredModel } from './ModelRegistry';
 import type {
-  AgentRole, Pipeline, AgentTask, ChatMessage, AgentModelConfig, PMModelAssignment, PhaseTemplate,
+  AgentRole, Pipeline, AgentTask, ChatMessage, AgentModelConfig, PMModelAssignment, PhaseTemplate, QualityPreset,
 } from '@thinkcoffee/core';
 import fs from 'fs';
 import path from 'path';
@@ -76,12 +77,25 @@ function buildPMAutoAssignPrompt(
   objective: string,
   phases: { name: string; agents: AgentRole[] }[],
   availableModels: DiscoveredModel[],
+  preset?: QualityPreset,
 ): string {
-  const models = availableModels.map(m => `- \`${m.family}\` (${m.label}, tier: ${m.tier})`).join('\n');
+  const presetData = preset ? QUALITY_PRESETS[preset] : null;
+  const costFilter = presetData
+    ? `\n- RESTRICAO DE CUSTO: So use modelos com custo entre ${presetData.costRange.min}x e ${presetData.costRange.max}x`
+    : '';
+  const filteredModels = presetData
+    ? availableModels.filter(m => m.costMultiplier >= presetData.costRange.min && m.costMultiplier <= presetData.costRange.max)
+    : availableModels;
+  const models = filteredModels.map(m => `- \`${m.family}\` (${m.label}, tier: ${m.tier}, custo: ${m.costMultiplier}x)`).join('\n');
   const agents = phases.flatMap(p => p.agents).map(a => `- ${a}: ${AGENT_META[a].description}`).join('\n');
+  const pmNote = presetData
+    ? `- PM usa \`${presetData.models['product-manager']}\` (ja definido pelo modo ${preset})`
+    : '- PM usa claude-opus-4.6 (ja definido)';
 
-  return `Voce e o Product Manager (rodando em claude-opus-4.6).
+  return `Voce e o Product Manager do time ThinkCoffee.
 Seu trabalho agora e ESCOLHER qual modelo de IA cada agente do pipeline deve usar.
+
+## Modo ativo: ${preset ? `${QUALITY_PRESETS[preset].label} (${preset})` : 'auto'}
 
 ## Objetivo do pipeline
 ${objective}
@@ -89,21 +103,55 @@ ${objective}
 ## Agentes no pipeline
 ${agents}
 
-## Modelos disponiveis
+## Modelos disponiveis (dentro do tier de custo)
 ${models}
 
 ## Regras de escolha
-- PM (voce) SEMPRE usa claude-opus-4.6 (ja definido, nao mude)
-- Para tarefas complexas de raciocinio/arquitetura: use claude-opus-4.5, claude-opus-4.6, gemini-2.5-pro ou gemini-3.1-pro
-- Para implementacao de codigo: use gpt-5.3-codex, gpt-5.2-codex ou grok-code-fast-1
-- Para tarefas padrao: use claude-sonnet-4.6, claude-sonnet-4.5 ou gpt-5.2
-- Para tarefas leves/rapidas: use claude-haiku-4.5, gpt-5.4-mini, gpt-5-mini ou raptor-mini
-- Code Review deve ser um modelo forte (opus ou gemini pro)
+${pmNote}${costFilter}
+- Para tarefas complexas de raciocinio/arquitetura: priorize modelos com tier premium ou standard alto
+- Para implementacao de codigo: priorize modelos com tier code
+- Para tarefas padrao: modelos standard
+- Para tarefas leves/rapidas: modelos fast
+- Code Review deve usar o modelo mais forte disponivel no tier
+- DIVERSIFIQUE vendors quando possivel (Anthropic, OpenAI, Google, xAI, Microsoft)
 
 Responda APENAS com JSON valido, sem markdown. Formato:
-[{"role": "architect", "model": "claude-opus-4", "reason": "arquitetura complexa"}, ...]
+[{"role": "architect", "model": "modelo-family", "reason": "justificativa curta"}, ...]
 
 NAO inclua product-manager na lista (ja esta definido).`;
+}
+
+function buildPMSelectModePrompt(objective: string): string {
+  const presetInfo = Object.entries(QUALITY_PRESETS).map(([key, p]) =>
+    `### ${p.label} (\`${key}\`)\n- Custo: ${p.costRange.min}x a ${p.costRange.max}x\n- ${p.subtitle}\n- ${p.description}`
+  ).join('\n\n');
+
+  return `Voce e o Opus, o decisor estrategico do time ThinkCoffee.
+Sua tarefa e analisar o objetivo do pipeline e decidir QUAL MODO DE QUALIDADE usar.
+
+## Objetivo do pipeline
+${objective}
+
+## Modos disponiveis
+
+${presetInfo}
+
+## Criterios de decisao
+- **cafe-soluvel** (0x): Use para tarefas simples, hotfixes, POCs, prototipos, ajustes pequenos, coisas urgentes que nao precisam de qualidade alta. Custo zero.
+- **coado-com-carinho** (0.1x-1x): Use para features normais, refactors, tasks de sprint, melhorias incrementais. O dia a dia de desenvolvimento. Bom custo-beneficio.
+- **espresso-duplo** (3x): Use para arquitetura de sistema, migrations criticas, lancamentos, features complexas que exigem perfeicao, codigo que sera muito revisado.
+
+## Regras
+- Analise a COMPLEXIDADE, CRITICIDADE e IMPACTO do objetivo
+- Se tiver duvida entre dois modos, prefira o mais barato (economize!)
+- Objetivo vago ou simples → cafe-soluvel
+- Objetivo claro com escopo medio → coado-com-carinho
+- Objetivo complexo, critico, ou que exige excelencia → espresso-duplo
+
+Responda APENAS com JSON valido, sem markdown:
+{"mode": "cafe-soluvel", "reason": "justificativa curta de porque este modo"}
+
+Use EXATAMENTE um dos nomes: cafe-soluvel, coado-com-carinho, espresso-duplo.`;
 }
 
 function buildPMPlanPhasesPrompt(objective: string): string {
@@ -515,28 +563,102 @@ export class AgentService {
     }
   }
 
-  // ─── Auto-assign models via PM (Opus) ───────────────────
+  // ─── PM selects quality mode via Opus ────────────────────
+
+  async pmSelectMode(objective: string): Promise<QualityPreset | null> {
+    this._chat.send({
+      sender: 'product-manager',
+      senderLabel: 'PM (Opus)',
+      content: 'Analisando objetivo para decidir o modo de qualidade...',
+      type: 'info',
+    });
+
+    try {
+      // Mode selection is ALWAYS done by Opus (even if the resulting mode uses a non-Opus PM)
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
+      if (!model) {
+        this._chat.send({
+          sender: 'system', senderLabel: 'System',
+          content: 'claude-opus-4.6 nao disponivel. Usando modo espresso-duplo como fallback.',
+          type: 'error',
+        });
+        applyQualityPreset('espresso-duplo');
+        return 'espresso-duplo';
+      }
+
+      const prompt = buildPMSelectModePrompt(objective);
+      const messages = [vscode.LanguageModelChatMessage.User(prompt)];
+      const cts = new vscode.CancellationTokenSource();
+      const response = await model.sendRequest(messages, {}, cts.token);
+
+      let fullText = '';
+      for await (const part of response.stream) {
+        if (part instanceof vscode.LanguageModelTextPart) {
+          fullText += part.value;
+        }
+      }
+      cts.dispose();
+
+      // Parse JSON response
+      const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('PM nao retornou JSON valido para selecao de modo');
+
+      const result = JSON.parse(jsonMatch[0]) as { mode: string; reason: string };
+      const mode = result.mode as QualityPreset;
+
+      if (!QUALITY_PRESETS[mode]) {
+        throw new Error(`Modo invalido retornado pelo PM: ${result.mode}`);
+      }
+
+      // Apply the preset
+      const config = applyQualityPreset(mode);
+      const presetData = QUALITY_PRESETS[mode];
+
+      this._chat.send({
+        sender: 'product-manager',
+        senderLabel: 'PM (Opus)',
+        content: `Modo selecionado: **${presetData.label}** (${presetData.subtitle})\n\n> ${result.reason}\n\nPM deste pipeline: \`${config.models['product-manager']}\` (custo: ${presetData.costRange.min}x-${presetData.costRange.max}x)`,
+        type: 'response',
+      });
+
+      return mode;
+    } catch (err: any) {
+      this._chat.send({
+        sender: 'system', senderLabel: 'System',
+        content: `Falha ao selecionar modo: ${err.message}. Usando espresso-duplo.`,
+        type: 'error',
+      });
+      applyQualityPreset('espresso-duplo');
+      return 'espresso-duplo';
+    }
+  }
+
+  // ─── Auto-assign models via PM ──────────────────────────
 
   async autoAssignModels(pipeline: Pipeline): Promise<AgentModelConfig | null> {
     const project = this._getProject();
     if (!project) return null;
 
+    const config = loadAgentConfig();
+    const activePreset = isQualityPreset(config.mode) ? config.mode as QualityPreset : undefined;
+    const pmModel = activePreset ? getPMModelForPreset(activePreset) : 'claude-opus-4.6';
+
     this._chat.send({
       sender: 'product-manager',
-      senderLabel: 'PM (Opus)',
-      content: 'Analisando pipeline para decidir qual modelo cada agente deve usar...',
+      senderLabel: `PM (${pmModel})`,
+      content: 'Atribuindo modelos aos agentes dentro do tier de custo...',
       type: 'info',
     });
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: pmModel });
       if (!model) {
         this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: 'claude-opus-4.6 nao disponivel. Usando configuracao padrao.',
+          content: `${pmModel} nao disponivel. Usando configuracao do preset.`,
           type: 'error',
         });
-        return null;
+        return config;
       }
 
       const dynamicModels = await discoverModels();
@@ -544,6 +666,7 @@ export class AgentService {
         pipeline.objective,
         pipeline.phases.map(p => ({ name: p.name, agents: p.agents })),
         dynamicModels,
+        activePreset,
       );
 
       const messages = [vscode.LanguageModelChatMessage.User(prompt)];
@@ -563,8 +686,6 @@ export class AgentService {
       if (!jsonMatch) throw new Error('PM nao retornou JSON valido');
 
       const assignments: PMModelAssignment[] = JSON.parse(jsonMatch[0]);
-      const config = loadAgentConfig();
-      config.mode = 'auto';
 
       for (const a of assignments) {
         if (a.role !== 'product-manager') {
@@ -581,8 +702,8 @@ export class AgentService {
 
       this._chat.send({
         sender: 'product-manager',
-        senderLabel: 'PM (Opus)',
-        content: `Modelos atribuidos pelo PM:\n\n${report}\n\n- **Product Manager**: \`claude-opus-4.6\` --- obrigatorio`,
+        senderLabel: `PM (${pmModel})`,
+        content: `Modelos atribuidos pelo PM:\n\n${report}\n\n- **Product Manager**: \`${pmModel}\``,
         type: 'response',
       });
 
@@ -591,10 +712,10 @@ export class AgentService {
     } catch (err: any) {
       this._chat.send({
         sender: 'system', senderLabel: 'System',
-        content: `Falha ao auto-atribuir modelos: ${err.message}. Usando padrao.`,
+        content: `Falha ao auto-atribuir modelos: ${err.message}. Usando config do preset.`,
         type: 'error',
       });
-      return null;
+      return config;
     }
   }
 
@@ -1183,20 +1304,36 @@ export class AgentService {
   // ─── Model rotation on rejection ────────────────────────
 
   /**
-   * Pick a different model for an agent, penalizing models with failure history.
-   * Score = tierRank - (failures * penalty). Higher score wins.
+   * Pick a different model for an agent, respecting cost tier and using preset ranking.
+   * Prefers models in the preset ranking, penalizes models with failure history.
    */
   private _pickAlternativeModel(role: AgentRole, currentModel: string): string {
+    const config = loadAgentConfig();
+    const activePreset = isQualityPreset(config.mode) ? config.mode as QualityPreset : undefined;
+    const presetData = activePreset ? QUALITY_PRESETS[activePreset] : null;
+    const ranking = presetData?.ranking ?? [];
+
     const tierRank: Record<string, number> = { premium: 4, code: 3, standard: 2, fast: 1 };
     const failureCounts = getModelFailureCounts(role);
 
-    const candidates = getCachedModels()
-      .filter(m => m.family !== currentModel && m.family !== 'claude-opus-4.6')
+    let allModels = getCachedModels();
+
+    // Filter by cost range if a preset is active
+    if (presetData) {
+      allModels = allModels.filter(
+        m => m.costMultiplier >= presetData.costRange.min && m.costMultiplier <= presetData.costRange.max
+      );
+    }
+
+    const candidates = allModels
+      .filter(m => m.family !== currentModel)
       .map(m => {
         const tier = tierRank[m.tier] || 0;
         const failures = failureCounts[m.family] || 0;
-        // Each failure costs 0.5 points; heavily penalize repeat offenders
-        const score = tier - (failures * 0.5);
+        // Bonus for being in ranking (higher position = more bonus)
+        const rankIdx = ranking.indexOf(m.family);
+        const rankBonus = rankIdx >= 0 ? (ranking.length - rankIdx) * 0.3 : 0;
+        const score = tier + rankBonus - (failures * 0.5);
         return { ...m, score, failures };
       })
       .sort((a, b) => b.score - a.score);
