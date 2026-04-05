@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import {
   ChatService, PipelineService, ContextService, DecisionService,
   AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent,
-  DEFAULT_AGENT_MODELS, QUALITY_PRESETS, getModelCost,
+  DEFAULT_AGENT_MODELS, QUALITY_PRESETS,
   applyQualityPreset, isQualityPreset, getPMModelForPreset,
   recordModelFailure, getModelFailureCounts,
 } from '@thinkcoffee/core';
@@ -50,13 +50,6 @@ function agentLabel(role: AgentRole, modelOverride?: string): string {
   const sigla = AGENT_SIGLA[role] || role.substring(0, 2).toUpperCase();
   const model = modelOverride || getModelForAgent(role);
   return `${sigla} - ${model}`;
-}
-
-/** Get PM model family for the active preset (or config fallback) */
-function getActivePMModel(): string {
-  const config = loadAgentConfig();
-  const preset = isQualityPreset(config.mode) ? config.mode as QualityPreset : undefined;
-  return preset ? getPMModelForPreset(preset) : getModelForAgent('product-manager', config);
 }
 
 // ─── System Prompts ──────────────────────────────────────────
@@ -166,7 +159,6 @@ ${presetInfo}
 - **cafe-soluvel** (0x): Use para tarefas simples, hotfixes, POCs, prototipos, ajustes pequenos, coisas urgentes que nao precisam de qualidade alta. Custo zero.
 - **coado-com-carinho** (0.1x-1x): Use para features normais, refactors, tasks de sprint, melhorias incrementais. O dia a dia de desenvolvimento. Bom custo-beneficio.
 - **espresso-duplo** (3x): Use para arquitetura de sistema, migrations criticas, lancamentos, features complexas que exigem perfeicao, codigo que sera muito revisado.
-- **auto**: Use quando o objetivo exige uma combinacao heterogenea de modelos — ex: backend precisa de modelo premium mas frontend pode ser simples. Voce escolhe livremente o melhor modelo para cada agente sem restricao de custo.
 
 ## Regras
 - Analise a COMPLEXIDADE, CRITICIDADE e IMPACTO do objetivo
@@ -174,12 +166,11 @@ ${presetInfo}
 - Objetivo vago ou simples → cafe-soluvel
 - Objetivo claro com escopo medio → coado-com-carinho
 - Objetivo complexo, critico, ou que exige excelencia → espresso-duplo
-- Objetivo heterogeneo (partes simples + partes criticas) → auto
 
 Responda APENAS com JSON valido, sem markdown:
 {"mode": "cafe-soluvel", "reason": "justificativa curta de porque este modo"}
 
-Use EXATAMENTE um dos nomes: cafe-soluvel, coado-com-carinho, espresso-duplo, auto.`;
+Use EXATAMENTE um dos nomes: cafe-soluvel, coado-com-carinho, espresso-duplo.`;
 }
 
 function buildPMPlanPhasesPrompt(objective: string): string {
@@ -433,11 +424,10 @@ async function handleToolCall(
 
 export class AgentService {
   private _running = new Map<string, RunningAgent>(); // taskId -> RunningAgent
-  private _directInvocations = new Map<string, Set<AgentRole>>(); // pipelineId -> active direct invocations
-  private _pendingMentions: { from: AgentRole; to: AgentRole; message: string; pipelineId: string }[] = [];
-  private _activePipelineLoops = new Set<string>(); // pipelineIds with active PM loops
-  private _globalChat: () => ChatService;
-  private _getChatForPipeline: (pipelineId: string) => ChatService;
+  private _directInvocations = new Set<AgentRole>(); // roles with active direct invocations
+  private _pendingMentions: { from: AgentRole; to: AgentRole; message: string }[] = [];
+  private _activePipelineLoop: string | null = null; // pipelineId of active PM oversight loop
+  private _getChat: () => ChatService;
   private _pipelines: PipelineService;
   private _contexts: ContextService;
   private _decisions: DecisionService;
@@ -445,43 +435,21 @@ export class AgentService {
   private _onAgentStateChange = new vscode.EventEmitter<void>();
   readonly onAgentStateChange = this._onAgentStateChange.event;
 
-  /** Get chat for a specific pipeline */
-  private _pipelineChat(pipelineId: string): ChatService {
-    return this._getChatForPipeline(pipelineId);
-  }
-
-  /** Get global chat (pre-pipeline operations) */
-  private get _chat(): ChatService { return this._globalChat(); }
+  /** Shorthand to get the active chat */
+  private get _chat(): ChatService { return this._getChat(); }
 
   constructor(
-    globalChat: () => ChatService,
-    getChatForPipeline: (pipelineId: string) => ChatService,
+    getChat: () => ChatService,
     pipelines: PipelineService,
     contexts: ContextService,
     decisions: DecisionService,
     getProject: () => { id: string; name: string } | null,
   ) {
-    this._globalChat = globalChat;
-    this._getChatForPipeline = getChatForPipeline;
+    this._getChat = getChat;
     this._pipelines = pipelines;
     this._contexts = contexts;
     this._decisions = decisions;
     this._getProject = getProject;
-  }
-
-  /** Track a direct invocation (typing indicator) for a pipeline */
-  private _trackDirect(pipelineId: string, role: AgentRole): void {
-    let set = this._directInvocations.get(pipelineId);
-    if (!set) { set = new Set(); this._directInvocations.set(pipelineId, set); }
-    set.add(role);
-    this._onAgentStateChange.fire();
-  }
-
-  /** Remove a direct invocation tracker */
-  private _untrackDirect(pipelineId: string, role: AgentRole): void {
-    const set = this._directInvocations.get(pipelineId);
-    if (set) { set.delete(role); if (set.size === 0) this._directInvocations.delete(pipelineId); }
-    this._onAgentStateChange.fire();
   }
 
   /** Get currently running agents */
@@ -496,12 +464,12 @@ export class AgentService {
       pipelineId: r.pipelineId,
       elapsed: Date.now() - r.startedAt,
     }));
-    // Include direct invocations per-pipeline
-    for (const [pid, roles] of this._directInvocations) {
-      if (pipelineId && pid !== pipelineId) continue;
-      for (const role of roles) {
-        if (!result.some(a => a.role === role && a.pipelineId === pid)) {
-          result.push({ role, taskId: `direct-${role}`, pipelineId: pid, elapsed: 0 });
+    // Include direct invocations (tied to _activePipelineLoop)
+    const directPid = this._activePipelineLoop || '';
+    if (!pipelineId || pipelineId === directPid) {
+      for (const role of this._directInvocations) {
+        if (!result.some(a => a.role === role)) {
+          result.push({ role, taskId: `direct-${role}`, pipelineId: directPid, elapsed: 0 });
         }
       }
     }
@@ -514,7 +482,7 @@ export class AgentService {
     if (running) {
       running.cts.cancel();
       this._running.delete(taskId);
-      this._pipelineChat(running.pipelineId).send({
+      this._chat.send({
         sender: 'system',
         senderLabel: 'Pipeline',
         content: `${AGENT_META[running.role].label} foi cancelado.`,
@@ -542,11 +510,11 @@ export class AgentService {
     });
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: getActivePMModel() });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
       if (!model) {
         this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: 'Modelo PM indisponivel. Usando fases padrao.',
+          content: 'claude-opus-4.6 nao disponivel. Usando fases padrao.',
           type: 'error',
         });
         return null;
@@ -557,7 +525,7 @@ export class AgentService {
       const cts = new vscode.CancellationTokenSource();
 
       // Track PM as running for typing indicator
-      this._trackDirect('', 'product-manager');
+      this._directInvocations.add('product-manager');
       this._onAgentStateChange.fire();
 
       const response = await model.sendRequest(messages, {}, cts.token);
@@ -612,7 +580,7 @@ export class AgentService {
       });
       return null;
     } finally {
-      this._untrackDirect('', 'product-manager');
+      this._directInvocations.delete('product-manager');
       this._onAgentStateChange.fire();
     }
   }
@@ -629,15 +597,15 @@ export class AgentService {
 
     try {
       // Mode selection is ALWAYS done by Opus (even if the resulting mode uses a non-Opus PM)
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: getActivePMModel() });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
       if (!model) {
         this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: 'Modelo PM indisponivel. Usando modo cafe-soluvel como fallback.',
+          content: 'claude-opus-4.6 nao disponivel. Usando modo espresso-duplo como fallback.',
           type: 'error',
         });
-        applyQualityPreset('cafe-soluvel');
-        return 'cafe-soluvel';
+        applyQualityPreset('espresso-duplo');
+        return 'espresso-duplo';
       }
 
       const prompt = buildPMSelectModePrompt(objective);
@@ -658,23 +626,6 @@ export class AgentService {
       if (!jsonMatch) throw new Error('PM nao retornou JSON valido para selecao de modo');
 
       const result = JSON.parse(jsonMatch[0]) as { mode: string; reason: string };
-
-      // Handle 'auto' mode — PM picks models freely without cost constraints
-      if (result.mode === 'auto') {
-        const config = loadAgentConfig();
-        config.mode = 'auto';
-        saveAgentConfig(config);
-
-        this._chat.send({
-          sender: 'product-manager',
-          senderLabel: agentLabel('product-manager'),
-          content: `Modo selecionado: **Automatico** (PM escolhe livremente)\n\n> ${result.reason}\n\nPM vai atribuir o melhor modelo para cada agente sem restricao de custo.`,
-          type: 'response',
-        });
-
-        return null; // null signals auto mode to caller
-      }
-
       const mode = result.mode as QualityPreset;
 
       if (!QUALITY_PRESETS[mode]) {
@@ -696,11 +647,11 @@ export class AgentService {
     } catch (err: any) {
       this._chat.send({
         sender: 'system', senderLabel: 'System',
-        content: `Falha ao selecionar modo: ${err.message}. Usando cafe-soluvel.`,
+        content: `Falha ao selecionar modo: ${err.message}. Usando espresso-duplo.`,
         type: 'error',
       });
-      applyQualityPreset('cafe-soluvel');
-      return 'cafe-soluvel';
+      applyQualityPreset('espresso-duplo');
+      return 'espresso-duplo';
     }
   }
 
@@ -714,7 +665,7 @@ export class AgentService {
     const activePreset = isQualityPreset(config.mode) ? config.mode as QualityPreset : undefined;
     const pmModel = activePreset ? getPMModelForPreset(activePreset) : 'claude-opus-4.6';
 
-    this._pipelineChat(pipeline.id).send({
+    this._chat.send({
       sender: 'product-manager',
       senderLabel: agentLabel('product-manager', pmModel),
       content: 'Atribuindo modelos aos agentes dentro do tier de custo...',
@@ -724,7 +675,7 @@ export class AgentService {
     try {
       const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: pmModel });
       if (!model) {
-        this._pipelineChat(pipeline.id).send({
+        this._chat.send({
           sender: 'system', senderLabel: 'System',
           content: `${pmModel} nao disponivel. Usando configuracao do preset.`,
           type: 'error',
@@ -758,19 +709,8 @@ export class AgentService {
 
       const assignments: PMModelAssignment[] = JSON.parse(jsonMatch[0]);
 
-      // Validate PM assignments against active preset cost tier (skip for 'auto' mode)
-      const presetData = activePreset ? QUALITY_PRESETS[activePreset] : null;
       for (const a of assignments) {
         if (a.role !== 'product-manager') {
-          const cost = getModelCost(a.model);
-          if (presetData && config.mode !== 'auto' && (cost < presetData.costRange.min || cost > presetData.costRange.max)) {
-            // PM picked a model outside the preset's cost range — override with preset default
-            const presetDefault = QUALITY_PRESETS[activePreset!].models[a.role as AgentRole];
-            if (presetDefault) {
-              a.model = presetDefault;
-              a.reason += ' (custo corrigido pelo sistema)';
-            }
-          }
           config.models[a.role as AgentRole] = a.model;
         }
       }
@@ -782,7 +722,7 @@ export class AgentService {
         `- **${AGENT_META[a.role as AgentRole]?.label || a.role}**: \`${a.model}\` — ${a.reason}`
       ).join('\n');
 
-      this._pipelineChat(pipeline.id).send({
+      this._chat.send({
         sender: 'product-manager',
         senderLabel: agentLabel('product-manager', pmModel),
         content: `Modelos atribuidos pelo PM:\n\n${report}\n\n- **Product Manager**: \`${pmModel}\``,
@@ -792,7 +732,7 @@ export class AgentService {
       return config;
 
     } catch (err: any) {
-      this._pipelineChat(pipeline.id).send({
+      this._chat.send({
         sender: 'system', senderLabel: 'System',
         content: `Falha ao auto-atribuir modelos: ${err.message}. Usando config do preset.`,
         type: 'error',
@@ -824,7 +764,7 @@ export class AgentService {
       }
     }
 
-    this._pipelineChat(pipelineId).send({
+    this._chat.send({
       sender: 'system',
       senderLabel: 'Pipeline',
       content: `Fase **${phase.name}** iniciada. Agentes: ${phase.agents.map(a => AGENT_META[a].label).join(', ')}${phase.parallel ? ' (paralelo)' : ''}`,
@@ -878,29 +818,18 @@ export class AgentService {
     const config = loadAgentConfig();
     const modelFamily = getModelForAgent(role, config);
 
-    // Cost tier guard: ensure model respects active preset (skip for 'auto' mode)
-    const activePreset = isQualityPreset(config.mode) ? config.mode as QualityPreset : undefined;
-    const presetData = activePreset ? QUALITY_PRESETS[activePreset] : null;
-    let effectiveFamily = modelFamily;
-    if (presetData && config.mode !== 'auto') {
-      const cost = getModelCost(modelFamily);
-      if (cost > presetData.costRange.max) {
-        effectiveFamily = presetData.models[role] || modelFamily;
-      }
-    }
-
     // Select model
     let model: vscode.LanguageModelChat;
     try {
-      const models = await vscode.lm.selectChatModels({ vendor: 'copilot', family: effectiveFamily });
+      const models = await vscode.lm.selectChatModels({ vendor: 'copilot', family: modelFamily });
       if (!models.length) {
         // Fallback to any available model
         const fallback = await vscode.lm.selectChatModels({ vendor: 'copilot' });
         if (!fallback.length) throw new Error('Nenhum modelo Copilot disponivel');
         model = fallback[0];
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: `${effectiveFamily} indisponivel para ${agentLabel(role)}. Usando ${fallback[0].family}.`,
+          content: `${modelFamily} indisponivel para ${agentLabel(role)}. Usando ${fallback[0].family}.`,
           type: 'info',
         });
       } else {
@@ -908,7 +837,7 @@ export class AgentService {
       }
     } catch (err: any) {
       this._pipelines.failTask(ctx.projectId, pipelineId, task.id, err.message);
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: role, senderLabel: agentLabel(role),
         content: `Falha ao iniciar: ${err.message}`,
         type: 'error',
@@ -924,7 +853,7 @@ export class AgentService {
     this._onAgentStateChange.fire();
 
     // Announce in chat
-    this._pipelineChat(pipelineId).send({
+    this._chat.send({
       sender: role,
       senderLabel: agentLabel(role),
       content: `Iniciando: **${task.title}** (modelo: \`${model.family}\`)`,
@@ -965,7 +894,7 @@ export class AgentService {
           // Post text to chat (chunked if long)
           const chunks = splitMessage(textAccum, 3000);
           for (const chunk of chunks) {
-            this._pipelineChat(pipelineId).send({
+            this._chat.send({
               sender: role,
               senderLabel: agentLabel(role),
               content: chunk,
@@ -1000,9 +929,8 @@ export class AgentService {
               from: role,
               to: input.agent as AgentRole,
               message: input.message,
-              pipelineId,
             });
-            this._pipelineChat(pipelineId).send({
+            this._chat.send({
               sender: role,
               senderLabel: agentLabel(role),
               content: `@${input.agent} ${input.message}`,
@@ -1011,7 +939,7 @@ export class AgentService {
             });
           }
 
-          const result = await handleToolCall(tc, workspace, this._pipelineChat(pipelineId), role);
+          const result = await handleToolCall(tc, workspace, this._chat, role);
           toolResults.push(
             new vscode.LanguageModelToolResultPart(tc.callId, [new vscode.LanguageModelTextPart(result)])
           );
@@ -1028,7 +956,7 @@ export class AgentService {
         this._contexts, this._decisions,
       ).catch(() => {});
 
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: role,
         senderLabel: agentLabel(role),
         content: `Tarefa concluida: **${task.title}**`,
@@ -1048,7 +976,7 @@ export class AgentService {
           ? `LM Error (${err.code}): ${err.message}`
           : err.message || String(err);
         this._pipelines.failTask(ctx.projectId, pipelineId, task.id, errMsg);
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: role, senderLabel: agentLabel(role),
           content: `Erro: ${errMsg}`,
           type: 'error',
@@ -1082,7 +1010,7 @@ export class AgentService {
 
       if (hasTaskInPhase) {
         // Agent is in the current phase — it already ran or will run
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'system',
           senderLabel: 'Pipeline',
           content: `${AGENT_META[mention.from].label} solicitou @${mention.to}: ${mention.message}`,
@@ -1090,7 +1018,7 @@ export class AgentService {
         });
       } else {
         // Agent is NOT in the current phase — invoke directly with the mention context
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'system',
           senderLabel: 'Pipeline',
           content: `${AGENT_META[mention.from].label} invocou @${mention.to}: ${mention.message}`,
@@ -1106,17 +1034,17 @@ export class AgentService {
         }
 
         // Invoke the mentioned agent directly with context from the mention
-        await this.invokeAgent(pipelineId, mention.to, `Solicitacao de ${AGENT_META[mention.from].label}:\n\n${mention.message}\n\nContexto adicional dos outputs anteriores:\n${allOutputs.map(o => `### ${AGENT_META[o.agent].label}\n${o.output.substring(0, 2000)}`).join('\n\n')}`);
+        await this.invokeAgent(mention.to, `Solicitacao de ${AGENT_META[mention.from].label}:\n\n${mention.message}\n\nContexto adicional dos outputs anteriores:\n${allOutputs.map(o => `### ${AGENT_META[o.agent].label}\n${o.output.substring(0, 2000)}`).join('\n\n')}`);
       }
     }
   }
 
   // ─── Direct agent invocation (outside pipeline) ─────────
 
-  async invokeAgent(pipelineId: string, role: AgentRole, userMessage: string): Promise<void> {
+  async invokeAgent(role: AgentRole, userMessage: string): Promise<void> {
     const project = this._getProject();
     if (!project) {
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'system', senderLabel: 'System',
         content: 'Nenhum projeto ativo.',
         type: 'error',
@@ -1139,7 +1067,7 @@ export class AgentService {
         model = models[0];
       }
     } catch (err: any) {
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'system', senderLabel: 'System',
         content: `Erro ao selecionar modelo para ${agentLabel(role)}: ${err.message}`,
         type: 'error',
@@ -1147,7 +1075,7 @@ export class AgentService {
       return;
     }
 
-    this._pipelineChat(pipelineId).send({
+    this._chat.send({
       sender: role,
       senderLabel: agentLabel(role),
       content: `Processando... (modelo: \`${model.family}\`)`,
@@ -1155,7 +1083,7 @@ export class AgentService {
     });
 
     // Track direct invocation so typing indicator shows
-    this._trackDirect(pipelineId, role);
+    this._directInvocations.add(role);
     this._onAgentStateChange.fire();
 
     const meta = AGENT_META[role];
@@ -1190,7 +1118,7 @@ export class AgentService {
           fullOutput += textAccum;
           const chunks = splitMessage(textAccum, 3000);
           for (const chunk of chunks) {
-            this._pipelineChat(pipelineId).send({
+            this._chat.send({
               sender: role,
               senderLabel: agentLabel(role),
               content: chunk,
@@ -1214,7 +1142,7 @@ export class AgentService {
 
         const results: vscode.LanguageModelToolResultPart[] = [];
         for (const tc of toolCalls) {
-          const result = await handleToolCall(tc, workspace, this._pipelineChat(pipelineId), role);
+          const result = await handleToolCall(tc, workspace, this._chat, role);
           results.push(new vscode.LanguageModelToolResultPart(tc.callId, [new vscode.LanguageModelTextPart(result)]));
         }
         messages.push(vscode.LanguageModelChatMessage.User(results));
@@ -1223,27 +1151,27 @@ export class AgentService {
       const errMsg = err instanceof vscode.LanguageModelError
         ? `LM Error (${err.code}): ${err.message}`
         : err.message || String(err);
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: role, senderLabel: agentLabel(role),
         content: `Erro: ${errMsg}`,
         type: 'error',
       });
     } finally {
-      this._untrackDirect(pipelineId, role);
+      this._directInvocations.delete(role);
       this._onAgentStateChange.fire();
       cts.dispose();
     }
   }
 
   dispose(): void {
-    this._activePipelineLoops.clear();
+    this._activePipelineLoop = null;
     this.stopAll();
     this._onAgentStateChange.dispose();
   }
 
   /** Check if PM oversight loop is running for a pipeline */
   isPipelineLoopActive(pipelineId: string): boolean {
-    return this._activePipelineLoops.has(pipelineId);
+    return this._activePipelineLoop === pipelineId;
   }
 
   // ─── PM Pipeline Oversight Loop ─────────────────────────
@@ -1255,10 +1183,10 @@ export class AgentService {
    */
   async runPipeline(projectId: string, pipelineId: string): Promise<void> {
     // Prevent duplicate loops
-    if (this._activePipelineLoops.has(pipelineId)) return;
-    this._activePipelineLoops.add(pipelineId);
+    if (this._activePipelineLoop === pipelineId) return;
+    this._activePipelineLoop = pipelineId;
 
-    this._pipelineChat(pipelineId).send({
+    this._chat.send({
       sender: 'product-manager',
       senderLabel: agentLabel('product-manager'),
       content: 'Assumindo supervisao da pipeline. Vou acompanhar cada fase e avaliar os resultados.',
@@ -1266,13 +1194,13 @@ export class AgentService {
     });
 
     try {
-      while (this._activePipelineLoops.has(pipelineId)) {
+      while (this._activePipelineLoop === pipelineId) {
         const pipeline = this._pipelines.get(projectId, pipelineId);
         if (!pipeline) break;
 
         // Pipeline done?
         if (pipeline.status === 'completed' || pipeline.status === 'failed') {
-          this._pipelineChat(pipelineId).send({
+          this._chat.send({
             sender: 'product-manager',
             senderLabel: agentLabel('product-manager'),
             content: pipeline.status === 'completed'
@@ -1313,7 +1241,7 @@ export class AgentService {
                 updPhase.status = 'failed';
                 this._pipelines.save(p);
               }
-              this._pipelineChat(pipelineId).send({
+              this._chat.send({
                 sender: 'product-manager',
                 senderLabel: agentLabel('product-manager'),
                 content: 'Pipeline abortada pelo PM devido a falhas criticas.',
@@ -1346,7 +1274,7 @@ export class AgentService {
             const p = this._pipelines.approvePhase(projectId, pipelineId, 'product-manager');
             if (!p) break;
 
-            this._pipelineChat(pipelineId).send({
+            this._chat.send({
               sender: 'product-manager',
               senderLabel: agentLabel('product-manager'),
               content: `Fase **${phase.name}** aprovada pelo PM.${p.status === 'completed' ? '\n\nPipeline concluida!' : ''}`,
@@ -1365,7 +1293,7 @@ export class AgentService {
             // Reject with feedback
             this._pipelines.rejectPhase(projectId, pipelineId, review.feedback);
 
-            this._pipelineChat(pipelineId).send({
+            this._chat.send({
               sender: 'product-manager',
               senderLabel: agentLabel('product-manager'),
               content: `Fase **${phase.name}** rejeitada. Agentes vao refazer com feedback:\n\n${review.feedback}`,
@@ -1381,15 +1309,15 @@ export class AgentService {
         break;
       }
     } catch (err: any) {
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'system',
         senderLabel: 'Pipeline',
         content: `Erro no loop do PM: ${err.message}`,
         type: 'error',
       });
     } finally {
-      if (this._activePipelineLoops.has(pipelineId)) {
-        this._activePipelineLoops.delete(pipelineId);
+      if (this._activePipelineLoop === pipelineId) {
+        this._activePipelineLoop = null;
       }
       this._onAgentStateChange.fire();
     }
@@ -1458,18 +1386,18 @@ export class AgentService {
     const pipeline = this._pipelines.get(projectId, pipelineId);
     if (!pipeline) return;
 
-    this._pipelineChat(pipelineId).send({
+    this._chat.send({
       sender: 'product-manager',
       senderLabel: agentLabel('product-manager'),
       content: `Revisando tarefa de ${agentLabel(agentRole)}: **${task.title}**...`,
       type: 'info',
     });
 
-    this._trackDirect(pipelineId, 'product-manager');
+    this._directInvocations.add('product-manager');
     this._onAgentStateChange.fire();
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: getActivePMModel() });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
       if (!model) return; // Skip review if model unavailable
 
       const prompt = `Voce e o Product Manager (PM) supervisando a pipeline: "${pipeline.objective}"
@@ -1512,7 +1440,7 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
       const result = JSON.parse(jsonMatch[0]);
 
       if (result.approved) {
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'product-manager',
           senderLabel: agentLabel('product-manager'),
           content: `Tarefa aprovada (${agentLabel(agentRole)}): ${result.summary || 'OK'}`,
@@ -1537,7 +1465,7 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
           ? `\nTrocando modelo: \`${currentModel}\` -> \`${newModel}\``
           : '';
 
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'product-manager',
           senderLabel: agentLabel('product-manager'),
           content: `Tarefa rejeitada (${agentLabel(agentRole)}): ${result.feedback}\n\nAgente vai refazer.${modelMsg}`,
@@ -1566,14 +1494,14 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
       }
     } catch (err: any) {
       // On error, skip review — don't block the pipeline
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'system',
         senderLabel: 'System',
         content: `Erro no review individual do PM: ${err.message}`,
         type: 'error',
       });
     } finally {
-      this._untrackDirect(pipelineId, 'product-manager');
+      this._directInvocations.delete('product-manager');
       this._onAgentStateChange.fire();
     }
   }
@@ -1599,18 +1527,18 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
       .map(t => `- **${AGENT_META[t.agent].label}** — ${t.title}: ${(t.output || 'sem output').substring(0, 1000)}`)
       .join('\n');
 
-    this._pipelineChat(pipelineId).send({
+    this._chat.send({
       sender: 'product-manager',
       senderLabel: agentLabel('product-manager'),
       content: `Detectei ${failedTasks.length} tarefa(s) com falha na fase **${phase.name}**. Avaliando...`,
       type: 'info',
     });
 
-    this._trackDirect(pipelineId, 'product-manager');
+    this._directInvocations.add('product-manager');
     this._onAgentStateChange.fire();
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: getActivePMModel() });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
       if (!model) {
         // Default: retry once
         this._resetTasksToPending(pipeline, failedTasks);
@@ -1655,7 +1583,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
 
       const result = JSON.parse(jsonMatch[0]);
 
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'product-manager',
         senderLabel: agentLabel('product-manager'),
         content: `Decisao do PM: **${result.decision}** — ${result.reason || ''}`,
@@ -1670,7 +1598,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       this._resetTasksToPending(pipeline, failedTasks);
       return 'retry';
     } catch (err: any) {
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'system',
         senderLabel: 'System',
         content: `Erro no tratamento de falhas do PM: ${err.message}. Tentando retry.`,
@@ -1679,7 +1607,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       this._resetTasksToPending(pipeline, failedTasks);
       return 'retry';
     } finally {
-      this._untrackDirect(pipelineId, 'product-manager');
+      this._directInvocations.delete('product-manager');
       this._onAgentStateChange.fire();
     }
   }
@@ -1711,14 +1639,14 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
     const workspace = pipeline.workspace || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
     if (!workspace) return;
 
-    this._pipelineChat(pipelineId).send({
+    this._chat.send({
       sender: 'product-manager',
       senderLabel: agentLabel('product-manager'),
       content: 'Pipeline concluida. Iniciando workflow Git: criando branch, commit e PR...',
       type: 'info',
     });
 
-    this._trackDirect(pipelineId, 'product-manager');
+    this._directInvocations.add('product-manager');
     this._onAgentStateChange.fire();
 
     try {
@@ -1737,7 +1665,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       try {
         execSync('git rev-parse --is-inside-work-tree', execOpts);
       } catch {
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'product-manager',
           senderLabel: agentLabel('product-manager'),
           content: 'Workspace nao e um repositorio Git. Pulando workflow Git.',
@@ -1760,7 +1688,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
         try {
           execSync(`git checkout ${branchName}`, execOpts);
         } catch (err: any) {
-          this._pipelineChat(pipelineId).send({
+          this._chat.send({
             sender: 'product-manager',
             senderLabel: agentLabel('product-manager'),
             content: `Erro ao criar branch: ${err.message}`,
@@ -1776,7 +1704,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       // Check if there are changes to commit
       const status = execSync('git status --porcelain', execOpts).trim();
       if (!status) {
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'product-manager',
           senderLabel: agentLabel('product-manager'),
           content: 'Nenhuma alteracao detectada para commit. Branch criada mas sem mudancas.',
@@ -1789,7 +1717,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       const commitMsg = `feat: ${pipeline.objective}\n\nPipeline ThinkCoffee (${pipelineId})\nFases: ${pipeline.phases.map(p => p.name).join(', ')}`;
       execSync(`git commit -m ${JSON.stringify(commitMsg)}`, execOpts);
 
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'product-manager',
         senderLabel: agentLabel('product-manager'),
         content: `Branch **${branchName}** criada com commit.\nBase: ${baseBranch}`,
@@ -1809,14 +1737,14 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
             { ...execOpts, timeout: 60000 },
           );
 
-          this._pipelineChat(pipelineId).send({
+          this._chat.send({
             sender: 'product-manager',
             senderLabel: agentLabel('product-manager'),
             content: `PR criado com sucesso! Branch: **${branchName}** -> ${baseBranch}`,
             type: 'info',
           });
         } catch {
-          this._pipelineChat(pipelineId).send({
+          this._chat.send({
             sender: 'product-manager',
             senderLabel: agentLabel('product-manager'),
             content: `Push feito. PR nao criado automaticamente (gh CLI nao disponivel). Crie manualmente: **${branchName}** -> ${baseBranch}`,
@@ -1824,7 +1752,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
           });
         }
       } catch (pushErr: any) {
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'product-manager',
           senderLabel: agentLabel('product-manager'),
           content: `Branch e commit criados localmente. Push falhou: ${pushErr.message}\n\nExecute manualmente:\n\`git push -u origin ${branchName}\``,
@@ -1832,14 +1760,14 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
         });
       }
     } catch (err: any) {
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'product-manager',
         senderLabel: agentLabel('product-manager'),
         content: `Erro no workflow Git: ${err.message}`,
         type: 'error',
       });
     } finally {
-      this._untrackDirect(pipelineId, 'product-manager');
+      this._directInvocations.delete('product-manager');
       this._onAgentStateChange.fire();
     }
   }
@@ -1856,22 +1784,22 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
     const phase = pipeline.phases[pipeline.currentPhase];
     if (!phase) return { approved: true, feedback: '' };
 
-    this._pipelineChat(pipelineId).send({
+    this._chat.send({
       sender: 'product-manager',
       senderLabel: agentLabel('product-manager'),
       content: `Revisando fase **${phase.name}**...`,
       type: 'info',
     });
 
-    this._trackDirect(pipelineId, 'product-manager');
+    this._directInvocations.add('product-manager');
     this._onAgentStateChange.fire();
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: getActivePMModel() });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
       if (!model) {
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: 'Modelo PM indisponivel para review. Auto-aprovando fase.',
+          content: 'claude-opus-4.6 indisponivel para review. Auto-aprovando fase.',
           type: 'error',
         });
         return { approved: true, feedback: '' };
@@ -1931,7 +1859,7 @@ NAO seja excessivamente exigente — foque em bloqueios reais.`;
       // Parse JSON
       const jsonMatch = fullText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        this._pipelineChat(pipelineId).send({
+        this._chat.send({
           sender: 'product-manager', senderLabel: agentLabel('product-manager'),
           content: 'Nao consegui gerar review estruturado. Aprovando fase.',
           type: 'info',
@@ -1946,14 +1874,14 @@ NAO seja excessivamente exigente — foque em bloqueios reais.`;
       };
 
     } catch (err: any) {
-      this._pipelineChat(pipelineId).send({
+      this._chat.send({
         sender: 'system', senderLabel: 'System',
         content: `Erro na review do PM: ${err.message}. Auto-aprovando.`,
         type: 'error',
       });
       return { approved: true, feedback: '' };
     } finally {
-      this._untrackDirect(pipelineId, 'product-manager');
+      this._directInvocations.delete('product-manager');
       this._onAgentStateChange.fire();
     }
   }

@@ -32,11 +32,18 @@ function getChatFile(channel: string): string {
   return path.join(getChatDir(), `${safe}.jsonl`);
 }
 
+function getBackupFile(channel: string): string {
+  const safe = channel.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(getChatDir(), `${safe}.backup.jsonl`);
+}
+
 export class ChatService {
   private filePath: string;
+  private backupPath: string;
 
   constructor(channel: string = 'default') {
     this.filePath = getChatFile(channel);
+    this.backupPath = getBackupFile(channel);
     if (!fs.existsSync(this.filePath)) {
       fs.writeFileSync(this.filePath, '', 'utf-8');
     }
@@ -67,6 +74,18 @@ export class ChatService {
       }
     });
     return limit ? msgs.slice(-limit) : msgs;
+  }
+
+  backup(): void {
+    if (fs.existsSync(this.filePath)) {
+      fs.copyFileSync(this.filePath, this.backupPath);
+    }
+  }
+
+  restore(): void {
+    if (fs.existsSync(this.backupPath)) {
+      fs.copyFileSync(this.backupPath, this.filePath);
+    }
   }
 
   getUnread(): ChatMessage[] {

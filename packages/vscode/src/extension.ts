@@ -125,6 +125,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // ─── Agent Service ───────────────────────────────────────────
   agentService = new AgentService(
     () => chatProvider.getActiveChat(),
+    (pid) => chatProvider.getChatForPipeline(pid),
     pipelineService,
     contextService,
     decisionService,
@@ -617,7 +618,7 @@ export async function activate(context: vscode.ExtensionContext) {
         mentions: [pick.role],
       });
       chatProvider.refresh();
-      agentService.invokeAgent(pick.role, message);
+      agentService.invokeAgent(chatProvider.getActivePipelineId() || '', pick.role, message);
     }),
 
     // ─── View Agent Models ───────────────────────────────────

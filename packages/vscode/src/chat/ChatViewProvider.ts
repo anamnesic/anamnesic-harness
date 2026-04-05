@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
+import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS } from '@thinkcoffee/core';
 import type { ChatMessage, Pipeline, AgentRole } from '@thinkcoffee/core';
 import type { AgentService } from '../agents/AgentService';
 import { execSync } from 'child_process';
@@ -146,8 +146,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   /** Expose active chat for AgentService to write to */
   getActiveChat(): ChatService { return this._activeChat; }
 
+  getActivePipelineId(): string | null { return this._activePipelineId; }
+
+  getChatForPipeline(pipelineId: string): ChatService {
+    return this._getOrCreatePipelineChat(pipelineId);
+  }
+
   /** Change quality preset mode from webview dropdown */
   private _changeMode(mode: string) {
+    if (mode === 'auto') {
+      const config = loadAgentConfig();
+      config.mode = 'auto';
+      saveAgentConfig(config);
+      this._activeChat.send({
+        sender: 'system',
+        senderLabel: 'Sistema',
+        content: 'Modo alterado para **Auto** — PM escolhe livremente os modelos para cada agente.',
+        type: 'info',
+      });
+      this._sendState();
+      return;
+    }
     const presets = ['cafe-soluvel', 'coado-com-carinho', 'espresso-duplo'] as const;
     if (presets.includes(mode as any)) {
       applyQualityPreset(mode as any);
@@ -215,11 +234,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     if (this._activePipelineId && project) {
       // ─── Chat mode: viewing a specific pipeline ───
+      const pipeline = this._pipelines.get(project.id, this._activePipelineId);
+      if (!pipeline) {
+        // Pipeline was deleted or doesn't exist — fall back to list
+        this._activePipelineId = null;
+        this._sendState();
+        return;
+      }
       // Only show agents running in THIS pipeline
       const runningAgents = this._agentService
         ? this._agentService.getRunning(this._activePipelineId)
         : [];
-      const pipeline = this._pipelines.get(project.id, this._activePipelineId);
       const chat = this._getOrCreatePipelineChat(this._activePipelineId);
       const msgs = chat.getHistory(200);
       this._view.webview.postMessage({
@@ -326,7 +351,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         });
         this._sendState();
         if (this._agentService) {
-          this._agentService.invokeAgent(target as AgentRole, message);
+          this._agentService.invokeAgent(this._activePipelineId || '', target as AgentRole, message);
         }
         return;
       }
@@ -345,7 +370,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         });
         this._sendState();
         if (this._agentService) {
-          this._agentService.invokeAgent(shortMap[target], message);
+          this._agentService.invokeAgent(this._activePipelineId || '', shortMap[target], message);
         }
         return;
       }
@@ -779,45 +804,21 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   .btn-reject { background: transparent; color: #ef4444; border: 1px solid #ef4444 !important; }
   .btn-reject:hover { background: #ef444418; }
 
-  /* ─── Running Agents Banner ────────────────────────────── */
-  .agents-bar {
+  /* ─── Stop button in input area ────────────────────────────── */
+  .stop-btn-input {
     display: none;
-    padding: 4px 10px;
-    border-bottom: 1px solid var(--vscode-panel-border);
-    background: color-mix(in srgb, #3b82f6 8%, var(--vscode-editor-background));
-    font-size: 10px;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-  }
-  .agents-bar.active { display: flex; }
-  .agents-bar .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #3b82f6;
-    animation: pulse 1.2s infinite;
-  }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-  .agents-bar .agent-chips {
-    display: flex; gap: 4px; flex-wrap: wrap; flex: 1;
-  }
-  .agents-bar .chip {
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-weight: 600;
-    font-size: 9px;
-  }
-  .agents-bar .stop-btn {
-    padding: 2px 6px;
-    border-radius: 3px;
+    padding: 6px 10px;
+    border-radius: 6px;
     border: 1px solid #ef4444;
     background: transparent;
     color: #ef4444;
-    font-size: 9px;
+    font-size: 12px;
     cursor: pointer;
     font-weight: 600;
+    flex-shrink: 0;
   }
-  .agents-bar .stop-btn:hover { background: #ef444433; }
+  .stop-btn-input:hover { background: #ef444411; }
+  .stop-btn-input.active { display: inline-flex; align-items: center; justify-content: center; }
 
   /* ─── Messages ─────────────────────────────────────────── */
   .messages {
@@ -961,8 +962,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
-    border-bottom: 1px solid var(--vscode-panel-border);
+    padding: 8px 10px;
+    border-top: 1px solid var(--vscode-panel-border);
     background: var(--vscode-sideBar-background, var(--vscode-editor-background));
     flex-shrink: 0;
   }
@@ -972,8 +973,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     color: var(--vscode-descriptionForeground);
     white-space: nowrap;
   }
+  .mode-bar > label:first-child { margin-right: 4px; }
   .mode-select {
-    flex: 1;
     font-size: 11px;
     font-family: var(--vscode-font-family, sans-serif);
     background: var(--vscode-input-background);
@@ -1267,30 +1268,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <div class="progress-track" id="progressTrack"></div>
   </div>
 
-  <div class="mode-bar" id="modeBar">
-    <label>Modo:</label>
-    <select class="mode-select" id="modeSelect">
-      <option value="cafe-soluvel">Cafe Soluvel</option>
-      <option value="coado-com-carinho">Coado com Carinho</option>
-      <option value="espresso-duplo">Espresso Duplo</option>
-    </select>
-    <span class="mode-subtitle" id="modeSubtitle">Rapido e sem frescura</span>
-    <div class="autoapprove-wrap">
-      <label for="autoApproveToggle" title="Aprovar fases automaticamente sem pedir confirmacao">Auto-approve</label>
-      <label class="toggle-switch" title="Aprovar fases automaticamente">
-        <input type="checkbox" id="autoApproveToggle" checked>
-        <span class="toggle-track"></span>
-        <span class="toggle-thumb"></span>
-      </label>
-    </div>
-  </div>
-
-  <div class="agents-bar" id="agentsBar">
-    <div class="dot"></div>
-    <div class="agent-chips" id="agentChips"></div>
-    <button class="stop-btn" id="stopAgentsBtn">Stop</button>
-  </div>
-
   <div class="pipeline-list" id="pipelineList">
     <div class="pl-header">
       <span class="pl-title">Pipelines</span>
@@ -1335,6 +1312,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   <div class="input-area">
     <div class="input-wrap">
       <textarea id="input" placeholder="Message agents... (/ for commands)" rows="1"></textarea>
+      <button class="stop-btn-input" id="stopBtnInput" title="Stop agents">Stop</button>
       <button class="send-btn" id="sendBtn" title="Send">
         <span class="send-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
         <span class="sending-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4" stroke-dashoffset="10"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle></svg></span>
@@ -1350,6 +1328,24 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <strong>/stop</strong> &bull;
       <strong>@pm</strong> <strong>@ar</strong> <strong>@be</strong> <strong>@fe</strong> <strong>@qa</strong> <strong>@cr</strong>
     </div>
+    <div class="mode-bar" id="modeBar">
+      <label>Modo:</label>
+      <select class="mode-select" id="modeSelect">
+        <option value="auto">Auto (PM decide)</option>
+        <option value="cafe-soluvel">Cafe Soluvel</option>
+        <option value="coado-com-carinho">Coado com Carinho</option>
+        <option value="espresso-duplo">Espresso Duplo</option>
+      </select>
+      <span class="mode-subtitle" id="modeSubtitle">PM escolhe livremente</span>
+      <div class="autoapprove-wrap">
+        <label for="autoApproveToggle" title="Aprovar fases automaticamente sem pedir confirmacao">Auto-approve</label>
+        <label class="toggle-switch" title="Aprovar fases automaticamente">
+          <input type="checkbox" id="autoApproveToggle" checked>
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -1358,6 +1354,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   const emptyEl = document.getElementById('emptyState');
   const inputEl = document.getElementById('input');
   const sendBtn = document.getElementById('sendBtn');
+  const stopBtnInput = document.getElementById('stopBtnInput');
   const pipelineStrip = document.getElementById('pipelineStrip');
   const progressTrack = document.getElementById('progressTrack');
   const stripObjective = document.getElementById('stripObjective');
@@ -1366,9 +1363,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   const approvalTitle = document.getElementById('approvalTitle');
   const approveBtn = document.getElementById('approveBtn');
   const rejectBtn = document.getElementById('rejectBtn');
-  const agentsBar = document.getElementById('agentsBar');
-  const agentChips = document.getElementById('agentChips');
-  const stopAgentsBtn = document.getElementById('stopAgentsBtn');
   const typingIndicator = document.getElementById('typingIndicator');
   const typingAvatar = document.getElementById('typingAvatar');
   const typingLabel = document.getElementById('typingLabel');
@@ -1398,7 +1392,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     pipelineList.classList.add('active');
     messagesEl.style.display = 'none';
     pipelineStrip.classList.remove('active');
-    agentsBar.classList.remove('active');
     inputArea.style.display = '';
     inputEl.placeholder = 'Descreva o objetivo para criar uma pipeline...';
 
@@ -1454,6 +1447,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   }
 
   const MODE_SUBTITLES = {
+    'auto': 'PM escolhe livremente',
     'cafe-soluvel': 'Rapido e sem frescura',
     'coado-com-carinho': 'Equilibrado, pro dia a dia',
     'espresso-duplo': 'Premium, nivel barista',
@@ -1670,25 +1664,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       vscode.postMessage({ command: 'reject', feedback: fb });
     }
   });
-  stopAgentsBtn.addEventListener('click', () => vscode.postMessage({ command: 'send', text: '/stop' }));
+  stopBtnInput.addEventListener('click', () => vscode.postMessage({ command: 'send', text: '/stop' }));
 
   function renderRunningAgents(running) {
     if (!running || running.length === 0) {
-      agentsBar.classList.remove('active');
+      stopBtnInput.classList.remove('active');
       return;
     }
-    agentsBar.classList.add('active');
-    agentChips.innerHTML = '';
-    for (const r of running) {
-      const chip = document.createElement('span');
-      chip.className = 'chip';
-      const color = AGENT_COLORS[r.role] || '#9ca3af';
-      chip.style.background = color + '33';
-      chip.style.color = color;
-      const secs = Math.round(r.elapsed / 1000);
-      chip.textContent = (AGENT_INITIALS[r.role] || '??') + ' ' + secs + 's';
-      agentChips.appendChild(chip);
-    }
+    stopBtnInput.classList.add('active');
   }
 
   window.addEventListener('message', (e) => {
@@ -1717,9 +1700,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       // Sync mode dropdown
       if (msg.data.modelConfig && msg.data.modelConfig.mode) {
         const m = msg.data.modelConfig.mode;
-        if (modeSelect.value !== m && MODE_SUBTITLES[m]) {
-          modeSelect.value = m;
-          modeSubtitle.textContent = MODE_SUBTITLES[m] || '';
+        if (modeSelect.value !== m) {
+          modeSelect.value = MODE_SUBTITLES[m] ? m : 'auto';
+          modeSubtitle.textContent = MODE_SUBTITLES[modeSelect.value] || '';
         }
       }
       // Reset send button
