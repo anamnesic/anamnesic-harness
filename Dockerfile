@@ -1,14 +1,15 @@
 # ==============================================================================
-# ThinkCoffee MCP Server - Multi-stage Dockerfile (V4 - Agent Safety Net)
+# ThinkCoffee MCP Server - Multi-stage Dockerfile (V5 - Agent Safety Net)
 # ==============================================================================
 # Build: docker build -t thinkcoffee/mcp-server:latest .
 # Run:   docker run -v thinkcoffee_data:/data thinkcoffee/mcp-server:latest
 #
-# V4 changes:
-#   - Health check via HTTP endpoint (/health)
-#   - Explicit NODE_OPTIONS for memory limits
-#   - SIGTERM/SIGINT graceful shutdown support
-#   - Tighter file permissions on /data subdirs
+# V5 changes:
+#   - Health check via HTTP endpoint (/health) com fallback filesystem
+#   - NODE_OPTIONS configuravel via ARG
+#   - Graceful shutdown via tini + SIGTERM/SIGINT
+#   - Permissoes restritas em /data/snapshots e /data/logs
+#   - Labels OCI para rastreabilidade
 # ==============================================================================
 
 # --- Stage 1: Build -----------------------------------------------------------
@@ -51,14 +52,16 @@ RUN echo "{\"version\":\"${THINKCOFFEE_VERSION}\",\"buildDate\":\"$(date -u +%Y-
 # --- Stage 2: Production ------------------------------------------------------
 FROM node:20-alpine AS production
 
-# Security + traceability labels
+ARG THINKCOFFEE_VERSION=dev
+
+# OCI labels
 LABEL org.opencontainers.image.title="ThinkCoffee MCP Server"
-LABEL org.opencontainers.image.description="AI Context Management Platform - MCP Server (V4 Agent Safety Net)"
+LABEL org.opencontainers.image.description="AI Context Management Platform - MCP Server (V5 Agent Safety Net)"
 LABEL org.opencontainers.image.source="https://github.com/thinkcoffee/thinkcoffee"
 LABEL org.opencontainers.image.vendor="ThinkCoffee Team"
 LABEL org.opencontainers.image.version="${THINKCOFFEE_VERSION}"
 
-# Install curl for HTTP health checks
+# curl for HTTP health checks, tini for signal handling
 RUN apk add --no-cache curl tini
 
 RUN corepack enable && corepack prepare pnpm@9 --activate
@@ -83,8 +86,8 @@ COPY --from=builder /app/packages/mcp-server/dist ./packages/mcp-server/dist
 
 # Data directory structure:
 #   /data/data.sqlite        - SQLite database
-#   /data/snapshots/          - File snapshots for rollback (V3)
-#   /data/logs/               - Action logs JSONL (V3)
+#   /data/snapshots/          - File snapshots for rollback
+#   /data/logs/               - Action logs JSONL
 RUN mkdir -p /data /data/snapshots /data/logs && \
     chown -R thinkcoffee:thinkcoffee /data /app && \
     chmod 750 /data /data/snapshots /data/logs
@@ -99,13 +102,13 @@ ENV NODE_ENV=production \
     THINKCOFFEE_LOG_DIR=/data/logs \
     MCP_PORT=3000 \
     LOG_LEVEL=info \
-    # V3/V4 Safety Net defaults \
+    # Safety Net defaults \
     THINKCOFFEE_SNAPSHOT_RETENTION_DAYS=7 \
     THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB=50 \
     THINKCOFFEE_DRY_RUN_DEFAULT=false \
     THINKCOFFEE_DIFF_PREVIEW_MODE=existing-only \
     THINKCOFFEE_COMMAND_CONFIRMATION=destructive-only \
-    # Node memory limit (256MB default -- adjust per host) \
+    # Node memory limit (256MB default) \
     NODE_OPTIONS="--max-old-space-size=256"
 
 EXPOSE 3000

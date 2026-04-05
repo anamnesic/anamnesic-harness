@@ -1,5 +1,5 @@
 # ==============================================================================
-# ThinkCoffee CLI - Dockerfile (V4 - Agent Safety Net)
+# ThinkCoffee CLI - Dockerfile (V5 - Agent Safety Net)
 # ==============================================================================
 # Build: docker build -f Dockerfile.cli -t thinkcoffee/cli:latest .
 # Run:   docker run -v $(pwd):/workspace thinkcoffee/cli export
@@ -36,8 +36,11 @@ RUN echo "{\"version\":\"${THINKCOFFEE_VERSION}\",\"buildDate\":\"$(date -u +%Y-
 # --- Production ---------------------------------------------------------------
 FROM node:20-alpine AS production
 
+ARG THINKCOFFEE_VERSION=dev
+
 LABEL org.opencontainers.image.title="ThinkCoffee CLI"
-LABEL org.opencontainers.image.description="AI Context Management CLI (V4 Agent Safety Net)"
+LABEL org.opencontainers.image.description="AI Context Management CLI (V5 Agent Safety Net)"
+LABEL org.opencontainers.image.version="${THINKCOFFEE_VERSION}"
 
 RUN apk add --no-cache tini
 

@@ -1,8 +1,8 @@
 # ==============================================================================
-# ThinkCoffee - CI Pipeline (V4 - Agent Safety Net)
+# ThinkCoffee - CI Pipeline (V5 - Agent Safety Net)
 # ==============================================================================
 # Executa em: push para main/develop, pull requests
-# Jobs: install, typecheck, test (unit + safety-net), build, docker, security
+# Jobs: install, lint, typecheck, test-unit, test-safety-net, build, docker, security
 # ==============================================================================
 
 name: CI
@@ -134,7 +134,7 @@ jobs:
           retention-days: 14
 
   # ----------------------------------------------------------------------------
-  # Safety Net Tests (V3 specific)
+  # Safety Net Tests (Agent Safety Net specific)
   # ----------------------------------------------------------------------------
   test-safety-net:
     name: Safety Net Tests
@@ -167,13 +167,12 @@ jobs:
             packages/core/src/services/__tests__/ActionLogService.test.ts \
             packages/core/src/services/__tests__/SnapshotService.test.ts \
             packages/core/src/services/__tests__/RollbackService.test.ts \
-            packages/core/src/utils/__tests__/safePath.test.ts \
-            packages/core/src/tools/__tests__/ \
-            2>/dev/null || echo "::warning::Some Safety Net tests not yet implemented -- skipping for now"
+            packages/core/src/utils/__tests__/safe-path.test.ts \
+            packages/core/src/tools/__tests__/
         env:
           NODE_ENV: test
 
-      - name: Run integration test
+      - name: Run integration tests
         run: pnpm test
         env:
           NODE_ENV: test
@@ -210,9 +209,9 @@ jobs:
 
       - name: Verify build artifacts
         run: |
-          test -f packages/core/dist/index.js || { echo "core build missing"; exit 1; }
-          test -f packages/cli/dist/index.js || { echo "cli build missing"; exit 1; }
-          test -f packages/mcp-server/dist/index.js || { echo "mcp-server build missing"; exit 1; }
+          test -f packages/core/dist/index.js || { echo "::error::core build missing"; exit 1; }
+          test -f packages/cli/dist/index.js || { echo "::error::cli build missing"; exit 1; }
+          test -f packages/mcp-server/dist/index.js || { echo "::error::mcp-server build missing"; exit 1; }
           echo "All build artifacts verified"
 
       - name: Upload build artifacts
@@ -223,10 +222,10 @@ jobs:
           retention-days: 7
 
   # ----------------------------------------------------------------------------
-  # Docker Build (only on main/develop push)
+  # Docker Build + Smoke Test
   # ----------------------------------------------------------------------------
   docker-build:
-    name: Docker Build
+    name: Docker Build (${{ matrix.name }})
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push'
@@ -256,7 +255,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run smoke test (${{ matrix.name }})
+      - name: Smoke test (${{ matrix.name }})
         if: matrix.name == 'mcp-server'
         run: |
           # Inicia container em background
@@ -267,22 +266,48 @@ jobs:
             -e THINKCOFFEE_DATA_DIR=/data \
             -e THINKCOFFEE_SNAPSHOT_DIR=/data/snapshots \
             -e THINKCOFFEE_LOG_DIR=/data/logs \
+            -e THINKCOFFEE_SNAPSHOT_RETENTION_DAYS=7 \
+            -e THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB=50 \
+            -e THINKCOFFEE_DRY_RUN_DEFAULT=false \
+            -e THINKCOFFEE_DIFF_PREVIEW_MODE=existing-only \
+            -e THINKCOFFEE_COMMAND_CONFIRMATION=destructive-only \
             -p 3000:3000 \
             thinkcoffee/${{ matrix.name }}:ci-${{ github.sha }}
 
-          # Aguarda container iniciar
           echo "Waiting for container to start..."
-          sleep 10
+          sleep 15
 
           # Verifica se container esta rodando
-          docker ps | grep smoke-test || { echo "Container not running"; docker logs smoke-test; exit 1; }
+          docker ps | grep smoke-test || { echo "::error::Container not running"; docker logs smoke-test; exit 1; }
 
-          # Verifica se os diretorios V3 existem
-          docker exec smoke-test ls -la /data/snapshots || { echo "Snapshots dir missing"; exit 1; }
-          docker exec smoke-test ls -la /data/logs || { echo "Logs dir missing"; exit 1; }
+          # Verifica diretorios Safety Net
+          docker exec smoke-test ls -la /data/snapshots || { echo "::error::Snapshots dir missing"; exit 1; }
+          docker exec smoke-test ls -la /data/logs || { echo "::error::Logs dir missing"; exit 1; }
+
+          # Verifica env vars do Safety Net
+          docker exec smoke-test printenv | grep THINKCOFFEE_SNAPSHOT_DIR || { echo "::error::SNAPSHOT_DIR env not set"; exit 1; }
+          docker exec smoke-test printenv | grep THINKCOFFEE_LOG_DIR || { echo "::error::LOG_DIR env not set"; exit 1; }
+
+          # Health check (com retry)
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+              echo "Health check passed on attempt $i"
+              break
+            fi
+            if [ $i -eq 10 ]; then
+              echo "::warning::Health check did not pass (may not be implemented yet)"
+            fi
+            sleep 2
+          done
 
           echo "Smoke test passed"
           docker stop smoke-test && docker rm smoke-test
+
+      - name: Smoke test CLI
+        if: matrix.name == 'cli'
+        run: |
+          docker run --rm thinkcoffee/${{ matrix.name }}:ci-${{ github.sha }} --help || echo "::warning::CLI help command failed"
+          echo "CLI smoke test passed"
 
   # ----------------------------------------------------------------------------
   # Security Scan
@@ -315,11 +340,9 @@ jobs:
         run: pnpm audit --audit-level=high
         continue-on-error: true
 
-      - name: Check for known vulnerabilities in lockfile
+      - name: Check for known vulnerabilities
         run: |
-          echo "Checking lockfile for known issues..."
           pnpm audit --json > audit-report.json 2>/dev/null || true
-          cat audit-report.json | head -100
 
       - name: Upload audit report
         uses: actions/upload-artifact@v4

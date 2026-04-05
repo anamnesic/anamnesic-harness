@@ -1,65 +1,45 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as os from 'os';
+import * as fs from 'fs';
 
-/**
- * Handles showing a diff preview to the user for file modifications.
- */
 export class DiffPreviewHandler {
-    /**
-     * Shows a diff view to the user and asks for confirmation.
-     * @param workspaceRoot The root of the current workspace.
-     * @param relativePath The relative path of the file being modified.
-     * @param newContent The proposed new content for the file.
-     * @returns A promise that resolves to `true` if the user accepts the change, `false` otherwise.
-     */
-    public static async showDiff(
-        workspaceRoot: string,
-        relativePath: string,
-        newContent: string
-    ): Promise<boolean> {
-        const absolutePath = path.join(workspaceRoot, relativePath);
-        let originalContent = '';
+  constructor(private workspaceRoot: string) {}
 
-        try {
-            originalContent = await fs.readFile(absolutePath, 'utf-8');
-        } catch (error) {
-            // If the file doesn't exist, treat original content as empty.
-            // This might happen if the agent intends to create a file but uses a write action.
-            originalContent = '';
-        }
+  async showDiff(relativePath: string, originalContent: string | null, newContent: string): Promise<boolean> {
+    const filePath = path.join(this.workspaceRoot, relativePath);
+    const fileName = path.basename(filePath);
 
-        const tempDir = path.join(os.tmpdir(), 'thinkcoffee-diff');
-        await fs.mkdir(tempDir, { recursive: true });
+    // Create temporary files for diffing
+    const tempOriginal = path.join(this.workspaceRoot, '.thinkcoffee', 'tmp', `${fileName}.orig`);
+    const tempNew = path.join(this.workspaceRoot, '.thinkcoffee', 'tmp', `${fileName}.new`);
 
-        const originalFileUri = vscode.Uri.file(path.join(tempDir, `original-${path.basename(relativePath)}`));
-        const modifiedFileUri = vscode.Uri.file(path.join(tempDir, `modified-${path.basename(relativePath)}`));
+    await fs.promises.mkdir(path.dirname(tempOriginal), { recursive: true });
+    
+    await fs.promises.writeFile(tempOriginal, originalContent || '');
+    await fs.promises.writeFile(tempNew, newContent);
 
-        await fs.writeFile(originalFileUri.fsPath, originalContent);
-        await fs.writeFile(modifiedFileUri.fsPath, newContent);
+    const originalUri = vscode.Uri.file(tempOriginal);
+    const newUri = vscode.Uri.file(tempNew);
 
-        const originalDocName = `${relativePath} (Original)`;
-        const modifiedDocName = `${relativePath} (Proposed)`;
+    const title = originalContent === null ? `Review Create: ${relativePath}` : `Review Edit: ${relativePath}`;
 
-        await vscode.commands.executeCommand(
-            'vscode.diff',
-            originalFileUri,
-            modifiedFileUri,
-            `${originalDocName} ↔ ${modifiedDocName}`
-        );
+    return new Promise((resolve) => {
+        vscode.commands.executeCommand('vscode.diff', originalUri, newUri, title).then(() => {
+            vscode.window.showInformationMessage(
+                title,
+                { modal: true },
+                'Accept',
+                'Reject'
+            ).then(async (selection) => {
+                // Cleanup temp files
+                await fs.promises.unlink(tempOriginal).catch(() => {});
+                await fs.promises.unlink(tempNew).catch(() => {});
+                // Close the diff tab
+                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
-        const userResponse = await vscode.window.showWarningMessage(
-            `Apply changes to ${relativePath}?`,
-            { modal: true },
-            'Apply',
-            'Discard'
-        );
-
-        // Clean up temporary files
-        await fs.unlink(originalFileUri.fsPath).catch(() => {});
-        await fs.unlink(modifiedFileUri.fsPath).catch(() => {});
-
-        return userResponse === 'Apply';
-    }
+                resolve(selection === 'Accept');
+            });
+        });
+    });
+  }
 }
