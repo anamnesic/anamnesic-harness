@@ -491,77 +491,111 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     overflow: hidden;
   }
 
-  /* ─── Pipeline Banner ─────────────────────────────────── */
-  .pipeline-bar {
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--vscode-panel-border);
-    background: var(--vscode-editor-background);
-    flex-shrink: 0;
+  /* ─── Pipeline Progress Strip ───────────────────────────── */
+  .pipeline-strip {
     display: none;
+    flex-shrink: 0;
+    flex-direction: column;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+    cursor: default;
   }
-  .pipeline-bar.active { display: block; }
-  .pipeline-bar .objective {
-    font-weight: 600;
-    font-size: 12px;
-    margin-bottom: 4px;
+  .pipeline-strip.active { display: flex; }
+  .pipeline-strip .strip-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    font-size: 10px;
+    color: var(--vscode-descriptionForeground);
+  }
+  .pipeline-strip .strip-objective {
+    flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .phase-track {
-    display: flex;
-    gap: 2px;
-    align-items: center;
-  }
-  .phase-dot {
-    flex: 1;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--vscode-input-border, #444);
-    transition: background 0.2s;
-  }
-  .phase-dot.completed { background: #22c55e; }
-  .phase-dot.in-progress { background: #3b82f6; }
-  .phase-dot.awaiting { background: #eab308; }
-  .phase-dot.failed { background: #ef4444; }
-
-  .phase-label {
-    font-size: 10px;
-    color: var(--vscode-descriptionForeground);
-    margin-top: 3px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .phase-label .current-phase { font-weight: 600; color: var(--vscode-foreground); }
-
-  .approval-bar {
-    display: none;
-    gap: 6px;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--vscode-panel-border);
-    background: color-mix(in srgb, #eab308 10%, var(--vscode-editor-background));
-    align-items: center;
-    flex-shrink: 0;
-  }
-  .approval-bar.active { display: flex; }
-  .approval-bar .label {
-    flex: 1;
-    font-size: 11px;
     font-weight: 600;
+    color: var(--vscode-foreground);
+    font-size: 11px;
   }
-  .approval-bar button {
-    padding: 3px 10px;
-    border-radius: 3px;
+  .pipeline-strip .strip-phase {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: color-mix(in srgb, #3b82f6 15%, transparent);
+    color: #3b82f6;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .pipeline-strip .strip-phase.done {
+    background: color-mix(in srgb, #22c55e 15%, transparent);
+    color: #22c55e;
+  }
+  .progress-track {
+    display: flex;
+    height: 3px;
+  }
+  .progress-seg {
+    flex: 1;
+    transition: background 0.3s;
+    background: var(--vscode-input-border, #333);
+  }
+  .progress-seg.completed { background: #22c55e; }
+  .progress-seg.in-progress { background: #3b82f6; }
+  .progress-seg.awaiting { background: #eab308; }
+  .progress-seg.failed { background: #ef4444; }
+
+  /* ─── Inline Approval Card (inside chat) ────────────────── */
+  .approval-card {
+    display: none;
+    margin: 8px 0 8px 25px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: color-mix(in srgb, #eab308 6%, var(--vscode-input-background));
+    border: 1px solid color-mix(in srgb, #eab308 25%, var(--vscode-input-border));
+    animation: fadeIn 0.15s ease-in;
+  }
+  .approval-card.active { display: block; }
+  .approval-card .ac-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .approval-card .ac-icon {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #eab308;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #000; font-weight: 700;
+  }
+  .approval-card .ac-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+  }
+  .approval-card .ac-desc {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .approval-card .ac-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .approval-card .ac-actions button {
+    padding: 4px 14px;
+    border-radius: 4px;
     border: none;
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
+    transition: background 0.15s;
   }
   .btn-approve { background: #22c55e; color: #000; }
   .btn-approve:hover { background: #16a34a; }
-  .btn-reject { background: #ef4444; color: #fff; }
-  .btn-reject:hover { background: #dc2626; }
+  .btn-reject { background: transparent; color: #ef4444; border: 1px solid #ef4444 !important; }
+  .btn-reject:hover { background: #ef444418; }
 
   /* ─── Running Agents Banner ────────────────────────────── */
   .agents-bar {
@@ -909,19 +943,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 </style>
 </head>
 <body>
-  <div class="pipeline-bar" id="pipelineBar">
-    <div class="objective" id="pipelineObj"></div>
-    <div class="phase-track" id="phaseTrack"></div>
-    <div class="phase-label">
-      <span class="current-phase" id="currentPhase"></span>
-      <span id="pipelineStatus"></span>
+  <div class="pipeline-strip" id="pipelineStrip">
+    <div class="strip-header">
+      <span class="strip-objective" id="stripObjective"></span>
+      <span class="strip-phase" id="stripPhase"></span>
     </div>
-  </div>
-
-  <div class="approval-bar" id="approvalBar">
-    <span class="label" id="approvalLabel">Phase awaiting approval</span>
-    <button class="btn-approve" id="approveBtn">Approve</button>
-    <button class="btn-reject" id="rejectBtn">Reject</button>
+    <div class="progress-track" id="progressTrack"></div>
   </div>
 
   <div class="mode-bar" id="modeBar">
@@ -945,6 +972,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <div class="avatar" id="typingAvatar">...</div>
       <span class="typing-label" id="typingLabel">Pensando</span>
       <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>
+    <div class="approval-card" id="approvalCard">
+      <div class="ac-header">
+        <div class="ac-icon">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <span class="ac-title" id="approvalTitle">Fase aguardando aprovacao</span>
+      </div>
+      <div class="ac-desc" id="approvalDesc">Revise o resultado dos agentes e aprove para continuar ou rejeite com feedback.</div>
+      <div class="ac-actions">
+        <button class="btn-approve" id="approveBtn">Aprovar</button>
+        <button class="btn-reject" id="rejectBtn">Rejeitar</button>
+      </div>
     </div>
     <div class="empty" id="emptyState">
       <h3>ThinkCoffee Agents</h3>
@@ -986,13 +1026,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   const emptyEl = document.getElementById('emptyState');
   const inputEl = document.getElementById('input');
   const sendBtn = document.getElementById('sendBtn');
-  const pipelineBar = document.getElementById('pipelineBar');
-  const phaseTrack = document.getElementById('phaseTrack');
-  const pipelineObj = document.getElementById('pipelineObj');
-  const currentPhaseEl = document.getElementById('currentPhase');
-  const pipelineStatusEl = document.getElementById('pipelineStatus');
-  const approvalBar = document.getElementById('approvalBar');
-  const approvalLabel = document.getElementById('approvalLabel');
+  const pipelineStrip = document.getElementById('pipelineStrip');
+  const progressTrack = document.getElementById('progressTrack');
+  const stripObjective = document.getElementById('stripObjective');
+  const stripPhase = document.getElementById('stripPhase');
+  const approvalCard = document.getElementById('approvalCard');
+  const approvalTitle = document.getElementById('approvalTitle');
   const approveBtn = document.getElementById('approveBtn');
   const rejectBtn = document.getElementById('rejectBtn');
   const agentsBar = document.getElementById('agentsBar');
@@ -1060,35 +1099,49 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   function renderPipeline(pipeline) {
     if (!pipeline) {
-      pipelineBar.classList.remove('active');
-      approvalBar.classList.remove('active');
+      pipelineStrip.classList.remove('active');
+      approvalCard.classList.remove('active');
       return;
     }
-    pipelineBar.classList.add('active');
-    pipelineObj.textContent = pipeline.objective;
+    pipelineStrip.classList.add('active');
+    stripObjective.textContent = pipeline.objective;
 
-    phaseTrack.innerHTML = '';
+    // Progress segments
+    progressTrack.innerHTML = '';
     let awaitingPhaseName = '';
+    const completed = pipeline.phases.filter(p => p.status === 'completed' || p.status === 'approved').length;
+    const total = pipeline.phases.length;
+
     pipeline.phases.forEach(ph => {
-      const dot = document.createElement('div');
-      dot.className = 'phase-dot';
-      dot.title = ph.name + ' (' + ph.status + ')';
-      if (ph.status === 'completed' || ph.status === 'approved') dot.classList.add('completed');
-      else if (ph.status === 'in-progress') dot.classList.add('in-progress');
-      else if (ph.status === 'awaiting-approval') { dot.classList.add('awaiting'); awaitingPhaseName = ph.name; }
-      else if (ph.status === 'failed') dot.classList.add('failed');
-      phaseTrack.appendChild(dot);
+      const seg = document.createElement('div');
+      seg.className = 'progress-seg';
+      seg.title = ph.name + ' (' + ph.status + ')';
+      if (ph.status === 'completed' || ph.status === 'approved') seg.classList.add('completed');
+      else if (ph.status === 'in-progress') seg.classList.add('in-progress');
+      else if (ph.status === 'awaiting-approval') { seg.classList.add('awaiting'); awaitingPhaseName = ph.name; }
+      else if (ph.status === 'failed') seg.classList.add('failed');
+      progressTrack.appendChild(seg);
     });
 
+    // Current phase badge
     const cp = pipeline.phases[pipeline.currentPhase];
-    currentPhaseEl.textContent = cp ? cp.name : 'Done';
-    pipelineStatusEl.textContent = pipeline.status;
-
-    if (awaitingPhaseName) {
-      approvalBar.classList.add('active');
-      approvalLabel.textContent = awaitingPhaseName + ' awaiting approval';
+    if (pipeline.status === 'completed') {
+      stripPhase.textContent = 'Concluido';
+      stripPhase.classList.add('done');
     } else {
-      approvalBar.classList.remove('active');
+      stripPhase.textContent = cp ? cp.name : completed + '/' + total;
+      stripPhase.classList.remove('done');
+    }
+
+    // Inline approval card in chat
+    if (awaitingPhaseName) {
+      approvalTitle.textContent = awaitingPhaseName + ' aguardando aprovacao';
+      approvalCard.classList.add('active');
+      // Keep it at the bottom of messages
+      messagesEl.appendChild(approvalCard);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    } else {
+      approvalCard.classList.remove('active');
     }
   }
 
@@ -1129,7 +1182,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       messagesEl.appendChild(div);
     }
 
-    // Keep typing indicator at bottom
+    // Keep approval card and typing indicator at bottom
+    if (approvalCard.classList.contains('active')) {
+      messagesEl.appendChild(approvalCard);
+    }
     if (typingIndicator.classList.contains('active')) {
       messagesEl.appendChild(typingIndicator);
     }
@@ -1189,10 +1245,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
   });
 
-  approveBtn.addEventListener('click', () => vscode.postMessage({ command: 'approve' }));
+  approveBtn.addEventListener('click', () => {
+    approvalCard.classList.remove('active');
+    vscode.postMessage({ command: 'approve' });
+  });
   rejectBtn.addEventListener('click', () => {
-    const fb = prompt('Feedback for agents:');
-    if (fb) vscode.postMessage({ command: 'reject', feedback: fb });
+    const fb = prompt('Feedback para os agentes:');
+    if (fb) {
+      approvalCard.classList.remove('active');
+      vscode.postMessage({ command: 'reject', feedback: fb });
+    }
   });
   stopAgentsBtn.addEventListener('click', () => vscode.postMessage({ command: 'send', text: '/stop' }));
 
