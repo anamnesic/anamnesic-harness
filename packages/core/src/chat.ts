@@ -55,10 +55,15 @@ export class ChatService {
     const raw = fs.readFileSync(this.filePath, 'utf-8').trim();
     if (!raw) return [];
     const lines = raw.split('\n');
-    const msgs = lines
-      .filter(l => l.trim())
-      .map(l => { try { return JSON.parse(l) as ChatMessage; } catch { return null; } })
-      .filter((m): m is ChatMessage => m !== null);
+    const msgs: ChatMessage[] = [];
+    lines.forEach((l, i) => {
+      if (!l.trim()) return;
+      try {
+        msgs.push(JSON.parse(l) as ChatMessage);
+      } catch (err) {
+        console.error(`[ThinkCoffee] Chat line ${i + 1} parse error: ${(err as Error).message} — content: ${l.substring(0, 80)}`);
+      }
+    });
     return limit ? msgs.slice(-limit) : msgs;
   }
 

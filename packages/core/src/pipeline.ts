@@ -150,7 +150,11 @@ function createTasksForPhase(phaseName: string, agents: AgentRole[], objective: 
 
 function getPipelinesDir(projectId: string): string {
   const dir = path.join(os.homedir(), '.thinkcoffee', 'pipelines', projectId);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  try {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  } catch (err) {
+    console.error(`[ThinkCoffee] Cannot create pipelines dir ${dir}: ${(err as Error).message}`);
+  }
   return dir;
 }
 
@@ -163,7 +167,12 @@ function savePipeline(p: Pipeline): void {
 function loadPipeline(projectId: string, pipelineId: string): Pipeline | null {
   const file = path.join(getPipelinesDir(projectId), `${pipelineId}.json`);
   if (!fs.existsSync(file)) return null;
-  return JSON.parse(fs.readFileSync(file, 'utf-8'));
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch (err) {
+    console.error(`[ThinkCoffee] Failed to parse pipeline ${pipelineId}: ${(err as Error).message}`);
+    return null;
+  }
 }
 
 // ─── PipelineService ─────────────────────────────────────────
@@ -211,8 +220,22 @@ export class PipelineService {
   /** List all pipelines for a project */
   list(projectId: string): Pipeline[] {
     const dir = getPipelinesDir(projectId);
-    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
-    return files.map(f => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')));
+    let files: string[];
+    try {
+      files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    } catch {
+      return [];
+    }
+    const results: Pipeline[] = [];
+    for (const f of files) {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'));
+        results.push(data);
+      } catch (err) {
+        console.error(`[ThinkCoffee] Skipping corrupted pipeline file ${f}: ${(err as Error).message}`);
+      }
+    }
+    return results;
   }
 
   /** Get the active pipeline for a project (most recent non-completed) */
