@@ -8,10 +8,11 @@ import {
 } from '@thinkcoffee/core';
 import { discoverModels, getCachedModels, type DiscoveredModel } from './ModelRegistry';
 import type {
-  AgentRole, Pipeline, AgentTask, ChatMessage, AgentModelConfig, PMModelAssignment, PhaseTemplate, QualityPreset,
+  AgentRole, Pipeline, AgentTask, ChatMessage, AgentModelConfig, PMModelAssignment, PhaseTemplate, QualityPreset, TaskStatus,
 } from '@thinkcoffee/core';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ const AGENT_SIGLA: Record<AgentRole, string> = {
   'product-manager': 'PM',
   'architect': 'AR',
   'organizer': 'OG',
+  'troubleshooter': 'TS',
   'backend': 'BE',
   'frontend': 'FE',
   'devops': 'DO',
@@ -104,6 +106,27 @@ ${ctx.task.title}: ${ctx.task.description}
 7. NAO faca git push — apenas commit local.`
     : '';
 
+  // Extra instructions for the troubleshooter agent
+  const troubleshooterExtra = role === 'troubleshooter'
+    ? `\n\n## Instrucoes especiais do Troubleshooter
+Voce e o agente de emergencia. Outro agente falhou e o PM te chamou pra resolver.
+
+## Sua abordagem (NESTA ORDEM):
+1. LEIA o feedback do PM nos outputs anteriores — ele explica exatamente o que deu errado
+2. Use list_files e read_file para entender o estado ATUAL do workspace
+3. IDENTIFIQUE a causa raiz (arquivo faltando? codigo errado? import quebrado?)
+4. Use write_file para CRIAR ou CORRIGIR cada arquivo necessario
+5. Se precisar deletar arquivos, use run_command (rm/del)
+6. Ao final, liste todos os arquivos que voce criou/corrigiu
+
+## Regras criticas
+- VOCE DEVE usar write_file. Se nao criar/corrigir arquivos, voce tambem falhou.
+- Nao analise apenas — RESOLVA. Codigo, nao teoria.
+- Voce tem UMA chance. Nao existe retry apos voce.
+- Se a tarefa original pedia implementar algo, IMPLEMENTE.
+- Se faltam arquivos, CRIE-OS com conteudo funcional.`
+    : '';
+
   const prev = ctx.previousOutputs.length > 0
     ? '\n\n## Outputs anteriores dos agentes\n' + ctx.previousOutputs.map(
       p => `### ${AGENT_META[p.agent].label}\n${p.output.substring(0, 3000)}`
@@ -114,7 +137,7 @@ ${ctx.task.title}: ${ctx.task.description}
     ? `\n\n## FEEDBACK DE REJEICAO (prioridade alta)\n${ctx.rejectionFeedback}`
     : '';
 
-  return base + roleExtra + prev + feedback;
+  return base + roleExtra + troubleshooterExtra + prev + feedback;
 }
 
 function buildPMAutoAssignPrompt(
@@ -1066,7 +1089,11 @@ export class AgentService {
       });
 
       // PM reviews individual task after completion
-      if (role !== 'product-manager') {
+      // Skip for: PM itself, troubleshooter (to avoid loop), and pure analysis tasks
+      const skipReview = role === 'product-manager'
+        || role === 'troubleshooter'
+        || (role === 'code-review' && (task.title.startsWith('Diagnosticar') || task.title.startsWith('Diagnose')));
+      if (!skipReview) {
         await this._pmTaskReview(ctx.projectId, pipelineId, task, role, fullOutput);
       }
 
@@ -1560,60 +1587,22 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
           type: 'info',
         });
       } else {
-        // PM rejects — create diagnostic sub-pipeline to identify and fix the problem
+        // PM rejects — invoke troubleshooter to fix directly (no retry loop)
         const config = loadAgentConfig();
         const currentModel = getModelForAgent(agentRole, config);
 
         // Record this model's failure for future reference
         recordModelFailure(currentModel, agentRole, task.title, result.feedback);
 
-        const newModel = this._pickAlternativeModel(agentRole, currentModel);
-        if (newModel && newModel !== currentModel) {
-          config.models[agentRole] = newModel;
-          saveAgentConfig(config);
-        }
-
-        const modelMsg = newModel && newModel !== currentModel
-          ? `\nTrocando modelo: \`${currentModel}\` -> \`${newModel}\``
-          : '';
-
-        // Create and run diagnostic sub-pipeline
-        const diagResult = await this._runDiagnosticPipeline(
-          projectId, pipelineId, task, agentRole, output, result.feedback,
-        );
-
         this._pipelineChat(pipelineId).send({
           sender: 'product-manager',
           senderLabel: agentLabel('product-manager'),
-          content: `Tarefa rejeitada (${agentLabel(agentRole)}): ${result.feedback}\n\n${
-            diagResult
-              ? `Pipeline de diagnostico concluida. Agente vai refazer com correcoes aplicadas.`
-              : `Agente vai refazer com feedback do PM.`
-          }${modelMsg}`,
+          content: `Tarefa rejeitada (${agentLabel(agentRole)}): ${result.feedback}\n\nInvocando Troubleshooter para corrigir...`,
           type: 'info',
         });
 
-        // Reset task to pending with diagnostic output as context
-        const p = this._pipelines.get(projectId, pipelineId);
-        if (p) {
-          const phase = p.phases[p.currentPhase];
-          const t = phase?.tasks.find(tt => tt.id === task.id);
-          if (t) {
-            t.status = 'pending';
-            const diagContext = diagResult
-              ? `\n\n[DIAGNOSTICO]\n${diagResult.substring(0, 3000)}`
-              : '';
-            t.output = `[PM FEEDBACK] ${result.feedback}${diagContext}\n\n[OUTPUT ANTERIOR]\n${(t.output || '').substring(0, 2000)}`;
-            if (phase.status === 'awaiting-approval' || phase.status === 'approved' || phase.status === 'completed') {
-              phase.status = 'in-progress';
-            }
-            if (p.status === 'completed') {
-              p.status = 'active';
-              p.completedAt = undefined;
-            }
-            this._pipelines.save(p);
-          }
-        }
+        // Run troubleshooter directly — it reads the failed output, diagnoses, and fixes in one pass
+        await this._runTroubleshooter(projectId, pipelineId, task, agentRole, output, result.feedback);
       }
     } catch (err: any) {
       // On error, skip review — don't block the pipeline
@@ -1629,147 +1618,99 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
     }
   }
 
-  // ─── Diagnostic Sub-Pipeline ────────────────────────────
+  // ─── Troubleshooter — single-pass fix agent ─────────────
 
   /**
-   * Creates and runs a diagnostic sub-pipeline when PM rejects a task.
-   * Phase 1 (code-review): Analyze the failed output and identify the root cause.
-   * Phase 2 (same agent role): Apply the fix based on the diagnosis.
-   * Returns the combined diagnostic output, or null on failure.
+   * When PM rejects a task, the Troubleshooter agent takes over.
+   * It reads the failed output + PM feedback, analyzes the workspace,
+   * and applies fixes directly using write_file. No retry loop.
+   * After it finishes, the original task is marked completed with
+   * the troubleshooter's output appended.
    */
-  private async _runDiagnosticPipeline(
+  private async _runTroubleshooter(
     projectId: string,
-    parentPipelineId: string,
+    pipelineId: string,
     failedTask: AgentTask,
-    agentRole: AgentRole,
+    originalRole: AgentRole,
     failedOutput: string,
     pmFeedback: string,
-  ): Promise<string | null> {
-    const parentPipeline = this._pipelines.get(projectId, parentPipelineId);
-    if (!parentPipeline) return null;
+  ): Promise<void> {
+    const pipeline = this._pipelines.get(projectId, pipelineId);
+    if (!pipeline) return;
 
-    // Prevent infinite recursion: don't create diagnostic of a diagnostic
-    if (parentPipeline.parentPipelineId) return null;
-
-    const workspace = parentPipeline.workspace;
-    const agentLabel_ = AGENT_META[agentRole].label;
-    const outputSnippet = failedOutput.substring(failedOutput.length - 4000);
+    const workspace = pipeline.workspace || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+    const originalLabel = AGENT_META[originalRole].label;
+    const outputSnippet = failedOutput.substring(failedOutput.length - 6000);
     const artifactsInfo = failedTask.artifacts?.length
-      ? `Arquivos criados: ${failedTask.artifacts.join(', ')}`
-      : 'Nenhum arquivo criado';
+      ? `Arquivos ja criados pelo agente original: ${failedTask.artifacts.join(', ')}`
+      : 'O agente original NAO criou nenhum arquivo (esse e o problema principal)';
 
-    const diagObjective = `[DIAGNOSTICO] Corrigir falha na tarefa "${failedTask.title}" do ${agentLabel_}`;
+    // Build troubleshooter task
+    const tsTask: AgentTask = {
+      id: crypto.randomUUID(),
+      agent: 'troubleshooter',
+      title: `Corrigir: ${failedTask.title}`,
+      description: `O ${originalLabel} falhou na tarefa "${failedTask.title}" e o PM rejeitou.
 
-    // Build the diagnostic phases
-    const diagPhases: PhaseTemplate[] = [
-      {
-        name: 'Diagnostico',
-        order: 0,
-        parallel: false,
-        agents: ['code-review'],
-        taskDescriptions: {
-          'code-review': {
-            title: `Diagnosticar falha: ${failedTask.title}`,
-            description: `O PM rejeitou a tarefa "${failedTask.title}" executada pelo ${agentLabel_}.
-
-## Feedback do PM
+## Feedback do PM (LEIA COM ATENCAO)
 ${pmFeedback}
-
-## Output do agente (ultimos 4000 chars)
-${outputSnippet}
 
 ## ${artifactsInfo}
 
-## Tarefa original
+## Tarefa original que o ${originalLabel} deveria ter feito
 ${failedTask.description}
 
-## Objetivo da pipeline original
-${parentPipeline.objective}
+## Output do agente que falhou (ultimos 6000 chars)
+${outputSnippet}
 
-## Sua tarefa
-1. Leia os arquivos relevantes no workspace para entender o estado atual
-2. Identifique EXATAMENTE o que deu errado com base no feedback do PM
-3. Liste os arquivos que precisam ser criados ou corrigidos
-4. Descreva o passo-a-passo para corrigir
+## Objetivo da pipeline
+${pipeline.objective}
 
-Seja especifico: indique nomes de arquivos, linhas, e o que precisa mudar.`,
-          },
-        },
-      },
-      {
-        name: 'Correcao',
-        order: 1,
-        parallel: false,
-        agents: [agentRole],
-        taskDescriptions: {
-          [agentRole]: {
-            title: `Corrigir: ${failedTask.title}`,
-            description: `Voce executou a tarefa "${failedTask.title}" mas o PM rejeitou.
+## O QUE VOCE DEVE FAZER
+1. Leia os arquivos existentes no workspace (list_files, read_file) para entender o estado atual
+2. Baseado no feedback do PM, identifique EXATAMENTE o que falta
+3. Use write_file para CRIAR ou CORRIGIR cada arquivo necessario
+4. Se algum import/require quebrou, corrija-o
+5. Garanta que TODOS os arquivos mencionados no feedback do PM sejam criados/corrigidos
 
-## Feedback do PM
-${pmFeedback}
+LEMBRE: Voce tem UMA chance. Use write_file. Nao descreva — FACA.`,
+      status: 'pending' as TaskStatus,
+    };
 
-## Contexto
-O code-review ja analisou o problema na fase anterior. Use o diagnostico para guiar sua correcao.
+    const ctx: AgentContext = {
+      projectId,
+      projectName: pipeline.objective,
+      workspace,
+      objective: pipeline.objective,
+      previousOutputs: [{ agent: originalRole, output: failedOutput.substring(0, 4000) }],
+      task: tsTask,
+      rejectionFeedback: pmFeedback,
+    };
 
-## Tarefa original
-${failedTask.description}
+    // Run the troubleshooter (reuses _runAgent but WITHOUT PM re-review to avoid loop)
+    await this._runAgent(tsTask, ctx, pipelineId);
 
-## IMPORTANTE
-- Leia o output do code-review da fase anterior para entender o que corrigir
-- Use write_file para CRIAR ou CORRIGIR os arquivos necessarios
-- Nao repita os mesmos erros — foque nas correcoes indicadas pelo diagnostico`,
-          },
-        },
-      },
-    ];
+    // After troubleshooter completes, merge its artifacts into the original task
+    // and mark the original task as completed
+    const updatedPipeline = this._pipelines.get(projectId, pipelineId);
+    if (updatedPipeline) {
+      const phase = updatedPipeline.phases[updatedPipeline.currentPhase];
+      const originalTask = phase?.tasks.find(t => t.id === failedTask.id);
+      if (originalTask) {
+        const tsArtifacts = tsTask.artifacts || [];
+        originalTask.artifacts = [...(originalTask.artifacts || []), ...tsArtifacts];
+        originalTask.output = (originalTask.output || '') + `\n\n[TROUBLESHOOTER FIX]\n${tsTask.output || '(sem output)'}`;
+        originalTask.status = 'completed';
+        this._pipelines.save(updatedPipeline);
+      }
+    }
 
-    // Create the diagnostic sub-pipeline
-    const diagPipeline = this._pipelines.create(projectId, diagObjective, workspace, diagPhases);
-    diagPipeline.parentPipelineId = parentPipelineId;
-    diagPipeline.parentTaskId = failedTask.id;
-    this._pipelines.save(diagPipeline);
-
-    this._pipelineChat(parentPipelineId).send({
-      sender: 'product-manager',
-      senderLabel: agentLabel('product-manager'),
-      content: `Criando pipeline de diagnostico para investigar e corrigir a falha de ${agentLabel_}...`,
+    this._pipelineChat(pipelineId).send({
+      sender: 'troubleshooter',
+      senderLabel: agentLabel('troubleshooter'),
+      content: `Correcao aplicada para a tarefa "${failedTask.title}" do ${originalLabel}.`,
       type: 'info',
     });
-
-    try {
-      // Run the diagnostic pipeline (reuses the same runPipeline loop)
-      await this.runPipeline(projectId, diagPipeline.id);
-
-      // Collect results
-      const completed = this._pipelines.get(projectId, diagPipeline.id);
-      if (!completed || completed.status !== 'completed') {
-        this._pipelineChat(parentPipelineId).send({
-          sender: 'system',
-          senderLabel: 'System',
-          content: `Pipeline de diagnostico nao completou (status: ${completed?.status || 'not found'}).`,
-          type: 'error',
-        });
-        return null;
-      }
-
-      // Gather all task outputs from the diagnostic pipeline
-      const diagOutput = completed.phases
-        .flatMap(p => p.tasks)
-        .filter(t => t.output)
-        .map(t => `## ${AGENT_META[t.agent].label} — ${t.title}\n${t.output}`)
-        .join('\n\n---\n\n');
-
-      return diagOutput || null;
-    } catch (err: any) {
-      this._pipelineChat(parentPipelineId).send({
-        sender: 'system',
-        senderLabel: 'System',
-        content: `Erro na pipeline de diagnostico: ${err.message}`,
-        type: 'error',
-      });
-      return null;
-    }
   }
 
   // ─── PM Handle Failed/Missing Agents ────────────────────

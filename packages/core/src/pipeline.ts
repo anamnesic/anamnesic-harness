@@ -9,6 +9,7 @@ export type AgentRole =
   | 'product-manager'
   | 'architect'
   | 'organizer'
+  | 'troubleshooter'
   | 'backend'
   | 'frontend'
   | 'devops'
@@ -104,6 +105,10 @@ export const AGENT_META: Record<AgentRole, { label: string; description: string 
     label: 'Organizer',
     description: 'Consulta o PM para definir o design pattern ideal, organiza pastas e arquivos conforme o padrao escolhido e faz o commit.',
   },
+  'troubleshooter': {
+    label: 'Troubleshooter',
+    description: 'Agente especialista em diagnosticar e corrigir falhas. Analisa o feedback do PM, identifica o problema no workspace e aplica a correcao diretamente usando write_file. Resolve em uma unica execucao, sem loop.',
+  },
 };
 
 // ─── Default phase templates ─────────────────────────────────
@@ -151,6 +156,10 @@ const DEFAULT_TASK_DESCRIPTIONS: Record<AgentRole, (obj: string) => { title: str
   'organizer': (obj) => ({
     title: 'Organize project structure',
     description: `Para o objetivo: "${obj}"\n\n1. Consulte o PM (@product-manager) para decidir o design pattern ideal (MVC, Clean Architecture, DDD, Hexagonal, etc)\n2. Analise a estrutura atual de pastas e arquivos\n3. Reorganize pastas/arquivos conforme o pattern escolhido\n4. Mova, renomeie ou crie pastas necessarias\n5. Atualize imports quebrados\n6. Faca commit com mensagem descrevendo a reorganizacao`,
+  }),
+  'troubleshooter': (obj) => ({
+    title: 'Diagnosticar e corrigir falha',
+    description: `Analise o problema reportado pelo PM e corrija diretamente:\n1. Leia o feedback do PM e o output do agente que falhou\n2. Use list_files e read_file para entender o estado atual\n3. Identifique a causa raiz\n4. Use write_file para aplicar TODAS as correcoes necessarias\n5. Valide que os arquivos foram criados/corrigidos`,
   }),
 };
 

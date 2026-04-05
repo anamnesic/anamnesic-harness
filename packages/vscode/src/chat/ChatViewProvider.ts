@@ -361,7 +361,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     if (!trimmed) return;
 
     // Agent @mentions: @product-manager, @architect, @backend, etc.
-    const agentRoles: AgentRole[] = ['product-manager', 'architect', 'organizer', 'backend', 'frontend', 'devops', 'qa', 'code-review'];
+    const agentRoles: AgentRole[] = ['product-manager', 'architect', 'organizer', 'troubleshooter', 'backend', 'frontend', 'devops', 'qa', 'code-review'];
     const agentMatch = trimmed.match(/^@([\w-]+)\s+([\s\S]+)/);
     if (agentMatch) {
       const target = agentMatch[1];
@@ -384,7 +384,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
       // Also support short names: @pm, @ar, @be, @fe, @do, @qa, @cr
       const shortMap: Record<string, AgentRole> = {
-        pm: 'product-manager', ar: 'architect', og: 'organizer', be: 'backend',
+        pm: 'product-manager', ar: 'architect', og: 'organizer', ts: 'troubleshooter', be: 'backend',
         fe: 'frontend', do: 'devops', qa: 'qa', cr: 'code-review',
       };
       if (shortMap[target]) {
@@ -525,7 +525,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   private _showModels() {
     const config = loadAgentConfig();
-    const roles: AgentRole[] = ['product-manager', 'architect', 'organizer', 'backend', 'frontend', 'devops', 'qa', 'code-review'];
+    const roles: AgentRole[] = ['product-manager', 'architect', 'organizer', 'troubleshooter', 'backend', 'frontend', 'devops', 'qa', 'code-review'];
     const lines = roles.map(r => {
       const model = config.models[r] || DEFAULT_AGENT_MODELS[r];
       const locked = r === 'product-manager' ? ' (obrigatorio)' : '';
@@ -1426,7 +1426,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <strong>/models</strong> &bull;
       <strong>/agents</strong> &bull;
       <strong>/stop</strong> &bull;
-      <strong>@pm</strong> <strong>@ar</strong> <strong>@og</strong> <strong>@be</strong> <strong>@fe</strong> <strong>@qa</strong> <strong>@cr</strong>
+      <strong>@pm</strong> <strong>@ar</strong> <strong>@og</strong> <strong>@ts</strong> <strong>@be</strong> <strong>@fe</strong> <strong>@qa</strong> <strong>@cr</strong>
     </div>
     <div class="mode-bar" id="modeBar">
       <label>Modo:</label>
@@ -1587,6 +1587,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     'qa': '#facc15',
     'code-review': '#c084fc',
     'organizer': '#f59e0b',
+    'troubleshooter': '#ef4444',
     'system': '#9ca3af',
     'github-cli': '#22c55e',
     'terminal': '#eab308',
@@ -1602,6 +1603,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     'qa': 'QA',
     'code-review': 'CR',
     'organizer': 'OG',
+    'troubleshooter': 'TS',
     'system': 'S',
     'github-cli': 'GH',
     'terminal': 'T',
