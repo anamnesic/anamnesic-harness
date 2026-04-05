@@ -9,6 +9,7 @@ export type AgentRole =
   | 'product-manager'
   | 'architect'
   | 'organizer'
+  | 'git'
   | 'troubleshooter'
   | 'backend'
   | 'frontend'
@@ -103,7 +104,11 @@ export const AGENT_META: Record<AgentRole, { label: string; description: string 
   },
   'organizer': {
     label: 'Organizer',
-    description: 'Consulta o PM para definir o design pattern ideal, organiza pastas e arquivos conforme o padrao escolhido e faz o commit.',
+    description: 'Consulta o PM para definir o design pattern ideal, organiza pastas e arquivos conforme o padrao escolhido.',
+  },
+  'git': {
+    label: 'Git Agent',
+    description: 'Gerencia o repositorio Git: cria branch, faz stage, commit com mensagem descritiva, push e abre PR no GitHub.',
   },
   'troubleshooter': {
     label: 'Troubleshooter',
@@ -155,7 +160,11 @@ const DEFAULT_TASK_DESCRIPTIONS: Record<AgentRole, (obj: string) => { title: str
   }),
   'organizer': (obj) => ({
     title: 'Organize project structure',
-    description: `Para o objetivo: "${obj}"\n\n1. Consulte o PM (@product-manager) para decidir o design pattern ideal (MVC, Clean Architecture, DDD, Hexagonal, etc)\n2. Analise a estrutura atual de pastas e arquivos\n3. Reorganize pastas/arquivos conforme o pattern escolhido\n4. Mova, renomeie ou crie pastas necessarias\n5. Atualize imports quebrados\n6. Faca commit com mensagem descrevendo a reorganizacao`,
+    description: `Para o objetivo: "${obj}"\n\n1. Analise a estrutura atual de pastas e arquivos (list_files, read_file)\n2. Identifique a stack (package.json, tsconfig, etc) e DECIDA o design pattern ideal\n3. Reorganize pastas/arquivos conforme o pattern escolhido\n4. Corrija nomes inconsistentes, arquivos soltos, pastas baguncadas\n5. Atualize imports quebrados\n6. Escreva REORGANIZATION.md com as mudancas\nNOTA: NAO consulte o PM. Decida o pattern sozinho. NAO faca git add/commit/push.`,
+  }),
+  'git': (obj) => ({
+    title: 'Git: commit, push, merge na main',
+    description: `Finalize o repositorio para o objetivo: "${obj}"\n\n1. git add -A (stage todas as mudancas)\n2. Crie feature branch descritiva\n3. Commit com conventional commits (feat:, fix:, refactor:)\n4. git push -u origin <branch>\n5. Abra PR no GitHub usando gh cli\n6. Merge na main: git checkout main && git pull && git merge <branch> --no-ff && git push\n7. Se houver conflitos de merge, resolva-os (read_file + write_file)\n8. Delete feature branch local e remota\nIMPORTANTE: Use run_command para TODOS os comandos git.`,
   }),
   'troubleshooter': (obj) => ({
     title: 'Diagnosticar e corrigir falha',

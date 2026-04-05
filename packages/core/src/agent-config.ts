@@ -8,10 +8,13 @@ import type { AgentRole } from './pipeline';
 /**
  * Quality presets — cada um com nome de cafe e nivel de qualidade:
  *
- * - cafe-soluvel:       O dev pediu pra ontem. Modelos rapidos, zero frescura.
+ * - cafe-soluvel:       O dev pediu pra ontem. Modelos rapidos, zero frescura, ZERO CUSTO.
  * - coado-com-carinho:  Equilibrio entre velocidade e qualidade. Dia a dia.
  * - espresso-duplo:     Premium. Cada agente recebe o melhor modelo pra sua area.
  *                        PM toma um Opus 4.6 e cobra resultado de todos.
+ *
+ * IMPORTANTE: cafe-soluvel usa APENAS modelos gratuitos (Claude, GPT, Gemini free tiers)
+ * Nenhuma credencial de API externa necessaria — tudo via VS Code Copilot API.
  */
 export type QualityPreset = 'cafe-soluvel' | 'coado-com-carinho' | 'espresso-duplo';
 
@@ -26,25 +29,25 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
   'cafe-soluvel': {
     label: 'Cafe Soluvel',
     subtitle: 'So gratuitas (0x)',
-    description: 'Zero custo. So modelos inclusos no plano. Ideal pra hotfix rapido, POC descartavel, ou quando o budget ja era. PM tambem usa modelo free.',
+    description: 'Zero custo. So modelos inclusos no plano. Ideal pra hotfix rapido, POC descartavel, ou quando o budget ja era. PM tambem usa modelo free. Nenhuma credencial de API necessaria!',
     costRange: { min: 0, max: 0 },
     models: {
       'product-manager': 'claude-sonnet-4',    // Melhor raciocinio free pra PM
       'architect': 'gpt-4o',                   // Bom raciocinio geral, free
       'organizer': 'gpt-4.1',                  // Organiza projeto, free
-      'troubleshooter': 'gpt-4.1',               // Fix problems, free
-      'backend': 'grok-code-fast-1',           // Code-specialized, free
+      'git': 'gpt-4.1',                           // Git operations, free
+      'troubleshooter': 'gpt-4.1',             // Fix problems, free
+      'backend': 'gpt-5.4-mini',               // Mini capaz para code (REMOVIDO Grok)
       'frontend': 'gpt-4.1',                   // Bom geral, free
-      'devops': 'gpt-5.4-mini',               // Mini capaz
-      'qa': 'claude-haiku-4.5',               // Analise rapida
+      'devops': 'gpt-5.4-mini',                // Mini capaz
+      'qa': 'claude-haiku-4.5',                // Analise rapida
       'code-review': 'gemini-3-flash',         // Review rapido
     },
     ranking: [
       'claude-sonnet-4',     // Melhor raciocinio free
       'gpt-4o',              // Forte raciocinio geral
       'gpt-4.1',             // Solido
-      'grok-code-fast-1',    // Bom pra codigo
-      'gpt-5.4-mini',        // Mini capaz
+      'gpt-5.4-mini',        // Mini capaz (substituiu grok-code-fast-1)
       'gpt-5-mini',          // Mini alternativo
       'claude-haiku-4.5',    // Rapido
       'gemini-3-flash',      // Flash rapido
@@ -60,6 +63,7 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
       'product-manager': 'claude-sonnet-4.6',  // 1x — melhor PM no tier mid
       'architect': 'gemini-2.5-pro',            // 1x — contexto longo, design
       'organizer': 'claude-sonnet-4.5',         // 0.5x — organiza estrutura
+      'git': 'claude-sonnet-4.5',                // 0.5x — git operations
       'troubleshooter': 'claude-sonnet-4.6',     // 1x — diagnostica e corrige
       'backend': 'gpt-5.3-codex',              // 1x — melhor code
       'frontend': 'gpt-5.2-codex',             // 0.5x — code pra UI
@@ -86,6 +90,7 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
       'product-manager': 'claude-opus-4.6',    // 3x — melhor raciocinio
       'architect': 'gemini-3.1-pro',            // 3x — melhor pra arquitetura
       'organizer': 'claude-opus-4.5',           // 3x — reestrutura com precisao
+      'git': 'claude-opus-4.5',                  // 3x — git pro
       'troubleshooter': 'claude-opus-4.6',       // 3x — resolve tudo
       'backend': 'gpt-5.4',                     // 3x — mais capaz
       'frontend': 'claude-opus-4.5',            // 3x — raciocinio profundo UI
@@ -145,8 +150,6 @@ export const AVAILABLE_MODELS = [
   { family: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro (Preview)', tier: 'premium', vendor: 'copilot', cost: 3 as CostMultiplier },
   { family: 'gemini-3-flash', label: 'Gemini 3 Flash (Preview)', tier: 'fast', vendor: 'copilot', cost: 0 as CostMultiplier },
   { family: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', tier: 'premium', vendor: 'copilot', cost: 1 as CostMultiplier },
-  // xAI — Grok
-  { family: 'grok-code-fast-1', label: 'Grok Code Fast 1', tier: 'code', vendor: 'copilot', cost: 0 as CostMultiplier },
   // Microsoft — Raptor
   { family: 'raptor-mini', label: 'Raptor mini (Preview)', tier: 'fast', vendor: 'copilot', cost: 0 as CostMultiplier },
 ] as const;
@@ -167,6 +170,7 @@ export const DEFAULT_AGENT_MODELS: Record<AgentRole, string> = {
   'product-manager': 'claude-opus-4.6',
   'architect': 'gemini-3.1-pro',
   'organizer': 'claude-opus-4.5',
+  'git': 'claude-opus-4.5',
   'troubleshooter': 'claude-opus-4.6',
   'backend': 'gpt-5.4',
   'frontend': 'claude-opus-4.5',
@@ -191,7 +195,7 @@ export function loadAgentConfig(): AgentModelConfig {
   } catch (err) {
     console.error(`[ThinkCoffee] Failed to load agent config: ${(err as Error).message}`);
   }
-  // Return default — cafe-soluvel (gratuito) para nao gastar sem querer
+  // Return default — cafe-soluvel (gratuito, zero credenciais necessarias) para nao gastar sem querer
   return applyQualityPreset('cafe-soluvel');
 }
 

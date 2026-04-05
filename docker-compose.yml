@@ -1,86 +1,132 @@
-# ==============================================================================
-# ThinkCoffee - Docker Compose Base (V4 - Agent Safety Net)
-# ==============================================================================
-# Uso:
-#   docker compose up -d                    # Inicia MCP server
-#   docker compose --profile cli run cli    # Roda CLI
-#   docker compose logs -f mcp-server       # Ver logs
-# ==============================================================================
+﻿version: '3.8'
 
 services:
-  # --- MCP Server (Production) -----------------------------------------------
-  mcp-server:
+  # Aplicacao principal
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
-      args:
-        THINKCOFFEE_VERSION: ${THINKCOFFEE_VERSION:-latest}
-    image: thinkcoffee/mcp-server:${THINKCOFFEE_VERSION:-latest}
-    container_name: thinkcoffee-mcp
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      THINKCOFFEE_DB_PATH: /data/data.sqlite
-      THINKCOFFEE_DATA_DIR: /data
-      THINKCOFFEE_SNAPSHOT_DIR: /data/snapshots
-      THINKCOFFEE_LOG_DIR: /data/logs
-      MCP_PORT: "3000"
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      # V3/V4 Safety Net
-      THINKCOFFEE_SNAPSHOT_RETENTION_DAYS: ${THINKCOFFEE_SNAPSHOT_RETENTION_DAYS:-7}
-      THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB: ${THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB:-50}
-      THINKCOFFEE_DRY_RUN_DEFAULT: ${THINKCOFFEE_DRY_RUN_DEFAULT:-false}
-      THINKCOFFEE_DIFF_PREVIEW_MODE: ${THINKCOFFEE_DIFF_PREVIEW_MODE:-existing-only}
-      THINKCOFFEE_COMMAND_CONFIRMATION: ${THINKCOFFEE_COMMAND_CONFIRMATION:-destructive-only}
-    volumes:
-      - thinkcoffee_data:/data
+    container_name: thinkcoffee-app
     ports:
-      - "${MCP_PORT:-3000}:3000"
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      APP_PORT: 3000
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-thinkcoffee}
+      DB_USER: ${DB_USER:-thinkcoffee_user}
+      DB_PASSWORD: ${DB_PASSWORD:-devpassword}
+      DATABASE_URL: postgres://${DB_USER:-thinkcoffee_user}:${DB_PASSWORD:-devpassword}@postgres:5432/${DB_NAME:-thinkcoffee}
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-devredispassword}
+      
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-dev-refresh-secret-change-in-prod}
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - /app/node_modules
+    
+    networks:
+      - thinkcoffee-network
+    
+    restart: unless-stopped
+    
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 15s
-    networks:
-      - thinkcoffee-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
+      start_period: 40s
 
-  # --- CLI (on-demand) --------------------------------------------------------
-  cli:
-    build:
-      context: .
-      dockerfile: Dockerfile.cli
-      target: production
-      args:
-        THINKCOFFEE_VERSION: ${THINKCOFFEE_VERSION:-latest}
-    image: thinkcoffee/cli:${THINKCOFFEE_VERSION:-latest}
-    container_name: thinkcoffee-cli
-    profiles:
-      - cli
-    env_file:
-      - .env
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: thinkcoffee-postgres
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      THINKCOFFEE_DATA_DIR: /data
-      THINKCOFFEE_SNAPSHOT_DIR: /data/snapshots
-      THINKCOFFEE_LOG_DIR: /data/logs
+      POSTGRES_DB: ${DB_NAME:-thinkcoffee}
+      POSTGRES_USER: ${DB_USER:-thinkcoffee_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword}
+    
     volumes:
-      - thinkcoffee_data:/data
-      - .:/workspace
-    working_dir: /workspace
+      - postgres_data:/var/lib/postgresql/data
+    
+    ports:
+      - "5432:5432"
+    
     networks:
       - thinkcoffee-network
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-thinkcoffee_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: thinkcoffee-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-devredispassword}
+    
+    volumes:
+      - redis_data:/data
+    
+    ports:
+      - "6379:6379"
+    
+    networks:
+      - thinkcoffee-network
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin (Development only)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: thinkcoffee-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@thinkcoffee.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    
+    ports:
+      - "5050:80"
+    
+    networks:
+      - thinkcoffee-network
+    
+    restart: unless-stopped
+    
+    profiles:
+      - dev
 
 volumes:
-  thinkcoffee_data:
+  postgres_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:

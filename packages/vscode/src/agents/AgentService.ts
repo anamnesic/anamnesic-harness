@@ -40,6 +40,7 @@ const AGENT_SIGLA: Record<AgentRole, string> = {
   'product-manager': 'PM',
   'architect': 'AR',
   'organizer': 'OG',
+  'git': 'GI',
   'troubleshooter': 'TS',
   'backend': 'BE',
   'frontend': 'FE',
@@ -92,18 +93,56 @@ ${ctx.task.title}: ${ctx.task.description}
   // Extra instructions for the organizer agent
   const roleExtra = role === 'organizer'
     ? `\n\n## Instrucoes especiais do Organizer
-1. PRIMEIRO: Use mention_agent para consultar o product-manager. Pergunte: "Qual e o melhor design pattern (MVC, Clean Architecture, DDD, Hexagonal, Modular, etc) para este projeto, considerando o objetivo e a stack?"
-2. LEIA a resposta do PM nos outputs anteriores. Se nao houver resposta ainda, use mention_agent.
-3. Use list_files e read_file para mapear TODA a estrutura atual do projeto.
-4. REORGANIZE as pastas e arquivos seguindo o design pattern que o PM recomendou:
-   - Crie as novas pastas via write_file (escreva um arquivo dentro delas)
+Voce e o agente que garante que o projeto esteja organizado de forma profissional.
+NAO consulte o PM — decida voce mesmo o melhor padrao baseado na stack e nos arquivos existentes.
+
+## Sua abordagem (NESTA ORDEM):
+1. Use list_files para mapear TODA a estrutura atual do projeto
+2. Use read_file nos arquivos principais para entender a stack (package.json, tsconfig, etc)
+3. IDENTIFIQUE o design pattern mais adequado (Clean Architecture, MVC, DDD, Hexagonal, Modular, etc) baseado na stack e no que ja existe
+4. REORGANIZE as pastas e arquivos:
+   - Crie as novas pastas via write_file (escreva um arquivo index dentro delas)
    - Mova arquivos: leia o conteudo (read_file), escreva no novo caminho (write_file), delete o antigo (run_command: rm ou del)
    - Atualize imports/requires quebrados nos arquivos movidos
-5. Escreva um arquivo REORGANIZATION.md na raiz com: pattern escolhido, estrutura antes/depois, lista de mudancas.
-6. FACA O COMMIT: use run_command para executar:
-   - git add -A
-   - git commit -m "refactor: reorganize project structure to [PATTERN] pattern"
-7. NAO faca git push — apenas commit local.`
+5. Corrija arquivos fora do padrao profissional: nomes inconsistentes, pastas bagunçadas, arquivos soltos na raiz que deveriam estar em src/
+6. Escreva um arquivo REORGANIZATION.md na raiz com: pattern escolhido, estrutura antes/depois, lista de mudancas
+7. NAO faca git add/commit/push — o agente Git cuida disso
+
+## Regras criticas
+- DECIDA o pattern sozinho. Nao perca tempo consultando outros agentes.
+- Se o projeto ja esta bem organizado, faca apenas ajustes menores e reporte.
+- Use write_file para TODAS as mudancas. Nao descreva — FACA.`
+    : '';
+
+  // Extra instructions for the git agent
+  const gitExtra = role === 'git'
+    ? `\n\n## Instrucoes especiais do Git Agent
+Voce e o agente responsavel por finalizar o repositorio Git.
+
+## Sua abordagem (NESTA ORDEM):
+1. Use run_command para verificar o estado do repo: git status
+2. Descubra a branch atual: git rev-parse --abbrev-ref HEAD
+3. Se estiver na main/master, crie feature branch: git checkout -b feature/<slug>-<8chars-id>
+4. Stage todas mudancas: git add -A
+5. Gere uma mensagem de commit profissional em ingles, formato conventional commits (feat:, fix:, refactor:, etc)
+6. Commit: git commit -m "<mensagem>" (inclua no body o Pipeline ID)
+7. Push: git push -u origin <branch>
+8. Se gh cli estiver disponivel, abra PR: gh pr create --title "<titulo>" --body "<descricao>" --base main
+9. MERGE na main:
+   a. git checkout main
+   b. git pull origin main
+   c. git merge <feature-branch> --no-ff -m "Merge branch '<feature-branch>'"
+   d. Se houver conflitos: abra os arquivos com read_file, resolva editando com write_file, depois git add -A && git commit --no-edit
+   e. git push origin main
+10. Limpe a feature branch: git branch -d <feature-branch> && git push origin --delete <feature-branch>
+
+## Regras criticas
+- SEMPRE use run_command para executar comandos git
+- Se git push falhar (auth, remote), reporte o erro mas NAO falhe a task
+- Se merge tiver conflitos, RESOLVA usando read_file + write_file nos arquivos conflitantes
+- Se gh cli nao estiver disponivel, apenas reporte que o PR deve ser criado manualmente
+- NUNCA faca force push
+- So modifique arquivos para resolver conflitos de merge`
     : '';
 
   // Extra instructions for the troubleshooter agent
@@ -137,7 +176,7 @@ Voce e o agente de emergencia. Outro agente falhou e o PM te chamou pra resolver
     ? `\n\n## FEEDBACK DE REJEICAO (prioridade alta)\n${ctx.rejectionFeedback}`
     : '';
 
-  return base + roleExtra + troubleshooterExtra + prev + feedback;
+  return base + roleExtra + troubleshooterExtra + gitExtra + prev + feedback;
 }
 
 function buildPMAutoAssignPrompt(
@@ -1092,6 +1131,8 @@ export class AgentService {
       // Skip for: PM itself, troubleshooter (to avoid loop), and pure analysis tasks
       const skipReview = role === 'product-manager'
         || role === 'troubleshooter'
+        || role === 'git'
+        || role === 'organizer'
         || (role === 'code-review' && (task.title.startsWith('Diagnosticar') || task.title.startsWith('Diagnose')));
       if (!skipReview) {
         await this._pmTaskReview(ctx.projectId, pipelineId, task, role, fullOutput);
@@ -1338,9 +1379,9 @@ export class AgentService {
             type: 'info',
           });
 
-          // On success, create feature branch + commit + PR
+          // On success, run organizer + git agent
           if (pipeline.status === 'completed') {
-            await this._pmGitFinalize(projectId, pipelineId);
+            await this._runPipelineFinalization(projectId, pipelineId);
           }
           break;
         }
@@ -1412,7 +1453,7 @@ export class AgentService {
             this._onAgentStateChange.fire();
 
             if (p.status === 'completed') {
-              await this._pmGitFinalize(projectId, pipelineId);
+              await this._runPipelineFinalization(projectId, pipelineId);
               break;
             }
             if (p.status === 'failed') break;
@@ -1834,7 +1875,168 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
     this._pipelines.save(pipeline);
   }
 
-  // ─── PM Git Finalize ────────────────────────────────────
+  // ─── Pipeline Finalization (Organizer + Git) ─────────────
+
+  /**
+   * After all pipeline phases complete:
+   * 1. Run the Organizer agent to reorganize files professionally
+   * 2. Run the Git agent to create branch, commit, push and open PR
+   */
+  private async _runPipelineFinalization(projectId: string, pipelineId: string): Promise<void> {
+    const pipeline = this._pipelines.get(projectId, pipelineId);
+    if (!pipeline) return;
+
+    const workspace = pipeline.workspace || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+    if (!workspace) return;
+
+    // Collect a summary of all phases and outputs for context
+    const phasesSummary = pipeline.phases.map(p => {
+      const taskSummary = p.tasks.map(t => {
+        const artifacts = t.artifacts?.length ? `\nArquivos: ${t.artifacts.join(', ')}` : '';
+        return `  - ${AGENT_META[t.agent].label}: ${t.title} (${t.status})${artifacts}`;
+      }).join('\n');
+      return `### ${p.name}\n${taskSummary}`;
+    }).join('\n\n');
+
+    this._pipelineChat(pipelineId).send({
+      sender: 'product-manager',
+      senderLabel: agentLabel('product-manager'),
+      content: 'Pipeline concluida! Iniciando finalizacao: Organizer vai reorganizar os arquivos, depois o Git Agent vai salvar no GitHub.',
+      type: 'info',
+    });
+
+    // ── Step 1: Run Organizer Agent ──
+    try {
+      this._pipelineChat(pipelineId).send({
+        sender: 'organizer',
+        senderLabel: agentLabel('organizer'),
+        content: 'Iniciando reorganizacao profissional do projeto...',
+        type: 'info',
+      });
+
+      const orgTask: AgentTask = {
+        id: crypto.randomUUID(),
+        agent: 'organizer',
+        title: 'Finalizar: organizar estrutura do projeto',
+        description: `A pipeline "${pipeline.objective}" foi concluida com sucesso.
+
+## Resumo das fases
+${phasesSummary}
+
+## Sua tarefa
+Organize o projeto de forma profissional SEM consultar o PM:
+1. Use list_files para ver TODA a estrutura atual
+2. Leia package.json, tsconfig e arquivos-chave para entender a stack
+3. DECIDA o design pattern mais adequado (Clean Architecture, MVC, DDD, Modular, etc)
+4. Mova e organize arquivos/pastas conforme o pattern escolhido
+5. Corrija nomes inconsistentes, arquivos soltos, pastas bagunçadas
+6. Atualize imports/requires quebrados
+7. Escreva REORGANIZATION.md na raiz descrevendo as mudancas
+8. NAO faca git add/commit/push — o agente Git cuida disso depois.
+
+IMPORTANTE: Aja diretamente. Use write_file e run_command. Nao descreva — FACA.`,
+        status: 'pending' as TaskStatus,
+      };
+
+      const orgCtx: AgentContext = {
+        projectId,
+        projectName: pipeline.objective,
+        workspace,
+        objective: pipeline.objective,
+        previousOutputs: pipeline.phases.flatMap(p =>
+          p.tasks
+            .filter(t => t.output)
+            .map(t => ({ agent: t.agent, output: (t.output || '').substring(0, 2000) }))
+        ).slice(-5), // Last 5 outputs for context
+        task: orgTask,
+      };
+
+      await this._runAgent(orgTask, orgCtx, pipelineId);
+
+      this._pipelineChat(pipelineId).send({
+        sender: 'organizer',
+        senderLabel: agentLabel('organizer'),
+        content: 'Reorganizacao do projeto finalizada.',
+        type: 'info',
+      });
+    } catch (err: any) {
+      this._pipelineChat(pipelineId).send({
+        sender: 'system',
+        senderLabel: 'System',
+        content: `Erro no Organizer (nao-bloqueante): ${err.message}. Prosseguindo para Git...`,
+        type: 'error',
+      });
+    }
+
+    // ── Step 2: Run Git Agent ──
+    try {
+      this._pipelineChat(pipelineId).send({
+        sender: 'git',
+        senderLabel: agentLabel('git'),
+        content: 'Iniciando workflow Git: branch, commit, push e PR...',
+        type: 'info',
+      });
+
+      const gitTask: AgentTask = {
+        id: crypto.randomUUID(),
+        agent: 'git',
+        title: 'Git: commit, push, merge na main',
+        description: `A pipeline "${pipeline.objective}" foi concluida e os arquivos foram organizados.
+Pipeline ID: ${pipelineId}
+
+## Fases concluidas
+${pipeline.phases.map(p => `- ${p.name}: ${p.status}`).join('\n')}
+
+## O QUE VOCE DEVE FAZER (use run_command para TODOS os comandos)
+1. git status — verifique as mudancas
+2. Crie branch: git checkout -b feature/${pipeline.objective.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 50)}-${pipelineId.substring(0, 8)}
+3. git add -A
+4. git commit -m "feat: ${pipeline.objective}\n\nPipeline ThinkCoffee (${pipelineId})\nFases: ${pipeline.phases.map(p => p.name).join(', ')}"
+5. git push -u origin <nome-da-branch>
+6. Se gh cli disponivel: gh pr create --title "feat: ${pipeline.objective}" --body "Pipeline ThinkCoffee ${pipelineId}" --base main
+7. MERGE na main:
+   a. git checkout main
+   b. git pull origin main
+   c. git merge <feature-branch> --no-ff
+   d. Se houver conflitos: use read_file nos arquivos, resolva com write_file, git add -A && git commit --no-edit
+   e. git push origin main
+8. Limpe: git branch -d <feature-branch> && git push origin --delete <feature-branch>
+9. Se push ou merge falhar, reporte mas NAO falhe a task
+
+IMPORTANTE: Use APENAS run_command para git. So edite arquivos se precisar resolver conflitos.`,
+        status: 'pending' as TaskStatus,
+      };
+
+      const gitCtx: AgentContext = {
+        projectId,
+        projectName: pipeline.objective,
+        workspace,
+        objective: pipeline.objective,
+        previousOutputs: [],
+        task: gitTask,
+      };
+
+      await this._runAgent(gitTask, gitCtx, pipelineId);
+
+      this._pipelineChat(pipelineId).send({
+        sender: 'git',
+        senderLabel: agentLabel('git'),
+        content: 'Workflow Git finalizado.',
+        type: 'info',
+      });
+    } catch (err: any) {
+      // Git agent failed — fall back to direct git commands
+      this._pipelineChat(pipelineId).send({
+        sender: 'system',
+        senderLabel: 'System',
+        content: `Git Agent falhou: ${err.message}. Tentando fallback direto...`,
+        type: 'error',
+      });
+      await this._pmGitFinalize(projectId, pipelineId);
+    }
+  }
+
+  // ─── PM Git Finalize (Fallback) ─────────────────────────
 
   /**
    * On pipeline completion, PM creates a feature branch, commits all changes, and opens a PR.
