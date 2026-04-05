@@ -1,0 +1,35 @@
+name: Infraestrutura
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.env'
+      - 'scripts/**'
+      - '.github/workflows/infra.yml'
+
+jobs:
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Instalar pnpm
+        run: npm install -g pnpm
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+      - name: Build Docker images
+        run: |
+          docker build -f Dockerfile -t thinkcoffee/mcp-server:ci .
+          docker build -f Dockerfile.cli -t thinkcoffee/cli:ci .
+      - name: Testar healthcheck
+        run: |
+          docker compose up -d
+          sleep 10
+          curl -sf http://localhost:3000/health
