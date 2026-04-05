@@ -10,6 +10,7 @@ export type AgentRole =
   | 'architect'
   | 'organizer'
   | 'git'
+  | 'dead-code'
   | 'troubleshooter'
   | 'backend'
   | 'frontend'
@@ -110,6 +111,10 @@ export const AGENT_META: Record<AgentRole, { label: string; description: string 
     label: 'Git Agent',
     description: 'Gerencia o repositorio Git: cria branch, faz stage, commit com mensagem descritiva, push e abre PR no GitHub.',
   },
+  'dead-code': {
+    label: 'Dead Code Cleaner',
+    description: 'Analisa o mapa de conexoes do codigo, identifica arquivos orfaos, exports nao usados, funcoes mortas e remove tudo que e lixo.',
+  },
   'troubleshooter': {
     label: 'Troubleshooter',
     description: 'Agente especialista em diagnosticar e corrigir falhas. Analisa o feedback do PM, identifica o problema no workspace e aplica a correcao diretamente usando write_file. Resolve em uma unica execucao, sem loop.',
@@ -165,6 +170,10 @@ const DEFAULT_TASK_DESCRIPTIONS: Record<AgentRole, (obj: string) => { title: str
   'git': (obj) => ({
     title: 'Git: commit, push, merge na main',
     description: `Finalize o repositorio para o objetivo: "${obj}"\n\n1. git add -A (stage todas as mudancas)\n2. Crie feature branch descritiva\n3. Commit com conventional commits (feat:, fix:, refactor:)\n4. git push -u origin <branch>\n5. Abra PR no GitHub usando gh cli\n6. Merge na main: git checkout main && git pull && git merge <branch> --no-ff && git push\n7. Se houver conflitos de merge, resolva-os (read_file + write_file)\n8. Delete feature branch local e remota\nIMPORTANTE: Use run_command para TODOS os comandos git.`,
+  }),
+  'dead-code': () => ({
+    title: 'Remover codigo morto',
+    description: 'Analise o CODE_MAP fornecido nos outputs anteriores e:\n1. Identifique arquivos orfaos (sem import de/para nenhum outro)\n2. Identifique exports que ninguem importa\n3. Identifique funcoes/classes/variaveis declaradas mas nunca referenciadas\n4. Delete arquivos inteiros se forem 100%% lixo (run_command: rm/del)\n5. Remova exports/funcoes mortas de arquivos que ainda tem codigo vivo (write_file)\n6. NAO delete arquivos de config, testes, ou entrypoints',
   }),
   'troubleshooter': (obj) => ({
     title: 'Diagnosticar e corrigir falha',

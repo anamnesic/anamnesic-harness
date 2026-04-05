@@ -13,6 +13,7 @@ import type {
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { buildCodeMap } from './CodeMap';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ const AGENT_SIGLA: Record<AgentRole, string> = {
   'architect': 'AR',
   'organizer': 'OG',
   'git': 'GI',
+  'dead-code': 'DC',
   'troubleshooter': 'TS',
   'backend': 'BE',
   'frontend': 'FE',
@@ -145,6 +147,36 @@ Voce e o agente responsavel por finalizar o repositorio Git.
 - So modifique arquivos para resolver conflitos de merge`
     : '';
 
+  // Extra instructions for the dead-code cleaner agent
+  const deadCodeExtra = role === 'dead-code'
+    ? `\n\n## Instrucoes especiais do Dead Code Cleaner
+Voce e o agente responsavel por limpar codigo morto do projeto.
+Voce recebe um CODE_MAP nos outputs anteriores com o grafo de dependencias completo.
+
+## Sua abordagem (NESTA ORDEM):
+1. LEIA o CODE_MAP nos outputs anteriores — ele mostra todos os arquivos, seus imports, exports e quem os importa
+2. Identifique arquivos marcados como [ORPHAN] — ninguem os importa
+3. Para cada orfao, verifique com read_file se realmente e codigo morto (pode ser entrypoint, config, ou script)
+4. DELETE arquivos 100%% mortos: run_command para rm/del
+5. Para arquivos parcialmente mortos (tem exports vivos e mortos), use read_file + write_file para remover so os exports mortos
+6. Use search_code para confirmar que um export nao e usado em nenhum lugar antes de remover
+7. Ao final, liste tudo que foi removido
+
+## NAO DELETE (safe list):
+- package.json, tsconfig*.json, *.config.js/ts
+- Arquivos de teste (*.test.*, *.spec.*)
+- Arquivos .d.ts
+- README, LICENSE, .md files
+- Entrypoints (index.ts, main.ts, app.ts, server.ts)
+- Arquivos referenciados em package.json (main, bin, scripts)
+
+## Regras criticas
+- SEMPRE confirme com search_code antes de deletar
+- Se em duvida, NAO delete — melhor deixar do que quebrar
+- Use run_command para deletar arquivos, write_file para editar
+- Faca git add -A && git commit -m "chore: remove dead code" ao final`
+    : '';
+
   // Extra instructions for the troubleshooter agent
   const troubleshooterExtra = role === 'troubleshooter'
     ? `\n\n## Instrucoes especiais do Troubleshooter
@@ -176,7 +208,7 @@ Voce e o agente de emergencia. Outro agente falhou e o PM te chamou pra resolver
     ? `\n\n## FEEDBACK DE REJEICAO (prioridade alta)\n${ctx.rejectionFeedback}`
     : '';
 
-  return base + roleExtra + troubleshooterExtra + gitExtra + prev + feedback;
+  return base + roleExtra + troubleshooterExtra + gitExtra + deadCodeExtra + prev + feedback;
 }
 
 function buildPMAutoAssignPrompt(
@@ -1132,6 +1164,7 @@ export class AgentService {
       const skipReview = role === 'product-manager'
         || role === 'troubleshooter'
         || role === 'git'
+        || role === 'dead-code'
         || role === 'organizer'
         || (role === 'code-review' && (task.title.startsWith('Diagnosticar') || task.title.startsWith('Diagnose')));
       if (!skipReview) {
@@ -2034,6 +2067,87 @@ IMPORTANTE: Use APENAS run_command para git. So edite arquivos se precisar resol
       });
       await this._pmGitFinalize(projectId, pipelineId);
     }
+
+    // ── Step 3: Run Dead Code Cleaner (background / fire-and-forget) ──
+    void this._runDeadCodeCleanup(projectId, pipelineId, workspace, phasesSummary).catch(err => {
+      this._pipelineChat(pipelineId).send({
+        sender: 'system',
+        senderLabel: 'System',
+        content: `Dead Code Cleaner falhou (nao-bloqueante): ${err.message}`,
+        type: 'error',
+      });
+    });
+  }
+
+  /**
+   * Runs the dead-code cleaner agent in background after pipeline finalization.
+   * Builds a code dependency map and passes it as context.
+   */
+  private async _runDeadCodeCleanup(
+    projectId: string,
+    pipelineId: string,
+    workspace: string,
+    phasesSummary: string,
+  ): Promise<void> {
+    this._pipelineChat(pipelineId).send({
+      sender: 'dead-code',
+      senderLabel: agentLabel('dead-code'),
+      content: 'Construindo mapa de dependencias do projeto...',
+      type: 'info',
+    });
+
+    const codeMap = buildCodeMap(workspace);
+
+    this._pipelineChat(pipelineId).send({
+      sender: 'dead-code',
+      senderLabel: agentLabel('dead-code'),
+      content: `Mapa concluido: ${codeMap.totalFiles} arquivos analisados, ${codeMap.orphans.length} potenciais orfaos. Iniciando limpeza...`,
+      type: 'info',
+    });
+
+    const dcTask: AgentTask = {
+      id: crypto.randomUUID(),
+      agent: 'dead-code',
+      title: 'Limpar codigo morto do projeto',
+      description: `A pipeline foi finalizada e o codigo foi commitado. Agora limpe o codigo morto.
+
+## CODE_MAP (grafo de dependencias)
+${codeMap.mapText}
+
+## Orfaos detectados (${codeMap.orphans.length})
+${codeMap.orphans.length > 0 ? codeMap.orphans.map(o => `- ${o}`).join('\n') : 'Nenhum orfao detectado — verifique exports nao-usados dentro dos arquivos.'}
+
+## Fases da pipeline
+${phasesSummary}
+
+## Instrucoes
+1. Analise os orfaos acima — confirme com search_code se realmente nao sao usados
+2. Delete arquivos 100% mortos com run_command
+3. Em arquivos parcialmente mortos, remova apenas exports/funcoes nao-usadas com write_file
+4. Ao final: git add -A && git commit -m "chore: remove dead code" && git push`,
+      status: 'pending' as TaskStatus,
+    };
+
+    const dcCtx: AgentContext = {
+      projectId,
+      projectName: this._pipelines.get(projectId, pipelineId)?.objective || '',
+      workspace,
+      objective: 'Remover codigo morto e arquivos orfaos',
+      previousOutputs: [{
+        agent: 'dead-code',
+        output: `CODE_MAP:\n${codeMap.mapText}`,
+      }],
+      task: dcTask,
+    };
+
+    await this._runAgent(dcTask, dcCtx, pipelineId);
+
+    this._pipelineChat(pipelineId).send({
+      sender: 'dead-code',
+      senderLabel: agentLabel('dead-code'),
+      content: 'Limpeza de codigo morto finalizada.',
+      type: 'info',
+    });
   }
 
   // ─── PM Git Finalize (Fallback) ─────────────────────────

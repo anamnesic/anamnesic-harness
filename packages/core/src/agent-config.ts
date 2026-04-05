@@ -36,6 +36,7 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
       'architect': 'gpt-4o',                   // Bom raciocinio geral, free
       'organizer': 'gpt-4.1',                  // Organiza projeto, free
       'git': 'gpt-4.1',                           // Git operations, free
+      'dead-code': 'gpt-4.1',                      // Dead code analysis, free
       'troubleshooter': 'gpt-4.1',             // Fix problems, free
       'backend': 'gpt-5.4-mini',               // Mini capaz para code (REMOVIDO Grok)
       'frontend': 'gpt-4.1',                   // Bom geral, free
@@ -64,6 +65,7 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
       'architect': 'gemini-2.5-pro',            // 1x — contexto longo, design
       'organizer': 'claude-sonnet-4.5',         // 0.5x — organiza estrutura
       'git': 'claude-sonnet-4.5',                // 0.5x — git operations
+      'dead-code': 'claude-sonnet-4.5',           // 0.5x — dead code analysis
       'troubleshooter': 'claude-sonnet-4.6',     // 1x — diagnostica e corrige
       'backend': 'gpt-5.3-codex',              // 1x — melhor code
       'frontend': 'gpt-5.2-codex',             // 0.5x — code pra UI
@@ -91,6 +93,7 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
       'architect': 'gemini-3.1-pro',            // 3x — melhor pra arquitetura
       'organizer': 'claude-opus-4.5',           // 3x — reestrutura com precisao
       'git': 'claude-opus-4.5',                  // 3x — git pro
+      'dead-code': 'claude-opus-4.5',             // 3x — deep analysis
       'troubleshooter': 'claude-opus-4.6',       // 3x — resolve tudo
       'backend': 'gpt-5.4',                     // 3x — mais capaz
       'frontend': 'claude-opus-4.5',            // 3x — raciocinio profundo UI
@@ -171,6 +174,7 @@ export const DEFAULT_AGENT_MODELS: Record<AgentRole, string> = {
   'architect': 'gemini-3.1-pro',
   'organizer': 'claude-opus-4.5',
   'git': 'claude-opus-4.5',
+  'dead-code': 'claude-opus-4.5',
   'troubleshooter': 'claude-opus-4.6',
   'backend': 'gpt-5.4',
   'frontend': 'claude-opus-4.5',
