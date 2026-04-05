@@ -1,31 +1,27 @@
 {
   "name": "thinkcoffee",
-  "version": "0.1.0",
-  "description": "AI Context Management Platform - Second brain for AI tool context switching",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Context Management Platform - MCP Server, CLI, and VS Code Extension",
   "scripts": {
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build:backend": "cd backend && npm run build",
-    "build:frontend": "cd frontend && npm run build",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "test": "cd backend && npm test"
+    "build": "pnpm -r build",
+    "build:core": "pnpm --filter @thinkcoffee/core build",
+    "build:mcp": "pnpm --filter @thinkcoffee/mcp-server build",
+    "build:cli": "pnpm --filter @thinkcoffee/cli build",
+    "build:vscode": "pnpm --filter thinkcoffee-vscode build",
+    "dev:core": "pnpm --filter @thinkcoffee/core dev",
+    "dev:mcp": "pnpm --filter @thinkcoffee/mcp-server dev",
+    "dev:cli": "pnpm --filter @thinkcoffee/cli dev"
   },
   "keywords": [
     "ai",
     "context",
     "management",
-    "developer-tools",
-    "productivity"
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "developer-tools"
   ],
   "author": "ThinkCoffee Team",
-  "license": "MIT",
-  "workspaces": [
-    "backend",
-    "frontend",
-    "shared"
-  ],
-  "dependencies": {
-    "@apollo/protobufjs": "^1.2.7",
-    "caniuse-lite": "^1.0.30001785"
-  }
+  "license": "MIT"
 }

@@ -1,0 +1,49 @@
+{
+  "name": "thinkcoffee-vscode",
+  "displayName": "ThinkCoffee",
+  "description": "AI Context Management - maintain project context across all AI assistants",
+  "version": "1.0.0",
+  "publisher": "thinkcoffee",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [{
+        "id": "thinkcoffee",
+        "title": "ThinkCoffee",
+        "icon": "resources/icon.svg"
+      }]
+    },
+    "views": {
+      "thinkcoffee": [
+        { "id": "thinkcoffee.projects", "name": "Projects" },
+        { "id": "thinkcoffee.context", "name": "Context" },
+        { "id": "thinkcoffee.decisions", "name": "Decisions" }
+      ]
+    },
+    "commands": [
+      { "command": "thinkcoffee.refreshProjects", "title": "ThinkCoffee: Refresh Projects" },
+      { "command": "thinkcoffee.addContext", "title": "ThinkCoffee: Add Context Entry" },
+      { "command": "thinkcoffee.addDecision", "title": "ThinkCoffee: Record Decision" },
+      { "command": "thinkcoffee.syncContext", "title": "ThinkCoffee: Sync to AI Tools" },
+      { "command": "thinkcoffee.exportContext", "title": "ThinkCoffee: Export Context" }
+    ]
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "@thinkcoffee/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "@types/node": "^20.19.39",
+    "typescript": "^5.1.6"
+  }
+}
