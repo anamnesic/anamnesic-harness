@@ -29,7 +29,7 @@ export class SyncConfig {
   trigger!: SyncTrigger;
 
   /** Cron expression for scheduled syncs (e.g., "0 9 * * *" for daily at 9am) */
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   cronSchedule!: string | null;
 
   /** Absolute path to the workspace/repo where config file should be written */
@@ -57,7 +57,7 @@ export class SyncConfig {
   failureCount!: number;
 
   /** Custom output path override (null = use default for target) */
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   customOutputPath!: string | null;
 
   @CreateDateColumn()
