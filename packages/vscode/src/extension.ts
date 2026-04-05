@@ -277,12 +277,9 @@ export async function activate(context: vscode.ExtensionContext) {
     // ─── Open File from Context ──────────────────────────────
     vscode.commands.registerCommand('thinkcoffee.openContextFile', async (item?: ContextTreeItem) => {
       if (!item?.entry) return;
-      // Extract file path from context value like "File: `src/foo.ts`..."
       const match = item.entry.value.match(/(?:File|From)\s*:\s*`([^`]+)`/);
       if (!match) {
-        // Show context as text
-        const doc = await vscode.workspace.openTextDocument({ content: item.entry.value, language: 'markdown' });
-        await vscode.window.showTextDocument(doc);
+        ContextViewerPanel.show(context.extensionUri, item.entry);
         return;
       }
       const root = getWorkspaceRoot();
@@ -294,6 +291,12 @@ export async function activate(context: vscode.ExtensionContext) {
       } else {
         vscode.window.showWarningMessage(`File not found: ${match[1]}`);
       }
+    }),
+
+    // ─── View Context Entry ──────────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.viewContext', (item?: ContextTreeItem) => {
+      if (!item?.entry) return;
+      ContextViewerPanel.show(context.extensionUri, item.entry);
     })
   );
 }
@@ -370,13 +373,11 @@ class ContextTreeItem extends vscode.TreeItem {
     this.description = `P${entry.priority}` + (isFile ? ' (file)' : '');
     this.tooltip = entry.value.substring(0, 300);
     this.contextValue = isFile ? 'context-file' : 'context';
-    if (isFile) {
-      this.command = {
-        command: 'thinkcoffee.openContextFile',
-        title: 'Open File',
-        arguments: [this],
-      };
-    }
+    this.command = {
+      command: isFile ? 'thinkcoffee.openContextFile' : 'thinkcoffee.viewContext',
+      title: isFile ? 'Open File' : 'View Context',
+      arguments: [this],
+    };
   }
 }
 
@@ -386,5 +387,230 @@ class DecisionTreeItem extends vscode.TreeItem {
     this.description = `[${decision.status}]`;
     this.tooltip = decision.description;
     this.contextValue = 'decision';
+  }
+}
+
+// --- Context Viewer Panel ---
+
+class ContextViewerPanel {
+  private static panels = new Map<string, vscode.WebviewPanel>();
+
+  static show(extensionUri: vscode.Uri, entry: ContextEntry) {
+    const existing = this.panels.get(entry.id);
+    if (existing) {
+      existing.reveal();
+      existing.webview.html = this._getHtml(entry);
+      return;
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      'thinkcoffeeContext',
+      `[${entry.category}] ${entry.key}`,
+      vscode.ViewColumn.One,
+      { enableScripts: false }
+    );
+
+    panel.webview.html = this._getHtml(entry);
+    this.panels.set(entry.id, panel);
+    panel.onDidDispose(() => this.panels.delete(entry.id));
+  }
+
+  private static _getHtml(entry: ContextEntry): string {
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Render value with basic markdown: code blocks, inline code, bold
+    let body = esc(entry.value);
+    // Fenced code blocks
+    body = body.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) =>
+      `<pre class="code-block"><code>${code.trimEnd()}</code></pre>`
+    );
+    // Inline code
+    body = body.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    // Bold
+    body = body.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Line breaks (outside pre)
+    body = body.replace(/\n/g, '<br>');
+    // Fix double <br> inside <pre>
+    body = body.replace(/<pre class="code-block"><code>([\s\S]*?)<\/code><\/pre>/g, (_m, code) =>
+      `<pre class="code-block"><code>${(code as string).replace(/<br>/g, '\n')}</code></pre>`
+    );
+
+    const priorityLabels = ['', 'Low', 'Normal', 'High', 'Critical'];
+    const priorityColors = ['', '#888', 'var(--vscode-foreground)', '#e5a00d', '#f14c4c'];
+    const categoryIcons: Record<string, string> = {
+      architecture: 'S',
+      requirements: 'R',
+      dependencies: 'D',
+      standards: 'T',
+      general: 'G',
+    };
+
+    const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : 'N/A';
+    const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'N/A';
+
+    return /*html*/`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    padding: 20px 28px;
+    line-height: 1.6;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+  }
+
+  .category-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .category-badge.architecture { background: #0e7490; }
+  .category-badge.requirements { background: #7c3aed; }
+  .category-badge.dependencies { background: #2563eb; }
+  .category-badge.standards { background: #059669; }
+  .category-badge.general { background: #6b7280; }
+
+  .header-text h1 {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .header-text .subtitle {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding: 10px 14px;
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 6px;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .meta-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    letter-spacing: 0.5px;
+  }
+
+  .meta-value {
+    font-size: 13px;
+  }
+
+  .priority-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  .content {
+    padding: 16px 18px;
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 6px;
+    word-break: break-word;
+  }
+
+  .content .code-block {
+    margin: 10px 0;
+    padding: 12px 14px;
+    background: var(--vscode-textCodeBlock-background);
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre;
+  }
+
+  .content .inline-code {
+    font-family: var(--vscode-editor-font-family, monospace);
+    background: var(--vscode-textCodeBlock-background);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  .id-line {
+    margin-top: 16px;
+    font-size: 10px;
+    color: var(--vscode-descriptionForeground);
+    font-family: var(--vscode-editor-font-family, monospace);
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="category-badge ${entry.category}">${esc(categoryIcons[entry.category] || 'G')}</div>
+    <div class="header-text">
+      <h1>${esc(entry.key)}</h1>
+      <div class="subtitle">${esc(entry.category)} context entry</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="meta-item">
+      <span class="meta-label">Category</span>
+      <span class="meta-value">${esc(entry.category)}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Priority</span>
+      <span class="meta-value">
+        <span class="priority-dot" style="background:${priorityColors[entry.priority] || '#888'}"></span>
+        ${entry.priority} - ${priorityLabels[entry.priority] || 'Unknown'}
+      </span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Created</span>
+      <span class="meta-value">${createdAt}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Updated</span>
+      <span class="meta-value">${updatedAt}</span>
+    </div>
+  </div>
+
+  <div class="content">${body}</div>
+
+  <div class="id-line">ID: ${esc(entry.id)}</div>
+</body>
+</html>`;
   }
 }

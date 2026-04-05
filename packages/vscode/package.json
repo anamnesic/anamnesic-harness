@@ -82,6 +82,10 @@
         "title": "ThinkCoffee: Open Context File"
       },
       {
+        "command": "thinkcoffee.viewContext",
+        "title": "ThinkCoffee: View Context Entry"
+      },
+      {
         "command": "thinkcoffee.openChat",
         "title": "ThinkCoffee: Open AI Chat"
       }

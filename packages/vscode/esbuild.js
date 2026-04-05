@@ -41,8 +41,6 @@ function copyNativeDeps() {
 
 copyNativeDeps();
 
-copyNativeDeps();
-
 esbuild.build({
   entryPoints: ['src/extension.ts'],
   bundle: true,
