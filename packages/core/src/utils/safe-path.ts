@@ -1,81 +1,49 @@
 import * as path from 'path';
 
 /**
- * Validates and resolves a relative path to ensure it stays within a designated root directory.
- * Throws an error if path traversal is attempted.
+ * Validates that a given relative path, when resolved against a root directory,
+ * does not point to a location outside of that root directory. This prevents
+ * path traversal attacks (e.g., '../../etc/passwd').
  *
- * Handles:
- * - Path traversal via `..`
- * - Absolute paths in relativePath
- * - Windows drive letters (C:\, D:\, etc.)
- * - UNC paths (\\server\share)
- * - Mixed separators (/ and \)
- * - Unicode characters
- * - Paths with spaces
- * - Null bytes
- *
- * @param rootDir - The absolute path of the allowed root directory.
- * @param relativePath - The relative path to validate.
- * @returns The resolved, absolute, and safe path.
- * @throws Error if the path is outside the root directory.
+ * @param rootDir - The absolute path to the workspace or safe root directory.
+ * @param relativePath - The user-provided relative path.
+ * @returns The resolved, absolute, and normalized path if it is safe.
+ * @throws An error if the path is outside the root directory or input is invalid.
  */
 export function safePath(rootDir: string, relativePath: string): string {
+  // Input validation
   if (!rootDir || typeof rootDir !== 'string') {
     throw new Error('Root directory must be a non-empty string.');
   }
-
   if (!relativePath || typeof relativePath !== 'string') {
     throw new Error('Relative path must be a non-empty string.');
   }
 
-  // Block null bytes (common injection technique)
-  if (relativePath.includes('\0') || rootDir.includes('\0')) {
-    throw new Error('Path traversal denied: null byte detected.');
+  // Null byte injection protection
+  if (rootDir.includes('\0')) {
+    throw new Error('Path contains null byte: root directory is invalid.');
+  }
+  if (relativePath.includes('\0')) {
+    throw new Error('Path contains null byte: relative path is invalid.');
   }
 
-  // Normalize the root directory to a consistent format
-  const normalizedRoot = path.resolve(rootDir);
+  const resolvedRoot = path.resolve(rootDir);
+  const resolvedPath = path.resolve(resolvedRoot, relativePath);
+  const normalizedPath = path.normalize(resolvedPath);
 
-  // On Windows, block attempts to use absolute paths from different drives
-  if (process.platform === 'win32') {
-    // Block UNC paths
-    if (relativePath.startsWith('\\\\') || relativePath.startsWith('//')) {
-      throw new Error(
-        `Path traversal denied. Attempted to access UNC path '${relativePath}' which is outside the workspace root.`
-      );
-    }
+  // Ensure the resolved path is still within the root directory.
+  // We check if it starts with the root path followed by a path separator
+  // to prevent cases like '/root/dir' matching '/root/directory'.
+  // On Windows, paths are case-insensitive.
+  const isSafe = process.platform === 'win32'
+    ? normalizedPath.toLowerCase().startsWith(resolvedRoot.toLowerCase() + path.sep) ||
+      normalizedPath.toLowerCase() === resolvedRoot.toLowerCase()
+    : normalizedPath.startsWith(resolvedRoot + path.sep) ||
+      normalizedPath === resolvedRoot;
 
-    // Block absolute paths with drive letters (e.g., C:\, D:\)
-    if (/^[a-zA-Z]:[/\\]/.test(relativePath)) {
-      const relDrive = relativePath.charAt(0).toUpperCase();
-      const rootDrive = normalizedRoot.charAt(0).toUpperCase();
-      if (relDrive !== rootDrive || !path.resolve(relativePath).startsWith(normalizedRoot + path.sep)) {
-        throw new Error(
-          `Path traversal denied. Attempted to access '${relativePath}' which is outside the workspace root.`
-        );
-      }
-    }
-  } else {
-    // On Unix, block absolute paths that don't start with the root
-    if (relativePath.startsWith('/')) {
-      const resolvedAbs = path.resolve(relativePath);
-      if (!resolvedAbs.startsWith(normalizedRoot + path.sep) && resolvedAbs !== normalizedRoot) {
-        throw new Error(
-          `Path traversal denied. Attempted to access '${resolvedAbs}' which is outside the workspace root.`
-        );
-      }
-    }
+  if (!isSafe) {
+    throw new Error(`Path traversal detected. Access to '${relativePath}' is denied.`);
   }
 
-  // Resolve the full path
-  const resolvedPath = path.resolve(normalizedRoot, relativePath);
-
-  // Ensure the resolved path starts with the root (plus separator) or IS the root
-  if (resolvedPath !== normalizedRoot && !resolvedPath.startsWith(normalizedRoot + path.sep)) {
-    throw new Error(
-      `Path traversal denied. Attempted to access '${resolvedPath}' which is outside the workspace root.`
-    );
-  }
-
-  return resolvedPath;
+  return normalizedPath;
 }

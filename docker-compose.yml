@@ -1,7 +1,5 @@
-version: "3.9"
-
 # ==============================================================================
-# ThinkCoffee - Docker Compose (V3 - Agent Safety Net)
+# ThinkCoffee - Docker Compose Base (V4 - Agent Safety Net)
 # ==============================================================================
 # Uso:
 #   docker compose up -d                    # Inicia MCP server
@@ -29,9 +27,9 @@ services:
       THINKCOFFEE_DATA_DIR: /data
       THINKCOFFEE_SNAPSHOT_DIR: /data/snapshots
       THINKCOFFEE_LOG_DIR: /data/logs
-      MCP_PORT: 3000
+      MCP_PORT: "3000"
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      # V3 Safety Net
+      # V3/V4 Safety Net
       THINKCOFFEE_SNAPSHOT_RETENTION_DAYS: ${THINKCOFFEE_SNAPSHOT_RETENTION_DAYS:-7}
       THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB: ${THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB:-50}
       THINKCOFFEE_DRY_RUN_DEFAULT: ${THINKCOFFEE_DRY_RUN_DEFAULT:-false}
@@ -42,7 +40,7 @@ services:
     ports:
       - "${MCP_PORT:-3000}:3000"
     healthcheck:
-      test: ["CMD", "node", "-e", "const fs=require('fs');try{fs.accessSync('/data',fs.constants.W_OK);fs.accessSync('/data/snapshots',fs.constants.W_OK);fs.accessSync('/data/logs',fs.constants.W_OK);process.exit(0)}catch(e){process.exit(1)}"]
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

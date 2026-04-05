@@ -22,6 +22,9 @@ import { ChatViewProvider } from './chat/ChatViewProvider';
 import { ChatHistoryView } from './chat/ChatHistoryView';
 import { AgentService } from './agents/AgentService';
 import { discoverModels } from './agents/ModelRegistry';
+import { SafetyNetPanel } from './views/SafetyNetPanel';
+import { SafetyNetIntegration, DryRunManager } from './utils';
+import { DryRunStatusBar } from './utils/DryRunStatusBar';
 import fs from 'fs';
 import path from 'path';
 import { getPipelineChatHistoryService } from './chat/PipelineChatHistoryService';
@@ -32,6 +35,8 @@ let contextService: ContextService;
 let decisionService: DecisionService;
 let pipelineService: PipelineService;
 let agentService: AgentService;
+let safetyNetIntegration: SafetyNetIntegration;
+let dryRunStatusBar: DryRunStatusBar;
 
 /** The project bound to the current workspace (auto-created on activate) */
 let activeProject: Project | null = null;
@@ -94,6 +99,25 @@ export async function activate(context: vscode.ExtensionContext) {
       project = await projectService.get(project.id) || project;
     }
     activeProject = project;
+
+    // Initialize Safety Net Integration
+    safetyNetIntegration = new SafetyNetIntegration(wsRoot);
+
+    // Run automatic cleanup on activation if enabled
+    const autoCleanup = vscode.workspace.getConfiguration('thinkcoffee.safetynet').get<boolean>('autoCleanup', true);
+    if (autoCleanup) {
+      // Get active pipeline IDs to protect from cleanup
+      const activePipelines = new Set<string>();
+      if (activeProject) {
+        const pipelinesForProject = pipelineService.list(activeProject.id);
+        for (const p of pipelinesForProject) {
+          if (p.status === 'active' || p.status === 'in-progress') {
+            activePipelines.add(p.id);
+          }
+        }
+      }
+      safetyNetIntegration.runCleanup(activePipelines).catch(console.error);
+    }
   }
 
   // Status bar — show active project
@@ -108,6 +132,12 @@ export async function activate(context: vscode.ExtensionContext) {
   }
   statusBar.show();
   context.subscriptions.push(statusBar);
+
+  // Dry-Run Status Bar
+  if (safetyNetIntegration) {
+    dryRunStatusBar = new DryRunStatusBar(safetyNetIntegration.dryRunManager);
+    context.subscriptions.push(dryRunStatusBar);
+  }
 
   // ─── Chat Sidebar (replaces tree views) ─────────────────────
   const chat = new ChatService('default');
@@ -376,7 +406,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // --- Open Pipeline Chat History ---
     vscode.commands.registerCommand('thinkcoffee.openPipelineChat', (pipelineId: string) => {
       if (!pipelineId) {
-        vscode.window.showWarningMessage('ID do Pipeline não fornecido.');
+        vscode.window.showWarningMessage('ID do Pipeline nao fornecido.');
         return;
       }
       const historyService = getPipelineChatHistoryService();
@@ -498,63 +528,182 @@ export async function activate(context: vscode.ExtensionContext) {
             value: key as string,
           };
         }),
-        // Separator
-        { label: '', description: '', detail: '', value: '', kind: vscode.QuickPickItemKind.Separator } as any,
-        // Manual / Auto
-        { label: 'Manual', description: 'Voce escolhe o modelo de cada agente, um por um', value: 'manual' },
-        { label: 'Auto (PM Opus decide)', description: 'O PM (Opus 4.6) analisa o pipeline e atribui modelos', value: 'auto' },
-      ], { placeHolder: 'Escolha o modo de qualidade do cafe', matchOnDetail: true });
-      if (!modeChoice || !modeChoice.value) return;
+        // Then auto mode
+        {
+          label: 'Auto',
+          description: 'Let PM choose models for each agent',
+          detail: 'The Product Manager agent will analyze the objective and assign optimal models',
+          value: 'auto',
+        },
+        // Then direct model config
+        {
+          label: 'Manual',
+          description: 'Choose model for each agent manually',
+          detail: 'Set a specific model for any agent role',
+          value: 'manual',
+        },
+      ], { placeHolder: 'Select mode or preset' });
 
-      // Quality preset
-      if (modeChoice.value in QUALITY_PRESETS) {
-        const preset = modeChoice.value as QualityPreset;
-        applyQualityPreset(preset);
-        vscode.window.showInformationMessage(`Qualidade definida para: ${QUALITY_PRESETS[preset].label}`);
+      if (!modeChoice) return;
+
+      if (modeChoice.value === 'manual') {
+        // Manual: pick an agent, then a model
+        const roles = Object.keys(AGENT_META) as AgentRole[];
+        const agentPick = await vscode.window.showQuickPick(
+          roles.map(r => ({ label: AGENT_META[r].label, description: r, role: r })),
+          { placeHolder: 'Which agent to configure?' }
+        );
+        if (!agentPick) return;
+
+        const modelPick = await vscode.window.showInputBox({
+          prompt: `Model for ${agentPick.label}`,
+          value: config.models[agentPick.role] || DEFAULT_AGENT_MODELS[agentPick.role],
+          placeHolder: 'e.g. claude-sonnet-4-20250514, gpt-4.1, gemini-2.5-pro',
+        });
+        if (!modelPick) return;
+
+        setAgentModel(agentPick.role, modelPick);
+        vscode.window.showInformationMessage(`${agentPick.label} now uses ${modelPick}`);
+      } else if (modeChoice.value === 'auto') {
+        saveAgentConfig({ ...config, mode: 'auto' });
+        vscode.window.showInformationMessage('Mode: Auto — PM will assign models when running pipelines.');
+      } else {
+        // Apply a quality preset
+        applyQualityPreset(modeChoice.value as QualityPreset);
+        const preset = QUALITY_PRESETS[modeChoice.value as QualityPreset];
+        vscode.window.showInformationMessage(`Preset applied: ${preset.label}`);
+      }
+
+      chatProvider.refresh();
+    }),
+
+    // ═══════════════════════════════════════════════════════════
+    // SAFETY NET COMMANDS
+    // ═══════════════════════════════════════════════════════════
+
+    // ─── Toggle Dry-Run Mode ─────────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.toggleDryRun', () => {
+      if (!safetyNetIntegration) {
+        vscode.window.showWarningMessage('Safety Net nao disponivel - abra um workspace primeiro.');
+        return;
+      }
+      safetyNetIntegration.toggleDryRun();
+    }),
+
+    // ─── Open Safety Net Panel ───────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.openSafetyNet', () => {
+      const wsRoot = getWorkspaceRoot();
+      if (!wsRoot) {
+        vscode.window.showWarningMessage('Nenhum workspace aberto.');
         return;
       }
 
-      // Auto mode
-      if (modeChoice.value === 'auto') {
-        config.autoAssignModels = true;
-        saveAgentConfig(config);
-        vscode.window.showInformationMessage('Modo automatico ativado. O PM ira atribuir os modelos.');
+      // Tentar obter pipeline ativo
+      let pipelineId: string | undefined;
+      if (activeProject) {
+        const active = pipelineService.getActive(activeProject.id);
+        if (active) {
+          pipelineId = active.id;
+        }
+      }
+
+      SafetyNetPanel.createOrShow(context.extensionUri, wsRoot, pipelineId);
+    }),
+
+    // ─── Rollback Phase ──────────────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.rollback', async () => {
+      if (!safetyNetIntegration) {
+        vscode.window.showWarningMessage('Safety Net nao disponivel.');
         return;
       }
 
-      // Manual mode
-      config.autoAssignModels = false;
-      saveAgentConfig(config);
+      const project = await getProject();
+      if (!project) return;
 
-      const agentRole = await vscode.window.showQuickPick(
-        Object.keys(AGENT_META).map(k => ({
-          label: AGENT_META[k as AgentRole].label,
-          description: k,
-          detail: `Modelo atual: ${config.models[k as AgentRole] || DEFAULT_AGENT_MODELS[k as AgentRole]}`,
-          role: k as AgentRole,
-        })),
-        { placeHolder: 'Selecione o agente para configurar' }
+      const active = pipelineService.getActive(project.id);
+      if (!active) {
+        vscode.window.showWarningMessage('Nenhum pipeline ativo.');
+        return;
+      }
+
+      // Perguntar qual fase reverter
+      const phases = active.phases.map((p, i) => ({
+        label: `Fase ${i}: ${p.name}`,
+        description: p.status,
+        phaseIndex: i,
+      }));
+
+      const selected = await vscode.window.showQuickPick(phases, {
+        placeHolder: 'Selecione a fase para reverter',
+      });
+
+      if (!selected) return;
+
+      const chat = chatProvider.getActiveChat();
+      await safetyNetIntegration.executeRollback(
+        active.id,
+        selected.phaseIndex,
+        chat,
+        pipelineService,
+        project.id
       );
-      if (!agentRole) return;
 
-      const availableModels = await discoverModels();
-      if (!availableModels.length) {
-        vscode.window.showErrorMessage('Nenhum modelo de IA encontrado. Verifique a integracao com Claude, Ollama, etc.');
+      chatProvider.refresh();
+    }),
+
+    // ─── List Snapshots ──────────────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.listSnapshots', async () => {
+      if (!safetyNetIntegration) {
+        vscode.window.showWarningMessage('Safety Net nao disponivel.');
         return;
       }
 
-      const modelId = await vscode.window.showQuickPick(
-        availableModels.map(m => ({ label: m.name, description: m.id, detail: `${m.provider} - ${m.family}` })),
-        { placeHolder: `Selecione o modelo para ${agentRole.label}` }
-      );
-      if (!modelId) return;
+      const project = await getProject();
+      if (!project) return;
 
-      setAgentModel(agentRole.role, modelId.description!);
-      vscode.window.showInformationMessage(`Modelo para ${agentRole.label} definido como: ${modelId.label}`);
-    })
-  );
+      const active = pipelineService.getActive(project.id);
+      if (!active) {
+        vscode.window.showWarningMessage('Nenhum pipeline ativo.');
+        return;
+      }
+
+      const chat = chatProvider.getActiveChat();
+      await safetyNetIntegration.listSnapshots(active.id, chat);
+    }),
+
+    // ─── Cleanup Snapshots ───────────────────────────────────
+    vscode.commands.registerCommand('thinkcoffee.cleanupSnapshots', async () => {
+      if (!safetyNetIntegration) {
+        vscode.window.showWarningMessage('Safety Net nao disponivel.');
+        return;
+      }
+
+      const confirm = await vscode.window.showWarningMessage(
+        'Tem certeza que deseja limpar snapshots antigos?',
+        { modal: true },
+        'Sim, limpar',
+        'Cancelar'
+      );
+
+      if (confirm !== 'Sim, limpar') return;
+
+      // Coletar pipelines ativos
+      const activePipelines = new Set<string>();
+      if (activeProject) {
+        const allPipelines = pipelineService.list(activeProject.id);
+        for (const p of allPipelines) {
+          if (p.status === 'active' || p.status === 'in-progress') {
+            activePipelines.add(p.id);
+          }
+        }
+      }
+
+      await safetyNetIntegration.runCleanup(activePipelines);
+    }),
+
+  ); // End of commands
 }
 
 export function deactivate() {
-  if (agentService) agentService.dispose();
+  // Cleanup is handled by disposal
 }

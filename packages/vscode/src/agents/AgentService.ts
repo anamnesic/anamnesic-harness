@@ -1560,7 +1560,7 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
           type: 'info',
         });
       } else {
-        // PM rejects the individual task — record failure, switch model and retry
+        // PM rejects — create diagnostic sub-pipeline to identify and fix the problem
         const config = loadAgentConfig();
         const currentModel = getModelForAgent(agentRole, config);
 
@@ -1568,7 +1568,6 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
         recordModelFailure(currentModel, agentRole, task.title, result.feedback);
 
         const newModel = this._pickAlternativeModel(agentRole, currentModel);
-
         if (newModel && newModel !== currentModel) {
           config.models[agentRole] = newModel;
           saveAgentConfig(config);
@@ -1578,22 +1577,33 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
           ? `\nTrocando modelo: \`${currentModel}\` -> \`${newModel}\``
           : '';
 
+        // Create and run diagnostic sub-pipeline
+        const diagResult = await this._runDiagnosticPipeline(
+          projectId, pipelineId, task, agentRole, output, result.feedback,
+        );
+
         this._pipelineChat(pipelineId).send({
           sender: 'product-manager',
           senderLabel: agentLabel('product-manager'),
-          content: `Tarefa rejeitada (${agentLabel(agentRole)}): ${result.feedback}\n\nAgente vai refazer.${modelMsg}`,
+          content: `Tarefa rejeitada (${agentLabel(agentRole)}): ${result.feedback}\n\n${
+            diagResult
+              ? `Pipeline de diagnostico concluida. Agente vai refazer com correcoes aplicadas.`
+              : `Agente vai refazer com feedback do PM.`
+          }${modelMsg}`,
           type: 'info',
         });
 
-        // Reset task to pending and fix pipeline/phase status if already advanced
+        // Reset task to pending with diagnostic output as context
         const p = this._pipelines.get(projectId, pipelineId);
         if (p) {
           const phase = p.phases[p.currentPhase];
           const t = phase?.tasks.find(tt => tt.id === task.id);
           if (t) {
             t.status = 'pending';
-            t.output = `[PM FEEDBACK] ${result.feedback}\n\n[OUTPUT ANTERIOR]\n${(t.output || '').substring(0, 2000)}`;
-            // If phase/pipeline was already advanced, revert to in-progress
+            const diagContext = diagResult
+              ? `\n\n[DIAGNOSTICO]\n${diagResult.substring(0, 3000)}`
+              : '';
+            t.output = `[PM FEEDBACK] ${result.feedback}${diagContext}\n\n[OUTPUT ANTERIOR]\n${(t.output || '').substring(0, 2000)}`;
             if (phase.status === 'awaiting-approval' || phase.status === 'approved' || phase.status === 'completed') {
               phase.status = 'in-progress';
             }
@@ -1616,6 +1626,149 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
     } finally {
       this._untrackDirect(pipelineId, 'product-manager');
       this._onAgentStateChange.fire();
+    }
+  }
+
+  // ─── Diagnostic Sub-Pipeline ────────────────────────────
+
+  /**
+   * Creates and runs a diagnostic sub-pipeline when PM rejects a task.
+   * Phase 1 (code-review): Analyze the failed output and identify the root cause.
+   * Phase 2 (same agent role): Apply the fix based on the diagnosis.
+   * Returns the combined diagnostic output, or null on failure.
+   */
+  private async _runDiagnosticPipeline(
+    projectId: string,
+    parentPipelineId: string,
+    failedTask: AgentTask,
+    agentRole: AgentRole,
+    failedOutput: string,
+    pmFeedback: string,
+  ): Promise<string | null> {
+    const parentPipeline = this._pipelines.get(projectId, parentPipelineId);
+    if (!parentPipeline) return null;
+
+    // Prevent infinite recursion: don't create diagnostic of a diagnostic
+    if (parentPipeline.parentPipelineId) return null;
+
+    const workspace = parentPipeline.workspace;
+    const agentLabel_ = AGENT_META[agentRole].label;
+    const outputSnippet = failedOutput.substring(failedOutput.length - 4000);
+    const artifactsInfo = failedTask.artifacts?.length
+      ? `Arquivos criados: ${failedTask.artifacts.join(', ')}`
+      : 'Nenhum arquivo criado';
+
+    const diagObjective = `[DIAGNOSTICO] Corrigir falha na tarefa "${failedTask.title}" do ${agentLabel_}`;
+
+    // Build the diagnostic phases
+    const diagPhases: PhaseTemplate[] = [
+      {
+        name: 'Diagnostico',
+        order: 0,
+        parallel: false,
+        agents: ['code-review'],
+        taskDescriptions: {
+          'code-review': {
+            title: `Diagnosticar falha: ${failedTask.title}`,
+            description: `O PM rejeitou a tarefa "${failedTask.title}" executada pelo ${agentLabel_}.
+
+## Feedback do PM
+${pmFeedback}
+
+## Output do agente (ultimos 4000 chars)
+${outputSnippet}
+
+## ${artifactsInfo}
+
+## Tarefa original
+${failedTask.description}
+
+## Objetivo da pipeline original
+${parentPipeline.objective}
+
+## Sua tarefa
+1. Leia os arquivos relevantes no workspace para entender o estado atual
+2. Identifique EXATAMENTE o que deu errado com base no feedback do PM
+3. Liste os arquivos que precisam ser criados ou corrigidos
+4. Descreva o passo-a-passo para corrigir
+
+Seja especifico: indique nomes de arquivos, linhas, e o que precisa mudar.`,
+          },
+        },
+      },
+      {
+        name: 'Correcao',
+        order: 1,
+        parallel: false,
+        agents: [agentRole],
+        taskDescriptions: {
+          [agentRole]: {
+            title: `Corrigir: ${failedTask.title}`,
+            description: `Voce executou a tarefa "${failedTask.title}" mas o PM rejeitou.
+
+## Feedback do PM
+${pmFeedback}
+
+## Contexto
+O code-review ja analisou o problema na fase anterior. Use o diagnostico para guiar sua correcao.
+
+## Tarefa original
+${failedTask.description}
+
+## IMPORTANTE
+- Leia o output do code-review da fase anterior para entender o que corrigir
+- Use write_file para CRIAR ou CORRIGIR os arquivos necessarios
+- Nao repita os mesmos erros — foque nas correcoes indicadas pelo diagnostico`,
+          },
+        },
+      },
+    ];
+
+    // Create the diagnostic sub-pipeline
+    const diagPipeline = this._pipelines.create(projectId, diagObjective, workspace, diagPhases);
+    diagPipeline.parentPipelineId = parentPipelineId;
+    diagPipeline.parentTaskId = failedTask.id;
+    this._pipelines.save(diagPipeline);
+
+    this._pipelineChat(parentPipelineId).send({
+      sender: 'product-manager',
+      senderLabel: agentLabel('product-manager'),
+      content: `Criando pipeline de diagnostico para investigar e corrigir a falha de ${agentLabel_}...`,
+      type: 'info',
+    });
+
+    try {
+      // Run the diagnostic pipeline (reuses the same runPipeline loop)
+      await this.runPipeline(projectId, diagPipeline.id);
+
+      // Collect results
+      const completed = this._pipelines.get(projectId, diagPipeline.id);
+      if (!completed || completed.status !== 'completed') {
+        this._pipelineChat(parentPipelineId).send({
+          sender: 'system',
+          senderLabel: 'System',
+          content: `Pipeline de diagnostico nao completou (status: ${completed?.status || 'not found'}).`,
+          type: 'error',
+        });
+        return null;
+      }
+
+      // Gather all task outputs from the diagnostic pipeline
+      const diagOutput = completed.phases
+        .flatMap(p => p.tasks)
+        .filter(t => t.output)
+        .map(t => `## ${AGENT_META[t.agent].label} — ${t.title}\n${t.output}`)
+        .join('\n\n---\n\n');
+
+      return diagOutput || null;
+    } catch (err: any) {
+      this._pipelineChat(parentPipelineId).send({
+        sender: 'system',
+        senderLabel: 'System',
+        content: `Erro na pipeline de diagnostico: ${err.message}`,
+        type: 'error',
+      });
+      return null;
     }
   }
 

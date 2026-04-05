@@ -9,7 +9,6 @@ describe('safePath', () => {
 
   beforeEach(() => {
     testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'safepath-test-'));
-    // Create some test directories
     fs.mkdirSync(path.join(testRoot, 'src'));
     fs.mkdirSync(path.join(testRoot, 'tests'));
   });
@@ -28,7 +27,7 @@ describe('safePath', () => {
 
     it('should resolve nested paths', () => {
       const result = safePath(testRoot, 'src/index.ts');
-      expected(result).toBe(path.join(testRoot, 'src', 'index.ts'));
+      expect(result).toBe(path.join(testRoot, 'src', 'index.ts'));
     });
 
     it('should resolve paths with multiple levels', () => {
@@ -57,8 +56,7 @@ describe('safePath', () => {
     });
 
     it('should normalize mixed path separators on Windows', () => {
-      // This test behavior depends on platform
-      const mixed = process.platform === 'win32' 
+      const mixed = process.platform === 'win32'
         ? 'src\\lib/utils\\helpers.ts'
         : 'src/lib/utils/helpers.ts';
       const result = safePath(testRoot, mixed);
@@ -72,11 +70,9 @@ describe('safePath', () => {
     });
 
     it('should allow legitimate parent references that stay in root', () => {
-      // Create a nested directory
       const nested = path.join(testRoot, 'a', 'b', 'c');
       fs.mkdirSync(nested, { recursive: true });
-      
-      // Going up should still be within root
+
       const result = safePath(testRoot, 'a/b/c/../../file.ts');
       expect(result.startsWith(testRoot)).toBe(true);
     });
@@ -95,6 +91,10 @@ describe('safePath', () => {
       expect(() => safePath(testRoot, 'src/../../outside.txt')).toThrow('traversal');
     });
 
+    it('should block deep parent traversal to /etc/passwd', () => {
+      expect(() => safePath(testRoot, '../../../etc/passwd')).toThrow('traversal');
+    });
+
     it('should block absolute paths on Unix', () => {
       if (process.platform !== 'win32') {
         expect(() => safePath(testRoot, '/etc/passwd')).toThrow('traversal');
@@ -110,31 +110,24 @@ describe('safePath', () => {
 
     it('should block UNC paths on Windows', () => {
       if (process.platform === 'win32') {
-        expect(() => safePath(testRoot, '\\\\server\\share\\file.txt')).toThrow(
-          'traversal'
-        );
+        expect(() => safePath(testRoot, '\\\\server\\share\\file.txt')).toThrow('traversal');
       }
     });
 
-    it('should block ~/ paths', () => {
-      // ~ is not expanded by safePath, so it's treated as a relative path
+    it('should handle ~/ paths as relative (stays inside root)', () => {
       const result = safePath(testRoot, '~/file.ts');
       expect(result).toContain('~');
-      expect(result.startsWith(testRoot)).toBe(true); // Still contained
+      expect(result.startsWith(testRoot)).toBe(true);
     });
   });
 
   describe('Null byte injection', () => {
     it('should block null bytes in path', () => {
-      expect(() => safePath(testRoot, 'file.txt\0.hidden')).toThrow(
-        'null byte'
-      );
+      expect(() => safePath(testRoot, 'file.txt\0.hidden')).toThrow('null byte');
     });
 
     it('should block null bytes in root', () => {
-      expect(() => safePath(testRoot + '\0.thinkcoffee', 'file.txt')).toThrow(
-        'null byte'
-      );
+      expect(() => safePath(testRoot + '\0.thinkcoffee', 'file.txt')).toThrow('null byte');
     });
   });
 
@@ -184,10 +177,9 @@ describe('safePath', () => {
 
     it('should normalize . in middle of path', () => {
       const result = safePath(testRoot, 'src/./index.ts');
-      // Result should be normalized and contained
       expect(result).toContain('src');
       expect(result).toContain('index.ts');
-      expect(!result.includes('\\.\\')).toBe(true);
+      expect(result.includes('\\.\\') || result.includes('/./') ).toBe(false);
     });
   });
 
@@ -217,7 +209,6 @@ describe('safePath', () => {
       const pathWithSlash = safePath(testRoot, 'src/file.ts');
       const pathWithBackslash = safePath(testRoot, 'src\\file.ts');
 
-      // Both should resolve to the same absolute path
       expect(path.normalize(pathWithSlash)).toBe(path.normalize(pathWithBackslash));
     });
 

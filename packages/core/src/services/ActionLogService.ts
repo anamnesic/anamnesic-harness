@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
-import { ActionLogEntry } from '../types/safety-net';
+import { ActionLogEntry, ActionResult, ToolName, FileAffected } from '../types/safety-net';
 
 /**
  * Service for logging agent tool actions.

@@ -64,6 +64,9 @@ export interface Pipeline {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
+  /** If this is a diagnostic sub-pipeline, references the parent */
+  parentPipelineId?: string;
+  parentTaskId?: string;
 }
 
 // ─── Agent metadata ──────────────────────────────────────────
