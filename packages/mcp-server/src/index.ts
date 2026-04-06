@@ -11,4 +11,4 @@ const server = new McpServer({
 
 registerChatEndpoints(server);
 
-server.start(new StdioServerTransport());
+server.connect(new StdioServerTransport());
