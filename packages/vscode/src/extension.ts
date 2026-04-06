@@ -14,8 +14,8 @@ import {
   saveAgentConfig,
   setAgentModel,
   applyQualityPreset,
-  DEFAULT_AGENT_MODELS,
   QUALITY_PRESETS,
+  getModelForAgent,
 } from '@thinkcoffee/core';
 import type { Project, AgentRole, QualityPreset } from '@thinkcoffee/core';
 import { ChatViewProvider } from './chat/ChatViewProvider';
@@ -592,7 +592,7 @@ async function _activate(context: vscode.ExtensionContext) {
 
         const modelPick = await vscode.window.showInputBox({
           prompt: `Model for ${agentPick.label}`,
-          value: config.models[agentPick.role] || DEFAULT_AGENT_MODELS[agentPick.role],
+          value: getModelForAgent(agentPick.role, config),
           placeHolder: 'e.g. claude-sonnet-4-20250514, gpt-4.1, gemini-2.5-pro',
         });
         if (!modelPick) return;

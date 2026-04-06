@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import {
   ChatService, PipelineService, ContextService, DecisionService,
   AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent,
-  DEFAULT_AGENT_MODELS, QUALITY_PRESETS, getModelCost,
+  QUALITY_PRESETS, getModelCost,
   applyQualityPreset, isQualityPreset, getPMModelForPreset,
   recordModelFailure, getModelFailureCounts,
 } from '@thinkcoffee/core';

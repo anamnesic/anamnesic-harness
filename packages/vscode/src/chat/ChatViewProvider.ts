@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, DEFAULT_AGENT_MODELS, QUALITY_PRESETS, loadOllamaConfig, saveOllamaConfig } from '@thinkcoffee/core';
+import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, QUALITY_PRESETS, resolvePreset, loadOllamaConfig, saveOllamaConfig } from '@thinkcoffee/core';
 import type { ChatMessage, Pipeline, AgentRole } from '@thinkcoffee/core';
 import type { AgentService } from '../agents/AgentService';
 import { reloadOllamaClient } from '../agents/OllamaClient';
@@ -193,13 +193,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       this._sendState();
       return;
     }
-    const presets = ['cafe-soluvel', 'coado-com-carinho', 'espresso-duplo'] as const;
-    if (presets.includes(mode as any)) {
+    if (isQualityPreset(mode)) {
       applyQualityPreset(mode as any);
+      const resolved = resolvePreset(mode) as keyof typeof QUALITY_PRESETS;
+      const preset = QUALITY_PRESETS[resolved];
       this._activeChat.send({
         sender: 'system',
         senderLabel: 'Sistema',
-        content: `Modo alterado para **${QUALITY_PRESETS[mode as keyof typeof QUALITY_PRESETS].label}** — ${QUALITY_PRESETS[mode as keyof typeof QUALITY_PRESETS].subtitle}`,
+        content: `Modo alterado para **${preset.label}** — ${preset.subtitle}`,
         type: 'info',
       });
       this._sendState();
@@ -269,7 +270,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           project: null,
           agents: AGENT_META,
           runningAgents: [],
-          modelConfig: { mode: 'cafe-soluvel', models: {} },
+          modelConfig: { mode: 'free-tier', models: {} },
           ollamaEnabled: loadOllamaConfig().enabled,
         },
       });
@@ -550,7 +551,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const config = loadAgentConfig();
     const roles: AgentRole[] = ['product-manager', 'architect', 'organizer', 'git', 'dead-code', 'troubleshooter', 'backend', 'frontend', 'devops', 'qa', 'code-review'];
     const lines = roles.map(r => {
-      const model = config.models[r] || DEFAULT_AGENT_MODELS[r];
+      const model = getModelForAgent(r, config);
       const locked = r === 'product-manager' ? ' (obrigatorio)' : '';
       return `- **${AGENT_META[r].label}**: \`${model}\`${locked}`;
     });
@@ -1458,9 +1459,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <label>Modo:</label>
       <select class="mode-select" id="modeSelect">
         <option value="auto">Auto (PM decide)</option>
-        <option value="cafe-soluvel">Cafe Soluvel</option>
-        <option value="coado-com-carinho">Coado com Carinho</option>
-        <option value="espresso-duplo">Espresso Duplo</option>
+        <option value="free-tier">Cafe Soluvel (0x)</option>
+        <option value="budget-tier">Pingado (0.25x)</option>
+        <option value="lite-tier">Cafe com Leite (0.33x)</option>
+        <option value="standard-tier">Cafe Coado (1x)</option>
+        <option value="premium-tier">Espresso Duplo (3x)</option>
+        <option value="ultra-tier">Ristretto (30x)</option>
       </select>
       <span class="mode-subtitle" id="modeSubtitle">PM escolhe livremente</span>
       <div class="autoapprove-wrap">
@@ -1603,9 +1607,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   const MODE_SUBTITLES = {
     'auto': 'PM escolhe livremente',
-    'cafe-soluvel': 'Rapido e sem frescura',
-    'coado-com-carinho': 'Equilibrado, pro dia a dia',
-    'espresso-duplo': 'Premium, nivel barista',
+    'free-tier': 'Gratuito — 0x multiplier',
+    'budget-tier': 'Quase gratis — 0.25x',
+    'lite-tier': 'Leve — 0.33x multiplier',
+    'standard-tier': 'Equilibrado — 1x multiplier',
+    'premium-tier': 'Premium — 3x multiplier',
+    'ultra-tier': 'Ultra — 30x multiplier',
   };
 
   modeSelect.addEventListener('change', () => {
