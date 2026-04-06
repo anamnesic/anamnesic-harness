@@ -29,6 +29,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private _pipelineChats = new Map<string, ChatService>();
   /** Currently viewed pipeline ID (null = list view) */
   private _activePipelineId: string | null = null;
+  /** Guard against double pipeline creation */
+  private _isCreatingPipeline = false;
   /** Auto-approve phases without user confirmation */
   private _autoApprove = true;
   /** Ollama local model toggle */
@@ -393,6 +395,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
       // Check if it's an agent role
       if (agentRoles.includes(target as AgentRole)) {
+        if (!this._activePipelineId) {
+          this._systemMsg('Nenhuma pipeline ativa. Crie uma com `/pipeline <objetivo>` ou envie uma mensagem.', 'info');
+          return;
+        }
         this._activeChat.send({
           sender: 'programmer',
           senderLabel: 'You',
@@ -402,7 +408,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         });
         this._sendState();
         if (this._agentService) {
-          this._agentService.invokeAgent(this._activePipelineId || '', target as AgentRole, message);
+          this._agentService.invokeAgent(this._activePipelineId, target as AgentRole, message);
         }
         return;
       }
@@ -412,6 +418,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         fe: 'frontend', do: 'devops', qa: 'qa', cr: 'code-review',
       };
       if (shortMap[target]) {
+        if (!this._activePipelineId) {
+          this._systemMsg('Nenhuma pipeline ativa. Crie uma com `/pipeline <objetivo>` ou envie uma mensagem.', 'info');
+          return;
+        }
         this._activeChat.send({
           sender: 'programmer',
           senderLabel: 'You',
@@ -421,7 +431,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         });
         this._sendState();
         if (this._agentService) {
-          this._agentService.invokeAgent(this._activePipelineId || '', shortMap[target], message);
+          this._agentService.invokeAgent(this._activePipelineId, shortMap[target], message);
         }
         return;
       }
@@ -434,7 +444,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     } else if (trimmed.startsWith('@files ')) {
       await this._handleFiles(trimmed.slice(7));
     } else if (trimmed.startsWith('/pipeline ')) {
-      this._createPipeline(trimmed.slice(10));
+      if (!this._isCreatingPipeline) await this._createPipeline(trimmed.slice(10));
     } else if (trimmed === '/approve') {
       this._approvePhase();
     } else if (trimmed.startsWith('/reject ')) {
@@ -454,7 +464,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     } else {
       // Regular message — if in list view, treat as new pipeline objective
       if (!this._activePipelineId) {
-        this._createPipeline(trimmed);
+        if (!this._isCreatingPipeline) await this._createPipeline(trimmed);
       } else {
         this._activeChat.send({
           sender: 'programmer',
@@ -590,46 +600,73 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+    this._isCreatingPipeline = true;
+    try {
+      const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
-    // Step 1: PM (Opus) selects the quality mode based on project analysis
-    if (this._agentService) {
-      const config = loadAgentConfig();
-      if (config.mode === 'auto' || config.mode === 'manual') {
-        this._systemMsg('PM (Opus) esta analisando o objetivo para definir o modo de qualidade...', 'info');
-        await this._agentService.pmSelectMode(obj);
+      // Show immediate feedback — switch webview to chat mode before PM analysis
+      if (this._view) {
+        this._view.webview.postMessage({
+          command: 'state',
+          data: {
+            mode: 'chat',
+            messages: [{
+              id: `creating-${Date.now()}`,
+              sender: 'product-manager',
+              senderLabel: 'PM',
+              content: `Analisando objetivo: **${obj}**\n\nPlanejando fases e alocando modelos...`,
+              type: 'info',
+              timestamp: new Date().toISOString(),
+            }],
+            pipeline: { id: 'pending', objective: obj, status: 'pending', currentPhase: 0, phases: [] },
+            project: { id: project.id, name: project.name },
+            agents: AGENT_META,
+            runningAgents: [],
+            modelConfig: loadAgentConfig(),
+            ollamaEnabled: loadOllamaConfig().enabled,
+          },
+        });
       }
-    }
 
-    // Step 2: PM plans the phases dynamically
-    let customPhases = null;
-    if (this._agentService) {
-      this._systemMsg(`PM esta planejando as fases para: **${obj}**`, 'info');
-      customPhases = await this._agentService.planPhases(obj);
-    }
-
-    const p = this._pipelines.create(project.id, obj, ws, customPhases || undefined);
-
-    // Create per-pipeline chat channel and start as PM conversation
-    const chat = this._getOrCreatePipelineChat(p.id);
-    chat.send({
-      sender: 'product-manager',
-      senderLabel: `PM - ${getModelForAgent('product-manager')}`,
-      content: `Pipeline criada com **${p.phases.length} fases**:\n\n${p.phases.map((ph, i) => `${i + 1}. **${ph.name}** — ${ph.agents.map(a => AGENT_META[a].label).join(', ')}`).join('\n')}\n\nA primeira fase **${p.phases[0].name}** ja esta ativa. Use \`/run\` para iniciar os agentes.`,
-      type: 'response',
-    });
-
-    // Switch to the new pipeline chat
-    this._switchToPipeline(p.id);
-
-    // Step 3: Auto-assign models within the selected mode's cost tier, then run
-    if (this._agentService) {
-      const config = loadAgentConfig();
-      if (config.mode === 'auto' || isQualityPreset(config.mode)) {
-        await this._agentService.autoAssignModels(p);
+      // Step 1: PM selects quality mode (no _sendState — webview is already in chat mode)
+      if (this._agentService) {
+        const config = loadAgentConfig();
+        if (config.mode === 'auto' || config.mode === 'manual') {
+          await this._agentService.pmSelectMode(obj);
+        }
       }
-      this._sendState(); // Refresh UI with updated mode/models
-      this._agentService.runPipeline(project.id, p.id);
+
+      // Step 2: PM plans the phases dynamically
+      let customPhases = null;
+      if (this._agentService) {
+        customPhases = await this._agentService.planPhases(obj);
+      }
+
+      const p = this._pipelines.create(project.id, obj, ws, customPhases || undefined);
+
+      // Create per-pipeline chat channel and start as PM conversation
+      const chat = this._getOrCreatePipelineChat(p.id);
+      chat.send({
+        sender: 'product-manager',
+        senderLabel: `PM - ${getModelForAgent('product-manager')}`,
+        content: `Pipeline criada com **${p.phases.length} fases**:\n\n${p.phases.map((ph, i) => `${i + 1}. **${ph.name}** — ${ph.agents.map(a => AGENT_META[a].label).join(', ')}`).join('\n')}\n\nA primeira fase **${p.phases[0].name}** ja esta ativa.`,
+        type: 'response',
+      });
+
+      // Switch to the new pipeline chat
+      this._switchToPipeline(p.id);
+
+      // Step 3: Auto-assign models within the selected mode's cost tier, then run
+      if (this._agentService) {
+        const config = loadAgentConfig();
+        if (config.mode === 'auto' || isQualityPreset(config.mode)) {
+          await this._agentService.autoAssignModels(p);
+        }
+        this._sendState(); // Refresh UI with updated mode/models
+        this._agentService.runPipeline(project.id, p.id);
+      }
+    } finally {
+      this._isCreatingPipeline = false;
     }
   }
 
@@ -1529,9 +1566,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   });
 
   let currentMode = 'list';
+  let currentRenderedPipelineId = null;
 
   function showListView(pipelines) {
     currentMode = 'list';
+    currentRenderedPipelineId = null;
     pipelineList.classList.add('active');
     messagesEl.style.display = 'none';
     pipelineStrip.classList.remove('active');
@@ -1853,6 +1892,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         showListView(msg.data.pipelines);
         renderRunningAgents([]); // In list mode, per-card indicators handle this
       } else {
+        const newPipelineId = msg.data.pipeline ? msg.data.pipeline.id : null;
+        if (newPipelineId !== currentRenderedPipelineId) {
+          // Pipeline changed — clear stale messages from previous pipeline
+          messagesEl.querySelectorAll('.msg').forEach(el => el.remove());
+          currentRenderedPipelineId = newPipelineId;
+        }
         showChatView();
         renderPipeline(msg.data.pipeline);
         renderMessages(msg.data.messages);
