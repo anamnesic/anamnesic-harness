@@ -415,6 +415,65 @@ function getAgentTools(workspace: string): vscode.LanguageModelChatTool[] {
       },
     },
     {
+      name: 'move_file',
+      description: 'Move a file or directory to a new location. Parent directories are created automatically.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          source: { type: 'string', description: 'Relative path of the file/directory to move' },
+          destination: { type: 'string', description: 'Relative destination path (including filename)' },
+        },
+        required: ['source', 'destination'],
+      },
+    },
+    {
+      name: 'copy_file',
+      description: 'Copy a file to a new location. Parent directories are created automatically.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          source: { type: 'string', description: 'Relative path of the file to copy' },
+          destination: { type: 'string', description: 'Relative destination path (including filename)' },
+        },
+        required: ['source', 'destination'],
+      },
+    },
+    {
+      name: 'rename_file',
+      description: 'Rename a file or directory in place.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          source: { type: 'string', description: 'Relative path of the file/directory to rename' },
+          newName: { type: 'string', description: 'New name (just the filename, not a full path)' },
+        },
+        required: ['source', 'newName'],
+      },
+    },
+    {
+      name: 'delete_file',
+      description: 'Delete a file or empty directory from the workspace.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Relative path of the file or empty directory to delete' },
+          recursive: { type: 'boolean', description: 'If true, delete directory and all contents recursively. Use with caution.' },
+        },
+        required: ['path'],
+      },
+    },
+    {
+      name: 'create_directory',
+      description: 'Create a directory (and any missing parent directories) in the workspace.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Relative path of the directory to create' },
+        },
+        required: ['path'],
+      },
+    },
+    {
       name: 'mention_agent',
       description: 'Request another agent to handle a specific subtask. The mentioned agent will be triggered after you finish.',
       inputSchema: {
@@ -532,6 +591,118 @@ async function handleToolCall(
         return output.trim().substring(0, 4000) || '(no output)';
       } catch (e: any) {
         return `Command failed: ${e.stderr || e.message}`.substring(0, 2000);
+      }
+    }
+    case 'move_file': {
+      if (!input.source || !input.destination) return 'Error: source and destination are required';
+      const absSrc = path.resolve(workspace, input.source);
+      const absDst = path.resolve(workspace, input.destination);
+      if (!absSrc.startsWith(workspace)) return 'Error: Path traversal denied (source)';
+      if (!absDst.startsWith(workspace)) return 'Error: Path traversal denied (destination)';
+      try {
+        if (!fs.existsSync(absSrc)) return `Error: source not found: ${input.source}`;
+        const dstDir = path.dirname(absDst);
+        if (!fs.existsSync(dstDir)) fs.mkdirSync(dstDir, { recursive: true });
+        fs.renameSync(absSrc, absDst);
+        chat.send({
+          sender: agentRole,
+          senderLabel: agentLabel(agentRole),
+          content: `Movido: \`${input.source}\` -> \`${input.destination}\``,
+          type: 'code',
+        });
+        return `Moved: ${input.source} -> ${input.destination}`;
+      } catch (e: any) {
+        return `Error moving file: ${e.message}`;
+      }
+    }
+    case 'copy_file': {
+      if (!input.source || !input.destination) return 'Error: source and destination are required';
+      const absSrc = path.resolve(workspace, input.source);
+      const absDst = path.resolve(workspace, input.destination);
+      if (!absSrc.startsWith(workspace)) return 'Error: Path traversal denied (source)';
+      if (!absDst.startsWith(workspace)) return 'Error: Path traversal denied (destination)';
+      try {
+        if (!fs.existsSync(absSrc)) return `Error: source not found: ${input.source}`;
+        const dstDir = path.dirname(absDst);
+        if (!fs.existsSync(dstDir)) fs.mkdirSync(dstDir, { recursive: true });
+        fs.copyFileSync(absSrc, absDst);
+        chat.send({
+          sender: agentRole,
+          senderLabel: agentLabel(agentRole),
+          content: `Copiado: \`${input.source}\` -> \`${input.destination}\``,
+          type: 'code',
+        });
+        return `Copied: ${input.source} -> ${input.destination}`;
+      } catch (e: any) {
+        return `Error copying file: ${e.message}`;
+      }
+    }
+    case 'rename_file': {
+      if (!input.source || !input.newName) return 'Error: source and newName are required';
+      if (input.newName.includes('/') || input.newName.includes('\\')) return 'Error: newName must be a filename, not a path';
+      const absSrc = path.resolve(workspace, input.source);
+      if (!absSrc.startsWith(workspace)) return 'Error: Path traversal denied';
+      const absDst = path.join(path.dirname(absSrc), input.newName);
+      if (!absDst.startsWith(workspace)) return 'Error: Path traversal denied';
+      try {
+        if (!fs.existsSync(absSrc)) return `Error: source not found: ${input.source}`;
+        fs.renameSync(absSrc, absDst);
+        const relDst = path.relative(workspace, absDst).replace(/\\/g, '/');
+        chat.send({
+          sender: agentRole,
+          senderLabel: agentLabel(agentRole),
+          content: `Renomeado: \`${input.source}\` -> \`${relDst}\``,
+          type: 'code',
+        });
+        return `Renamed: ${input.source} -> ${relDst}`;
+      } catch (e: any) {
+        return `Error renaming: ${e.message}`;
+      }
+    }
+    case 'delete_file': {
+      if (!input.path || typeof input.path !== 'string') return 'Error: path is required (string)';
+      const abs = path.resolve(workspace, input.path);
+      if (!abs.startsWith(workspace)) return 'Error: Path traversal denied';
+      if (abs === workspace) return 'Error: Cannot delete workspace root';
+      try {
+        if (!fs.existsSync(abs)) return `Error: not found: ${input.path}`;
+        const stat = fs.statSync(abs);
+        if (stat.isDirectory()) {
+          const recursive = (input as any).recursive === true;
+          if (recursive) {
+            fs.rmSync(abs, { recursive: true, force: true });
+          } else {
+            fs.rmdirSync(abs); // fails if not empty
+          }
+        } else {
+          fs.unlinkSync(abs);
+        }
+        chat.send({
+          sender: agentRole,
+          senderLabel: agentLabel(agentRole),
+          content: `Deletado: \`${input.path}\``,
+          type: 'code',
+        });
+        return `Deleted: ${input.path}`;
+      } catch (e: any) {
+        return `Error deleting: ${e.message}`;
+      }
+    }
+    case 'create_directory': {
+      if (!input.path || typeof input.path !== 'string') return 'Error: path is required (string)';
+      const abs = path.resolve(workspace, input.path);
+      if (!abs.startsWith(workspace)) return 'Error: Path traversal denied';
+      try {
+        fs.mkdirSync(abs, { recursive: true });
+        chat.send({
+          sender: agentRole,
+          senderLabel: agentLabel(agentRole),
+          content: `Pasta criada: \`${input.path}\``,
+          type: 'code',
+        });
+        return `Directory created: ${input.path}`;
+      } catch (e: any) {
+        return `Error creating directory: ${e.message}`;
       }
     }
     case 'mention_agent': {
