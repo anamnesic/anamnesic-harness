@@ -102,6 +102,36 @@ export function registerProjectEndpoints(server: any) {
         }
     );
 
+    server.tool(
+        'find_project_by_workspace',
+        'Find a project linked to a specific workspace directory. Returns the project if found, or null. Useful for auto-detecting which project belongs to the current workspace.',
+        {
+            workspace: z.string().describe('Absolute path to the workspace directory'),
+        },
+        async ({ workspace }: { workspace: string }) => {
+            const { projectService } = await services();
+            const project = await projectService.findByWorkspace(workspace);
+            if (!project) {
+                return { content: [{ type: 'text', text: `No project linked to workspace: ${workspace}` }] };
+            }
+            return { content: [{ type: 'text', text: JSON.stringify(project, null, 2) }] };
+        }
+    );
+
+    server.tool(
+        'link_workspace',
+        'Link an existing project to a workspace directory. This allows find_project_by_workspace to discover the project automatically.',
+        {
+            projectId: z.string().describe('Project ID'),
+            workspace: z.string().describe('Absolute path to the workspace directory'),
+        },
+        async ({ projectId, workspace }: { projectId: string; workspace: string }) => {
+            const { projectService } = await services();
+            await projectService.linkWorkspace(projectId, workspace);
+            return { content: [{ type: 'text', text: `Project ${projectId} linked to workspace: ${workspace}` }] };
+        }
+    );
+
     // ─── Context ─────────────────────────────────────────────────
 
     server.tool(
@@ -378,6 +408,34 @@ export function registerProjectEndpoints(server: any) {
         async ({ projectId, objective, workspace }: { projectId: string; objective: string; workspace?: string }) => {
             const pipeline = pipelineService.create(projectId, objective, workspace ?? '');
             return { content: [{ type: 'text', text: `Pipeline created: ${pipeline.id} — "${pipeline.objective}"` }] };
+        }
+    );
+
+    server.tool(
+        'batch_create_pipelines',
+        'Create multiple pipelines for a project in a single call. Useful for setting up a swarm of AIs to work on different aspects of the project simultaneously.',
+        {
+            projectId: z.string().describe('Project ID'),
+            workspace: z.string().optional().describe('Absolute path to the workspace root'),
+            pipelines: z.array(z.object({
+                objective: z.string().describe('What should be built / the pipeline objective'),
+            })).describe('Array of pipelines to create, each with an objective'),
+        },
+        async ({ projectId, workspace, pipelines: pipelineDefs }: {
+            projectId: string; workspace?: string;
+            pipelines: Array<{ objective: string }>;
+        }) => {
+            const results: string[] = [];
+            for (const def of pipelineDefs) {
+                const pipeline = pipelineService.create(projectId, def.objective, workspace ?? '');
+                results.push(`${pipeline.id}: ${pipeline.objective}`);
+            }
+            return {
+                content: [{
+                    type: 'text',
+                    text: `Created ${results.length} pipelines:\n${results.map((r, i) => `${i + 1}. ${r}`).join('\n')}`,
+                }],
+            };
         }
     );
 
