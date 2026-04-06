@@ -3,11 +3,9 @@ import { DryRunManager, PlannedAction, DryRunSummary } from './DryRunManager';
 import { DiffPreviewHandler } from './DiffPreviewHandler';
 import { CommandConfirmationHandler } from './CommandConfirmationHandler';
 import { RollbackCommandHandler } from './RollbackCommandHandler';
-import { SnapshotService } from '@thinkcoffee/core/src/services/SnapshotService';
-import { ActionLogService } from '@thinkcoffee/core/src/services/ActionLogService';
-import { validateCommand, CommandValidationResult } from '@thinkcoffee/core/src/guardrails/command-validator';
+import { SnapshotService, ActionLogService, validateCommand } from '@thinkcoffee/core';
 import type { ChatService, PipelineService } from '@thinkcoffee/core';
-import type { ActionLogEntry, FileAffected, CommandRiskLevel, UserDecision } from '@thinkcoffee/core/src/types/safety-net';
+import type { ActionLogEntry, FileAffected, CommandRiskLevel, UserDecision } from '@thinkcoffee/core';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -78,30 +76,18 @@ export class SafetyNetIntegration {
 
   // ─── Dry-Run ─────────────────────────────────────────────────
 
-  /**
-   * Ativa/desativa o modo dry-run.
-   */
   setDryRun(enabled: boolean): void {
     this._dryRunManager.isDryRunEnabled = enabled;
   }
 
-  /**
-   * Alterna o modo dry-run.
-   */
   toggleDryRun(): void {
     this._dryRunManager.toggleDryRun();
   }
 
-  /**
-   * Retorna o resumo das acoes planejadas em dry-run.
-   */
   getDryRunSummary(): DryRunSummary {
     return this._dryRunManager.getSummary();
   }
 
-  /**
-   * Retorna a mensagem de resumo formatada para o chat.
-   */
   getDryRunSummaryMessage(): string {
     return this._dryRunManager.getSummaryMessage();
   }
@@ -113,11 +99,10 @@ export class SafetyNetIntegration {
    *
    * Fluxo:
    * 1. Se dry-run: registra e retorna simulacao
-   * 2. Se arquivo existe: mostra diff preview
-   * 3. Se aprovado: cria snapshot e executa
-   * 4. Loga a acao
-   *
-   * @returns Resultado da operacao ou mensagem de simulacao/rejeicao
+   * 2. Valida path traversal
+   * 3. Se arquivo existe: cria snapshot + mostra diff preview (se configurado)
+   * 4. Se novo: registra criacao
+   * 5. Loga a acao
    */
   async interceptWriteFile(
     relativePath: string,
@@ -160,12 +145,10 @@ export class SafetyNetIntegration {
       return { proceed: false, message: simMessage };
     }
 
-    // Verificar configuracao de diff preview
-    const diffConfig = this._getDiffPreviewConfig();
     const fileExists = fs.existsSync(absolutePath);
+    const diffConfig = this._getDiffPreviewConfig();
 
     if (diffConfig === 'always' || (diffConfig === 'existing-only' && fileExists)) {
-      // Mostrar diff preview
       const approved = await DiffPreviewHandler.showDiff(this._workspaceRoot, relativePath, content);
 
       if (!approved) {
@@ -183,27 +166,36 @@ export class SafetyNetIntegration {
       }
     }
 
-    // Criar snapshot antes de modificar
+    // Criar snapshot ANTES de modificar
     if (this._currentPipelineId) {
       if (fileExists) {
-        await this._snapshotService.createSnapshot(
-          this._currentPipelineId,
-          this._currentPhaseIndex,
-          this._currentPhaseName,
-          relativePath,
-          'modified'
-        );
+        try {
+          const originalContent = fs.readFileSync(absolutePath);
+          await this._snapshotService.saveFileContent(
+            this._currentPipelineId,
+            this._currentPhaseIndex,
+            this._currentPhaseName,
+            relativePath,
+            'modified',
+            originalContent,
+          );
+        } catch (e: any) {
+          console.warn('[SafetyNet] Falha ao criar snapshot:', e.message);
+        }
       } else {
-        await this._snapshotService.recordFileCreation(
-          this._currentPipelineId,
-          this._currentPhaseIndex,
-          this._currentPhaseName,
-          relativePath
-        );
+        try {
+          await this._snapshotService.recordFileCreation(
+            this._currentPipelineId,
+            this._currentPhaseIndex,
+            this._currentPhaseName,
+            relativePath,
+          );
+        } catch (e: any) {
+          console.warn('[SafetyNet] Falha ao registrar criacao:', e.message);
+        }
       }
     }
 
-    // Permitir a execucao
     return { proceed: true, message: '' };
   }
 
@@ -216,7 +208,7 @@ export class SafetyNetIntegration {
     taskId: string,
     success: boolean,
     error?: string,
-    durationMs?: number
+    durationMs?: number,
   ): Promise<void> {
     await this._logAction({
       toolName: 'write_file',
@@ -226,7 +218,7 @@ export class SafetyNetIntegration {
       output: success ? `File written: ${relativePath}` : `Error: ${error}`,
       result: success ? 'success' : 'error',
       durationMs: durationMs || 0,
-      filesAffected: [{ path: relativePath, action: success ? 'write' : 'write' }],
+      filesAffected: [{ path: relativePath, action: 'write' }],
     });
   }
 
@@ -237,7 +229,7 @@ export class SafetyNetIntegration {
    * 1. Valida o comando com command-validator
    * 2. Se bloqueado: rejeita imediatamente
    * 3. Se dry-run: registra e retorna simulacao
-   * 4. Se destrutivo: pede confirmacao
+   * 4. Se destrutivo e configurado: pede confirmacao
    * 5. Loga a acao
    */
   async interceptRunCommand(
@@ -247,10 +239,10 @@ export class SafetyNetIntegration {
   ): Promise<{ proceed: boolean; message: string }> {
     const startTime = Date.now();
 
-    // Validar comando
+    // Validar comando (passa workspaceRoot para checks futuros de path)
     const validation = validateCommand(command, this._workspaceRoot);
 
-    // Bloqueado - rejeitar imediatamente
+    // Bloqueado — rejeitar imediatamente
     if (validation.riskLevel === 'blocked') {
       await this._logAction({
         toolName: 'run_command',
@@ -289,7 +281,6 @@ export class SafetyNetIntegration {
       return { proceed: false, message: simMessage };
     }
 
-    // Verificar configuracao de confirmacao
     const confirmConfig = this._getCommandConfirmationConfig();
 
     if (
@@ -317,7 +308,6 @@ export class SafetyNetIntegration {
       }
     }
 
-    // Permitir a execucao
     return { proceed: true, message: '' };
   }
 
@@ -331,7 +321,7 @@ export class SafetyNetIntegration {
     success: boolean,
     exitCode?: number,
     output?: string,
-    durationMs?: number
+    durationMs?: number,
   ): Promise<void> {
     const validation = validateCommand(command, this._workspaceRoot);
 
@@ -363,7 +353,6 @@ export class SafetyNetIntegration {
     const startTime = Date.now();
     const absolutePath = path.resolve(this._workspaceRoot, relativePath);
 
-    // Validar path traversal
     if (!absolutePath.startsWith(this._workspaceRoot)) {
       await this._logAction({
         toolName: 'delete_file',
@@ -378,7 +367,6 @@ export class SafetyNetIntegration {
       return { proceed: false, message: 'Error: Path traversal denied' };
     }
 
-    // Dry-run mode
     if (this._dryRunManager.isDryRunEnabled) {
       const simMessage = this._dryRunManager.simulateDeleteFile(relativePath);
       await this._logAction({
@@ -397,13 +385,19 @@ export class SafetyNetIntegration {
 
     // Criar snapshot antes de deletar
     if (this._currentPipelineId && fs.existsSync(absolutePath)) {
-      await this._snapshotService.createSnapshot(
-        this._currentPipelineId,
-        this._currentPhaseIndex,
-        this._currentPhaseName,
-        relativePath,
-        'deleted'
-      );
+      try {
+        const originalContent = fs.readFileSync(absolutePath);
+        await this._snapshotService.saveFileContent(
+          this._currentPipelineId,
+          this._currentPhaseIndex,
+          this._currentPhaseName,
+          relativePath,
+          'deleted',
+          originalContent,
+        );
+      } catch (e: any) {
+        console.warn('[SafetyNet] Falha ao criar snapshot para delete:', e.message);
+      }
     }
 
     return { proceed: true, message: '' };
@@ -420,7 +414,7 @@ export class SafetyNetIntegration {
     taskId: string,
     success: boolean,
     output: string,
-    durationMs: number
+    durationMs: number,
   ): Promise<void> {
     await this._logAction({
       toolName,
@@ -435,44 +429,34 @@ export class SafetyNetIntegration {
 
   // ─── Rollback ────────────────────────────────────────────────
 
-  /**
-   * Executa rollback de uma fase.
-   */
   async executeRollback(
     pipelineId: string,
     phaseIndex: number,
     chat: ChatService,
     pipelineService?: PipelineService,
-    projectId?: string
+    projectId?: string,
   ): Promise<boolean> {
     return this._rollbackHandler.executeRollback(
       pipelineId,
       phaseIndex,
       chat,
       pipelineService,
-      projectId
+      projectId,
     );
   }
 
-  /**
-   * Lista snapshots disponiveis.
-   */
   async listSnapshots(pipelineId: string, chat: ChatService): Promise<void> {
     return this._rollbackHandler.listSnapshots(pipelineId, chat);
   }
 
   // ─── Cleanup ─────────────────────────────────────────────────
 
-  /**
-   * Executa limpeza de snapshots antigos.
-   * Deve ser chamado periodicamente (ex: ao ativar extensao).
-   */
   async runCleanup(activePipelineIds: Set<string> = new Set()): Promise<void> {
     try {
       const result = await this._snapshotService.cleanup(activePipelineIds);
       if (result.removedCount > 0) {
         vscode.window.showInformationMessage(
-          `Safety Net: Cleanup removeu ${result.removedCount} snapshot(s) antigo(s) (${result.freedSizeMb} MB liberados).`
+          `Safety Net: Cleanup removeu ${result.removedCount} snapshot(s) antigo(s) (${result.freedSizeMb} MB liberados).`,
         );
       }
     } catch (error: any) {
@@ -499,10 +483,7 @@ export class SafetyNetIntegration {
       userDecision?: UserDecision;
     };
   }): Promise<void> {
-    if (!this._currentPipelineId) {
-      // Se nao houver pipeline ativo, nao loga
-      return;
-    }
+    if (!this._currentPipelineId) return;
 
     try {
       await this._actionLogService.log({
@@ -515,25 +496,24 @@ export class SafetyNetIntegration {
         output: params.output,
         result: params.result,
         durationMs: params.durationMs,
-        dryRun: params.dryRun || false,
+        dryRun: params.dryRun ?? false,
         filesAffected: params.filesAffected,
         commandDetails: params.commandDetails,
       });
-    } catch (error: any) {
-      console.error('[SafetyNetIntegration] Failed to log action:', error.message);
+    } catch (e: any) {
+      console.warn('[SafetyNetIntegration] Falha ao logar acao:', e.message);
     }
   }
 
   private _getDiffPreviewConfig(): 'always' | 'existing-only' | 'never' {
-    const config = vscode.workspace.getConfiguration('thinkcoffee');
-    return config.get<'always' | 'existing-only' | 'never'>('diffPreview', 'existing-only');
+    return vscode.workspace
+      .getConfiguration('thinkcoffee.safetynet')
+      .get<'always' | 'existing-only' | 'never'>('diffPreview', 'existing-only');
   }
 
   private _getCommandConfirmationConfig(): 'always' | 'destructive-only' | 'never' {
-    const config = vscode.workspace.getConfiguration('thinkcoffee');
-    return config.get<'always' | 'destructive-only' | 'never'>('commandConfirmation', 'destructive-only');
+    return vscode.workspace
+      .getConfiguration('thinkcoffee.safetynet')
+      .get<'always' | 'destructive-only' | 'never'>('commandConfirmation', 'destructive-only');
   }
 }
-
-// Exportar tipos para uso externo
-export { DryRunManager, PlannedAction, DryRunSummary };
