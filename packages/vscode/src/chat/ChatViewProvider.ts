@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, QUALITY_PRESETS, resolvePreset, loadOllamaConfig, saveOllamaConfig } from '@thinkcoffee/core';
-import type { ChatMessage, Pipeline, AgentRole } from '@thinkcoffee/core';
+import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, QUALITY_PRESETS, resolvePreset, loadOllamaConfig, saveOllamaConfig, getEventBus } from '@thinkcoffee/core';
+import type { ChatMessage, Pipeline, AgentRole, EventBus } from '@thinkcoffee/core';
 import type { AgentService } from '../agents/AgentService';
 import { reloadOllamaClient } from '../agents/OllamaClient';
 import { execSync } from 'child_process';
@@ -24,6 +24,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private _agentService: AgentService | null = null;
   private _stopWatch: (() => void) | null = null;
   private _pipelineRefreshTimer?: ReturnType<typeof setInterval>;
+  private _eventBus: EventBus;
+  private _stopEventBus: (() => void) | null = null;
 
   /** Per-pipeline chat channels (lazy) */
   private _pipelineChats = new Map<string, ChatService>();
@@ -57,6 +59,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     this._contexts = contexts;
     this._decisions = decisions;
     this._getProject = getProject;
+
+    // EventBus: real-time cross-process events (replaces 3s polling)
+    this._eventBus = getEventBus('vscode');
+    this._eventBus.startWatching();
   }
 
   setAgentService(service: AgentService) {
@@ -116,11 +122,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     // Watch chat for external messages (from MCP / Claude Desktop)
     this._stopWatch = this._chat.watch(() => this._sendState());
 
-    // Poll pipeline state every 3s
-    this._pipelineRefreshTimer = setInterval(() => this._sendPipelineState(), 3000);
+    // Real-time pipeline events via EventBus (cross-process: MCP, CLI, etc.)
+    // Replaces the old setInterval polling with instant event-driven updates
+    this._stopEventBus = this._eventBus.on('*', (event) => {
+      if (event.type.startsWith('pipeline:') || event.type.startsWith('project:') || event.type.startsWith('context:') || event.type.startsWith('decision:')) {
+        this._sendState();
+      }
+    });
+
+    // Fallback polling at 10s (safety net for edge cases where fs.watch misses events)
+    this._pipelineRefreshTimer = setInterval(() => this._sendPipelineState(), 10000);
 
     webviewView.onDidDispose(() => {
       if (this._stopWatch) this._stopWatch();
+      if (this._stopEventBus) this._stopEventBus();
       if (this._pipelineRefreshTimer) clearInterval(this._pipelineRefreshTimer);
     });
   }
