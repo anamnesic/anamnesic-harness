@@ -8,3 +8,4 @@ export * from './chat';
 export * from './pipeline';
 export * from './agent-config';
 export * from './services';
+export * from './events';
