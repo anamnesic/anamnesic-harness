@@ -90,7 +90,7 @@ ${ctx.task.title}: ${ctx.task.description}
 5. Se sua tarefa e de codigo, escreva os arquivos .ts/.tsx/.js etc no workspace.
 6. Responda em portugues (BR) a menos que o contexto exija ingles tecnico.
 7. Seja objetivo e pratico — foque em output acionavel.
-8. Se precisar de outro agente, mencione-o com @role (ex: @backend, @frontend).
+8. Se encontrar um PROBLEMA que NAO e da sua area, use mention_agent para delegar ao agente correto. Descreva o problema claramente. O agente vai resolver e voce sera notificado para continuar.
 9. Formate sua resposta com markdown.
 10. NAO use emojis — nunca.`;
 
@@ -189,11 +189,16 @@ Voce e o agente de emergencia. Outro agente falhou e o PM te chamou pra resolver
 2. Use list_files e read_file para entender o estado ATUAL do workspace
 3. IDENTIFIQUE a causa raiz (arquivo faltando? codigo errado? import quebrado?)
 4. Use write_file para CRIAR ou CORRIGIR cada arquivo necessario
-5. Se precisar deletar arquivos, use run_command (rm/del)
-6. Ao final, liste todos os arquivos que voce criou/corrigiu
+5. Se precisar deletar arquivos, use delete_file ou run_command (rm/del)
+6. Ao final, use report_error para DOCUMENTAR o erro para os devs:
+   - Qual agente errou e por que
+   - O que o PM reportou
+   - O que voce corrigiu
+   - Quais arquivos foram alterados
 
 ## Regras criticas
 - VOCE DEVE usar write_file. Se nao criar/corrigir arquivos, voce tambem falhou.
+- VOCE DEVE usar report_error ao final. O report e para os devs humanos entenderem o que a IA errou.
 - Nao analise apenas — RESOLVA. Codigo, nao teoria.
 - Voce tem UMA chance. Nao existe retry apos voce.
 - Se a tarefa original pedia implementar algo, IMPLEMENTE.
@@ -475,14 +480,31 @@ function getAgentTools(workspace: string): vscode.LanguageModelChatTool[] {
     },
     {
       name: 'mention_agent',
-      description: 'Request another agent to handle a specific subtask. The mentioned agent will be triggered after you finish.',
+      description: 'Delegate a problem to another agent. Use when you find an issue outside your expertise. The mentioned agent will fix it and you will be notified when done so you can continue.',
       inputSchema: {
         type: 'object',
         properties: {
-          agent: { type: 'string', description: 'Agent role to mention (e.g. backend, frontend, qa)' },
-          message: { type: 'string', description: 'What you need this agent to do' },
+          agent: { type: 'string', description: 'Agent role to mention (e.g. backend, frontend, qa, architect, troubleshooter)' },
+          message: { type: 'string', description: 'What you need this agent to do — describe the problem clearly' },
+          problem: { type: 'string', description: 'Brief description of the problem you found (used for reporting)' },
         },
         required: ['agent', 'message'],
+      },
+    },
+    {
+      name: 'report_error',
+      description: 'Create an internal error report for developers. Use after fixing an AI error to document what went wrong, what was fixed, and lessons learned.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Short title for the error report' },
+          originalAgent: { type: 'string', description: 'Agent role that caused the error' },
+          errorDescription: { type: 'string', description: 'What went wrong — the AI mistake' },
+          pmFeedback: { type: 'string', description: 'PM feedback that triggered the fix' },
+          fix: { type: 'string', description: 'What was fixed and how' },
+          filesChanged: { type: 'string', description: 'Comma-separated list of files created/modified' },
+        },
+        required: ['title', 'originalAgent', 'errorDescription', 'fix'],
       },
     },
   ];
@@ -705,9 +727,40 @@ async function handleToolCall(
         return `Error creating directory: ${e.message}`;
       }
     }
+    case 'report_error': {
+      const reportInput = input as Record<string, string>;
+      if (!reportInput.title || !reportInput.originalAgent || !reportInput.errorDescription || !reportInput.fix) {
+        return 'Error: title, originalAgent, errorDescription and fix are required';
+      }
+      try {
+        const reportsDir = path.join(workspace, '.thinkcoffee', 'reports');
+        if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+        const slug = reportInput.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 40);
+        const reportPath = path.join(reportsDir, `${timestamp}_${slug}.md`);
+        const content = `# Error Report: ${reportInput.title}\n\n` +
+          `**Data**: ${new Date().toISOString()}\n` +
+          `**Agente original**: ${reportInput.originalAgent}\n` +
+          `**Corrigido por**: ${agentRole}\n\n` +
+          `## Erro da IA\n${reportInput.errorDescription}\n\n` +
+          (reportInput.pmFeedback ? `## Feedback do PM\n${reportInput.pmFeedback}\n\n` : '') +
+          `## Correcao aplicada\n${reportInput.fix}\n\n` +
+          (reportInput.filesChanged ? `## Arquivos alterados\n${reportInput.filesChanged.split(',').map((f: string) => `- ${f.trim()}`).join('\n')}\n` : '');
+        fs.writeFileSync(reportPath, content, 'utf-8');
+        chat.send({
+          sender: agentRole,
+          senderLabel: agentLabel(agentRole),
+          content: `Report criado: \`.thinkcoffee/reports/${path.basename(reportPath)}\``,
+          type: 'code',
+        });
+        return `Report written: .thinkcoffee/reports/${path.basename(reportPath)}`;
+      } catch (e: any) {
+        return `Error writing report: ${e.message}`;
+      }
+    }
     case 'mention_agent': {
       // Record the mention — AgentService will pick it up
-      return `Mentioned @${input.agent}: "${input.message}" — will be triggered after your task completes.`;
+      return `Mentioned @${input.agent}: "${input.message}" — the agent will be invoked and you will be notified when done.`;
     }
     default:
       return `Unknown tool: ${toolCall.name}`;
@@ -719,7 +772,7 @@ async function handleToolCall(
 export class AgentService {
   private _running = new Map<string, RunningAgent>(); // taskId -> RunningAgent
   private _directInvocations = new Map<string, Set<AgentRole>>(); // pipelineId -> active direct invocations
-  private _pendingMentions: { from: AgentRole; to: AgentRole; message: string; pipelineId: string }[] = [];
+  private _pendingMentions: { from: AgentRole; to: AgentRole; message: string; pipelineId: string; problem?: string }[] = [];
   private _activePipelineLoops = new Set<string>(); // pipelineIds with active PM loops
   private _globalChat: () => ChatService;
   private _getChatForPipeline: (pipelineId: string) => ChatService;
@@ -1298,12 +1351,13 @@ export class AgentService {
         for (const tc of pendingToolCalls) {
           // Check for @mentions
           if (tc.name === 'mention_agent') {
-            const input = tc.input as { agent: string; message: string };
+            const input = tc.input as { agent: string; message: string; problem?: string };
             this._pendingMentions.push({
               from: role,
               to: input.agent as AgentRole,
               message: input.message,
               pipelineId,
+              problem: input.problem,
             });
             this._pipelineChat(pipelineId).send({
               sender: role,
@@ -1340,7 +1394,7 @@ export class AgentService {
       this._pipelines.saveAgentHistory(
         ctx.projectId, pipelineId, task.id,
         this._contexts, this._decisions,
-      ).catch(() => {});
+      ).catch(() => { });
 
       this._pipelineChat(pipelineId).send({
         sender: role,
@@ -1411,11 +1465,13 @@ export class AgentService {
         });
       } else {
         // Agent is NOT in the current phase — invoke directly with the mention context
+        const problemTag = mention.problem ? ` (problema: ${mention.problem})` : '';
         this._pipelineChat(pipelineId).send({
-          sender: 'system',
-          senderLabel: 'Pipeline',
-          content: `${AGENT_META[mention.from].label} invocou @${mention.to}: ${mention.message}`,
-          type: 'info',
+          sender: mention.from,
+          senderLabel: agentLabel(mention.from),
+          content: `Delegando para @${mention.to}${problemTag}: ${mention.message}`,
+          type: 'request',
+          mentions: [mention.to],
         });
 
         // Collect all prior outputs including the mentioning agent's output
@@ -1426,8 +1482,23 @@ export class AgentService {
           }
         }
 
-        // Invoke the mentioned agent directly with context from the mention
-        await this.invokeAgent(pipelineId, mention.to, `Solicitacao de ${AGENT_META[mention.from].label}:\n\n${mention.message}\n\nContexto adicional dos outputs anteriores:\n${allOutputs.map(o => `### ${AGENT_META[o.agent].label}\n${o.output.substring(0, 2000)}`).join('\n\n')}`);
+        const contextSummary = allOutputs.map(o => `### ${AGENT_META[o.agent].label}\n${o.output.substring(0, 2000)}`).join('\n\n');
+
+        // Invoke the mentioned agent with full context
+        await this.invokeAgent(
+          pipelineId,
+          mention.to,
+          `Solicitacao de ${AGENT_META[mention.from].label}:\n\n${mention.message}\n\nContexto:\n${contextSummary}`,
+        );
+
+        // Notify the caller agent that the mentioned agent finished
+        this._pipelineChat(pipelineId).send({
+          sender: mention.to,
+          senderLabel: agentLabel(mention.to),
+          content: `@${mention.from} Pronto — concluida a solicitacao: ${mention.message.substring(0, 200)}. Pode continuar sua tarefa.`,
+          type: 'info',
+          mentions: [mention.from],
+        });
       }
     }
   }
@@ -1995,6 +2066,41 @@ LEMBRE: Voce tem UMA chance. Use write_file. Nao descreva — FACA.`,
       content: `Correcao aplicada para a tarefa "${failedTask.title}" do ${originalLabel}.`,
       type: 'info',
     });
+
+    // Auto-generate error report for devs (in case TS didn't use report_error tool)
+    try {
+      const reportsDir = path.join(workspace, '.thinkcoffee', 'reports');
+      if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+      const slug = failedTask.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 40);
+      const reportPath = path.join(reportsDir, `${timestamp}_${slug}.md`);
+
+      // Only write if TS didn't already create a report for this fix
+      if (!fs.readdirSync(reportsDir).some(f => f.includes(slug) && f !== path.basename(reportPath))) {
+        const tsOutput = tsTask.output || '(sem output)';
+        const tsArtifactsList = (tsTask.artifacts || []).map(f => `- ${f}`).join('\n') || '- (nenhum)';
+        const report = `# Error Report: ${failedTask.title}\n\n` +
+          `**Data**: ${new Date().toISOString()}\n` +
+          `**Pipeline**: ${pipeline.objective}\n` +
+          `**Pipeline ID**: ${pipelineId}\n` +
+          `**Agente original**: ${originalLabel} (${originalRole})\n` +
+          `**Modelo do agente**: ${getModelForAgent(originalRole)}\n` +
+          `**Corrigido por**: Troubleshooter (${getModelForAgent('troubleshooter')})\n\n` +
+          `---\n\n` +
+          `## Feedback do PM (motivo da rejeicao)\n${pmFeedback}\n\n` +
+          `## Output original do agente (ultimos 3000 chars)\n\`\`\`\n${failedOutput.substring(failedOutput.length - 3000)}\n\`\`\`\n\n` +
+          `## Correcao do Troubleshooter\n${tsOutput.substring(0, 4000)}\n\n` +
+          `## Arquivos alterados pelo Troubleshooter\n${tsArtifactsList}\n`;
+        fs.writeFileSync(reportPath, report, 'utf-8');
+
+        this._pipelineChat(pipelineId).send({
+          sender: 'system',
+          senderLabel: 'Pipeline',
+          content: `Report de erro salvo em \`.thinkcoffee/reports/${path.basename(reportPath)}\``,
+          type: 'info',
+        });
+      }
+    } catch { /* report generation is best-effort */ }
   }
 
   // ─── PM Handle Failed/Missing Agents ────────────────────
@@ -2202,6 +2308,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
               to: fnArgs.agent as AgentRole,
               message: fnArgs.message as string,
               pipelineId,
+              problem: fnArgs.problem as string | undefined,
             });
           }
 
@@ -2225,7 +2332,7 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
       }
 
       this._pipelines.completeTask(ctx.projectId, pipelineId, task.id, fullOutput, filesWritten.length > 0 ? filesWritten : undefined);
-      this._pipelines.saveAgentHistory(ctx.projectId, pipelineId, task.id, this._contexts, this._decisions).catch(() => {});
+      this._pipelines.saveAgentHistory(ctx.projectId, pipelineId, task.id, this._contexts, this._decisions).catch(() => { });
 
       this._pipelineChat(pipelineId).send({
         sender: role,
