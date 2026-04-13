@@ -1,162 +1,88 @@
-# Reorganização e Finalização da Migração Grok → APIs Gratuitas
+# REORGANIZATION.md
 
-**Data:** 2024  
-**Status:** Finalização  
-**Padrão Arquitetural:** Layered Architecture (Provider/Service/Agent)
+## Padrão Adotado
+Clean Architecture + Modular Monorepo (PNPM Workspaces)
 
----
+## Estrutura Antes
+- Documentação dispersa na raiz e docs/
+- Arquivos soltos: INFRASTRUCTURE.md, QUICKSTART.md, TEST_EXECUTION_GUIDE.md, etc
+- Pastas de documentação sem padronização
 
-## Análise do Projeto
-
-### Stack Tecnológico
-- **Linguagem:** TypeScript
-- **Runtime:** Node.js + Electron (VSCode Extension)
-- **Frameworks:** Vitest (Testing), Hono (HTTP), CLI via Commander
-- **Padrão de Arquitetura:** Layered (Providers → Services → Agents)
-
-### Objetivo
-Migrar do **Grok (xAI - pago)** para **APIs Gratuitas via VS Code Copilot API** mantendo:
-- Zero custo operacional (`cafe-soluvel` preset)
-- Modelos de qualidade: Claude Free, GPT-4o Free, Gemini Flash
-- Compatibilidade com presets existentes
-
----
-
-## Estrutura Atual (Before)
-
-```
-packages/core/src/
-├── providers/
-│   ├── AIProvider.ts           (abstrato)
-│   ├── CopilotProvider.ts      (novo - gratuito)
-│   ├── GroqProvider.ts         (REMOVER - pago)
-│   ├── OllamaProvider.ts       (local)
-│   └── index.ts
-├── services/
-│   ├── ActionLogService.ts
-│   ├── ChatHistoryService.ts
-│   ├── ContextService.ts
-│   ├── DecisionService.ts
-│   ├── ProjectService.ts
-│   ├── SyncConfigService.ts
-│   └── ...
-├── agent-config.ts            (YA ATUALIZADO - Grok removido)
-├── pipeline.ts                (estructura OK)
-├── chat.ts
-├── database.ts
-└── index.ts
-```
-
----
-
-## Estrutura Após Reorganização (After)
-
-```
-packages/core/src/
-├── providers/
-│   ├── AIProvider.ts           (interface - sem change)
-│   ├── CopilotProvider.ts      (principal - gratuito)
-│   ├── OllamaProvider.ts       (fallback local)
-│   └── index.ts
-├── services/
-│   ├── (estrutura unchanged)
-├── config/
-│   └── agent-config.ts         (MOVIDO da raiz)
-├── pipeline/
-│   └── pipeline.ts             (MOVIDO da raiz)
-├── chat/
-│   └── chat.ts                 (MOVIDO da raiz)
-├── database.ts                 (unchanged)
-├── index.ts
-└── types/
-    └── (tipos principais aqui)
-```
-
----
+## Estrutura Depois
+- Toda documentação centralizada em `docs/`
+- Subpastas temáticas: architecture, diagnostics, guides, planning, reference, reviews
+- Arquivos soltos migrados para subpastas adequadas
+- Arquivo README.md em cada subpasta explicando o conteúdo
+- Arquivos de documentação da raiz migrados para `docs/root_docs/` para histórico
 
 ## Mudanças Realizadas
+- Adotado padrão Clean Architecture para documentação e código
+- Criadas subpastas temáticas em `docs/` para cada tipo de documento
+- Migrados arquivos soltos da raiz para `docs/root_docs/`
+- Corrigidos nomes e padronização de arquivos
+- Atualizado README.md principal para refletir nova estrutura
 
-### 1. Remoção do GroqProvider.ts
-- **Arquivo:** `packages/core/src/providers/GroqProvider.ts`
-- **Ação:** DELETAR
-- **Razão:** Grok é pago, incompatível com objetivo `cafe-soluvel`
-- **Impacto:** Nenhum - CopilotProvider é o substituto
+## Estrutura Final
 
-### 2. Agent Config já atualizado
-- **Arquivo:** `packages/core/src/agent-config.ts`
-- **Status:** ✅ YA MIGRADO
-- Substituições feitas:
-  - `grok-code-fast-1` → `gpt-5.4-mini` (backend)
-  - Zero referências a Grok em nenhum preset
-  - Todos os modelos são gratuitos em `cafe-soluvel`
-
-### 3. Verificação de Referências Restantes
-- **Search Result:** Nenhuma referência ativa a `grok-code-fast-1` em código
-- Documentos (DELIVERABLES, TRACEABILITY) contêm histórico - intencional
-
-### 4. Reorganização de Estrutura
-- **agent-config.ts:** Criado novo arquivo em `src/config/agent-config.ts`
-- **pipeline.ts:** Criado novo arquivo em `src/pipeline/pipeline.ts`
-- **chat.ts:** Mantém-se em `src/chat/chat.ts`
-
-### 5. Atualização de Imports
-- `index.ts` atualizado para refletirem novos caminhos
-- Todos os imports internos validados
-
----
-
-## Validação Pós-Migração
-
-### Critérios de Aceite
-- [x] Zero referências a `grok-code-fast-1` ou variantes em código
-- [x] CopilotProvider funciona como provider principal
-- [x] Todos os presets (`cafe-soluvel`, `coado-com-carinho`, `espresso-duplo`) funcionam
-- [x] Backend role usa `gpt-5.4-mini` (gratuito)
-- [x] Testes passam sem Grok dependency
-- [x] Estrutura organizada conforme padrão Layered
-
-### Testes Relacionados
-- `packages/core/src/__tests__/grok-migration.test.ts` - PASS (27 testes)
-- `packages/core/src/__tests__/grok-migration-integration.test.ts` - PASS (30 testes)
-- Script: `./scripts/validate-grok-migration.sh` - PASS
-
----
-
-## Commit Final
-
-```bash
-git add -A
-git commit -m "refactor: finalize migration from Grok to free APIs (Copilot)
-
-- Remove GroqProvider.ts (paid, incompatible with free tier)
-- Confirm agent-config.ts uses only free models (gpt-5.4-mini, claude-haiku, etc)
-- Reorganize project structure: providers, services, config layers
-- Update imports across packages
-- Zero Grok references in active code
-- All presets (cafe-soluvel, coado-com-carinho, espresso-duplo) compatible
-
-Validation:
-- 27 unit tests passing
-- 30 integration tests passing
-- Code scan: 0 Grok references
-- Backend now uses gpt-5.4-mini (free)
-
-This completes the migration pipeline: pycoffee is now 100% free to operate."
+```
+docs/
+  architecture/
+    ARCH-GUARDRAILS.md
+    architecture-plan.md
+    INFRASTRUCTURE.md
+    README.md
+    TECH-ARCH-V3.md
+    TECH-ARCH-V4.md
+    thinkcoffee_architecture.md
+  diagnostics/
+    analise-perda-historico.md
+    backend-implement-failure.md
+    DIAG-002-setup-infrastructure-final.md
+    diagnostico-setup-infrastructure.md
+    frontend-correction-plan.md
+    FRONTEND-FAILURE-DIAGNOSIS.md
+    frontend-implementation-failure.md
+    README.md
+    setup-infrastructure-diagnostico.md
+  guides/
+    BACKUP_PROCESS.md
+    DEPLOY_GUIDE.md
+    DEPLOYMENT.md
+    MONITORING.md
+    QUICKSTART.md
+    README.md
+    TEST_EXECUTION_GUIDE.md
+    TEST_FUNCTIONALITY_CHECKLIST.md
+    TUTORIAL.md
+  planning/
+    PM-BACKLOG.md
+    PM-REQUISITOS-BACKLOG.md
+    PM-SPRINT-PLAN.md
+    PM-USER-STORIES.md
+    README.md
+  reference/
+    FRONTEND_BREAKING_CHANGES.md
+    HISTORY_IMPLEMENTATION.md
+    README.md
+    restore_chat_history_plan.md
+    restore_history_status.json
+    TRACEABILITY_MATRIX.md
+  reviews/
+    ACTIONS-EXECUTED.md
+    CODE-REVIEW-FINAL.md
+    DELIVERABLES_SUMMARY.md
+    DOCS_REORGANIZATION_SUMMARY.md
+    README.md
+  root_docs/
+    (arquivos históricos migrados da raiz)
+  README.md
+  REORGANIZATION.md
 ```
 
----
-
-## Próximos Passos (Fora do Escopo)
-
-1. **DevOps:** Atualizar `.env.example` removendo `GROQ_API_KEY`
-2. **QA:** Executar suite completa com preset `cafe-soluvel`
-3. **PM:** Validar que zero credenciais externas são necessárias
-4. **Code Review:** Revisar imports e estrutura final
+- Estrutura de código mantida em `packages/` conforme padrão monorepo.
+- Scripts e infra em `scripts/`, `monitoring/`, `reports/`.
+- Testes em `test/`.
 
 ---
 
-## Documento Gerado
-- **Data:** 2024
-- **By:** Organizer Agent
-- **Pattern:** Layered Architecture
-- **Status:** ✅ PRONTO PARA COMMIT
+Esta reorganização garante padronização, rastreabilidade e fácil manutenção.
