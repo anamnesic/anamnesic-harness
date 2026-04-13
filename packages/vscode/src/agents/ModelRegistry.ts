@@ -110,13 +110,14 @@ export async function discoverModels(force = false): Promise<DiscoveredModel[]> 
       });
     }
 
-    // Sort: premium > code > standard > fast
+    // Keep only free models, then sort by tier priority.
+    const freeModels = discovered.filter(m => m.costMultiplier === 0);
     const tierRank: Record<string, number> = { premium: 4, code: 3, standard: 2, fast: 1 };
-    discovered.sort((a, b) => (tierRank[b.tier] || 0) - (tierRank[a.tier] || 0));
+    freeModels.sort((a, b) => (tierRank[b.tier] || 0) - (tierRank[a.tier] || 0));
 
-    _cachedModels = discovered;
+    _cachedModels = freeModels;
     _cacheTimestamp = now;
-    return discovered;
+    return freeModels;
   } catch {
     return _fallbackModels();
   }
@@ -134,12 +135,14 @@ export function invalidateModelCache(): void {
 }
 
 function _fallbackModels(): DiscoveredModel[] {
-  return AVAILABLE_MODELS.map(m => ({
-    family: m.family,
-    label: m.label,
-    tier: m.tier as DiscoveredModel['tier'],
-    vendor: m.vendor,
-    maxInputTokens: 0,
-    costMultiplier: m.cost,
-  }));
+  return AVAILABLE_MODELS
+    .filter(m => m.cost === 0)
+    .map(m => ({
+      family: m.family,
+      label: m.label,
+      tier: m.tier as DiscoveredModel['tier'],
+      vendor: m.vendor,
+      maxInputTokens: 0,
+      costMultiplier: m.cost,
+    }));
 }

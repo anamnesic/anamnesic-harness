@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, saveAgentConfig, getModelForAgent, applyQualityPreset, isQualityPreset, QUALITY_PRESETS, resolvePreset, loadOllamaConfig, saveOllamaConfig, getEventBus } from '@thinkcoffee/core';
+import { ChatService, PipelineService, ContextService, DecisionService, AGENT_META, loadAgentConfig, getModelForAgent, isQualityPreset, QUALITY_PRESETS, loadOllamaConfig, saveOllamaConfig, getEventBus } from '@thinkcoffee/core';
 import type { ChatMessage, Pipeline, AgentRole, EventBus } from '@thinkcoffee/core';
 import type { AgentService } from '../agents/AgentService';
 import { reloadOllamaClient } from '../agents/OllamaClient';
@@ -93,8 +93,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         case 'reject': this._rejectPhase(msg.feedback); break;
         case 'createPipeline': this._createPipeline(msg.objective); break;
         case 'refreshPipeline': this._sendState(); break;
-        case 'changeMode': this._changeMode(msg.mode); break;
-        case 'setAutoApprove': this._autoApprove = !!msg.enabled; break;
         case 'setOllama': {
           const cfg = loadOllamaConfig();
           cfg.enabled = !!msg.enabled;
@@ -193,35 +191,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   getChatForPipeline(pipelineId: string): ChatService {
     return this._getOrCreatePipelineChat(pipelineId);
-  }
-
-  /** Change quality preset mode from webview dropdown */
-  private _changeMode(mode: string) {
-    if (mode === 'auto') {
-      const config = loadAgentConfig();
-      config.mode = 'auto';
-      saveAgentConfig(config);
-      this._activeChat.send({
-        sender: 'system',
-        senderLabel: 'Sistema',
-        content: 'Modo alterado para **Auto** — PM escolhe livremente os modelos para cada agente.',
-        type: 'info',
-      });
-      this._sendState();
-      return;
-    }
-    if (isQualityPreset(mode)) {
-      applyQualityPreset(mode as any);
-      const resolved = resolvePreset(mode) as keyof typeof QUALITY_PRESETS;
-      const preset = QUALITY_PRESETS[resolved];
-      this._activeChat.send({
-        sender: 'system',
-        senderLabel: 'Sistema',
-        content: `Modo alterado para **${preset.label}** — ${preset.subtitle}`,
-        type: 'info',
-      });
-      this._sendState();
-    }
   }
 
   // ─── Pipeline navigation ──────────────────────────────────
@@ -1508,25 +1477,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <strong>@pm</strong> <strong>@ar</strong> <strong>@og</strong> <strong>@gi</strong> <strong>@dc</strong> <strong>@ts</strong> <strong>@be</strong> <strong>@fe</strong> <strong>@qa</strong> <strong>@cr</strong>
     </div>
     <div class="mode-bar" id="modeBar">
-      <label>Modo:</label>
-      <select class="mode-select" id="modeSelect">
-        <option value="auto">Auto (PM decide)</option>
-        <option value="free-tier">Cafe Soluvel (0x)</option>
-        <option value="budget-tier">Pingado (0.25x)</option>
-        <option value="lite-tier">Cafe com Leite (0.33x)</option>
-        <option value="standard-tier">Cafe Coado (1x)</option>
-        <option value="premium-tier">Espresso Duplo (3x)</option>
-        <option value="ultra-tier">Ristretto (30x)</option>
-      </select>
-      <span class="mode-subtitle" id="modeSubtitle">PM escolhe livremente</span>
-      <div class="autoapprove-wrap">
-        <label for="autoApproveToggle" title="Aprovar fases automaticamente sem pedir confirmacao">Auto-approve</label>
-        <label class="toggle-switch" title="Aprovar fases automaticamente">
-          <input type="checkbox" id="autoApproveToggle" checked>
-          <span class="toggle-track"></span>
-          <span class="toggle-thumb"></span>
-        </label>
-      </div>
+      <label>Modo: Cafe Soluvel (0x)</label>
+      <span class="mode-subtitle" id="modeSubtitle">Apenas modelos gratuitos (0x)</span>
       <div class="autoapprove-wrap">
         <label for="ollamaToggle" title="Usar modelos locais via Ollama">Ollama</label>
         <label class="toggle-switch ollama-toggle" title="Usar modelos locais via Ollama">
@@ -1556,9 +1508,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   const typingIndicator = document.getElementById('typingIndicator');
   const typingAvatar = document.getElementById('typingAvatar');
   const typingLabel = document.getElementById('typingLabel');
-  const modeSelect = document.getElementById('modeSelect');
-  const modeSubtitle = document.getElementById('modeSubtitle');
-  const autoApproveToggle = document.getElementById('autoApproveToggle');
   const ollamaToggle = document.getElementById('ollamaToggle');
   const pipelineList = document.getElementById('pipelineList');
   const pipelineCards = document.getElementById('pipelineCards');
@@ -1566,11 +1515,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   const backBtn = document.getElementById('backBtn');
 
   let autoApproveEnabled = true;
-
-  autoApproveToggle.addEventListener('change', () => {
-    autoApproveEnabled = autoApproveToggle.checked;
-    vscode.postMessage({ command: 'setAutoApprove', enabled: autoApproveEnabled });
-  });
 
   ollamaToggle.addEventListener('change', () => {
     vscode.postMessage({ command: 'setOllama', enabled: ollamaToggle.checked });
@@ -1658,22 +1602,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     inputArea.style.display = '';
     inputEl.placeholder = 'Message agents... (/ for commands)';
   }
-
-  const MODE_SUBTITLES = {
-    'auto': 'PM escolhe livremente',
-    'free-tier': 'Gratuito — 0x multiplier',
-    'budget-tier': 'Quase gratis — 0.25x',
-    'lite-tier': 'Leve — 0.33x multiplier',
-    'standard-tier': 'Equilibrado — 1x multiplier',
-    'premium-tier': 'Premium — 3x multiplier',
-    'ultra-tier': 'Ultra — 30x multiplier',
-  };
-
-  modeSelect.addEventListener('change', () => {
-    const mode = modeSelect.value;
-    modeSubtitle.textContent = MODE_SUBTITLES[mode] || '';
-    vscode.postMessage({ command: 'changeMode', mode });
-  });
 
   let currentAgents = {};
 
@@ -1927,14 +1855,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
       }
 
-      // Sync mode dropdown
-      if (msg.data.modelConfig && msg.data.modelConfig.mode) {
-        const m = msg.data.modelConfig.mode;
-        if (modeSelect.value !== m) {
-          modeSelect.value = MODE_SUBTITLES[m] ? m : 'auto';
-          modeSubtitle.textContent = MODE_SUBTITLES[modeSelect.value] || '';
-        }
-      }
       // Sync Ollama toggle
       if (typeof msg.data.ollamaEnabled === 'boolean') {
         ollamaToggle.checked = msg.data.ollamaEnabled;
