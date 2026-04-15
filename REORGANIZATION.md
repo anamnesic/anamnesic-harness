@@ -1,52 +1,40 @@
 # REORGANIZATION.md
 
-## Padrão de Design Escolhido
-
-**Registry Pattern + Modular**
-
-O sistema de agentes já segue um padrão Registry, com contratos bem definidos, registro dinâmico e suporte a extensibilidade. O padrão Registry é o mais adequado para sistemas que precisam registrar, descobrir e gerenciar múltiplos tipos de agentes de forma escalável e plugável. O código já implementa interfaces, contratos e um AgentRegistry central.
+## Padrão Adotado
+- **Monorepo Modular (Clean Architecture orientada a domínio)**
+- Cada pacote em `packages/` é um módulo isolado (core, mcp-server, cli, vscode)
+- Pastas internas seguem separação por domínio e responsabilidade: `agents/`, `entities/`, `services/`, `events/`, `pipeline/`, `providers/`, `types/`, `utils/`, etc.
 
 ## Estrutura Antes
-
-- packages/core/src/agents/
-  - config/
-  - contracts/
-  - tools/
-  - index.ts
-  - types.ts
+- Pastas soltas na raiz: `api/`, `components/`, `entities/`, `pages/`, `services/`, `App.tsx`, `index.ts`
+- Estrutura dos pacotes já modularizada em `packages/`
 
 ## Estrutura Depois
-
-Mantida a estrutura modular, apenas ajustes menores para padronização:
-
-- packages/core/src/agents/
-  - config/
-    - index.ts
-  - contracts/
-    - IAgent.ts
-    - IAgentContext.ts
-    - IAgentLifecycle.ts
-    - IAgentRegistry.ts
-    - index.ts
-  - tools/
-    - IAgentTool.ts
-    - index.ts
-  - index.ts
-  - types.ts
+- Todo o código de aplicação está em `packages/`:
+  - `core`: lógica de domínio, entidades, serviços, tipos, utilitários
+  - `mcp-server`: endpoints, integração backend, orquestração
+  - `cli`: comandos CLI
+  - `vscode`: extensão VS Code
+- Pastas e arquivos soltos na raiz (`api/`, `components/`, `entities/`, `pages/`, `services/`, `App.tsx`, `index.ts`) foram migrados para `packages/core/src/` conforme o domínio:
+  - `api/` → `packages/core/src/agents/`
+  - `components/` → `packages/core/src/agents/`
+  - `entities/` → `packages/core/src/entities/`
+  - `pages/` → `packages/core/src/views/`
+  - `services/` → `packages/core/src/services/`
+  - `App.tsx`, `index.ts` → `packages/core/src/`
 
 ## Mudanças Realizadas
+- Migrados arquivos e pastas soltos para dentro de `packages/core/src/`.
+- Corrigidos imports relativos nos arquivos migrados.
+- Mantida a estrutura modular dos pacotes.
+- Removidos arquivos duplicados e nomes inconsistentes.
+- Atualizada a documentação de organização.
 
-- Validação da estrutura modular e contratos.
-- Confirmação do uso do Registry Pattern para agentes.
-- Nenhuma mudança estrutural necessária, pois já está profissional e escalável.
-- Documentação deste padrão e estrutura para referência futura.
-
-## Recomendações
-
-- Novos agentes devem ser implementados seguindo `IAgent` e registrados via `AgentRegistry`.
-- Para extensões, criar subpastas por domínio se necessário, mantendo o padrão modular.
-- Atualizar este documento sempre que houver mudanças estruturais relevantes.
+## Observações
+- O projeto agora segue Clean Architecture modular, com separação clara de domínio e infraestrutura.
+- Todos os arquivos de código-fonte estão centralizados em `packages/`.
+- Testes permanecem em `__tests__/` na raiz do monorepo.
 
 ---
 
-**Status:** Estrutura de agentes já está adequada e profissional. Nenhuma refatoração estrutural necessária neste momento.
+Organização executada pelo agente Organizer em conformidade com padrões profissionais de arquitetura para monorepos TypeScript.
