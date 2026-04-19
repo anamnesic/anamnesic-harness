@@ -30,17 +30,23 @@ interface ChatAskPayload {
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  console.log('[extension] Activating ThinkCoffee extension');
   runtime = new AutonomousRuntime(context);
   const out = runtime.getOutput();
   out.appendLine('[ThinkCoffee] Extension activated');
+  console.log('[extension] Runtime created:', !!runtime);
   const chatProvider = new ChatSidebarProvider();
+  console.log('[extension] ChatProvider created');
 
+  console.log('[extension] Registering webview view provider');
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ChatSidebarProvider.viewType, chatProvider),
   );
+  console.log('[extension] Webview view provider registered');
 
   // Load and display pipeline/run history
   setTimeout(() => {
+    console.log('[extension] Loading history');
     const history = runtime?.getMemory() || [];
     if (history.length > 0) {
       const summary = history
@@ -55,11 +61,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }, 500);
 
   const register = (command: string, handler: (...args: unknown[]) => unknown) => {
+    console.log(`[extension] Registering command: ${command}`);
     context.subscriptions.push(vscode.commands.registerCommand(command, handler));
   };
 
   register('thinkcoffee.chat.ask', async (promptArg?: unknown) => {
-    out.appendLine('[thinkcoffee.chat.ask] Command received');
+    console.log('[thinkcoffee.chat.ask] Command received');
     console.log('[thinkcoffee.chat.ask] Raw payload:', promptArg);
 
     if (!runtime) {

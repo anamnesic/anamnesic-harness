@@ -38,22 +38,30 @@ export class ChatSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
+    console.log('[extension] resolveWebviewView called for view:', view.viewType);
     this.view = view;
+    console.log('[extension] Webview view set, view exists:', !!this.view);
 
     view.webview.options = {
       enableScripts: true,
     };
+    console.log('[extension] Webview options set');
 
     view.webview.onDidReceiveMessage(async message => {
+      console.log('[extension] Received message from webview:', message);
       if (message?.type !== 'ask') {
+        console.log('[extension] Ignoring non-ask message');
         return;
       }
+      console.log('[extension] Processing ask message');
       await vscode.commands.executeCommand('thinkcoffee.chat.ask', message);
     });
+    console.log('[extension] Message handler set');
 
     const nonce = getNonce();
 
-    view.webview.html = `<!DOCTYPE html>
+    console.log('[extension] Generating HTML for webview');
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -704,8 +712,12 @@ window.addEventListener('message', event => {
 });
 
 // Initialize on load
-initializeChats();
-renderChips();
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[webview] DOMContentLoaded, initializing chat');
+  initializeChats();
+  renderChips();
+  console.log('[webview] Chat initialized');
+});
 </script>
 </body>
 </html>`;
