@@ -721,6 +721,9 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>`;
+
+    view.webview.html = html;
+    console.log('[extension] Webview HTML set');
   }
 }
 
