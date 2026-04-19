@@ -140,23 +140,6 @@
         "title": "ThinkCoffee: View Agent Models"
       },
       {
-        "command": "thinkcoffee.showHistory",
-        "title": "ThinkCoffee: Show Pipeline History",
-        "icon": "$(history)"
-      },
-      {
-        "command": "thinkcoffee.backupHistory",
-        "title": "ThinkCoffee: Backup Pipeline History"
-      },
-      {
-        "command": "thinkcoffee.restoreHistory",
-        "title": "ThinkCoffee: Restore Pipeline History"
-      },
-      {
-        "command": "thinkcoffee.exportHistory",
-        "title": "ThinkCoffee: Export Pipeline History"
-      },
-      {
         "command": "thinkcoffee.toggleDryRun",
         "title": "ThinkCoffee: Toggle Dry-Run Mode",
         "icon": "$(beaker)"
@@ -178,11 +161,6 @@
       {
         "command": "thinkcoffee.cleanupSnapshots",
         "title": "ThinkCoffee: Cleanup Old Snapshots"
-      },
-      {
-        "command": "thinkcoffee.history.refresh",
-        "title": "ThinkCoffee: Refresh History",
-        "icon": "$(refresh)"
       },
       {
         "command": "thinkcoffee.advancedSoftware.generateCode",
@@ -299,43 +277,7 @@
           "group": "thinkcoffee"
         }
       ],
-      "view/title": [
-        {
-          "command": "thinkcoffee.runPhase",
-          "when": "view == thinkcoffee.chat",
-          "group": "navigation@1"
-        },
-        {
-          "command": "thinkcoffee.stopAgents",
-          "when": "view == thinkcoffee.chat",
-          "group": "navigation@2"
-        },
-        {
-          "command": "thinkcoffee.toggleDryRun",
-          "when": "view == thinkcoffee.chat",
-          "group": "navigation@3"
-        },
-        {
-          "command": "thinkcoffee.openSafetyNet",
-          "when": "view == thinkcoffee.chat",
-          "group": "navigation@4"
-        },
-        {
-          "command": "thinkcoffee.openAdvancedAgents",
-          "when": "view == thinkcoffee.chat",
-          "group": "navigation@5"
-        },
-        {
-          "command": "thinkcoffee.showHistory",
-          "when": "view == thinkcoffee.chat",
-          "group": "navigation@5"
-        },
-        {
-          "command": "thinkcoffee.history.refresh",
-          "when": "view == thinkcoffee-history",
-          "group": "navigation"
-        }
-      ],
+      "view/title": [],
       "view/item/context": []
     },
     "configuration": {

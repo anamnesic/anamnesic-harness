@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -12,7 +12,9 @@
     "strictPropertyInitialization": false,
     "composite": true
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "exclude": [
     "node_modules",
     "dist",
@@ -24,6 +26,10 @@
     "src/services/AITaskService.ts",
     "src/services/TaskExecutorService.ts",
     "src/services/WebSocketServer.ts",
+    "src/services/WorkflowExecutionEngine.ts",
+    "src/services/AdvancedSecurityAnalysisService.ts",
+    "src/services/AttackSimulationFramework.ts",
+    "src/services/AdvancedFeaturesFactory.ts",
     "src/export/__tests__",
     "src/providers"
   ]

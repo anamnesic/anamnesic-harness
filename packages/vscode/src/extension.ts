@@ -2,16 +2,32 @@ import * as vscode from 'vscode';
 import { AutonomousRuntime } from './agents/AutonomousRuntime';
 import type { WorkflowDefinition } from './agents/AutonomousRuntime';
 import { OrchestratorClient, OrchestratorHttpError } from './utils/orchestratorClient';
+import { AdvancedAgentsPanel, AgentsSidebarProvider, AdvancedAgentsSidebarProvider } from './views';
 
 let runtime: AutonomousRuntime | undefined;
 const RUN_ID_KEY = 'thinkcoffee.currentOrchestratorRunId';
 const PLAN_ID_KEY = 'thinkcoffee.currentOrchestratorPlanId';
 const WORKSPACE_ID_KEY = 'thinkcoffee.currentOrchestratorWorkspaceId';
+type PmDelegateMode = 'create-workflow' | 'resume-run' | 'pause-run' | 'show-run' | 'toggle-dry-run' | 'safety-scan' | 'stop-runs';
+interface PmDelegatedCommand {
+  command: string;
+  goal: string;
+  ask?: string;
+  delegate?: PmDelegateMode;
+}
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   runtime = new AutonomousRuntime(context);
   const out = runtime.getOutput();
   out.appendLine('[ThinkCoffee] Extension activated');
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(AgentsSidebarProvider.viewType, new AgentsSidebarProvider()),
+    vscode.window.registerWebviewViewProvider(
+      AdvancedAgentsSidebarProvider.viewType,
+      new AdvancedAgentsSidebarProvider(),
+    ),
+  );
 
   const register = (command: string, handler: (...args: unknown[]) => unknown) => {
     context.subscriptions.push(vscode.commands.registerCommand(command, handler));
@@ -500,42 +516,109 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     runtime.getOutput().show(true);
   });
 
-  const placeholders = [
-    'thinkcoffee.refreshProjects',
-    'thinkcoffee.createProject',
-    'thinkcoffee.addContext',
-    'thinkcoffee.addFileAsContext',
-    'thinkcoffee.addSelectionAsContext',
-    'thinkcoffee.addStructureAsContext',
-    'thinkcoffee.addDecision',
-    'thinkcoffee.syncContext',
-    'thinkcoffee.exportContext',
-    'thinkcoffee.openContextFile',
-    'thinkcoffee.viewContext',
-    'thinkcoffee.openChat',
-    'thinkcoffee.createPipeline',
-    'thinkcoffee.approvePhase',
-    'thinkcoffee.rejectPhase',
-    'thinkcoffee.viewTaskOutput',
-    'thinkcoffee.refreshPipeline',
-    'thinkcoffee.openOtherProject',
-    'thinkcoffee.configureAgentModels',
-    'thinkcoffee.viewAgentModels',
-    'thinkcoffee.showHistory',
-    'thinkcoffee.backupHistory',
-    'thinkcoffee.restoreHistory',
-    'thinkcoffee.exportHistory',
-    'thinkcoffee.toggleDryRun',
-    'thinkcoffee.openSafetyNet',
-    'thinkcoffee.rollback',
-    'thinkcoffee.listSnapshots',
-    'thinkcoffee.cleanupSnapshots',
-    'thinkcoffee.history.refresh',
+  register('thinkcoffee.openAdvancedAgents', async () => {
+    AdvancedAgentsPanel.createOrShow(context.extensionUri);
+  });
+
+  const pmDelegated: PmDelegatedCommand[] = [
+    { command: 'thinkcoffee.refreshProjects', goal: 'Refresh project context graph and dependencies' },
+    { command: 'thinkcoffee.createProject', goal: 'Create a new project context and baseline plan', ask: 'Project name or objective' },
+    { command: 'thinkcoffee.addContext', goal: 'Add context entry for PM planning', ask: 'Context to add' },
+    { command: 'thinkcoffee.addFileAsContext', goal: 'Summarize selected file as context for PM and agents' },
+    { command: 'thinkcoffee.addSelectionAsContext', goal: 'Summarize editor selection as context for PM and agents' },
+    { command: 'thinkcoffee.addStructureAsContext', goal: 'Capture workspace structure as context for PM and agents' },
+    { command: 'thinkcoffee.addDecision', goal: 'Record a technical decision with rationale', ask: 'Decision statement' },
+    { command: 'thinkcoffee.syncContext', goal: 'Sync managed context to configured AI tools' },
+    { command: 'thinkcoffee.exportContext', goal: 'Export consolidated context package' },
+    { command: 'thinkcoffee.openContextFile', goal: 'Open context artifact selected by PM' },
+    { command: 'thinkcoffee.viewContext', goal: 'Inspect a context entry and decision links' },
+    { command: 'thinkcoffee.openChat', goal: 'Open PM chat session and route next actions' },
+    { command: 'thinkcoffee.createPipeline', goal: 'Create phased delivery pipeline', delegate: 'create-workflow' },
+    { command: 'thinkcoffee.approvePhase', goal: 'Approve current phase and move to next', delegate: 'resume-run' },
+    { command: 'thinkcoffee.rejectPhase', goal: 'Reject current phase and pause for rework', delegate: 'pause-run' },
+    { command: 'thinkcoffee.viewTaskOutput', goal: 'Show output from latest delegated PM task' },
+    { command: 'thinkcoffee.refreshPipeline', goal: 'Refresh pipeline execution status', delegate: 'show-run' },
+    { command: 'thinkcoffee.openOtherProject', goal: 'Switch PM context to another project', ask: 'Project identifier' },
+    { command: 'thinkcoffee.configureAgentModels', goal: 'Configure model strategy by role and budget' },
+    { command: 'thinkcoffee.viewAgentModels', goal: 'Display active model assignments by role' },
+    { command: 'thinkcoffee.toggleDryRun', goal: 'Toggle PM dry-run mode without applying changes', delegate: 'toggle-dry-run' },
+    { command: 'thinkcoffee.openSafetyNet', goal: 'Run safety-net checks and defensive scan', delegate: 'safety-scan' },
+    { command: 'thinkcoffee.rollback', goal: 'Rollback current phase to previous stable checkpoint', delegate: 'stop-runs' },
+    { command: 'thinkcoffee.listSnapshots', goal: 'List snapshots available for rollback' },
+    { command: 'thinkcoffee.cleanupSnapshots', goal: 'Cleanup stale snapshots based on retention policy' },
   ];
 
-  for (const command of placeholders) {
-    register(command, () => {
-      vscode.window.showInformationMessage(`Command ${command} is available as a placeholder in this implementation phase.`);
+  const delegateToPm = async (
+    command: string,
+    goal: string,
+    ask?: string,
+    delegate?: PmDelegateMode,
+  ): Promise<void> => {
+    if (!runtime) return;
+
+    if (delegate === 'create-workflow') {
+      await vscode.commands.executeCommand('thinkcoffee.workflow.createComplex');
+      return;
+    }
+    if (delegate === 'resume-run') {
+      await vscode.commands.executeCommand('thinkcoffee.orchestrator.resumeRun');
+      return;
+    }
+    if (delegate === 'pause-run') {
+      await vscode.commands.executeCommand('thinkcoffee.orchestrator.pauseRun');
+      return;
+    }
+    if (delegate === 'show-run') {
+      await vscode.commands.executeCommand('thinkcoffee.orchestrator.showRunStatus');
+      return;
+    }
+    if (delegate === 'safety-scan') {
+      await vscode.commands.executeCommand('thinkcoffee.advancedSecurity.scanVulnerabilities');
+      return;
+    }
+    if (delegate === 'stop-runs') {
+      await vscode.commands.executeCommand('thinkcoffee.stopAgents');
+      return;
+    }
+    if (delegate === 'toggle-dry-run') {
+      const key = 'thinkcoffee.pmDryRun';
+      const current = context.workspaceState.get<boolean>(key) ?? true;
+      const next = !current;
+      await context.workspaceState.update(key, next);
+      vscode.window.showInformationMessage(`ThinkCoffee PM dry-run: ${next ? 'ON' : 'OFF'}`);
+      return;
+    }
+
+    const mode = await vscode.window.showQuickPick(['single-agent', 'multi-agent'], {
+      placeHolder: 'PM delegation mode',
+    });
+    if (!mode) return;
+
+    const detail = ask
+      ? await vscode.window.showInputBox({ prompt: ask, placeHolder: 'Optional details to refine PM orchestration' })
+      : undefined;
+
+    const summary = await runtime.runLongTask(`ThinkCoffee PM delegation: ${command}`, async () => {
+      return runtime!.adaptiveReasoning(
+        [
+          `PM command: ${command}`,
+          `Goal: ${goal}`,
+          `Delegation mode: ${mode}`,
+          `Details: ${detail?.trim() || 'none'}`,
+          'Return concise execution summary and the next recommended action.',
+        ].join('\n'),
+        mode === 'multi-agent' ? 'deep' : 'standard',
+      );
+    });
+    if (!summary) return;
+
+    out.appendLine(`[pm:${command}] ${summary.summary}`);
+    out.show(true);
+  };
+
+  for (const item of pmDelegated) {
+    register(item.command, async () => {
+      await delegateToPm(item.command, item.goal, item.ask, item.delegate);
     });
   }
 }
