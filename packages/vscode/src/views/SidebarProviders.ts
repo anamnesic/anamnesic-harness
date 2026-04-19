@@ -355,6 +355,19 @@ const statusEl = document.getElementById('status');
 const chatListEl = document.getElementById('chatList');
 const newChatBtn = document.getElementById('newChatBtn');
 
+// Debug: verify elements exist
+console.log('[init] Elements loaded:', {
+  input: !!input,
+  send: !!send,
+  attachEditorBtn: !!attachEditorBtn,
+  clearImagesBtn: !!clearImagesBtn,
+  chips: !!chips,
+  messagesEl: !!messagesEl,
+  statusEl: !!statusEl,
+  chatListEl: !!chatListEl,
+  newChatBtn: !!newChatBtn,
+});
+
 let includeActiveEditor = false;
 let images = [];
 let chats = {};
@@ -538,8 +551,12 @@ function buildUserPreview(prompt, includeFile, imageCount) {
 }
 
 function submitPrompt() {
-  const prompt = (input.value || '').trim();
+  console.log('[submitPrompt] Called');
+  const prompt = (input?.value || '').trim();
+  console.log('[submitPrompt] Prompt:', prompt, 'includeEditor:', includeActiveEditor, 'images:', images.length);
+  
   if (!prompt && !includeActiveEditor && images.length === 0) {
+    console.log('[submitPrompt] Empty, skipping');
     return;
   }
 
@@ -547,6 +564,7 @@ function submitPrompt() {
   addMessageToCurrentChat('user', userPreview);
   setStatus('PM thinking...');
 
+  console.log('[submitPrompt] Sending message via vscode.postMessage');
   vscode.postMessage({
     type: 'ask',
     prompt,
@@ -559,18 +577,30 @@ function submitPrompt() {
   input.focus();
 }
 
-newChatBtn.addEventListener('click', createNewChat);
-send.addEventListener('click', submitPrompt);
+newChatBtn.addEventListener('click', () => {
+  console.log('[ui] New chat button clicked');
+  createNewChat();
+});
+
+send.addEventListener('click', (e) => {
+  console.log('[ui] Send button clicked', e);
+  submitPrompt();
+});
+
 attachEditorBtn.addEventListener('click', () => {
+  console.log('[ui] Attach editor button clicked');
   includeActiveEditor = !includeActiveEditor;
   renderChips();
 });
+
 clearImagesBtn.addEventListener('click', () => {
+  console.log('[ui] Clear images button clicked');
   setImages([]);
 });
 
 input.addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.shiftKey) {
+    console.log('[ui] Enter key pressed in input');
     event.preventDefault();
     submitPrompt();
   }
@@ -620,20 +650,56 @@ window.addEventListener('message', event => {
     return;
   }
 
+  console.log('[message] Received from extension:', message.type);
+
   if (message.type === 'chat:status' && typeof message.text === 'string') {
+    console.log('[message] Status:', message.text);
     setStatus(message.text);
     return;
   }
 
   if (message.type === 'chat:assistant' && typeof message.text === 'string') {
+    console.log('[message] Assistant response received');
     addMessageToCurrentChat('assistant', message.text);
     setStatus('PM ready.');
     return;
   }
 
   if (message.type === 'chat:error' && typeof message.text === 'string') {
+    console.log('[message] Error:', message.text);
     addMessageToCurrentChat('error', message.text);
     setStatus('PM ready.');
+    return;
+  }
+
+  if (message.type === 'chat:new-chat' && typeof message.text === 'string') {
+    console.log('[message] New chat:', message.text, 'id:', message.chatId);
+    const chatId = message.chatId || generateChatId();
+    chats[chatId] = {
+      id: chatId,
+      title: message.text,
+      messages: [],
+      createdAt: Date.now(),
+    };
+    currentChatId = chatId;
+    saveChats();
+    renderChatList();
+    loadCurrentChat();
+    return;
+  }
+
+  if (message.type === 'chat:load-history' && typeof message.text === 'string') {
+    console.log('[message] Load history');
+    try {
+      const history = JSON.parse(message.text);
+      chats = history.chats || {};
+      currentChatId = history.currentChatId;
+      renderChatList();
+      loadCurrentChat();
+    } catch (e) {
+      console.error('[message] Failed to parse history:', e);
+    }
+    return;
   }
 });
 
