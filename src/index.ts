@@ -1,15 +1,22 @@
 import express from 'express';
 import projectRoutes from './routes/projectRoutes';
+import { AppDataSource } from './config/data-source';
+import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
 const port = 3000;
 
-// Middleware
 app.use(express.json());
 
-// Routes
-app.use('/projects', projectRoutes);
-
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+AppDataSource.initialize()
+  .then(() => {
+    app.use('/projects', projectRoutes);
+    app.use(errorHandler);
+    app.listen(port, () => {
+      console.log(`Server running at http://localhost:${port}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Database initialization failed:', err);
+    process.exit(1);
+  });

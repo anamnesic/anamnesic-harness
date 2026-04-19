@@ -9,7 +9,7 @@ interface AgentStatus {
   phase: string;
 }
 
-const statusColors = {
+const statusColors: Record<AgentStatus['status'], string> = {
   idle: '#ccc',
   running: '#3498db',
   success: '#27ae60',
@@ -19,6 +19,7 @@ const statusColors = {
 const AgentStatusPanel: React.FC = () => {
   const [agents, setAgents] = useState<AgentStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAgents();
@@ -28,10 +29,12 @@ const AgentStatusPanel: React.FC = () => {
 
   const fetchAgents = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await apiClient.get('/agents/status');
       setAgents(response.data);
     } catch (e) {
+      setError('Falha ao carregar status dos agentes.');
       setAgents([]);
     }
     setLoading(false);
@@ -40,7 +43,7 @@ const AgentStatusPanel: React.FC = () => {
   return (
     <section style={{padding: 16, background: '#f7f7f7', borderRadius: 8, margin: '16px 0'}}>
       <h3>Status dos Agentes</h3>
-      {loading ? <p>Carregando...</p> : (
+      {loading ? <p>Carregando...</p> : error ? <p style={{color: '#e74c3c'}}>{error}</p> : (
         <ul style={{listStyle: 'none', padding: 0}}>
           {agents.map(agent => (
             <li key={agent.id} style={{marginBottom: 12, display: 'flex', alignItems: 'center'}}>
