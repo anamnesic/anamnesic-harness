@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { DataSource } from 'typeorm';
 import {
   AgentService,
@@ -17,6 +18,15 @@ let taskService: TaskService;
 let workflowService: WorkflowService;
 let securityService: SecurityAnalysisService;
 let logService: ExecutionLogService;
+
+function resolveWorkspaceId(req: Request): string | null {
+  const userWorkspaceId = (req as any).user?.workspaceId as string | undefined;
+  const queryWorkspaceId = req.query.workspaceId as string | undefined;
+  if (userWorkspaceId && queryWorkspaceId && userWorkspaceId !== queryWorkspaceId) {
+    return null;
+  }
+  return userWorkspaceId || queryWorkspaceId || null;
+}
 
 export function initializeAgentRoutes(db: DataSource) {
   agentService = new AgentService(db);
@@ -70,7 +80,7 @@ router.post('/api/v1/agents', async (req: Request, res: Response) => {
 
 router.get('/api/v1/agents', async (req: Request, res: Response) => {
   try {
-    const workspaceId = (req as any).user?.workspaceId || req.query.workspaceId;
+    const workspaceId = resolveWorkspaceId(req);
     if (!workspaceId) {
       return res.status(400).json({
         success: false,
@@ -269,7 +279,8 @@ router.post('/api/v1/tasks', async (req: Request, res: Response) => {
 
 router.get('/api/v1/tasks', async (req: Request, res: Response) => {
   try {
-    const { workspaceId, agentId, status } = req.query;
+    const { agentId, status } = req.query;
+    const workspaceId = resolveWorkspaceId(req);
 
     if (!workspaceId) {
       return res.status(400).json({
@@ -479,7 +490,7 @@ router.post('/api/v1/workflows', async (req: Request, res: Response) => {
 
 router.get('/api/v1/workflows', async (req: Request, res: Response) => {
   try {
-    const workspaceId = req.query.workspaceId as string;
+    const workspaceId = resolveWorkspaceId(req);
     if (!workspaceId) {
       return res.status(400).json({
         success: false,
@@ -583,10 +594,13 @@ router.post('/api/v1/security/analyze', async (req: Request, res: Response) => {
       data: analysis,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to create security analysis' },
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: error?.message || 'Failed to create security analysis',
+      },
       timestamp: new Date().toISOString(),
     });
   }

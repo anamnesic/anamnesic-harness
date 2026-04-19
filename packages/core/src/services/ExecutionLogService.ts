@@ -22,7 +22,8 @@ export class ExecutionLogService {
   }
 
   async log(input: CreateExecutionLogInput): Promise<ExecutionLog> {
-    const log = this.repo.create(input);
+    const sanitized = this.sanitizeInput(input);
+    const log = this.repo.create(sanitized);
     return this.repo.save(log);
   }
 
@@ -103,5 +104,48 @@ export class ExecutionLogService {
       .execute();
 
     return result.affected || 0;
+  }
+
+  private sanitizeInput(input: CreateExecutionLogInput): CreateExecutionLogInput {
+    return {
+      ...input,
+      message: this.redactText(input.message),
+      reasoning: input.reasoning ? this.redactText(input.reasoning) : undefined,
+      data: input.data ? this.redactData(input.data) : undefined,
+    };
+  }
+
+  private redactData(data: Record<string, any>): Record<string, any> {
+    const clone = JSON.parse(JSON.stringify(data)) as Record<string, any>;
+    const walk = (value: unknown): unknown => {
+      if (Array.isArray(value)) {
+        return value.map((item) => walk(item));
+      }
+      if (value && typeof value === 'object') {
+        const entryObj = value as Record<string, unknown>;
+        const next: Record<string, unknown> = {};
+        for (const [key, inner] of Object.entries(entryObj)) {
+          if (/(token|secret|password|apikey|api_key|authorization|auth)/i.test(key)) {
+            next[key] = '[REDACTED]';
+          } else {
+            next[key] = walk(inner);
+          }
+        }
+        return next;
+      }
+      if (typeof value === 'string') {
+        return this.redactText(value);
+      }
+      return value;
+    };
+    return walk(clone) as Record<string, any>;
+  }
+
+  private redactText(text: string): string {
+    return text
+      .replace(/(Bearer\s+)[A-Za-z0-9._\-+/=]+/gi, '$1[REDACTED]')
+      .replace(/(api[_-]?key\s*[:=]\s*)[^\s"']+/gi, '$1[REDACTED]')
+      .replace(/(token\s*[:=]\s*)[^\s"']+/gi, '$1[REDACTED]')
+      .replace(/(password\s*[:=]\s*)[^\s"']+/gi, '$1[REDACTED]');
   }
 }

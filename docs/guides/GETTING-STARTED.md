@@ -510,10 +510,10 @@ AI_PROVIDER=openai
 
 ## Useful Links
 
-- 📖 [Full API Documentation](./IMPLEMENTATION-PHASE4-AI-INTEGRATION.md)
-- 🏗️ [Architecture Guide](./ADVANCED-AGENTS-ARCHITECTURE.md)
-- 📊 [Status Report](./STATUS-REPORT.md)
-- 🔧 [Configuration Guide](./IMPLEMENTATION-PHASE3.md)
+- 📖 [Full API Documentation](../implementation/IMPLEMENTATION-PHASE4-AI-INTEGRATION.md)
+- 🏗️ [Architecture Guide](../../architecture/ADVANCED-AGENTS-ARCHITECTURE.md)
+- 📊 [Status Report](../summaries/STATUS-REPORT.md)
+- 🔧 [Configuration Guide](../implementation/IMPLEMENTATION-PHASE3.md)
 
 ---
 

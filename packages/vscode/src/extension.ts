@@ -550,11 +550,15 @@ function getOrchestratorClient(): OrchestratorClient | undefined {
   const cfg = vscode.workspace.getConfiguration('thinkcoffee.orchestrator');
   const baseUrl = cfg.get<string>('baseUrl') || '';
   const token = cfg.get<string>('token') || '';
+  const timeoutMs = cfg.get<number>('timeoutMs') || 30_000;
   if (!baseUrl) return undefined;
-  return new OrchestratorClient({ baseUrl, token: token || undefined });
+  return new OrchestratorClient({ baseUrl, token: token || undefined, timeoutMs });
 }
 
 function toOrchestratorUserMessage(error: unknown): string {
+  const code = error && typeof error === 'object' && 'code' in error
+    ? String((error as { code?: unknown }).code || '')
+    : '';
   if (error instanceof OrchestratorHttpError) {
     if (error.statusCode === 401 || error.statusCode === 403) {
       return 'Authentication failed. Check thinkcoffee.orchestrator.token.';
@@ -567,10 +571,15 @@ function toOrchestratorUserMessage(error: unknown): string {
     }
     return `Request failed with HTTP ${error.statusCode}.`;
   }
-  if (error instanceof Error && /timeout/i.test(error.message)) {
+  if (code === 'ETIMEDOUT' || (error instanceof Error && /timeout/i.test(error.message))) {
     return 'Request timed out while contacting orchestrator API.';
   }
-  if (error instanceof Error && /ECONNREFUSED|ENOTFOUND|EAI_AGAIN/i.test(error.message)) {
+  if (
+    code === 'ECONNREFUSED' ||
+    code === 'ENOTFOUND' ||
+    code === 'EAI_AGAIN' ||
+    (error instanceof Error && /ECONNREFUSED|ENOTFOUND|EAI_AGAIN/i.test(error.message))
+  ) {
     return 'Unable to reach orchestrator API. Check base URL and network connectivity.';
   }
   return error instanceof Error ? error.message : String(error);

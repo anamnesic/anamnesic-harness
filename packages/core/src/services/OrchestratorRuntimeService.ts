@@ -14,6 +14,7 @@ import { WorkflowService } from './WorkflowService';
 import { AgentService } from './AgentService';
 import { ExecutionLogService } from './ExecutionLogService';
 import type { TaskType } from '../entities/Task';
+import type { AgentCapability } from '../types/agents';
 
 export interface CreateOrchestratorPlanInput {
   workspaceId: string;
@@ -60,10 +61,34 @@ export class OrchestratorRuntimeService {
 
   async createPlan(input: CreateOrchestratorPlanInput): Promise<{ plan: OrchestratorPlanRecord; warnings: string[] }> {
     const built = this.orchestrator.buildPlan(input.request);
-    const evaluated = this.orchestrator.enforcePolicy(built, {
+    const scopedPolicy: Partial<OrchestratorPolicy> = {
       ...(input.policy || {}),
       approvedTestScope: input.policyApproval?.approvedTestScope || input.policy?.approvedTestScope,
-    });
+    };
+
+    let evaluated = this.orchestrator.enforcePolicy(built, scopedPolicy);
+    const warnings = [...evaluated.warnings];
+
+    // Sensitive capabilities require explicit human approval and a bounded test scope.
+    const hasSensitiveCapabilities = this.hasSensitiveCapabilities(evaluated.plan);
+    const hasApprover = Boolean(input.policyApproval?.approvedByUserId);
+    const hasScope = Boolean((scopedPolicy.approvedTestScope || []).length);
+    const isControlledRedTeam = (scopedPolicy.mode || 'defensive') === 'controlled-red-team';
+
+    if (hasSensitiveCapabilities && (!hasApprover || !hasScope || !isControlledRedTeam)) {
+      evaluated = this.orchestrator.enforcePolicy(evaluated.plan, {
+        ...scopedPolicy,
+        mode: 'defensive',
+        allowVulnerabilityDiscovery: false,
+        allowAttackSimulation: false,
+        allowExploitChaining: false,
+        allowRestrictionEvasionTesting: false,
+      });
+      warnings.push(
+        'Sensitive capabilities were disabled: controlled-red-team mode, explicit approver, and approved test scope are required.'
+      );
+      warnings.push(...evaluated.warnings);
+    }
 
     const persisted = this.planRepo.create({
       workspaceId: input.workspaceId,
@@ -79,21 +104,25 @@ export class OrchestratorRuntimeService {
 
     const saved = await this.planRepo.save(persisted);
 
+    const resolvedWarnings = this.unique(warnings);
+    const effectiveMode: 'defensive' | 'controlled-red-team' =
+      this.hasSensitiveCapabilities(evaluated.plan) ? 'controlled-red-team' : 'defensive';
+
     await this.auditRepo.save(this.auditRepo.create({
       workspaceId: input.workspaceId,
       planId: saved.id,
       runId: null,
       requestedByUserId: input.createdByUserId || null,
       approvedByUserId: input.policyApproval?.approvedByUserId || null,
-      mode: (input.policy?.mode || 'defensive') as 'defensive' | 'controlled-red-team',
+      mode: effectiveMode,
       allowedCapabilities: this.extractAllowedCapabilities(evaluated.plan),
       blockedCapabilities: evaluated.blockedCapabilities,
       approvedTestScope: input.policyApproval?.approvedTestScope || input.policy?.approvedTestScope || null,
       decision: evaluated.blockedCapabilities.length > 0 ? 'auto-blocked' : 'approved',
-      reason: input.policyApproval?.reason || (evaluated.warnings.join(' | ') || null),
+      reason: input.policyApproval?.reason || (resolvedWarnings.join(' | ') || null),
     }));
 
-    return { plan: saved, warnings: evaluated.warnings };
+    return { plan: saved, warnings: resolvedWarnings };
   }
 
   async getPlan(planId: string): Promise<OrchestratorPlanRecord | null> {
@@ -205,10 +234,29 @@ export class OrchestratorRuntimeService {
     if (!agentId) throw new Error('No active agent available for orchestrated execution');
 
     try {
+      if (this.isRuntimeExceeded(run)) {
+        run.status = 'failed';
+        run.failureReason = 'Maximum orchestrator runtime exceeded before execution could proceed.';
+        run.statePayload = {
+          ...run.statePayload,
+          status: 'failed',
+          lastHeartbeatAt: new Date().toISOString(),
+        };
+        await this.runRepo.save(run);
+        return run;
+      }
+
       for (let idx = run.currentStep; idx < typedPlan.steps.length; idx++) {
         if (run.status === 'paused') break;
+        if (this.isRuntimeExceeded(run)) {
+          throw new Error('Maximum orchestrator runtime exceeded');
+        }
 
         const step = typedPlan.steps[idx];
+        if (!this.dependenciesSatisfied(step.dependsOn, run.stepTaskMap || [])) {
+          throw new Error(`Dependencies not satisfied for step ${step.id}`);
+        }
+
         const task = await this.tasks.create({
           workspaceId: run.workspaceId,
           agentId,
@@ -255,15 +303,18 @@ export class OrchestratorRuntimeService {
           { stepId: step.id, taskId: task.id, status: 'completed' },
         ];
 
-        run.checkpoints = [
-          ...(run.checkpoints || []),
-          {
-            step: run.currentStep,
-            at: new Date().toISOString(),
-            note: `Checkpoint after ${step.title}`,
-            state: run.statePayload,
-          },
-        ];
+        const latestNote = updatedState.notes[updatedState.notes.length - 1] || '';
+        if (latestNote.includes('Checkpoint reached')) {
+          run.checkpoints = [
+            ...(run.checkpoints || []),
+            {
+              step: run.currentStep,
+              at: new Date().toISOString(),
+              note: `Checkpoint after ${step.title}`,
+              state: run.statePayload,
+            },
+          ];
+        }
 
         await this.runRepo.save(run);
       }
@@ -339,5 +390,33 @@ export class OrchestratorRuntimeService {
     const available = await this.agents.listByWorkspace(workspaceId, true);
     if (available.length === 0) return null;
     return available[0].id;
+  }
+
+  private dependenciesSatisfied(
+    dependsOn: string[],
+    completedTasks: Array<{ stepId: string; taskId: string; status: string }>
+  ): boolean {
+    if (!dependsOn.length) return true;
+    const completed = new Set(
+      completedTasks.filter((entry) => entry.status === 'completed').map((entry) => entry.stepId)
+    );
+    return dependsOn.every((dependencyId) => completed.has(dependencyId));
+  }
+
+  private isRuntimeExceeded(run: OrchestratorRunRecord): boolean {
+    const state = run.statePayload || {};
+    const startedAtRaw = state.startedAt || run.createdAt?.toISOString?.() || new Date().toISOString();
+    const startedAtMs = new Date(startedAtRaw).getTime();
+    if (Number.isNaN(startedAtMs)) return false;
+    return Date.now() - startedAtMs > run.maxRuntimeMs;
+  }
+
+  private hasSensitiveCapabilities(plan: OrchestratorPlan): boolean {
+    const sensitive = new Set<AgentCapability>(AdaptiveOrchestratorService.getSensitiveCapabilities());
+    return plan.steps.some((step) => step.capabilities.some((capability) => sensitive.has(capability)));
+  }
+
+  private unique(values: string[]): string[] {
+    return Array.from(new Set(values));
   }
 }

@@ -4,14 +4,20 @@
   "description": "AI Context Management - maintain project context across all AI assistants",
   "version": "1.0.0",
   "publisher": "thinkcoffee",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chronokairo/thinkcoffee.git"
+  },
+  "homepage": "https://github.com/chronokairo/thinkcoffee",
+  "bugs": {
+    "url": "https://github.com/chronokairo/thinkcoffee/issues"
+  },
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.90.0",
+    "node": ">=18"
   },
   "categories": [
     "Other"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -405,14 +411,11 @@
   "scripts": {
     "build": "node esbuild.js",
     "build:tsc": "tsc",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "dev": "tsc --watch",
-    "package": "node esbuild.js && vsce package --allow-missing-repository",
+    "package": "node esbuild.js && pnpm exec vsce package --no-dependencies",
+    "publish:vsce": "pnpm exec vsce publish",
     "vscode:prepublish": "node esbuild.js"
-  },
-  "dependencies": {
-    "sqlite3": "^5.1.7",
-    "bindings": "*",
-    "file-uri-to-path": "*"
   },
   "devDependencies": {
     "@thinkcoffee/core": "workspace:*",

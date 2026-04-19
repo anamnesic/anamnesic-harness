@@ -4,6 +4,7 @@ import * as https from 'https';
 export interface OrchestratorClientConfig {
   baseUrl: string;
   token?: string;
+  timeoutMs?: number;
 }
 
 export interface PlanRequest {
@@ -104,8 +105,13 @@ function requestJson<T>(config: OrchestratorClientConfig, path: string, method: 
       },
     );
 
-    req.on('error', (err) => reject(err));
-    req.setTimeout(15000, () => req.destroy(new Error('Request timeout')));
+    req.on('error', (err: any) => reject(err));
+    const timeoutMs = Math.max(5_000, config.timeoutMs ?? 30_000);
+    req.setTimeout(timeoutMs, () => {
+      const timeoutError = new Error(`Request timeout after ${timeoutMs}ms`) as Error & { code?: string };
+      timeoutError.code = 'ETIMEDOUT';
+      req.destroy(timeoutError);
+    });
     if (payload) req.write(payload);
     req.end();
   });

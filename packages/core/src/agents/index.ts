@@ -9,8 +9,6 @@ export * from './reasoning';
 export * from './security';
 export * from './multimodal';
 
-// Export advanced agent implementations
-export { AdvancedSoftwareAgent } from './implementations/advanced-software-agent';
-export { AdvancedSecurityAgent } from './implementations/advanced-security-agent';
-export { AdvancedMultimodalAgent } from './implementations/advanced-multimodal-agent';
+// Advanced implementations are intentionally not exported here because
+// they are currently experimental and not part of the stable core build.
 

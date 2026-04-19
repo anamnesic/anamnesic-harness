@@ -253,10 +253,10 @@ Updated `packages/core/src/index.ts` with:
 ## 📚 Available Documentation
 
 ### Quick Reference
-- [Quick Start Guide](./PHASE5-6-7-QUICKSTART.md) - 5-minute setup
-- [Complete Implementation](./PHASE5-6-7-IMPLEMENTATION.md) - Detailed guide
-- [Deployment Guide](./PHASE5-6-7-DEPLOYMENT.md) - Production steps
-- [Completion Report](./PHASE5-6-7-COMPLETE.md) - Full summary
+- [Quick Start Guide](../implementation/PHASE5-6-7-QUICKSTART.md) - 5-minute setup
+- [Complete Implementation](../implementation/PHASE5-6-7-IMPLEMENTATION.md) - Detailed guide
+- [Deployment Guide](../implementation/PHASE5-6-7-DEPLOYMENT.md) - Production steps
+- [Completion Report](../implementation/PHASE5-6-7-COMPLETE.md) - Full summary
 
 ### Usage Examples
 
@@ -430,7 +430,7 @@ All code is:
 
 ## 📞 Getting Started
 
-1. **Read**: [PHASE5-6-7-QUICKSTART.md](./PHASE5-6-7-QUICKSTART.md)
+1. **Read**: [PHASE5-6-7-QUICKSTART.md](../implementation/PHASE5-6-7-QUICKSTART.md)
 2. **Integrate**: Follow deployment guide
 3. **Test**: Use provided examples
 4. **Deploy**: Follow checklist

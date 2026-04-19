@@ -94,59 +94,8 @@ export {
   createApiKeySchema,
 } from './validation/schemas';
 
-// ─── PHASE 5: Task Executor & WebSocket ─────────────────────
-export {
-  TaskExecutorService,
-  type SandboxConfig,
-  type ExecutionContext,
-  type ExecutionMetrics,
-  type ExecutionResult,
-  type SandboxedCode,
-} from './services/TaskExecutorService';
-
-export {
-  WebSocketServer,
-  type WebSocketMessage,
-  type TaskUpdateMessage,
-  type AgentStatusMessage,
-  type WorkflowProgressMessage,
-  type ClientSubscription,
-} from './services/WebSocketServer';
-
-// ─── PHASE 6: Workflow Execution Engine ──────────────────────
-export {
-  WorkflowExecutionEngine,
-  type WorkflowStep,
-  type WorkflowDefinition,
-  type StepExecution,
-  type WorkflowExecution,
-  type StepResult,
-} from './services/WorkflowExecutionEngine';
-
-// ─── PHASE 7: Advanced Security Analysis ─────────────────────
-export {
-  AdvancedSecurityAnalysisService,
-  type Vulnerability,
-  type AttackVector,
-  type SecurityAnalysisResult,
-  type SecurityRecommendation,
-  type ThreatModel,
-} from './services/AdvancedSecurityAnalysisService';
-
-export {
-  AttackSimulationFramework,
-  type AttackSimulation,
-  type AttackPayload,
-  type SimulationResult,
-  type DetectionEvent,
-  type SimulationMetrics,
-} from './services/AttackSimulationFramework';
-
-// ─── Advanced Features Factory ───────────────────────────────
-export {
-  AdvancedFeaturesFactory,
-  type AdvancedFeaturesConfig,
-} from './services/AdvancedFeaturesFactory';
+// ─── Experimental Advanced Runtime Modules ───────────────────
+// Intentionally not exported from the stable core entrypoint.
 
 // ─── Validation Schemas ──────────────────────────────────────
 export type {

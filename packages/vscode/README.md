@@ -16,7 +16,7 @@ Scaffold implementation. Core functionality:
 ```bash
 cd packages/vscode
 pnpm build
-npx vsce package
+pnpm exec vsce package --no-dependencies
 ```
 
 Install the generated `.vsix` from VS Code Extensions sidebar ("Install from VSIX...").

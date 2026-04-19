@@ -2,7 +2,18 @@ import { ChatService } from '@thinkcoffee/core';
 import { z } from 'zod';
 import { execSync } from 'child_process';
 
-export function registerChatEndpoints(server: any) {
+type ToolResponse = { content: Array<{ type: string; text?: string; data?: unknown }> };
+
+interface McpToolServer {
+  tool(
+    name: string,
+    description: string,
+    schema: Record<string, unknown>,
+    handler: (args: any) => Promise<ToolResponse>
+  ): void;
+}
+
+export function registerChatEndpoints(server: McpToolServer) {
   const chatService = new ChatService('default');
 
   server.tool(
