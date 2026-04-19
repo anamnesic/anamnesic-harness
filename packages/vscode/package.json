@@ -2,7 +2,7 @@
   "name": "thinkcoffee-vscode",
   "displayName": "ThinkCoffee",
   "description": "AI Context Management - maintain project context across all AI assistants",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "thinkcoffee",
   "repository": {
     "type": "git",
@@ -133,6 +133,23 @@
         "title": "ThinkCoffee: View Agent Models"
       },
       {
+        "command": "thinkcoffee.showHistory",
+        "title": "ThinkCoffee: Show Pipeline History",
+        "icon": "$(history)"
+      },
+      {
+        "command": "thinkcoffee.backupHistory",
+        "title": "ThinkCoffee: Backup Pipeline History"
+      },
+      {
+        "command": "thinkcoffee.restoreHistory",
+        "title": "ThinkCoffee: Restore Pipeline History"
+      },
+      {
+        "command": "thinkcoffee.exportHistory",
+        "title": "ThinkCoffee: Export Pipeline History"
+      },
+      {
         "command": "thinkcoffee.toggleDryRun",
         "title": "ThinkCoffee: Toggle Dry-Run Mode",
         "icon": "$(beaker)"
@@ -154,6 +171,11 @@
       {
         "command": "thinkcoffee.cleanupSnapshots",
         "title": "ThinkCoffee: Cleanup Old Snapshots"
+      },
+      {
+        "command": "thinkcoffee.history.refresh",
+        "title": "ThinkCoffee: Refresh History",
+        "icon": "$(refresh)"
       },
       {
         "command": "thinkcoffee.advancedSoftware.generateCode",
@@ -244,6 +266,11 @@
         "command": "thinkcoffee.orchestrator.selectRun",
         "title": "ThinkCoffee: Select Orchestrator Run",
         "icon": "$(symbol-key)"
+      },
+      {
+        "command": "thinkcoffee.openAdvancedAgents",
+        "title": "ThinkCoffee: Open Advanced AI Agents Panel",
+        "icon": "$(robot)"
       }
     ],
     "menus": {

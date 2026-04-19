@@ -16,6 +16,19 @@ interface PmDelegatedCommand {
   delegate?: PmDelegateMode;
 }
 
+interface ChatImageAttachment {
+  name: string;
+  mimeType: string;
+  dataUrl: string;
+}
+
+interface ChatAskPayload {
+  type?: string;
+  prompt?: string;
+  includeActiveEditor?: boolean;
+  images?: ChatImageAttachment[];
+}
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   runtime = new AutonomousRuntime(context);
   const out = runtime.getOutput();
@@ -28,6 +41,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const register = (command: string, handler: (...args: unknown[]) => unknown) => {
     context.subscriptions.push(vscode.commands.registerCommand(command, handler));
   };
+
+  register('thinkcoffee.chat.ask', async (promptArg?: unknown) => {
+    if (!runtime) return;
+
+    const payload = normalizeChatPayload(promptArg);
+    if (!payload.prompt && !payload.includeActiveEditor && payload.images.length === 0) {
+      return;
+    }
+
+    const editorContext = payload.includeActiveEditor ? buildActiveEditorContext() : undefined;
+
+    const imageContext = payload.images.length > 0
+      ? payload.images.map((image, index) => {
+        const dataPreview = image.dataUrl.slice(0, 8000);
+        return [
+          `Image ${index + 1}: ${image.name} (${image.mimeType})`,
+          `Data URL preview: ${dataPreview}`,
+        ].join('\n');
+      }).join('\n\n')
+      : undefined;
+
+    const summary = await runtime.runLongTask('ThinkCoffee PM chat request', async () => {
+      return runtime!.adaptiveReasoning(
+        [
+          'PM chat request from sidebar composer.',
+          `User prompt: ${payload.prompt || 'none'}`,
+          editorContext ? `Attached active editor context:\n${editorContext}` : 'Attached active editor context: none',
+          imageContext ? `Attached pasted images:\n${imageContext}` : 'Attached pasted images: none',
+          'Decide whether to use single-agent or multi-agent internally and provide concise next action.',
+        ].join('\n'),
+        'standard',
+      );
+    });
+    if (!summary) return;
+
+    out.appendLine(`[pm:chat] ${summary.summary}`);
+    out.show(true);
+  });
 
   register('thinkcoffee.advancedSoftware.generateCode', async () => {
     const prompt = await vscode.window.showInputBox({ prompt: 'Describe the code you need' });
@@ -613,6 +664,58 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await delegateToPm(item.command, item.goal, item.ask, item.delegate);
     });
   }
+}
+
+function normalizeChatPayload(input: unknown): { prompt: string; includeActiveEditor: boolean; images: ChatImageAttachment[] } {
+  if (typeof input === 'string') {
+    return {
+      prompt: input.trim(),
+      includeActiveEditor: false,
+      images: [],
+    };
+  }
+
+  if (!input || typeof input !== 'object') {
+    return {
+      prompt: '',
+      includeActiveEditor: false,
+      images: [],
+    };
+  }
+
+  const candidate = input as ChatAskPayload;
+  const prompt = typeof candidate.prompt === 'string' ? candidate.prompt.trim() : '';
+  const includeActiveEditor = candidate.includeActiveEditor === true;
+  const images = Array.isArray(candidate.images)
+    ? candidate.images
+      .filter((item): item is ChatImageAttachment => {
+        return !!item
+          && typeof item.name === 'string'
+          && typeof item.mimeType === 'string'
+          && typeof item.dataUrl === 'string';
+      })
+      .slice(0, 5)
+    : [];
+
+  return { prompt, includeActiveEditor, images };
+}
+
+function buildActiveEditorContext(): string | undefined {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return undefined;
+  }
+
+  const document = editor.document;
+  const fullText = document.getText();
+  const content = fullText.length > 12000 ? `${fullText.slice(0, 12000)}\n... [truncated]` : fullText;
+
+  return [
+    `Path: ${document.uri.fsPath}`,
+    `Language: ${document.languageId}`,
+    'Content:',
+    content,
+  ].join('\n');
 }
 
 export function deactivate(): void {
