@@ -35,14 +35,7 @@
         {
           "type": "webview",
           "id": "thinkcoffee.chat",
-          "name": "Agents"
-        },
-        {
-          "type": "webview",
-          "id": "thinkcoffee.advancedAgents",
-          "name": "Advanced AI Agents",
-          "icon": "$(robot)",
-          "contextualTitle": "25+ AI Capabilities"
+          "name": "Chat"
         }
       ]
     },
