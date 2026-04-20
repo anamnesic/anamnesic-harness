@@ -206,7 +206,7 @@ describe('ChatService', () => {
 
       const jsonlContent = messages.map(m => JSON.stringify(m)).join('\n');
       // Message '2' is already recorded as read in the .read.json sidecar file
-      vi.mocked(fs.readFileSync).mockImplementation((filePath: unknown) => {
+      vi.mocked(fs.readFileSync).mockImplementation((filePath: fs.PathLike | number) => {
         if (String(filePath).endsWith('.read.json')) return '["2"]';
         return jsonlContent;
       });

@@ -180,17 +180,17 @@ export class AutonomousRuntime {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
-        const parsed = JSON.parse(jsonMatch[0]) as Partial<PmChatResult>;
-        const action: PmChatAction = (['none', 'create-pipeline', 'approve-phase', 'reject-phase', 'show-status'] as PmChatAction[])
-          .includes(parsed.action as PmChatAction)
-          ? (parsed.action as PmChatAction)
+        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+        const validActions: PmChatAction[] = ['none', 'create-pipeline', 'approve-phase', 'reject-phase', 'show-status'];
+        const action: PmChatAction = validActions.includes(parsed['action'] as PmChatAction)
+          ? (parsed['action'] as PmChatAction)
           : 'none';
         return {
           action,
-          message: typeof parsed.message === 'string' && parsed.message
-            ? parsed.message
+          message: typeof parsed['message'] === 'string' && parsed['message']
+            ? parsed['message']
             : raw,
-          objective: typeof parsed.objective === 'string' ? parsed.objective : undefined,
+          objective: typeof parsed['objective'] === 'string' ? parsed['objective'] : undefined,
         };
       } catch {
         // fall through to plain-text response
@@ -552,17 +552,25 @@ export class AutonomousRuntime {
       ];
 
       // Use the provided cancellation token so the caller's cancel button works
-      const cts = token ? undefined : new vscode.CancellationTokenSource();
-      const resolvedToken = token ?? cts!.token;
+      if (token) {
+        const response = await model.sendRequest(messages, {}, token);
+        let text = '';
+        for await (const chunk of response.text) {
+          text += chunk;
+        }
+        return text.trim();
+      }
+
+      const cts = new vscode.CancellationTokenSource();
       try {
-        const response = await model.sendRequest(messages, {}, resolvedToken);
+        const response = await model.sendRequest(messages, {}, cts.token);
         let text = '';
         for await (const chunk of response.text) {
           text += chunk;
         }
         return text.trim();
       } finally {
-        cts?.dispose();
+        cts.dispose();
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

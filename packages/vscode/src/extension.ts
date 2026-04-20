@@ -106,7 +106,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ].join('').trim();
 
     // Derive the project ID from the workspace folder name (same logic as getWorkspaceId())
-    const projectId = (await getWorkspaceId()) ?? 'default';
+    const projectId = (await getWorkspaceId()) ?? `thinkcoffee-${process.pid}`;
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
 
     // Record the user message in the shared ChatService JSONL channel
