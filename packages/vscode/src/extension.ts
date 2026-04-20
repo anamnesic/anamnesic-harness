@@ -2,6 +2,14 @@ import * as vscode from 'vscode';
 import { AutonomousRuntime } from './agents/AutonomousRuntime';
 import type { WorkflowDefinition } from './agents/AutonomousRuntime';
 import { OrchestratorClient, OrchestratorHttpError } from './utils/orchestratorClient';
+import {
+  appendChatMessage,
+  createPipeline,
+  getActivePipeline,
+  approveCurrentPhase,
+  rejectCurrentPhase,
+  formatPipelineStatus,
+} from './utils/pmServices';
 import { ChatSidebarProvider } from './views';
 
 let runtime: AutonomousRuntime | undefined;
@@ -40,7 +48,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   console.log('[extension] Registering webview view provider');
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(ChatSidebarProvider.viewType, chatProvider),
+    vscode.window.registerWebviewViewProvider(ChatSidebarProvider.viewType, chatProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
   );
   console.log('[extension] Webview view provider registered');
 
@@ -67,7 +77,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   register('thinkcoffee.chat.ask', async (promptArg?: unknown) => {
     console.log('[thinkcoffee.chat.ask] Command received');
-    console.log('[thinkcoffee.chat.ask] Raw payload:', promptArg);
 
     if (!runtime) {
       out.appendLine('[thinkcoffee.chat.ask] Runtime not available');
@@ -76,47 +85,104 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
 
     const payload = normalizeChatPayload(promptArg);
-    out.appendLine(`[thinkcoffee.chat.ask] Normalized payload: prompt="${payload.prompt.slice(0, 50)}...", includeEditor=${payload.includeActiveEditor}, images=${payload.images.length}`);
+    out.appendLine(`[thinkcoffee.chat.ask] prompt="${payload.prompt.slice(0, 60)}…" editor=${payload.includeActiveEditor} images=${payload.images.length}`);
 
     if (!payload.prompt && !payload.includeActiveEditor && payload.images.length === 0) {
-      out.appendLine('[thinkcoffee.chat.ask] No content to process, skipping');
       return;
     }
 
-    chatProvider.postStatus('PM is analyzing request...');
+    chatProvider.postStatus('PM is analyzing request…');
 
     const editorContext = payload.includeActiveEditor ? buildActiveEditorContext() : undefined;
-
     const imageContext = payload.images.length > 0
-      ? payload.images.map((image, index) => {
-        const dataPreview = image.dataUrl.slice(0, 8000);
-        return [
-          `Image ${index + 1}: ${image.name} (${image.mimeType})`,
-          `Data URL preview: ${dataPreview}`,
-        ].join('\n');
-      }).join('\n\n')
+      ? payload.images.map((img, i) => `Image ${i + 1}: ${img.name} (${img.mimeType})\n${img.dataUrl.slice(0, 8000)}`).join('\n\n')
       : undefined;
 
+    // Build the full user prompt including any attachments
+    const fullPrompt = [
+      payload.prompt || '',
+      editorContext ? `\n[Active editor]\n${editorContext}` : '',
+      imageContext ? `\n[Attached images]\n${imageContext}` : '',
+    ].join('').trim();
+
+    // Derive the project ID from the workspace folder name (same logic as getWorkspaceId())
+    const projectId = (await getWorkspaceId()) ?? 'default';
+    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+
+    // Record the user message in the shared ChatService JSONL channel
+    appendChatMessage(projectId, 'programmer', 'request', fullPrompt);
+
+    // Read current pipeline state to give PM context
+    const activePipeline = getActivePipeline(projectId);
+    const pipelineStatus = activePipeline ? formatPipelineStatus(activePipeline) : undefined;
+
     try {
-      const summary = await runtime.runLongTask('ThinkCoffee PM chat request', async (_progress, _token) => {
-        return runtime!.adaptiveReasoning(
-          [
-            'PM chat request from sidebar composer.',
-            `User prompt: ${payload.prompt || 'none'}`,
-            editorContext ? `Attached active editor context:\n${editorContext}` : 'Attached active editor context: none',
-            imageContext ? `Attached pasted images:\n${imageContext}` : 'Attached pasted images: none',
-            'Decide whether to use single-agent or multi-agent internally and provide concise next action.',
-          ].join('\n'),
-          'standard',
-        );
+      const result = await runtime.runLongTask('ThinkCoffee PM', async (_progress, token) => {
+        return runtime!.pmChat(fullPrompt, { projectId, pipelineStatus }, token);
       });
-      if (!summary) {
+
+      if (!result) {
         chatProvider.postError('PM request was canceled.');
         return;
       }
 
-      out.appendLine(`[pm:chat] ${summary.summary}`);
-      chatProvider.postAssistant(summary.summary);
+      let replyText = result.message;
+
+      // Execute the action the PM decided on
+      if (result.action === 'create-pipeline') {
+        const objective = result.objective || fullPrompt;
+        try {
+          const pipeline = createPipeline(projectId, objective, workspacePath);
+          const status = formatPipelineStatus(pipeline);
+          replyText += `\n\n${status}`;
+          out.appendLine(`[pm:chat] Pipeline created: ${pipeline.id}`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          replyText += `\n\n⚠️ Could not persist pipeline: ${msg}`;
+        }
+      } else if (result.action === 'approve-phase') {
+        const pipeline = activePipeline;
+        if (pipeline) {
+          try {
+            const updated = approveCurrentPhase(projectId, pipeline.id);
+            if (updated) {
+              replyText += `\n\n${formatPipelineStatus(updated)}`;
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            replyText += `\n\n⚠️ Could not approve phase: ${msg}`;
+          }
+        } else {
+          replyText += '\n\n⚠️ No active pipeline found. Create one first.';
+        }
+      } else if (result.action === 'reject-phase') {
+        const pipeline = activePipeline;
+        if (pipeline) {
+          try {
+            const updated = rejectCurrentPhase(projectId, pipeline.id);
+            if (updated) {
+              replyText += `\n\n${formatPipelineStatus(updated)}`;
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            replyText += `\n\n⚠️ Could not reject phase: ${msg}`;
+          }
+        } else {
+          replyText += '\n\n⚠️ No active pipeline found.';
+        }
+      } else if (result.action === 'show-status') {
+        if (activePipeline) {
+          replyText += `\n\n${formatPipelineStatus(activePipeline)}`;
+        } else {
+          replyText += '\n\nNo active pipeline. Use "create pipeline for <objective>" to start one.';
+        }
+      }
+
+      // Record the PM response in the shared JSONL channel so MCP tools see it
+      appendChatMessage(projectId, 'pm', 'response', replyText);
+
+      out.appendLine(`[pm:chat] action=${result.action}`);
+      chatProvider.postAssistant(replyText);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       out.appendLine(`[pm:chat:error] ${message}`);

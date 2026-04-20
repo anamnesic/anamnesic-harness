@@ -67,6 +67,48 @@ interface RunSummary {
   summary: string;
 }
 
+export type PmChatAction = 'none' | 'create-pipeline' | 'approve-phase' | 'reject-phase' | 'show-status';
+
+export interface PmChatResult {
+  action: PmChatAction;
+  message: string;
+  objective?: string;
+}
+
+const PM_SYSTEM_PROMPT = `You are the Product Manager (PM) AI for ThinkCoffee, an AI-powered software development pipeline system.
+
+Your role:
+- Understand the developer's natural-language request about software development
+- Decide the appropriate action based on the request
+- Orchestrate a multi-phase pipeline of specialized agents when needed
+
+Available agents in the pipeline:
+- product-manager: Defines requirements, acceptance criteria, and backlog
+- architect: Designs stack, folder structure, API contracts, and data model
+- backend: Implements endpoints, business logic, database migrations
+- frontend: Creates UI components, pages, and API integration
+- devops: Sets up CI/CD, Docker, and environment variables
+- qa: Writes and runs unit and integration tests
+- code-review: Final code review for standards, security, and performance
+- organizer: Organizes project structure and applies design patterns
+- git: Manages Git workflow (branch, commit, push, PR)
+- dead-code: Identifies and removes dead code
+- troubleshooter: Diagnoses and fixes failures
+
+Respond ONLY with a valid JSON object (no markdown fences, no extra text):
+{
+  "action": "none" | "create-pipeline" | "approve-phase" | "reject-phase" | "show-status",
+  "message": "Your natural language response to the developer",
+  "objective": "Short pipeline objective (only when action is create-pipeline)"
+}
+
+Decision rules:
+- "create-pipeline": user wants to build a feature, implement something, start a project, or do development work
+- "approve-phase": user says approve, continue, next phase, looks good, proceed, yes, etc.
+- "reject-phase": user says reject, redo, not good, revise, go back, fix, etc.
+- "show-status": user asks about status, progress, what is happening, show pipeline, etc.
+- "none": general questions, explanations, or anything that does not require pipeline action`;
+
 const MEMORY_KEY = 'thinkcoffee.advancedMemory.runSummaries';
 const MAX_MEMORY_ITEMS = 40;
 const WORKFLOW_STATE_PREFIX = 'thinkcoffee.workflowState.';
@@ -95,7 +137,7 @@ export class AutonomousRuntime {
     return ids.length;
   }
 
-  async adaptiveReasoning(topic: string, depth: ReasoningDepth): Promise<ReasoningResult> {
+  async adaptiveReasoning(topic: string, depth: ReasoningDepth, token?: vscode.CancellationToken): Promise<ReasoningResult> {
     const plan = this.decomposeProblem(topic, depth === 'deep' ? 7 : 4);
     const prompt = [
       `Topic: ${topic}`,
@@ -104,13 +146,58 @@ export class AutonomousRuntime {
       'Focus on technical rigor and defensible conclusions.',
     ].join('\n');
 
-    const llm = await this.tryLLM(prompt, depth);
+    const llm = await this.tryLLM(prompt, depth, token);
     const summary = llm || `Structured reasoning completed for: ${topic}`;
     return {
       summary,
       steps: plan,
       confidence: depth === 'deep' ? 0.86 : 0.74,
     };
+  }
+
+  async pmChat(
+    userPrompt: string,
+    projectState: { projectId: string; pipelineStatus?: string },
+    token: vscode.CancellationToken,
+  ): Promise<PmChatResult> {
+    const contextBlock = [
+      `Current project: ${projectState.projectId}`,
+      `Active pipeline: ${projectState.pipelineStatus ?? 'none'}`,
+    ].join('\n');
+
+    const prompt = `${contextBlock}\n\nDeveloper request: ${userPrompt}`;
+
+    const raw = await this.tryLLM(prompt, 'standard', token, PM_SYSTEM_PROMPT);
+
+    if (!raw) {
+      return {
+        action: 'none',
+        message: 'PM is not available — no LLM model found. Please check your Copilot configuration.',
+      };
+    }
+
+    // Extract a JSON object from the response (tolerates extra text or markdown fences)
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0]) as Partial<PmChatResult>;
+        const action: PmChatAction = (['none', 'create-pipeline', 'approve-phase', 'reject-phase', 'show-status'] as PmChatAction[])
+          .includes(parsed.action as PmChatAction)
+          ? (parsed.action as PmChatAction)
+          : 'none';
+        return {
+          action,
+          message: typeof parsed.message === 'string' && parsed.message
+            ? parsed.message
+            : raw,
+          objective: typeof parsed.objective === 'string' ? parsed.objective : undefined,
+        };
+      } catch {
+        // fall through to plain-text response
+      }
+    }
+
+    return { action: 'none', message: raw };
   }
 
   decomposeProblem(problem: string, maxSteps: number): string[] {
@@ -432,7 +519,12 @@ export class AutonomousRuntime {
     );
   }
 
-  private async tryLLM(prompt: string, depth: ReasoningDepth): Promise<string> {
+  private async tryLLM(
+    prompt: string,
+    depth: ReasoningDepth,
+    token?: vscode.CancellationToken,
+    systemPrompt?: string,
+  ): Promise<string> {
     try {
       // First, check available models via registry
       const discovered = await discoverModels();
@@ -452,19 +544,26 @@ export class AutonomousRuntime {
       const messages = [
         vscode.LanguageModelChatMessage.User(
           [
-            'You are a technical reasoning assistant.',
+            systemPrompt || 'You are a technical reasoning assistant.',
             `Reasoning depth: ${depth}`,
             prompt,
           ].join('\n\n'),
         ),
       ];
 
-      const response = await model.sendRequest(messages, {}, new vscode.CancellationTokenSource().token);
-      let text = '';
-      for await (const chunk of response.text) {
-        text += chunk;
+      // Use the provided cancellation token so the caller's cancel button works
+      const cts = token ? undefined : new vscode.CancellationTokenSource();
+      const resolvedToken = token ?? cts!.token;
+      try {
+        const response = await model.sendRequest(messages, {}, resolvedToken);
+        let text = '';
+        for await (const chunk of response.text) {
+          text += chunk;
+        }
+        return text.trim();
+      } finally {
+        cts?.dispose();
       }
-      return text.trim();
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       this.output.appendLine(`[tryLLM:error] ${msg}`);
