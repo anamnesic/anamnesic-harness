@@ -43,6 +43,10 @@
             {
                 "command": "antigravity-llm-server.listModels",
                 "title": "LLM Server: List Available Models"
+            },
+            {
+                "command": "antigravity-llm-server.probeLanguageServer",
+                "title": "LLM Server: Probe Antigravity Language Server"
             }
         ],
         "configuration": {

@@ -2,6 +2,11 @@ import * as http from 'http';
 import * as vscode from 'vscode';
 import { createServer } from './server';
 import { listAntigravityModels } from './modelBridge';
+import {
+    findRunningLanguageServer,
+    LanguageServerClient,
+    probeServices,
+} from './antigravityClient';
 
 let httpServer: http.Server | undefined;
 let outputChannel: vscode.OutputChannel | undefined;
@@ -153,6 +158,42 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             outputChannel!.show();
             vscode.window.showInformationMessage(
                 `${models.length} model(s) available. See "Antigravity LLM Server" output channel for details.`,
+            );
+        }),
+
+        vscode.commands.registerCommand('antigravity-llm-server.probeLanguageServer', async () => {
+            const info = findRunningLanguageServer();
+            if (!info) {
+                vscode.window.showWarningMessage(
+                    'Antigravity language server is not running. Open the Antigravity editor at least once.',
+                );
+                return;
+            }
+            outputChannel!.show(true);
+            outputChannel!.appendLine(
+                `[probe] Found LS: pid=${info.pid} httpsPort=${info.httpsPort} lsVersion=${info.lsVersion}`,
+            );
+            outputChannel!.appendLine(`[probe] Discovery file: ${info.filePath}`);
+
+            const client = new LanguageServerClient(info);
+            const results = await probeServices(client);
+            for (const r of results) {
+                const label = `${r.target.service}/${r.target.method}`;
+                if (r.ok) {
+                    outputChannel!.appendLine(`  OK   ${label}`);
+                    outputChannel!.appendLine(
+                        `       sample: ${JSON.stringify(r.sample).slice(0, 400)}`,
+                    );
+                } else if (r.grpcStatus !== undefined) {
+                    outputChannel!.appendLine(
+                        `  EXISTS (grpc ${r.grpcStatus}: ${r.error}) ${label}`,
+                    );
+                } else {
+                    outputChannel!.appendLine(`  MISS ${label}  (${r.error})`);
+                }
+            }
+            vscode.window.showInformationMessage(
+                'Language server probe finished — see output channel.',
             );
         }),
     );
