@@ -10,6 +10,11 @@ import {
     countMessageChars,
     AUTO_MODEL_NAME,
     ROUTER_MODEL_FAMILY,
+    resolveCascadeModel,
+    runChatViaLanguageServer,
+    routeAutoViaLanguageServer,
+    chunkText,
+    type ResolvedCascadeModel,
 } from './modelBridge';
 import type {
     OllamaChatChunk,
@@ -56,6 +61,146 @@ function nowNano(): number {
     return Number(process.hrtime.bigint());
 }
 
+// ─── Language-server (Cascade) backend ────────────────────────────────────────
+
+/**
+ * Runs a chat request against the local Antigravity language server and
+ * writes an Ollama-compatible response (NDJSON stream or one-shot JSON).
+ *
+ * Used when the requested model resolves to a Cascade model, which covers
+ * every scenario where the editor's `vscode.lm` registry is empty (as is
+ * the case inside Antigravity itself).
+ */
+async function respondFromLanguageServer(opts: {
+    res: http.ServerResponse;
+    mode: 'chat' | 'generate';
+    stream: boolean;
+    model: ResolvedCascadeModel;
+    modelOllamaName: string;
+    messages: import('./types').OllamaChatMessage[];
+    promptChars: number;
+    startNs: number;
+    signal?: AbortSignal;
+    output: vscode.OutputChannel;
+}): Promise<void> {
+    const { res, mode, stream, model, modelOllamaName, messages, promptChars, startNs, signal, output } = opts;
+
+    let text: string;
+    try {
+        text = await runChatViaLanguageServer({
+            cascadeModelId: model.modelId,
+            messages,
+            signal,
+        });
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        output.appendLine(`[/api/${mode}] LS backend error: ${msg}`);
+        if (!res.headersSent) {
+            sendError(res, 502, `language server call failed: ${msg}`);
+        } else {
+            res.end();
+        }
+        return;
+    }
+
+    if (!stream) {
+        const totalNs = nowNano() - startNs;
+        if (mode === 'chat') {
+            const body: import('./types').OllamaChatChunk = {
+                model: modelOllamaName,
+                created_at: new Date().toISOString(),
+                message: { role: 'assistant', content: text },
+                done: true,
+                done_reason: 'stop',
+                total_duration: totalNs,
+                load_duration: 0,
+                prompt_eval_count: promptChars,
+                prompt_eval_duration: Math.floor(totalNs * 0.1),
+                eval_count: text.split(/\s+/).filter(Boolean).length,
+                eval_duration: Math.floor(totalNs * 0.9),
+            };
+            sendJson(res, 200, body);
+        } else {
+            const body: import('./types').OllamaGenerateChunk = {
+                model: modelOllamaName,
+                created_at: new Date().toISOString(),
+                response: text,
+                done: true,
+                done_reason: 'stop',
+                total_duration: totalNs,
+                load_duration: 0,
+                prompt_eval_count: promptChars,
+                prompt_eval_duration: Math.floor(totalNs * 0.1),
+                eval_count: text.split(/\s+/).filter(Boolean).length,
+                eval_duration: Math.floor(totalNs * 0.9),
+            };
+            sendJson(res, 200, body);
+        }
+        return;
+    }
+
+    res.writeHead(200, {
+        'Content-Type': 'application/x-ndjson',
+        'Transfer-Encoding': 'chunked',
+    });
+
+    let evalCount = 0;
+    for (const piece of chunkText(text)) {
+        evalCount++;
+        if (mode === 'chat') {
+            const part: import('./types').OllamaChatChunk = {
+                model: modelOllamaName,
+                created_at: new Date().toISOString(),
+                message: { role: 'assistant', content: piece },
+                done: false,
+            };
+            res.write(JSON.stringify(part) + '\n');
+        } else {
+            const part: import('./types').OllamaGenerateChunk = {
+                model: modelOllamaName,
+                created_at: new Date().toISOString(),
+                response: piece,
+                done: false,
+            };
+            res.write(JSON.stringify(part) + '\n');
+        }
+    }
+
+    const totalNs = nowNano() - startNs;
+    if (mode === 'chat') {
+        const final: import('./types').OllamaChatChunk = {
+            model: modelOllamaName,
+            created_at: new Date().toISOString(),
+            message: { role: 'assistant', content: '' },
+            done: true,
+            done_reason: 'stop',
+            total_duration: totalNs,
+            load_duration: 0,
+            prompt_eval_count: promptChars,
+            prompt_eval_duration: Math.floor(totalNs * 0.1),
+            eval_count: evalCount,
+            eval_duration: Math.floor(totalNs * 0.9),
+        };
+        res.write(JSON.stringify(final) + '\n');
+    } else {
+        const final: import('./types').OllamaGenerateChunk = {
+            model: modelOllamaName,
+            created_at: new Date().toISOString(),
+            response: '',
+            done: true,
+            done_reason: 'stop',
+            total_duration: totalNs,
+            load_duration: 0,
+            prompt_eval_count: promptChars,
+            prompt_eval_duration: Math.floor(totalNs * 0.1),
+            eval_count: evalCount,
+            eval_duration: Math.floor(totalNs * 0.9),
+        };
+        res.write(JSON.stringify(final) + '\n');
+    }
+    res.end();
+}
+
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 
 async function handleTags(res: http.ServerResponse): Promise<void> {
@@ -87,17 +232,74 @@ async function handleGenerate(
     const startNs = nowNano();
     const cts = new vscode.CancellationTokenSource();
 
+    // Build the message list once; we may dispatch it either to the LS
+    // backend or to vscode.lm depending on which one knows the model.
+    const ollamaMessages: import('./types').OllamaChatMessage[] = [];
+    if (payload.system) {
+        ollamaMessages.push({ role: 'system', content: payload.system });
+    }
+    ollamaMessages.push({ role: 'user', content: payload.prompt ?? '' });
+
+    // LS-backed path: matches ALL Cascade models (and is the only backend
+    // available when Antigravity's vscode.lm registry is empty).
+    if (!isAutoModel(payload.model)) {
+        const cascade = await resolveCascadeModel(payload.model);
+        if (cascade) {
+            output.appendLine(
+                `[/api/generate] LS backend: ${cascade.family} (${cascade.modelId})`,
+            );
+            await respondFromLanguageServer({
+                res,
+                mode: 'generate',
+                stream,
+                model: cascade,
+                modelOllamaName: `${cascade.family}:antigravity`,
+                messages: ollamaMessages,
+                promptChars: countMessageChars(ollamaMessages),
+                startNs,
+                output,
+            });
+            cts.dispose();
+            return;
+        }
+    } else {
+        // "auto" via LS backend whenever vscode.lm is empty.
+        const lmModels = await vscode.lm.selectChatModels();
+        if (lmModels.length === 0) {
+            try {
+                const routed = await routeAutoViaLanguageServer(ollamaMessages);
+                output.appendLine(
+                    `[/api/generate] LS auto-routed to '${routed.selectedModelName}'`,
+                );
+                await respondFromLanguageServer({
+                    res,
+                    mode: 'generate',
+                    stream,
+                    model: routed.model,
+                    modelOllamaName: `${routed.model.family}:antigravity`,
+                    messages: routed.messages,
+                    promptChars: countMessageChars(routed.messages),
+                    startNs,
+                    output,
+                });
+                cts.dispose();
+                return;
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                output.appendLine(`[/api/generate] LS auto-route failed: ${msg}`);
+                sendError(res, 500, `auto routing failed: ${msg}`);
+                cts.dispose();
+                return;
+            }
+        }
+    }
+
     let model: vscode.LanguageModelChat;
     let messages: vscode.LanguageModelChatMessage[];
 
     try {
         if (isAutoModel(payload.model)) {
-            const autoMsgs: OllamaChatMessage[] = [];
-            if (payload.system) {
-                autoMsgs.push({ role: 'system', content: payload.system });
-            }
-            autoMsgs.push({ role: 'user', content: payload.prompt ?? '' });
-            const autoResult = await routeAuto(autoMsgs, cts.token);
+            const autoResult = await routeAuto(ollamaMessages, cts.token);
             model = autoResult.model;
             messages = autoResult.messages;
             output.appendLine(`[/api/generate] auto-routed to '${autoResult.selectedModelName}'`);
@@ -225,6 +427,59 @@ async function handleChat(
     const stream = payload.stream !== false;
     const startNs = nowNano();
     const cts = new vscode.CancellationTokenSource();
+
+    // LS-backed path: takes priority for any Cascade-registered model, and
+    // is the only backend available inside Antigravity (vscode.lm empty).
+    if (!isAutoModel(payload.model)) {
+        const cascade = await resolveCascadeModel(payload.model);
+        if (cascade) {
+            output.appendLine(
+                `[/api/chat] LS backend: ${cascade.family} (${cascade.modelId})`,
+            );
+            await respondFromLanguageServer({
+                res,
+                mode: 'chat',
+                stream,
+                model: cascade,
+                modelOllamaName: `${cascade.family}:antigravity`,
+                messages: payload.messages,
+                promptChars: countMessageChars(payload.messages),
+                startNs,
+                output,
+            });
+            cts.dispose();
+            return;
+        }
+    } else {
+        const lmModels = await vscode.lm.selectChatModels();
+        if (lmModels.length === 0) {
+            try {
+                const routed = await routeAutoViaLanguageServer(payload.messages);
+                output.appendLine(
+                    `[/api/chat] LS auto-routed to '${routed.selectedModelName}'`,
+                );
+                await respondFromLanguageServer({
+                    res,
+                    mode: 'chat',
+                    stream,
+                    model: routed.model,
+                    modelOllamaName: `${routed.model.family}:antigravity`,
+                    messages: routed.messages,
+                    promptChars: countMessageChars(routed.messages),
+                    startNs,
+                    output,
+                });
+                cts.dispose();
+                return;
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                output.appendLine(`[/api/chat] LS auto-route failed: ${msg}`);
+                sendError(res, 500, `auto routing failed: ${msg}`);
+                cts.dispose();
+                return;
+            }
+        }
+    }
 
     let model: vscode.LanguageModelChat;
     let messages: vscode.LanguageModelChatMessage[];
@@ -383,6 +638,32 @@ async function handleShow(
 
     const model = await findModel(payload.model);
     if (!model) {
+        // Fall back to the LS-backed Cascade model registry.
+        const cascade = await resolveCascadeModel(payload.model);
+        if (cascade) {
+            const body: OllamaShowResponse = {
+                details: {
+                    parent_model: '',
+                    format: 'api',
+                    family: cascade.family,
+                    families: [cascade.family],
+                    parameter_size: 'cascade',
+                    quantization_level: 'none',
+                },
+                modelfile: `# ${cascade.label} via Antigravity language server\nFROM antigravity/cascade/${cascade.modelId}\n`,
+                template: '{{ .Prompt }}',
+                modelinfo: {
+                    'general.architecture': 'api',
+                    'general.name': cascade.label,
+                    'general.family': cascade.family,
+                    'general.vendor': 'antigravity',
+                    'general.version': '1',
+                    'cascade.model_id': cascade.modelId,
+                },
+            };
+            sendJson(res, 200, body);
+            return;
+        }
         sendError(res, 404, `model '${payload.model}' not found`);
         return;
     }
