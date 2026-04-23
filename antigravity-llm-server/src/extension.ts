@@ -3,9 +3,9 @@ import * as vscode from 'vscode';
 import { createServer } from './server';
 import { listAntigravityModels } from './modelBridge';
 import {
-    findRunningLanguageServer,
+    findRunningLanguageServers,
     LanguageServerClient,
-    probeServices,
+    LS,
 } from './antigravityClient';
 
 let httpServer: http.Server | undefined;
@@ -162,38 +162,63 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }),
 
         vscode.commands.registerCommand('antigravity-llm-server.probeLanguageServer', async () => {
-            const info = findRunningLanguageServer();
-            if (!info) {
+            const found = findRunningLanguageServers();
+            outputChannel!.show(true);
+            if (found.length === 0) {
+                outputChannel!.appendLine(
+                    '[probe] No Antigravity language server processes found. Open the editor first.',
+                );
                 vscode.window.showWarningMessage(
-                    'Antigravity language server is not running. Open the Antigravity editor at least once.',
+                    'Antigravity language server is not running.',
                 );
                 return;
             }
-            outputChannel!.show(true);
-            outputChannel!.appendLine(
-                `[probe] Found LS: pid=${info.pid} httpsPort=${info.httpsPort} lsVersion=${info.lsVersion}`,
-            );
-            outputChannel!.appendLine(`[probe] Discovery file: ${info.filePath}`);
 
-            const client = new LanguageServerClient(info);
-            const results = await probeServices(client);
-            for (const r of results) {
-                const label = `${r.target.service}/${r.target.method}`;
-                if (r.ok) {
-                    outputChannel!.appendLine(`  OK   ${label}`);
-                    outputChannel!.appendLine(
-                        `       sample: ${JSON.stringify(r.sample).slice(0, 400)}`,
-                    );
-                } else if (r.grpcStatus !== undefined) {
-                    outputChannel!.appendLine(
-                        `  EXISTS (grpc ${r.grpcStatus}: ${r.error}) ${label}`,
-                    );
-                } else {
-                    outputChannel!.appendLine(`  MISS ${label}  (${r.error})`);
-                }
+            for (const info of found) {
+                outputChannel!.appendLine(
+                    `[probe] PID=${info.pid} httpsPort=${info.httpsPort} workspace=${info.workspaceId ?? '(none)'} endpoint=${info.cloudCodeEndpoint ?? '(none)'}`,
+                );
             }
+
+            const workspaceFs = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            const client = LanguageServerClient.connect(workspaceFs);
+            outputChannel!.appendLine(`[probe] Using LS on :${client.info.httpsPort}`);
+
+            try {
+                const hb = await LS.ping(client);
+                outputChannel!.appendLine(`[probe] Heartbeat OK: ${JSON.stringify(hb)}`);
+            } catch (err) {
+                outputChannel!.appendLine(`[probe] Heartbeat failed: ${(err as Error).message}`);
+                return;
+            }
+
+            try {
+                const u = await LS.userStatus(client);
+                outputChannel!.appendLine(
+                    `[probe] User: ${u.userStatus?.email ?? 'unknown'} — ${u.userStatus?.planStatus?.planInfo?.planName ?? ''}`,
+                );
+            } catch (err) {
+                outputChannel!.appendLine(`[probe] GetUserStatus failed: ${(err as Error).message}`);
+            }
+
+            try {
+                const models = await LS.cascadeModels(client);
+                const configs = models.clientModelConfigs ?? [];
+                outputChannel!.appendLine(`[probe] ${configs.length} Cascade model(s):`);
+                for (const c of configs) {
+                    const modelId = c.modelOrAlias?.model ?? c.modelOrAlias?.alias ?? '?';
+                    outputChannel!.appendLine(
+                        `  - ${c.label.padEnd(28)} ${modelId}${c.isRecommended ? '  (recommended)' : ''}`,
+                    );
+                }
+            } catch (err) {
+                outputChannel!.appendLine(
+                    `[probe] GetCascadeModelConfigData failed: ${(err as Error).message}`,
+                );
+            }
+
             vscode.window.showInformationMessage(
-                'Language server probe finished — see output channel.',
+                'Probe finished — see Antigravity LLM Server output channel.',
             );
         }),
     );

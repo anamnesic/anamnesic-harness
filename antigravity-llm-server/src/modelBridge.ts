@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
 import type { OllamaChatMessage, OllamaModelInfo } from './types';
+import {
+    LanguageServerClient,
+    LS,
+    type CascadeModelConfig,
+} from './antigravityClient';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -33,9 +38,83 @@ export function isAutoModel(name: string): boolean {
  * Unlike the VS Code version, this exposes ALL available models rather than
  * filtering to a curated list, since Antigravity already provides a curated set.
  */
+/** Slugifies a Cascade model label ("Gemini 3 Flash" -> "gemini-3-flash"). */
+function cascadeLabelToFamily(label: string): string {
+    return label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+}
+
+/** Listing source used when building /api/tags (for logging/debugging). */
+export type ModelListSource = 'vscode.lm' | 'language-server' | 'empty';
+
+function cascadeConfigsToOllamaModels(
+    configs: readonly CascadeModelConfig[],
+    now: string,
+): OllamaModelInfo[] {
+    return configs.map((c) => {
+        const family = cascadeLabelToFamily(c.label);
+        const name = `${family}:antigravity`;
+        const modelId = c.modelOrAlias?.model ?? c.modelOrAlias?.alias ?? family;
+        const digest = `sha256:${Buffer.from(`${family}antigravity${modelId}`)
+            .toString('hex')
+            .padEnd(64, '0')
+            .slice(0, 64)}`;
+        return {
+            name,
+            model: name,
+            modified_at: now,
+            size: 0,
+            digest,
+            details: {
+                parent_model: '',
+                format: 'api',
+                family,
+                families: [family],
+                parameter_size: 'cascade',
+                quantization_level: 'none',
+            },
+        };
+    });
+}
+
 export async function listAntigravityModels(): Promise<OllamaModelInfo[]> {
     const all = await vscode.lm.selectChatModels();
     const now = new Date().toISOString();
+
+    // When running inside the Antigravity editor, vscode.lm.selectChatModels()
+    // returns empty (the core extension never registers chat models). Fall
+    // back to the local language_server.exe which knows about Cascade models.
+    if (all.length === 0) {
+        try {
+            const workspaceFs = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            const client = LanguageServerClient.connect(workspaceFs);
+            const resp = await LS.cascadeModels(client);
+            const configs = resp.clientModelConfigs ?? [];
+            if (configs.length > 0) {
+                const result = cascadeConfigsToOllamaModels(configs, now);
+                result.unshift({
+                    name: AUTO_MODEL_NAME,
+                    model: AUTO_MODEL_NAME,
+                    modified_at: now,
+                    size: 0,
+                    digest: `sha256:${'61757465'.padEnd(64, '0')}`,
+                    details: {
+                        parent_model: ROUTER_MODEL_FAMILY,
+                        format: 'router',
+                        family: AUTO_MODEL_NAME,
+                        families: [AUTO_MODEL_NAME],
+                        parameter_size: 'router',
+                        quantization_level: 'none',
+                    },
+                });
+                return result;
+            }
+        } catch {
+            // Fall through to empty list — upstream will surface a friendly error.
+        }
+    }
 
     const result: OllamaModelInfo[] = all.map((m) => {
         const digest = `sha256:${Buffer.from(`${m.family}${m.vendor}${m.version}`).toString('hex').padEnd(64, '0').slice(0, 64)}`;
