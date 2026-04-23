@@ -2,16 +2,19 @@ import * as http from 'http';
 import * as vscode from 'vscode';
 import {
     findModel,
-    getChunkText,
+    isAutoModel,
     listVSCodeModels,
     modelToOllamaName,
+    routeAuto,
     toVSCodeMessages,
     countMessageChars,
+    AUTO_MODEL_NAME,
+    ROUTER_MODEL_FAMILY,
 } from './modelBridge';
 import type {
     OllamaChatChunk,
+    OllamaChatMessage,
     OllamaChatRequest,
-    OllamaEmbedRequest,
     OllamaGenerateChunk,
     OllamaGenerateRequest,
     OllamaShowRequest,
@@ -80,22 +83,46 @@ async function handleGenerate(
         return;
     }
 
-    const model = await findModel(payload.model);
-    if (!model) {
-        sendError(res, 404, `model '${payload.model}' not found, try pulling it first`);
-        return;
-    }
-
-    const messages: vscode.LanguageModelChatMessage[] = [];
-    if (payload.system) {
-        messages.push(vscode.LanguageModelChatMessage.User(payload.system));
-        messages.push(vscode.LanguageModelChatMessage.Assistant('Understood.'));
-    }
-    messages.push(vscode.LanguageModelChatMessage.User(payload.prompt ?? ''));
-
     const stream = payload.stream !== false;
     const startNs = nowNano();
     const cts = new vscode.CancellationTokenSource();
+
+    let model: vscode.LanguageModelChat;
+    let messages: vscode.LanguageModelChatMessage[];
+
+    try {
+        if (isAutoModel(payload.model)) {
+            const autoMsgs: OllamaChatMessage[] = [];
+            if (payload.system) {
+                autoMsgs.push({ role: 'system', content: payload.system });
+            }
+            autoMsgs.push({ role: 'user', content: payload.prompt ?? '' });
+            const autoResult = await routeAuto(autoMsgs, cts.token);
+            model = autoResult.model;
+            messages = autoResult.messages;
+            output.appendLine(`[/api/generate] auto-routed to '${autoResult.selectedModelName}'`);
+        } else {
+            const found = await findModel(payload.model);
+            if (!found) {
+                sendError(res, 404, `model '${payload.model}' not found, try pulling it first`);
+                cts.dispose();
+                return;
+            }
+            model = found;
+            messages = [];
+            if (payload.system) {
+                messages.push(vscode.LanguageModelChatMessage.User(payload.system));
+                messages.push(vscode.LanguageModelChatMessage.Assistant('Understood.'));
+            }
+            messages.push(vscode.LanguageModelChatMessage.User(payload.prompt ?? ''));
+        }
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        output.appendLine(`[/api/generate] Routing error: ${msg}`);
+        sendError(res, 500, `routing failed: ${msg}`);
+        cts.dispose();
+        return;
+    }
 
     try {
         const lmResponse = await model.sendRequest(
@@ -114,18 +141,15 @@ async function handleGenerate(
             });
 
             let evalCount = 0;
-            for await (const chunk of lmResponse.stream) {
-                const text = getChunkText(chunk);
-                if (text !== undefined) {
-                    evalCount++;
-                    const part: OllamaGenerateChunk = {
-                        model: modelName,
-                        created_at: new Date().toISOString(),
-                        response: text,
-                        done: false,
-                    };
-                    res.write(JSON.stringify(part) + '\n');
-                }
+            for await (const text of lmResponse.text) {
+                evalCount++;
+                const part: OllamaGenerateChunk = {
+                    model: modelName,
+                    created_at: new Date().toISOString(),
+                    response: text,
+                    done: false,
+                };
+                res.write(JSON.stringify(part) + '\n');
             }
 
             const totalNs = nowNano() - startNs;
@@ -146,11 +170,8 @@ async function handleGenerate(
             res.end();
         } else {
             let fullText = '';
-            for await (const chunk of lmResponse.stream) {
-                const text = getChunkText(chunk);
-                if (text !== undefined) {
-                    fullText += text;
-                }
+            for await (const text of lmResponse.text) {
+                fullText += text;
             }
 
             const totalNs = nowNano() - startNs;
@@ -201,21 +222,42 @@ async function handleChat(
         return;
     }
 
-    const model = await findModel(payload.model);
-    if (!model) {
-        sendError(res, 404, `model '${payload.model}' not found, try pulling it first`);
-        return;
-    }
-
-    const messages = toVSCodeMessages(payload.messages);
-    if (messages.length === 0) {
-        sendError(res, 400, 'no valid messages after filtering');
-        return;
-    }
-
     const stream = payload.stream !== false;
     const startNs = nowNano();
     const cts = new vscode.CancellationTokenSource();
+
+    let model: vscode.LanguageModelChat;
+    let messages: vscode.LanguageModelChatMessage[];
+
+    try {
+        if (isAutoModel(payload.model)) {
+            const autoResult = await routeAuto(payload.messages, cts.token);
+            model = autoResult.model;
+            messages = autoResult.messages;
+            output.appendLine(`[/api/chat] auto-routed to '${autoResult.selectedModelName}'`);
+        } else {
+            const found = await findModel(payload.model);
+            if (!found) {
+                sendError(res, 404, `model '${payload.model}' not found, try pulling it first`);
+                cts.dispose();
+                return;
+            }
+            model = found;
+            messages = toVSCodeMessages(payload.messages);
+        }
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        output.appendLine(`[/api/chat] Routing error: ${msg}`);
+        sendError(res, 500, `routing failed: ${msg}`);
+        cts.dispose();
+        return;
+    }
+
+    if (messages.length === 0) {
+        sendError(res, 400, 'no valid messages after filtering');
+        cts.dispose();
+        return;
+    }
 
     try {
         const lmResponse = await model.sendRequest(
@@ -234,18 +276,15 @@ async function handleChat(
             });
 
             let evalCount = 0;
-            for await (const chunk of lmResponse.stream) {
-                const text = getChunkText(chunk);
-                if (text !== undefined) {
-                    evalCount++;
-                    const part: OllamaChatChunk = {
-                        model: modelName,
-                        created_at: new Date().toISOString(),
-                        message: { role: 'assistant', content: text },
-                        done: false,
-                    };
-                    res.write(JSON.stringify(part) + '\n');
-                }
+            for await (const text of lmResponse.text) {
+                evalCount++;
+                const part: OllamaChatChunk = {
+                    model: modelName,
+                    created_at: new Date().toISOString(),
+                    message: { role: 'assistant', content: text },
+                    done: false,
+                };
+                res.write(JSON.stringify(part) + '\n');
             }
 
             const totalNs = nowNano() - startNs;
@@ -266,11 +305,8 @@ async function handleChat(
             res.end();
         } else {
             let fullText = '';
-            for await (const chunk of lmResponse.stream) {
-                const text = getChunkText(chunk);
-                if (text !== undefined) {
-                    fullText += text;
-                }
+            for await (const text of lmResponse.text) {
+                fullText += text;
             }
 
             const totalNs = nowNano() - startNs;
@@ -317,6 +353,31 @@ async function handleShow(
 
     if (!payload.model) {
         sendError(res, 400, 'model field is required');
+        return;
+    }
+
+    if (isAutoModel(payload.model)) {
+        const body: OllamaShowResponse = {
+            details: {
+                parent_model: ROUTER_MODEL_FAMILY,
+                format: 'router',
+                family: AUTO_MODEL_NAME,
+                families: [AUTO_MODEL_NAME],
+                parameter_size: 'router',
+                quantization_level: 'none',
+            },
+            modelfile: `# Auto model router\n# Uses ${ROUTER_MODEL_FAMILY} to improve prompts and select the best model\n`,
+            template: '{{ .Prompt }}',
+            modelinfo: {
+                'general.architecture': 'router',
+                'general.name': 'Auto Router',
+                'general.family': AUTO_MODEL_NAME,
+                'general.vendor': 'vscode-llm-server',
+                'general.version': '1',
+                'llm.context_length': 0,
+            },
+        };
+        sendJson(res, 200, body);
         return;
     }
 
@@ -430,6 +491,37 @@ export function createServer(output: vscode.OutputChannel): http.Server {
 
             if (method === 'POST' && url === '/api/embed') {
                 handleEmbed(res);
+                return;
+            }
+
+            // Debug endpoint — sends first 3 raw stream parts as JSON
+            if (method === 'POST' && url === '/api/debug') {
+                const raw = await readBody(req);
+                let modelName = 'gpt-4o:copilot';
+                try { modelName = (JSON.parse(raw) as { model?: string }).model ?? modelName; } catch { /* ignore */ }
+                const m = await findModel(modelName);
+                if (!m) { sendError(res, 404, `model '${modelName}' not found`); return; }
+                const cts = new vscode.CancellationTokenSource();
+                try {
+                    const r = await m.sendRequest(
+                        [vscode.LanguageModelChatMessage.User('Say hi')],
+                        { justification: 'debug' }, cts.token,
+                    );
+                    const parts: unknown[] = [];
+                    let n = 0;
+                    for await (const chunk of r.stream) {
+                        if (n++ >= 5) break;
+                        const c = chunk as Record<string, unknown>;
+                        parts.push({ type: c.constructor?.name ?? typeof c, keys: Object.keys(c), value: c['value'] });
+                    }
+                    const textParts: string[] = [];
+                    const r2 = await m.sendRequest(
+                        [vscode.LanguageModelChatMessage.User('Say hi')],
+                        { justification: 'debug' }, cts.token,
+                    );
+                    for await (const t of r2.text) { textParts.push(t); if (textParts.length >= 5) break; }
+                    sendJson(res, 200, { streamChunks: parts, textChunks: textParts });
+                } finally { cts.dispose(); }
                 return;
             }
 
