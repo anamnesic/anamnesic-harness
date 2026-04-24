@@ -1,0 +1,44 @@
+{
+  "name": "kuse-cowork",
+  "version": "0.1.0",
+  "description": "Open-source Claude Cowork desktop app with custom API key and model selection",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@solidjs/router": "^0.14.0",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "@tauri-apps/plugin-shell": "^2.0.0",
+    "@tauri-apps/plugin-store": "^2.0.0",
+    "pdf-parse": "^2.4.5",
+    "solid-js": "^1.8.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.4.0",
+    "vite-plugin-solid": "^2.10.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kuse-ai/kuse-cowork"
+  },
+  "license": "MIT",
+  "keywords": [
+    "claude",
+    "anthropic",
+    "ai",
+    "cowork",
+    "desktop",
+    "tauri",
+    "solidjs"
+  ]
+}

@@ -1,0 +1,249 @@
+.agent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--background);
+}
+
+.agent-setup,
+.empty-agent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem;
+}
+
+.agent-setup h2,
+.empty-agent h2 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--foreground);
+}
+
+.agent-setup p,
+.empty-agent p {
+  color: var(--muted-foreground);
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.tools-list {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  background: var(--card);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.agent-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.output-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.agent-text {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+}
+
+.text-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.text-content {
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+}
+
+.tools-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tools-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.tool-execution {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  font-size: 0.875rem;
+}
+
+.tool-execution.running {
+  border-left: 3px solid var(--accent);
+}
+
+.tool-execution.completed {
+  border-left: 3px solid #4ade80;
+}
+
+.tool-execution.error {
+  border-left: 3px solid #ef4444;
+}
+
+.tool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.tool-name {
+  font-weight: 600;
+  color: var(--foreground);
+  font-family: monospace;
+}
+
+.tool-status {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.tool-status.running {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.tool-status.completed {
+  background: rgba(74, 222, 128, 0.2);
+  color: #22c55e;
+}
+
+.tool-status.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.tool-input {
+  color: var(--muted-foreground);
+  font-family: monospace;
+  font-size: 0.8125rem;
+  margin-bottom: 0.5rem;
+}
+
+.input-label,
+.result-label {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.tool-result {
+  margin-top: 0.75rem;
+}
+
+.result-content {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.completion-status {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: var(--radius);
+  color: #22c55e;
+  font-weight: 500;
+}
+
+.error-status {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius);
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.agent-input-section {
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.project-path-input {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.project-path-input label {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.project-path-input input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+
+.agent-form {
+  display: flex;
+  gap: 1rem;
+}
+
+.agent-form textarea {
+  flex: 1;
+  resize: none;
+  min-height: 60px;
+  max-height: 200px;
+  background: var(--background);
+}
+
+.agent-form button {
+  align-self: flex-end;
+  padding: 0.875rem 1.75rem;
+  white-space: nowrap;
+}
