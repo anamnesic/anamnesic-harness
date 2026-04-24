@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { AutonomousRuntime } from './agents/AutonomousRuntime';
 import type { WorkflowDefinition } from './agents/AutonomousRuntime';
 import { OrchestratorClient, OrchestratorHttpError } from './utils/orchestratorClient';
+<<<<<<< Updated upstream
 import {
   appendChatMessage,
   createPipeline,
@@ -11,6 +12,9 @@ import {
   formatPipelineStatus,
 } from './utils/pmServices';
 import { ChatSidebarProvider } from './views';
+=======
+import { AdvancedAgentsPanel, ChatSidebarProvider } from './views';
+>>>>>>> Stashed changes
 
 let runtime: AutonomousRuntime | undefined;
 let pipelineRunning = false;
@@ -18,6 +22,8 @@ let pipelineCurrentAgent = '';
 const RUN_ID_KEY = 'thinkcoffee.currentOrchestratorRunId';
 const PLAN_ID_KEY = 'thinkcoffee.currentOrchestratorPlanId';
 const WORKSPACE_ID_KEY = 'thinkcoffee.currentOrchestratorWorkspaceId';
+const HISTORY_MEMORY_KEY = 'thinkcoffee.advancedMemory.runSummaries';
+const HISTORY_BACKUP_KEY = 'thinkcoffee.advancedMemory.backup';
 type PmDelegateMode = 'create-workflow' | 'resume-run' | 'pause-run' | 'show-run' | 'toggle-dry-run' | 'safety-scan' | 'stop-runs';
 interface PmDelegatedCommand {
   command: string;
@@ -386,6 +392,241 @@ Respond ONLY with a valid JSON object (no markdown fences):
       const message = error instanceof Error ? error.message : String(error);
       out.appendLine(`[pm:chat:error] ${message}`);
       chatProvider.postError(`PM failed to process request: ${message}`);
+    }
+  });
+
+  register('thinkcoffee.chat.capability', async (capArg?: unknown) => {
+    if (!runtime) {
+      chatProvider.postError('PM runtime not available');
+      return;
+    }
+
+    const cap = (capArg && typeof capArg === 'object' && 'capability' in capArg)
+      ? String((capArg as { capability?: string }).capability)
+      : '';
+
+    if (!cap) {
+      chatProvider.postError('No capability specified');
+      return;
+    }
+
+    out.appendLine(`[pm:capability] ${cap}`);
+    chatProvider.postThinking(`Running ${cap}...`);
+
+    try {
+      // Route capabilities to AutonomousRuntime methods
+      switch (cap) {
+        // --- Reasoning & Analysis ---
+        case 'adaptive-reasoning':
+        case 'deep-reasoning':
+        case 'multi-step-solve':
+        case 'pattern-discovery':
+        case 'complex-systems':
+        case 'interdisciplinary':
+        case 'inconsistency-detection':
+        case 'scientific-analysis':
+        case 'contextual-decision':
+        case 'dynamic-adaptation':
+        case 'long-context':
+        case 'contextual-memory':
+        case 'self-optimization': {
+          const depth = ['deep-reasoning', 'multi-step-solve', 'complex-systems', 'scientific-analysis'].includes(cap) ? 'deep' : 'standard';
+          const topic = await vscode.window.showInputBox({ prompt: `Describe the topic for ${cap}` });
+          if (!topic) { chatProvider.postDone(); return; }
+          const result = await runtime.runLongTask(`ThinkCoffee: ${cap}`, async () => {
+            return runtime!.adaptiveReasoning(topic, depth as 'standard' | 'deep');
+          });
+          if (!result) { chatProvider.postError('Task was canceled.'); return; }
+          const text = [
+            result.summary,
+            '',
+            `Confidence: ${(result.confidence * 100).toFixed(1)}%`,
+            '',
+            'Steps:',
+            ...result.steps.map(s => `  ${s}`),
+          ].join('\n');
+          chatProvider.postCapabilityResult(text);
+          break;
+        }
+
+        // --- Software Engineering ---
+        case 'generate-code': {
+          const req = await vscode.window.showInputBox({ prompt: 'Describe the code you need' });
+          if (!req) { chatProvider.postDone(); return; }
+          const lang = await vscode.window.showQuickPick(['typescript', 'javascript', 'python'], { placeHolder: 'Target language' });
+          if (!lang) { chatProvider.postDone(); return; }
+          const codeResult = await runtime.runLongTask('ThinkCoffee: code generation', async () => {
+            return runtime!.generateAdvancedCode(req, lang);
+          });
+          if (!codeResult) { chatProvider.postError('Task was canceled.'); return; }
+          const doc = await vscode.workspace.openTextDocument({ content: codeResult.code, language: lang });
+          await vscode.window.showTextDocument(doc, { preview: false });
+          chatProvider.postCapabilityResult(`Code generated (${lang}).\n\n${codeResult.explanation}`);
+          break;
+        }
+
+        case 'debug-code': {
+          const editor = vscode.window.activeTextEditor;
+          if (!editor) { chatProvider.postError('Open a file to run debug analysis.'); return; }
+          const issue = await vscode.window.showInputBox({ prompt: 'What is failing?' });
+          if (!issue) { chatProvider.postDone(); return; }
+          const dbgResult = await runtime.runLongTask('ThinkCoffee: debug analysis', async () => {
+            return runtime!.debugCode(editor.document.getText(), issue);
+          });
+          if (!dbgResult) { chatProvider.postError('Task was canceled.'); return; }
+          const dbgText = [
+            dbgResult.summary,
+            '',
+            `Confidence: ${(dbgResult.confidence * 100).toFixed(1)}%`,
+            '',
+            'Recommended steps:',
+            ...dbgResult.steps.map(s => `  - ${s}`),
+          ].join('\n');
+          chatProvider.postCapabilityResult(dbgText);
+          break;
+        }
+
+        case 'refactor-code': {
+          const refEditor = vscode.window.activeTextEditor;
+          if (!refEditor) { chatProvider.postError('Open a file to refactor.'); return; }
+          const strategy = await vscode.window.showQuickPick(
+            ['extract-function', 'optimize-performance', 'improve-readability', 'remove-duplication', 'add-type-safety'],
+            { placeHolder: 'Refactoring strategy' },
+          );
+          if (!strategy) { chatProvider.postDone(); return; }
+          const refResult = await runtime.runLongTask('ThinkCoffee: refactoring', async () => {
+            return runtime!.refactorCode(refEditor.document.getText(), strategy);
+          });
+          if (!refResult) { chatProvider.postError('Task was canceled.'); return; }
+          const refDoc = await vscode.workspace.openTextDocument({
+            content: refResult.code,
+            language: refEditor.document.languageId,
+          });
+          await vscode.window.showTextDocument(refDoc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
+          chatProvider.postCapabilityResult(`Refactoring applied: ${strategy}\n\n${refResult.explanation}`);
+          break;
+        }
+
+        case 'autonomous-dev':
+        case 'task-decomposition': {
+          const devGoal = await vscode.window.showInputBox({ prompt: 'Describe the development goal' });
+          if (!devGoal) { chatProvider.postDone(); return; }
+          const devResult = await runtime.runLongTask(`ThinkCoffee: ${cap}`, async () => {
+            return runtime!.adaptiveReasoning(
+              `Autonomous software development task:\n${devGoal}\nDecompose into actionable steps, estimate complexity, and provide implementation plan.`,
+              'deep',
+            );
+          });
+          if (!devResult) { chatProvider.postError('Task was canceled.'); return; }
+          chatProvider.postCapabilityResult([devResult.summary, '', ...devResult.steps].join('\n'));
+          break;
+        }
+
+        // --- Security & Defense ---
+        case 'vulnerability-scan':
+        case 'defensive-security': {
+          const folder = vscode.workspace.workspaceFolders?.[0];
+          if (!folder) { chatProvider.postError('Open a workspace folder first.'); return; }
+          const scanResult = await runtime.runLongTask('ThinkCoffee: security scan', async () => {
+            return runtime!.runSecurityDefenseScan(folder.uri.fsPath);
+          });
+          if (!scanResult) { chatProvider.postError('Task was canceled.'); return; }
+          const findingsText = scanResult.findings.length > 0
+            ? scanResult.findings.map(f => `[${f.severity.toUpperCase()}] ${f.file}: ${f.title}\n  ${f.detail}`).join('\n\n')
+            : 'No vulnerabilities found.';
+          const secText = [
+            'Security Scan Results:',
+            '',
+            findingsText,
+            '',
+            'Attack Simulation Plan:',
+            ...scanResult.attackSimulationPlan.map(s => `  - ${s}`),
+            '',
+            'Exploit Chain Hypotheses:',
+            ...scanResult.exploitChainHypotheses.map(s => `  - ${s}`),
+            '',
+            'Defensive Recommendations:',
+            ...scanResult.defensiveRecommendations.map(s => `  - ${s}`),
+          ].join('\n');
+          chatProvider.postCapabilityResult(secText);
+          break;
+        }
+
+        case 'security-analysis':
+        case 'attack-simulation':
+        case 'exploit-chain':
+        case 'evasion-testing': {
+          const target = await vscode.window.showInputBox({ prompt: `Target for ${cap}` });
+          if (!target) { chatProvider.postDone(); return; }
+          if (cap === 'evasion-testing') {
+            chatProvider.postStep('Note: Only controlled defensive boundary test plans are supported.');
+          }
+          const secResult = await runtime.runLongTask(`ThinkCoffee: ${cap}`, async () => {
+            return runtime!.adaptiveReasoning(
+              `Defensive ${cap} analysis for controlled testing on: ${target}`,
+              'deep',
+            );
+          });
+          if (!secResult) { chatProvider.postError('Task was canceled.'); return; }
+          chatProvider.postCapabilityResult([secResult.summary, '', ...secResult.steps].join('\n'));
+          break;
+        }
+
+        // --- Autonomous Operations ---
+        case 'long-task': {
+          const taskDesc = await vscode.window.showInputBox({ prompt: 'Describe the long-running task' });
+          if (!taskDesc) { chatProvider.postDone(); return; }
+          const ltResult = await runtime.runLongTask('ThinkCoffee: long-running task', async () => {
+            return runtime!.adaptiveReasoning(taskDesc, 'deep');
+          });
+          if (!ltResult) { chatProvider.postError('Task was canceled.'); return; }
+          chatProvider.postCapabilityResult([ltResult.summary, '', ...ltResult.steps].join('\n'));
+          break;
+        }
+
+        case 'workflow-planning': {
+          await vscode.commands.executeCommand('thinkcoffee.workflow.createComplex');
+          chatProvider.postCapabilityResult('Workflow created. Use Autonomous Agent to execute.');
+          break;
+        }
+
+        case 'autonomous-agent': {
+          chatProvider.postStep('Starting autonomous workflow execution...');
+          await vscode.commands.executeCommand('thinkcoffee.workflow.executeAutonomous');
+          chatProvider.postCapabilityResult('Autonomous execution completed. Check output for details.');
+          break;
+        }
+
+        // --- Multimodal ---
+        case 'multimodal-text-image':
+        case 'diagram-interpretation': {
+          const dialogTitle = cap === 'diagram-interpretation' ? 'Select diagram files' : 'Select files for analysis';
+          const filters = cap === 'diagram-interpretation'
+            ? { Diagrams: ['svg', 'png', 'jpg', 'jpeg', 'md', 'txt'] }
+            : { Images: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg'] };
+          const selected = await vscode.window.showOpenDialog({
+            canSelectMany: true,
+            canSelectFolders: false,
+            title: dialogTitle,
+            filters,
+          });
+          if (!selected || selected.length === 0) { chatProvider.postDone(); return; }
+          const mmTopic = await vscode.window.showInputBox({ prompt: 'Analysis topic' }) || cap;
+          const mmResult = await runtime.runLongTask(`ThinkCoffee: ${cap}`, async () => {
+            return runtime!.analyzeMultimodal(selected.map(x => x.fsPath), mmTopic);
+          });
+          if (!mmResult) { chatProvider.postError('Task was canceled.'); return; }
+          chatProvider.postCapabilityResult([mmResult.summary, '', ...mmResult.steps].join('\n'));
+          break;
+        }
+
+        default:
+          chatProvider.postError(`Unknown capability: ${cap}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      out.appendLine(`[pm:capability:error] ${cap}: ${message}`);
+      chatProvider.postError(`Capability ${cap} failed: ${message}`);
     }
   });
 
@@ -840,6 +1081,8 @@ Respond ONLY with a valid JSON object (no markdown fences):
   register('thinkcoffee.stopAgents', async () => {
     if (!runtime) return;
     const canceled = runtime.cancelAllRuns();
+    chatProvider.postDone();
+    chatProvider.postStatus(`Stopped ${canceled} running task(s).`);
     vscode.window.showInformationMessage(`Stopped ${canceled} running task(s).`);
   });
 
@@ -870,6 +1113,59 @@ Respond ONLY with a valid JSON object (no markdown fences):
     const result = await runtime.adaptiveReasoning(`Run capability: ${action}`, 'standard');
     runtime.getOutput().appendLine(result.summary);
     runtime.getOutput().show(true);
+  });
+
+  register('thinkcoffee.showHistory', async () => {
+    if (!runtime) return;
+    await openHistoryDocument(runtime.getMemory(), 'ThinkCoffee: Pipeline History');
+  });
+
+  register('thinkcoffee.history.refresh', async () => {
+    await vscode.commands.executeCommand('thinkcoffee.showHistory');
+  });
+
+  register('thinkcoffee.backupHistory', async () => {
+    const history = runtime?.getMemory() || [];
+    await context.globalState.update(HISTORY_BACKUP_KEY, {
+      at: new Date().toISOString(),
+      items: history,
+    });
+    vscode.window.showInformationMessage(`Pipeline history backup saved (${history.length} items).`);
+  });
+
+  register('thinkcoffee.restoreHistory', async () => {
+    const backup = context.globalState.get<{ at: string; items: unknown[] }>(HISTORY_BACKUP_KEY);
+    if (!backup || !Array.isArray(backup.items)) {
+      vscode.window.showWarningMessage('No history backup found.');
+      return;
+    }
+
+    await context.globalState.update(HISTORY_MEMORY_KEY, backup.items);
+    vscode.window.showInformationMessage(`Pipeline history restored from backup (${backup.items.length} items).`);
+  });
+
+  register('thinkcoffee.exportHistory', async () => {
+    const history = runtime?.getMemory() || [];
+    const uri = await vscode.window.showSaveDialog({
+      saveLabel: 'Export History',
+      defaultUri: vscode.Uri.file('thinkcoffee-history.json'),
+      filters: {
+        JSON: ['json'],
+      },
+    });
+    if (!uri) return;
+
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      items: history,
+    };
+
+    await vscode.workspace.fs.writeFile(uri, Buffer.from(JSON.stringify(payload, null, 2), 'utf-8'));
+    vscode.window.showInformationMessage(`Pipeline history exported to ${uri.fsPath}.`);
+  });
+
+  register('thinkcoffee.openAdvancedAgents', async () => {
+    AdvancedAgentsPanel.createOrShow(context.extensionUri);
   });
 
   const pmDelegated: PmDelegatedCommand[] = [
@@ -1117,6 +1413,25 @@ async function getWorkspaceId(): Promise<string | undefined> {
   const folderName = vscode.workspace.workspaceFolders?.[0]?.name;
   if (!folderName) return undefined;
   return folderName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+}
+
+async function openHistoryDocument(
+  history: Array<{ at: string; summary: string; kind: string; id: string }>,
+  title: string,
+): Promise<void> {
+  const content = history.length === 0
+    ? ['# ' + title, '', '- No history entries found.'].join('\n')
+    : [
+      '# ' + title,
+      '',
+      ...history.map((item, index) => `${index + 1}. [${item.kind}] ${item.at} - ${item.summary}`),
+    ].join('\n');
+
+  const doc = await vscode.workspace.openTextDocument({
+    language: 'markdown',
+    content,
+  });
+  await vscode.window.showTextDocument(doc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
 }
 
 // === HELPER FUNCTIONS FOR RESULT DISPLAY ===
