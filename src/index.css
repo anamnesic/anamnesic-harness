@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Public+Sans:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-primary: #ec5b13;
+  --color-bg: #09090b;
+  --color-card: #18181b;
+  --color-border: #27272a;
+  --color-accent: #a1a1aa;
+  --color-highlight: #ffffff;
+  --color-text-dim: #71717a;
+
+  --radius-xl: 28px;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-highlight font-sans antialiased;
+  }
+
+  .bento-card {
+    @apply bg-card border border-border rounded-xl p-6 flex flex-col relative transition-all duration-300 hover:border-accent/40;
+  }
+
+  .label-caps {
+    @apply text-[10px] uppercase tracking-widest text-text-dim font-bold mb-2;
+  }
+}

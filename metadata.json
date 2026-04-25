@@ -1,0 +1,6 @@
+{
+  "name": "KAIROS Agent Dashboard",
+  "description": "A high-fidelity agentic monitoring and control system for autonomous AI systems.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

@@ -22,6 +22,24 @@
     "Other"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kairos-sidebar",
+          "title": "Kairos",
+          "icon": "$(robot)"
+        }
+      ]
+    },
+    "views": {
+      "kairos-sidebar": [
+        {
+          "id": "Kairos.conversations",
+          "name": "Conversations",
+          "type": "webview"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "kairos.llmServer.start",
@@ -38,6 +56,18 @@
       {
         "command": "kairos.llmServer.listModels",
         "title": "Kairos LLM Server: List Available Models"
+      },
+      {
+        "command": "Kairos.openSettings",
+        "title": "Kairos: Open Settings"
+      },
+      {
+        "command": "Kairos.openMcpSettings",
+        "title": "Kairos: Open MCP Settings"
+      },
+      {
+        "command": "Kairos.openSkills",
+        "title": "Kairos: Open Skills"
       }
     ],
     "configuration": {
@@ -69,10 +99,11 @@
     "think": "dist/interfaces/cli/index.js"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "build:backend": "tsc --project tsconfig.build.json",
     "build:vscode": "node esbuild.vscode.js",
-    "dev": "tsc --watch --project tsconfig.json",
-    "start": "node dist/main.js",
     "start:api": "node dist/interfaces/api/start-api.js",
     "start:cli": "node dist/interfaces/cli/index.js",
     "test": "node scripts/test-integration.js",
@@ -97,8 +128,13 @@
     "helmet": "^7.1.0",
     "hono": "^4.12.10",
     "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.11.0",
+    "motion": "^12.38.0",
+    "next": "^16.2.4",
     "node-cron": "^4.2.1",
     "pdf-parse": "^1.1.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "reflect-metadata": "^0.1.13",
     "socket.io": "^4.8.3",
     "sqlite3": "^5.1.7",
@@ -107,6 +143,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.4",
     "@types/chokidar": "^2.1.7",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",
@@ -114,12 +151,16 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20.19.39",
     "@types/node-cron": "^3.0.11",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@types/socket.io": "^3.0.2",
     "@types/uuid": "^11.0.0",
     "@types/vscode": "^1.90.0",
     "@vitest/coverage-v8": "^4.1.4",
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.28.0",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.4",
     "tsx": "^4.7.0",
     "typescript": "^5.1.6",
     "vitest": "^4.1.4"

@@ -11,7 +11,7 @@ import {
   rejectCurrentPhase,
   formatPipelineStatus,
 } from './utils/pmServices';
-import { AdvancedAgentsPanel, ChatSidebarProvider } from './views';
+import { AdvancedAgentsPanel, ChatSidebarProvider, SettingsPanel, McpSettingsPanel, ConversationsSidebarProvider, SkillsListPanel } from './views';
 
 let runtime: AutonomousRuntime | undefined;
 let pipelineRunning = false;
@@ -58,6 +58,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
   );
   console.log('[extension] Webview view provider registered');
+
+  const conversationsProvider = new ConversationsSidebarProvider();
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(ConversationsSidebarProvider.viewType, conversationsProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+  );
 
   // Load and display pipeline/run history
   setTimeout(() => {
@@ -1163,6 +1170,18 @@ Respond ONLY with a valid JSON object (no markdown fences):
 
   register('Kairos.openAdvancedAgents', async () => {
     AdvancedAgentsPanel.createOrShow(context.extensionUri);
+  });
+
+  register('Kairos.openSettings', () => {
+    SettingsPanel.createOrShow(context);
+  });
+
+  register('Kairos.openMcpSettings', () => {
+    McpSettingsPanel.createOrShow();
+  });
+
+  register('Kairos.openSkills', () => {
+    SkillsListPanel.createOrShow();
   });
 
   const pmDelegated: PmDelegatedCommand[] = [
