@@ -13,8 +13,8 @@ import {
     createConversation,
     deleteConversation,
     type Conversation,
-} from '../../../memory/conversations/ConversationStore.js';
-import type { AgentTask } from '../../../core/tasks/types.js';
+} from '../../../memory/conversations/ConversationStore';
+import type { AgentTask } from '../../../core/tasks/types';
 import path from 'path';
 import fs from 'fs';
 

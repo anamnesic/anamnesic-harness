@@ -1,2 +1,2 @@
-export * from './types.js';
-export * from './McpClientManager.js';
+export * from './types';
+export * from './McpClientManager';

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ActionLogEntry } from '../types/safety-net.js';
+import { ActionLogEntry } from '../types/safety-net';
 export type { ActionLogEntry };
 
 export class ActionLogService {

@@ -1,1 +1,1 @@
-export * from './SkillsManager.js';
+export * from './SkillsManager';

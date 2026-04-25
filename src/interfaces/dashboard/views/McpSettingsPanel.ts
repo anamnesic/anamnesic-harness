@@ -4,8 +4,8 @@
  */
 
 import * as vscode from 'vscode';
-import { mcpManager } from '../../../core/mcp-client/McpClientManager.js';
-import type { McpServerConfig } from '../../../core/mcp-client/types.js';
+import { mcpManager } from '../../../core/mcp-client/McpClientManager';
+import type { McpServerConfig } from '../../../core/mcp-client/types';
 import crypto from 'crypto';
 
 export class McpSettingsPanel {

@@ -9,19 +9,19 @@
  *  - toolRegistry       (built-in tool dispatch)
  */
 
-import type { MultiProviderSettings } from '../providers/multi-provider.js';
-import type { AgentTaskEvent } from '../tasks/types.js';
-import { TaskRunner } from '../tasks/TaskRunner.js';
-import type { ToolDefinition } from '../tasks/TaskRunner.js';
+import type { MultiProviderSettings } from '../providers/multi-provider';
+import type { AgentTaskEvent } from '../tasks/types';
+import { TaskRunner } from '../tasks/TaskRunner';
+import type { ToolDefinition } from '../tasks/TaskRunner';
 import {
     addMessage,
     getMessages,
     updateConversationTitle,
-} from '../../memory/conversations/ConversationStore.js';
-import { buildSkillsPrompt } from '../skills/SkillsManager.js';
-import { mcpManager } from '../mcp-client/McpClientManager.js';
-import { BUILTIN_TOOL_DEFINITIONS, createBuiltinHandler } from './toolRegistry.js';
-import type { ToolContext } from '../tools/file-tools.js';
+} from '../../memory/conversations/ConversationStore';
+import { buildSkillsPrompt } from '../skills/SkillsManager';
+import { mcpManager } from '../mcp-client/McpClientManager';
+import { BUILTIN_TOOL_DEFINITIONS, createBuiltinHandler } from './toolRegistry';
+import type { ToolContext } from '../tools/file-tools';
 
 // ─── Public API ─────────────────────────────────────────────────
 
@@ -147,7 +147,7 @@ export async function chatWithTools(options: ChatWithToolsOptions): Promise<void
 
 // ─── Helpers ───────────────────────────────────────────────────
 
-import type { AgentMessage, ContentBlock } from '../tasks/types.js';
+import type { AgentMessage, ContentBlock } from '../tasks/types';
 
 function extractAssistantTexts(messages: AgentMessage[]): string[] {
     const results: string[] = [];

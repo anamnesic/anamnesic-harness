@@ -8,7 +8,7 @@ import {
     getAvailableSkills,
     getSkillsDir,
     installSkill,
-} from '../../../core/skills/SkillsManager.js';
+} from '../../../core/skills/SkillsManager';
 
 export class SkillsListPanel {
     public static currentPanel: SkillsListPanel | undefined;

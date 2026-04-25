@@ -1,2 +1,2 @@
-export * from './chatWithTools.js';
-export * from './toolRegistry.js';
+export * from './chatWithTools';
+export * from './toolRegistry';

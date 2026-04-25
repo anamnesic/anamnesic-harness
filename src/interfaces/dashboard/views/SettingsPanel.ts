@@ -5,9 +5,9 @@
  */
 
 import * as vscode from 'vscode';
-import { AVAILABLE_MODELS } from '../../../config/models.js';
-import { testMultiProviderConnection } from '../../../core/providers/multi-provider.js';
-import type { MultiProviderSettings } from '../../../core/providers/multi-provider.js';
+import { AVAILABLE_MODELS } from '../../../config/models';
+import { testMultiProviderConnection } from '../../../core/providers/multi-provider';
+import type { MultiProviderSettings } from '../../../core/providers/multi-provider';
 
 const CONFIG_KEY = 'kairos.providerSettings';
 

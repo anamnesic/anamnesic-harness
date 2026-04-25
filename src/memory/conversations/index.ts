@@ -1,1 +1,1 @@
-export * from './ConversationStore.js';
+export * from './ConversationStore';

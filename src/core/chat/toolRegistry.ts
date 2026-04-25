@@ -15,12 +15,12 @@ import {
     listFiles,
     searchCode,
     type ToolContext,
-} from '../tools/file-tools.js';
-import { globFiles, grepFiles, formatGrepMatches } from '../tools/search-tools.js';
-import { runCommand } from '../tools/run-command.js';
-import { dockerRun, dockerList, dockerImages } from '../tools/docker-tools.js';
-import { extractPdfText } from '../../utils/pdf.js';
-import type { ToolDefinition, ToolHandler } from '../tasks/TaskRunner.js';
+} from '../tools/file-tools';
+import { globFiles, grepFiles, formatGrepMatches } from '../tools/search-tools';
+import { runCommand } from '../tools/run-command';
+import { dockerRun, dockerList, dockerImages } from '../tools/docker-tools';
+import { extractPdfText } from '../../utils/pdf';
+import type { ToolDefinition, ToolHandler } from '../tasks/TaskRunner';
 
 // ─── Built-in tool schemas ──────────────────────────────────────
 

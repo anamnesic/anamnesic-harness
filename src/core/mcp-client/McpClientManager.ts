@@ -16,7 +16,7 @@ import type {
     McpToolInfo,
     McpToolCall,
     McpToolResult,
-} from './types.js';
+} from './types';
 
 // ─── Storage helpers ────────────────────────────────────────────
 

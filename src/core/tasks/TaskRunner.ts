@@ -6,7 +6,7 @@
  * Emits strongly-typed events via a callback so callers can stream progress.
  */
 
-import type { MultiProviderSettings } from '../providers/multi-provider.js';
+import type { MultiProviderSettings } from '../providers/multi-provider';
 import type {
     AgentMessage,
     AgentTaskEvent,
@@ -14,7 +14,7 @@ import type {
     PlanStep,
     ToolResult,
     ToolUse,
-} from './types.js';
+} from './types';
 
 // ─── Tool handler ───────────────────────────────────────────────
 
