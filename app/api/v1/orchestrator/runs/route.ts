@@ -37,7 +37,3 @@ export async function POST(req: NextRequest) {
         return err('INTERNAL_ERROR', 'Failed to start orchestrator run', 500);
     }
 }
-
-return err('INTERNAL_ERROR', 'Failed to start orchestrator run', 500);
-    }
-}

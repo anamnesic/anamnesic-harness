@@ -1,0 +1,167 @@
+'use client';
+
+import { useEffect } from 'react';
+import { motion } from 'motion/react';
+import { Code2, MemoryStick, Shield, Activity } from 'lucide-react';
+import { useApi } from '@/src/lib/api';
+import { useToast } from '@/src/components/Toast';
+import { Skeleton, SkeletonRow } from '@/src/components/Skeleton';
+
+const ACTION_ICONS = [Code2, MemoryStick, Shield, Activity];
+
+interface HealthData { status: string; service: string; timestamp: string }
+interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number }
+interface HistoryData { data: any[]; count: number }
+
+export function Dashboard() {
+    const { data: health, error: healthErr } = useApi<HealthData>('/api/health');
+    const { data: metrics, loading: metricsLoading } = useApi<MetricsData>('/api/v1/metrics');
+    const { data: history, loading: histLoading } = useApi<HistoryData>('/api/chat/history?limit=3');
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (healthErr) toast('Could not reach health endpoint', 'error');
+    }, [healthErr]);
+
+    const isOnline = health?.status === 'ok';
+    const actions = history?.data ?? [];
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex-1 p-6 pb-32 max-w-4xl mx-auto w-full"
+        >
+            <div className="grid grid-cols-4 gap-4">
+                {/* Hero Card */}
+                <div className="bento-card col-span-4 md:col-span-2 md:row-span-2 overflow-hidden">
+                    <span className="label-caps">Status</span>
+                    <h2 className="text-3xl font-bold tracking-tighter mt-2 mb-4">
+                        {isOnline ? 'Agent Active & Observing' : health ? 'Agent Degraded' : 'Connecting…'}
+                    </h2>
+                    <div className="mt-auto space-y-4">
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-text-dim font-medium">System Health</span>
+                                <span className={`text-xs font-bold ${isOnline ? 'text-green-500' : 'text-text-dim'}`}>
+                                    {isOnline ? 'OPTIMAL' : 'UNKNOWN'}
+                                </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-border rounded-full overflow-hidden">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: isOnline ? '100%' : '20%' }}
+                                    className={`h-full ${isOnline ? 'bg-primary' : 'bg-border'}`}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-bg/50 p-3 rounded-xl border border-border">
+                                <p className="text-[8px] uppercase font-bold text-text-dim tracking-widest mb-1">MEMORY</p>
+                                {metricsLoading
+                                    ? <Skeleton className="h-6 w-14 mt-1" />
+                                    : <p className="text-lg font-bold font-mono">{metrics?.memory ?? '—'}</p>}
+                            </div>
+                            <div className="bg-bg/50 p-3 rounded-xl border border-border">
+                                <p className="text-[8px] uppercase font-bold text-text-dim tracking-widest mb-1">UPTIME</p>
+                                {metricsLoading
+                                    ? <Skeleton className="h-6 w-10 mt-1" />
+                                    : <p className="text-lg font-bold font-mono">{metrics?.uptime ?? '—'}</p>}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="absolute top-0 right-0 p-4">
+                        <div className={`size-2 rounded-full ${isOnline
+                            ? 'bg-green-500 animate-pulse shadow-[0_0_12px_rgba(34,197,94,0.6)]'
+                            : 'bg-border'}`}
+                        />
+                    </div>
+                </div>
+
+                {/* Suggestion Card */}
+                <div className="bento-card col-span-4 md:col-span-2">
+                    <span className="label-caps">Proactive Suggestion</span>
+                    <h3 className="text-lg font-bold tracking-tight">Refactor Auth Middleware</h3>
+                    <p className="text-xs text-text-dim mt-2 line-clamp-2">
+                        Repetitive patterns detected in routing logic. Abstracting into a shared utility could reduce bundle size by ~4KB.
+                    </p>
+                    <button className="mt-6 bg-highlight text-bg py-2.5 rounded-xl font-bold text-xs hover:bg-accent transition-colors w-full">
+                        Apply Optimization
+                    </button>
+                </div>
+
+                {/* Stat: Threads */}
+                <div className="bento-card col-span-2 md:col-span-1">
+                    <span className="label-caps">CPU Threads</span>
+                    <div className="mt-auto pt-4">
+                        {metricsLoading
+                            ? <Skeleton className="h-9 w-16" />
+                            : <p className="text-3xl font-bold tracking-tighter">{metrics?.threads ?? '—'}</p>}
+                        <p className="text-[10px] text-text-dim mt-1">Available</p>
+                    </div>
+                </div>
+
+                {/* Stat: Load */}
+                <div className="bento-card col-span-2 md:col-span-1">
+                    <span className="label-caps">Load Avg</span>
+                    <div className="mt-auto pt-4">
+                        {metricsLoading
+                            ? <Skeleton className="h-9 w-16" />
+                            : <p className="text-3xl font-bold tracking-tighter">{metrics?.loadAvg ?? '—'}</p>}
+                        <p className="text-[10px] text-text-dim mt-1">1-min</p>
+                    </div>
+                </div>
+
+                {/* Recent Actions */}
+                <div className="bento-card col-span-4 lg:col-span-2">
+                    <span className="label-caps">Recent Actions</span>
+                    {histLoading ? (
+                        <div className="space-y-1 mt-2">
+                            <SkeletonRow />
+                            <SkeletonRow />
+                            <SkeletonRow />
+                        </div>
+                    ) : actions.length > 0 ? (
+                        <div className="space-y-4 mt-2">
+                            {actions.map((action: any, i: number) => {
+                                const Icon = ACTION_ICONS[i % ACTION_ICONS.length];
+                                const label = action.channelId ?? action.message?.slice(0, 40) ?? 'Action';
+                                const time = action.createdAt
+                                    ? new Date(action.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                    : '—';
+                                return (
+                                    <div key={i} className="flex items-center justify-between group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-border text-accent group-hover:text-highlight transition-colors">
+                                                <Icon className="size-4" />
+                                            </div>
+                                            <span className="text-sm font-medium text-accent group-hover:text-highlight transition-colors truncate max-w-[180px]">
+                                                {label}
+                                            </span>
+                                        </div>
+                                        <span className="text-[10px] font-bold text-text-dim shrink-0">{time}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-text-dim mt-4">No recent actions recorded.</p>
+                    )}
+                </div>
+
+                {/* Infrastructure Card */}
+                <div
+                    className="bento-card col-span-4 lg:col-span-2 bg-no-repeat bg-cover bg-center overflow-hidden min-h-[160px]"
+                    style={{ backgroundImage: "url('https://images.unsplash.com/photo-1558494949-ef010cbdcc48?q=80&w=2000&auto=format&fit=crop')" }}
+                >
+                    <div className="absolute inset-0 bg-bg/60 backdrop-blur-[2px]" />
+                    <div className="relative z-10 mt-auto">
+                        <span className="label-caps !text-white/80">Infrastructure</span>
+                        <h4 className="text-white font-bold text-lg">Snapshot Monitor</h4>
+                        <p className="text-white/60 text-xs mt-1">All regions operational.</p>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+}

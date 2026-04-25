@@ -1,11 +1,11 @@
-/**
- * Stub: ChatHistoryService
- * Full implementation will be completed in Phase 2
- */
+import { DataSource } from 'typeorm';
+import { ChatHistory } from '../entities/ChatHistory';
 
 export interface SaveHistoryInput {
   channelId: string;
   message: string;
+  sender?: string;
+  metadata?: Record<string, any> | null;
 }
 
 export interface HistoryFilter {
@@ -25,14 +25,35 @@ export interface RecoveryResult {
 }
 
 export class ChatHistoryService {
-  constructor(private _db?: any) {}
-  
-  async saveHistory(_input: SaveHistoryInput): Promise<void> {
-    // Stub
+  constructor(private db: DataSource) { }
+
+  async saveHistory(input: SaveHistoryInput): Promise<void> {
+    const repo = this.db.getRepository(ChatHistory);
+    const entry = repo.create({
+      channelId: input.channelId,
+      message: input.message,
+      sender: input.sender ?? 'user',
+      metadata: input.metadata ?? null,
+    });
+    await repo.save(entry);
   }
 
-  async getHistory(_filter?: HistoryFilter): Promise<any[]> {
-    return [];
+  async getHistory(filter?: HistoryFilter): Promise<ChatHistory[]> {
+    const repo = this.db.getRepository(ChatHistory);
+    return repo.find({
+      order: { createdAt: 'DESC' },
+      take: filter?.limit,
+      skip: filter?.offset,
+    });
+  }
+
+  async deleteEntry(id: string): Promise<void> {
+    const repo = this.db.getRepository(ChatHistory);
+    const entry = await repo.findOneBy({ id });
+    if (!entry) {
+      throw new Error(`ChatHistory entry not found: ${id}`);
+    }
+    await repo.remove(entry);
   }
 
   async backup(): Promise<BackupInfo> {
