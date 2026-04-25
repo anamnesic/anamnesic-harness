@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { activateLlmServer, deactivateLlmServer } from '../llm-server/llmServer';
 import { AutonomousRuntime } from './agents/AutonomousRuntime';
 import type { WorkflowDefinition } from './agents/AutonomousRuntime';
 import { OrchestratorClient, OrchestratorHttpError } from './utils/orchestratorClient';
@@ -1265,6 +1266,8 @@ Respond ONLY with a valid JSON object (no markdown fences):
       await delegateToPm(item.command, item.goal, item.ask, item.delegate);
     });
   }
+
+  await activateLlmServer(context);
 }
 
 function normalizeChatPayload(input: unknown): { prompt: string; includeActiveEditor: boolean; images: ChatImageAttachment[] } {
@@ -1319,10 +1322,11 @@ function buildActiveEditorContext(): string | undefined {
   ].join('\n');
 }
 
-export function deactivate(): void {
+export async function deactivate(): Promise<void> {
   if (runtime) {
     runtime.cancelAllRuns();
   }
+  await deactivateLlmServer();
 }
 
 function getOrchestratorClient(): OrchestratorClient | undefined {

@@ -21,6 +21,48 @@
   "categories": [
     "Other"
   ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "kairos.llmServer.start",
+        "title": "Kairos LLM Server: Start"
+      },
+      {
+        "command": "kairos.llmServer.stop",
+        "title": "Kairos LLM Server: Stop"
+      },
+      {
+        "command": "kairos.llmServer.status",
+        "title": "Kairos LLM Server: Show Status"
+      },
+      {
+        "command": "kairos.llmServer.listModels",
+        "title": "Kairos LLM Server: List Available Models"
+      }
+    ],
+    "configuration": {
+      "title": "Kairos LLM Server",
+      "properties": {
+        "kairos.llmServer.host": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "Host address to bind the LLM server to. Use '0.0.0.0' to listen on all interfaces (not recommended)."
+        },
+        "kairos.llmServer.port": {
+          "type": "number",
+          "default": 11434,
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Port number for the Ollama-compatible LLM API server."
+        },
+        "kairos.llmServer.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically start the LLM server when VS Code opens."
+        }
+      }
+    }
+  },
   "bin": {
     "kairos-mcp": "dist/interfaces/api/index.js",
     "kairos-api": "dist/interfaces/api/start-api.js",
