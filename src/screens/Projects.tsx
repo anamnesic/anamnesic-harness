@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
+import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
@@ -153,6 +154,7 @@ export function Projects() {
                     )}
                 </div>
                 <ProjectContext projectId={selectedProject.id} />
+                <DecisionsPanel projectId={selectedProject.id} />
             </motion.div>
         );
     }

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'motion/react';
-import { Download, ScrollText } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Download, ScrollText, Undo2, X } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -33,6 +33,9 @@ export function ControlCenter() {
     const { toast } = useToast();
     const [auditPipelineId, setAuditPipelineId] = useState<string | null>(null);
     const [liveRuns, setLiveRuns] = useState<Run[] | null>(null);
+    const [rollbackRunId, setRollbackRunId] = useState<string | null>(null);
+    const [rollbackStep, setRollbackStep] = useState<string>('0');
+    const [rollbackSubmitting, setRollbackSubmitting] = useState(false);
 
     useEventStream<{ runs: Run[] }>('runs.snapshot', snap => {
         setLiveRuns(Array.isArray(snap.runs) ? snap.runs : []);
@@ -73,6 +76,30 @@ export function ControlCenter() {
             refetch();
         } catch (e: any) {
             toast(e.message ?? 'Resume failed', 'error');
+        }
+    }
+
+    async function submitRollback() {
+        if (!rollbackRunId) return;
+        const step = Number(rollbackStep);
+        if (!Number.isInteger(step) || step < 0) {
+            toast('Step must be a non-negative integer', 'error');
+            return;
+        }
+        setRollbackSubmitting(true);
+        try {
+            await apiFetch(`/api/v1/orchestrator/runs/${rollbackRunId}/rollback`, {
+                method: 'POST',
+                body: JSON.stringify({ toStep: step }),
+            });
+            toast(`Rolled back to step ${step}`, 'success');
+            setRollbackRunId(null);
+            setRollbackStep('0');
+            refetch();
+        } catch (e: any) {
+            toast(e.message ?? 'Rollback failed', 'error');
+        } finally {
+            setRollbackSubmitting(false);
         }
     }
 
@@ -193,6 +220,14 @@ export function ControlCenter() {
                                         >
                                             <ScrollText className="size-3.5" />
                                         </button>
+                                        <button
+                                            onClick={() => { setRollbackRunId(run.id); setRollbackStep('0'); }}
+                                            aria-label="Rollback run"
+                                            title="Rollback run"
+                                            className="p-1.5 rounded-md text-text-dim hover:text-primary hover:bg-card transition-colors"
+                                        >
+                                            <Undo2 className="size-3.5" />
+                                        </button>
                                         <span className={cn(
                                             'text-[8px] font-black tracking-widest px-2 py-0.5 rounded shrink-0',
                                             run.status === 'failed' ? 'bg-red-900/20 text-red-500' : 'bg-primary/10 text-primary',
@@ -261,6 +296,66 @@ export function ControlCenter() {
                     onClose={() => setAuditPipelineId(null)}
                 />
             )}
+
+            <AnimatePresence>
+                {rollbackRunId && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        onClick={() => !rollbackSubmitting && setRollbackRunId(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="bento-card w-full max-w-sm space-y-4"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold uppercase tracking-widest">Rollback Run</h3>
+                                <button
+                                    onClick={() => setRollbackRunId(null)}
+                                    disabled={rollbackSubmitting}
+                                    className="rounded-lg p-1 text-text-dim hover:text-accent hover:bg-white/5 transition-colors"
+                                    aria-label="Close"
+                                >
+                                    <X className="size-4" />
+                                </button>
+                            </div>
+                            <p className="text-[10px] font-mono text-text-dim truncate">{rollbackRunId}</p>
+                            <div>
+                                <label className="label-caps text-text-dim block mb-1">Rollback to step #</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={rollbackStep}
+                                    onChange={e => setRollbackStep(e.target.value)}
+                                    className="w-full rounded-lg bg-bg border border-border px-3 py-2 text-sm focus:outline-none focus:border-primary/60"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 pt-2">
+                                <button
+                                    onClick={() => setRollbackRunId(null)}
+                                    disabled={rollbackSubmitting}
+                                    className="flex-1 rounded-lg border border-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-text-dim hover:text-accent transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitRollback}
+                                    disabled={rollbackSubmitting}
+                                    className="flex-1 rounded-lg bg-primary px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                >
+                                    {rollbackSubmitting ? 'Rolling back…' : 'Confirm'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }

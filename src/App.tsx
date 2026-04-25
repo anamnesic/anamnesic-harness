@@ -15,6 +15,7 @@ import {
   Boxes,
   FolderKanban,
   Bot,
+  Camera,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -23,11 +24,11 @@ import { MemoryLedger } from './screens/MemoryLedger';
 import { Observers } from './screens/Observers';
 import { ControlCenter } from './screens/ControlCenter';
 import { SystemConfig } from './screens/SystemConfig';
-import { Workspaces } from './screens/Workspaces';
 import { Projects } from './screens/Projects';
 import { Agents } from './screens/Agents';
 import { Workflows } from './screens/Workflows';
 import { Security } from './screens/Security';
+import { Snapshots } from './screens/Snapshots';
 
 const Header = ({ title, subtitle, onBack, rightElement }: {
   title: string;
@@ -76,7 +77,7 @@ const TABS = [
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers' | 'workspaces' | 'workflows';
+type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
@@ -101,7 +102,7 @@ const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) 
   </div>
 );
 
-function useScreenConfig(active: TabId, goHome: () => void) {
+function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabId) => void) {
   switch (active) {
     case 'dashboard':
       return {
@@ -121,9 +122,24 @@ function useScreenConfig(active: TabId, goHome: () => void) {
     case 'observers':
       return { title: 'Monitoring', subtitle: 'Stateful Observers', element: <Observers />, onBack: goHome, rightElement: undefined };
     case 'control':
-      return { title: 'Security', subtitle: 'Safety Guardrails', element: <ControlCenter />, onBack: goHome, rightElement: undefined };
-    case 'workspaces':
-      return { title: 'Workspaces', subtitle: 'Manage Workspaces', element: <Workspaces />, onBack: goHome, rightElement: undefined };
+      return {
+        title: 'Security',
+        subtitle: 'Safety Guardrails',
+        element: <ControlCenter />,
+        onBack: goHome,
+        rightElement: (
+          <button
+            onClick={() => setActive('snapshots')}
+            className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-accent hover:border-primary/60 transition-colors"
+            aria-label="Snapshots"
+          >
+            <Camera className="size-4" />
+            Snapshots
+          </button>
+        ),
+      };
+    case 'snapshots':
+      return { title: 'Snapshots', subtitle: 'Point-in-time State', element: <Snapshots />, onBack: goHome, rightElement: undefined };
     case 'agents':
       return { title: 'Agents', subtitle: 'Agent Registry', element: <Agents />, onBack: goHome, rightElement: undefined };
     case 'workflows':
@@ -150,7 +166,7 @@ function useScreenConfig(active: TabId, goHome: () => void) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-  const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'));
+  const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'), setActiveTab);
 
   return (
     <ToastProvider>

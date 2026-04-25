@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, X, Building2 } from 'lucide-react';
+import { Plus, X, Building2, Pencil, Trash2, UserPlus, Users } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -15,13 +15,22 @@ interface Workspace {
     description?: string | null;
     status?: string;
     createdAt?: string;
+    updatedAt?: string;
 }
 
+interface Member {
+    id: string;
+    userId: string;
+    email: string | null;
+    fullName: string | null;
+    role: 'owner' | 'admin' | 'editor' | 'viewer';
+    joinedAt: string;
+}
+
+const ROLES: Member['role'][] = ['owner', 'admin', 'editor', 'viewer'];
+
 function slugify(value: string): string {
-    return value
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '');
+    return value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
 function StatusBadge({ status }: { status?: string }) {
@@ -30,6 +39,7 @@ function StatusBadge({ status }: { status?: string }) {
         active: 'bg-green-500/15 text-green-400',
         inactive: 'bg-zinc-500/15 text-zinc-400',
         archived: 'bg-orange-500/15 text-orange-400',
+        deleted: 'bg-red-500/15 text-red-400',
     };
     return (
         <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest', colors[s] ?? colors.active)}>
@@ -38,37 +48,65 @@ function StatusBadge({ status }: { status?: string }) {
     );
 }
 
-export function Workspaces() {
-    interface ApiResponse<T> {
-        success: boolean;
-        data?: T;
-        timestamp: string;
-    }
+function RoleBadge({ role }: { role: Member['role'] }) {
+    const colors: Record<Member['role'], string> = {
+        owner: 'bg-primary/20 text-primary',
+        admin: 'bg-blue-500/15 text-blue-400',
+        editor: 'bg-violet-500/15 text-violet-400',
+        viewer: 'bg-zinc-500/15 text-zinc-400',
+    };
+    return (
+        <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest', colors[role])}>
+            {role}
+        </span>
+    );
+}
 
+interface ApiResponse<T> {
+    success: boolean;
+    data?: T;
+    timestamp: string;
+}
+
+export function Workspaces() {
     const { data, loading, refetch } = useApi<ApiResponse<Workspace[]>>('/api/v1/workspaces');
     const { toast } = useToast();
 
-    const [showModal, setShowModal] = useState(false);
+    const [showCreate, setShowCreate] = useState(false);
+    const [editing, setEditing] = useState<Workspace | null>(null);
+    const [detail, setDetail] = useState<Workspace | null>(null);
+
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
     const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    function handleNameChange(value: string) {
-        setName(value);
-        setSlug(slugify(value));
-    }
-
-    function closeModal() {
-        setShowModal(false);
+    function resetForm() {
         setName('');
         setSlug('');
         setDescription('');
     }
 
-    async function handleSubmit() {
-        if (!name.trim()) { toast('Name is required', 'error'); return; }
-        if (!slug.trim()) { toast('Slug is required', 'error'); return; }
+    function openCreate() {
+        resetForm();
+        setShowCreate(true);
+    }
+
+    function openEdit(ws: Workspace) {
+        setName(ws.name);
+        setSlug(ws.slug);
+        setDescription(ws.description ?? '');
+        setEditing(ws);
+    }
+
+    function closeAll() {
+        setShowCreate(false);
+        setEditing(null);
+        resetForm();
+    }
+
+    async function handleCreate() {
+        if (!name.trim() || !slug.trim()) { toast('Name and slug are required', 'error'); return; }
         setSubmitting(true);
         try {
             await apiFetch('/api/v1/workspaces', {
@@ -77,7 +115,7 @@ export function Workspaces() {
             });
             toast('Workspace created', 'success');
             refetch();
-            closeModal();
+            closeAll();
         } catch (e: any) {
             toast(e.message ?? 'Failed to create workspace', 'error');
         } finally {
@@ -85,7 +123,37 @@ export function Workspaces() {
         }
     }
 
-    const workspaces = data?.data ?? [];
+    async function handleEdit() {
+        if (!editing) return;
+        if (!name.trim() || !slug.trim()) { toast('Name and slug are required', 'error'); return; }
+        setSubmitting(true);
+        try {
+            await apiFetch(`/api/v1/workspaces/${editing.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name: name.trim(), slug: slug.trim(), description: description.trim() }),
+            });
+            toast('Workspace updated', 'success');
+            refetch();
+            closeAll();
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to update workspace', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleDelete(ws: Workspace) {
+        if (!window.confirm(`Delete workspace ${ws.name}?`)) return;
+        try {
+            await apiFetch(`/api/v1/workspaces/${ws.id}`, { method: 'DELETE' });
+            toast('Workspace deleted', 'success');
+            refetch();
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to delete workspace', 'error');
+        }
+    }
+
+    const workspaces = (data?.data ?? []).filter(ws => ws.status !== 'deleted');
 
     return (
         <motion.div
@@ -96,7 +164,7 @@ export function Workspaces() {
             <div className="mb-8 flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Workspaces</h2>
                 <button
-                    onClick={() => setShowModal(true)}
+                    onClick={openCreate}
                     className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
                 >
                     <Plus className="size-3.5" />
@@ -116,10 +184,30 @@ export function Workspaces() {
             ) : (
                 <div className="space-y-4">
                     {workspaces.map(ws => (
-                        <div key={ws.id} className="bento-card space-y-2">
+                        <div
+                            key={ws.id}
+                            onClick={() => setDetail(ws)}
+                            className="bento-card space-y-2 cursor-pointer hover:border-primary/40 transition-colors"
+                        >
                             <div className="flex items-start justify-between gap-3">
                                 <span className="font-bold text-accent">{ws.name}</span>
-                                <StatusBadge status={ws.status} />
+                                <div className="flex items-center gap-2">
+                                    <StatusBadge status={ws.status} />
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); openEdit(ws); }}
+                                        title="Edit workspace"
+                                        className="rounded-lg p-1.5 text-text-dim hover:text-accent hover:bg-bg/60 transition-colors"
+                                    >
+                                        <Pencil className="size-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(ws); }}
+                                        title="Delete workspace"
+                                        className="rounded-lg p-1.5 text-text-dim hover:text-red-400 hover:bg-bg/60 transition-colors"
+                                    >
+                                        <Trash2 className="size-3.5" />
+                                    </button>
+                                </div>
                             </div>
                             <code className="text-xs text-text-dim font-mono">{ws.slug}</code>
                             {ws.description && (
@@ -134,77 +222,303 @@ export function Workspaces() {
             )}
 
             <AnimatePresence>
-                {showModal && (
-                    <motion.div
-                        key="workspace-modal-overlay"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 backdrop-blur-sm p-4"
-                        onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
-                    >
-                        <motion.div
-                            key="workspace-modal"
-                            initial={{ opacity: 0, y: 40 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 40 }}
-                            className="bento-card w-full max-w-md space-y-4"
-                        >
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold">New Workspace</h3>
-                                <button onClick={closeModal} className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors">
-                                    <X className="size-4" />
-                                </button>
-                            </div>
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="label-caps block mb-1">Name</label>
-                                    <input
-                                        className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary"
-                                        placeholder="My Workspace"
-                                        value={name}
-                                        onChange={e => handleNameChange(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label-caps block mb-1">Slug</label>
-                                    <input
-                                        className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-mono text-accent placeholder-text-dim focus:outline-none focus:border-primary"
-                                        placeholder="my-workspace"
-                                        value={slug}
-                                        onChange={e => setSlug(slugify(e.target.value))}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label-caps block mb-1">Description</label>
-                                    <textarea
-                                        rows={3}
-                                        className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary resize-none"
-                                        placeholder="Optional description…"
-                                        value={description}
-                                        onChange={e => setDescription(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={closeModal}
-                                    className="flex-1 rounded-xl border border-border py-3 text-sm font-bold text-text-dim hover:text-accent transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={submitting}
-                                    className="flex-1 rounded-xl bg-highlight py-3 text-sm font-bold text-bg hover:bg-accent transition-colors disabled:opacity-50"
-                                >
-                                    {submitting ? 'Creating…' : 'Create'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
+                {(showCreate || editing) && (
+                    <FormModal
+                        key="form-modal"
+                        title={editing ? 'Edit Workspace' : 'New Workspace'}
+                        name={name}
+                        slug={slug}
+                        description={description}
+                        onName={(v) => { setName(v); if (!editing) setSlug(slugify(v)); }}
+                        onSlug={(v) => setSlug(slugify(v))}
+                        onDescription={setDescription}
+                        onClose={closeAll}
+                        onSubmit={editing ? handleEdit : handleCreate}
+                        submitting={submitting}
+                        submitLabel={editing ? 'Save' : 'Create'}
+                    />
+                )}
+                {detail && (
+                    <DetailModal
+                        key="detail-modal"
+                        workspace={detail}
+                        onClose={() => setDetail(null)}
+                    />
                 )}
             </AnimatePresence>
+        </motion.div>
+    );
+}
+
+function FormModal({
+    title, name, slug, description,
+    onName, onSlug, onDescription, onClose, onSubmit, submitting, submitLabel,
+}: {
+    title: string;
+    name: string;
+    slug: string;
+    description: string;
+    onName: (v: string) => void;
+    onSlug: (v: string) => void;
+    onDescription: (v: string) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+    submitting: boolean;
+    submitLabel: string;
+}) {
+    return (
+        <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 backdrop-blur-sm p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <motion.div
+                initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
+                className="bento-card w-full max-w-md space-y-4"
+            >
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold">{title}</h3>
+                    <button onClick={onClose} className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors">
+                        <X className="size-4" />
+                    </button>
+                </div>
+                <div className="space-y-3">
+                    <div>
+                        <label className="label-caps block mb-1">Name</label>
+                        <input
+                            className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary"
+                            placeholder="My Workspace"
+                            value={name}
+                            onChange={e => onName(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="label-caps block mb-1">Slug</label>
+                        <input
+                            className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-mono text-accent placeholder-text-dim focus:outline-none focus:border-primary"
+                            placeholder="my-workspace"
+                            value={slug}
+                            onChange={e => onSlug(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="label-caps block mb-1">Description</label>
+                        <textarea
+                            rows={3}
+                            className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary resize-none"
+                            placeholder="Optional description"
+                            value={description}
+                            onChange={e => onDescription(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 rounded-xl border border-border py-3 text-sm font-bold text-text-dim hover:text-accent transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onSubmit}
+                        disabled={submitting}
+                        className="flex-1 rounded-xl bg-highlight py-3 text-sm font-bold text-bg hover:bg-accent transition-colors disabled:opacity-50"
+                    >
+                        {submitting ? 'Saving' : submitLabel}
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
+function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: () => void }) {
+    const { toast } = useToast();
+    const [members, setMembers] = useState<Member[]>([]);
+    const [loadingMembers, setLoadingMembers] = useState(true);
+    const [showAdd, setShowAdd] = useState(false);
+    const [newUserId, setNewUserId] = useState('');
+    const [newRole, setNewRole] = useState<Member['role']>('viewer');
+    const [adding, setAdding] = useState(false);
+
+    const load = useCallback(async () => {
+        setLoadingMembers(true);
+        try {
+            const res = await apiFetch<ApiResponse<Member[]>>(`/api/v1/workspaces/${workspace.id}/members`);
+            setMembers(res.data ?? []);
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to load members', 'error');
+        } finally {
+            setLoadingMembers(false);
+        }
+    }, [workspace.id, toast]);
+
+    useEffect(() => { load(); }, [load]);
+
+    async function handleRoleChange(member: Member, role: Member['role']) {
+        try {
+            await apiFetch(`/api/v1/workspaces/${workspace.id}/members/${member.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ role }),
+            });
+            toast('Role updated', 'success');
+            load();
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to update role', 'error');
+        }
+    }
+
+    async function handleRemove(member: Member) {
+        if (!window.confirm(`Remove ${member.fullName ?? member.userId} from workspace?`)) return;
+        try {
+            await apiFetch(`/api/v1/workspaces/${workspace.id}/members/${member.id}`, { method: 'DELETE' });
+            toast('Member removed', 'success');
+            load();
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to remove member', 'error');
+        }
+    }
+
+    async function handleAdd() {
+        if (!newUserId.trim()) { toast('userId is required', 'error'); return; }
+        setAdding(true);
+        try {
+            await apiFetch(`/api/v1/workspaces/${workspace.id}/members`, {
+                method: 'POST',
+                body: JSON.stringify({ userId: newUserId.trim(), role: newRole }),
+            });
+            toast('Member added', 'success');
+            setNewUserId('');
+            setNewRole('viewer');
+            setShowAdd(false);
+            load();
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to add member', 'error');
+        } finally {
+            setAdding(false);
+        }
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <motion.div
+                initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
+                className="bento-card w-full max-w-lg space-y-5 my-auto"
+            >
+                <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                        <h3 className="text-lg font-bold text-accent">{workspace.name}</h3>
+                        <code className="text-xs text-text-dim font-mono">{workspace.slug}</code>
+                    </div>
+                    <button onClick={onClose} className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors">
+                        <X className="size-4" />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1">
+                        <div className="label-caps">Status</div>
+                        <StatusBadge status={workspace.status} />
+                    </div>
+                    <div className="space-y-1">
+                        <div className="label-caps">Created</div>
+                        <div className="text-accent">{workspace.createdAt ? new Date(workspace.createdAt).toLocaleString() : '-'}</div>
+                    </div>
+                    <div className="space-y-1 col-span-2">
+                        <div className="label-caps">Updated</div>
+                        <div className="text-accent">{workspace.updatedAt ? new Date(workspace.updatedAt).toLocaleString() : '-'}</div>
+                    </div>
+                </div>
+
+                {workspace.description && (
+                    <p className="text-sm text-text-dim leading-relaxed border-t border-border pt-3">{workspace.description}</p>
+                )}
+
+                <div className="space-y-3 border-t border-border pt-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Users className="size-4 text-text-dim" />
+                            <h4 className="text-sm font-bold">Members</h4>
+                        </div>
+                        <button
+                            onClick={() => setShowAdd(s => !s)}
+                            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors"
+                        >
+                            <UserPlus className="size-3" />
+                            Add member
+                        </button>
+                    </div>
+
+                    {showAdd && (
+                        <div className="rounded-xl border border-border bg-bg/40 p-3 space-y-2">
+                            <input
+                                className="w-full rounded-lg bg-bg border border-border px-3 py-2 text-xs font-mono text-accent placeholder-text-dim focus:outline-none focus:border-primary"
+                                placeholder="Paste user UUID"
+                                value={newUserId}
+                                onChange={e => setNewUserId(e.target.value)}
+                            />
+                            <div className="flex gap-2">
+                                <select
+                                    value={newRole}
+                                    onChange={e => setNewRole(e.target.value as Member['role'])}
+                                    className="flex-1 rounded-lg bg-bg border border-border px-3 py-2 text-xs font-medium text-accent focus:outline-none focus:border-primary"
+                                >
+                                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                </select>
+                                <button
+                                    onClick={handleAdd}
+                                    disabled={adding}
+                                    className="rounded-lg bg-highlight px-4 py-2 text-xs font-bold text-bg hover:bg-accent transition-colors disabled:opacity-50"
+                                >
+                                    {adding ? 'Adding' : 'Add'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {loadingMembers ? (
+                        <p className="text-xs text-text-dim">Loading members</p>
+                    ) : members.length === 0 ? (
+                        <p className="text-xs text-text-dim">No members yet</p>
+                    ) : (
+                        <ul className="space-y-2">
+                            {members.map(m => {
+                                const initial = (m.fullName ?? m.email ?? m.userId).charAt(0).toUpperCase();
+                                return (
+                                    <li key={m.id} className="flex items-center gap-3 rounded-xl border border-border bg-bg/40 p-2.5">
+                                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-sm">
+                                            {initial}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-medium text-accent truncate">{m.fullName ?? m.userId}</div>
+                                            <div className="text-[11px] text-text-dim truncate">{m.email ?? ''}</div>
+                                        </div>
+                                        <RoleBadge role={m.role} />
+                                        <select
+                                            value={m.role}
+                                            onChange={e => handleRoleChange(m, e.target.value as Member['role'])}
+                                            className="rounded-lg bg-bg border border-border px-2 py-1 text-[11px] font-medium text-accent focus:outline-none focus:border-primary"
+                                        >
+                                            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                        </select>
+                                        <button
+                                            onClick={() => handleRemove(m)}
+                                            title="Remove member"
+                                            className="rounded-lg p-1.5 text-text-dim hover:text-red-400 transition-colors"
+                                        >
+                                            <X className="size-4" />
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+                </div>
+            </motion.div>
         </motion.div>
     );
 }
