@@ -133,6 +133,10 @@ export class OrchestratorRuntimeService {
     return this.planRepo.find({ where: { workspaceId }, order: { createdAt: 'DESC' } });
   }
 
+  async listAllPlans(): Promise<OrchestratorPlanRecord[]> {
+    return this.planRepo.find({ order: { createdAt: 'DESC' } });
+  }
+
   async startRun(input: StartOrchestratorRunInput): Promise<OrchestratorRunRecord> {
     const plan = await this.getPlan(input.planId);
     if (!plan || plan.workspaceId !== input.workspaceId) {
@@ -198,6 +202,13 @@ export class OrchestratorRuntimeService {
   async listRuns(workspaceId: string, status?: string): Promise<OrchestratorRunRecord[]> {
     return this.runRepo.find({
       where: status ? ({ workspaceId, status } as any) : { workspaceId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async listAllRuns(status?: string): Promise<OrchestratorRunRecord[]> {
+    return this.runRepo.find({
+      where: status ? ({ status } as any) : {},
       order: { createdAt: 'DESC' },
     });
   }

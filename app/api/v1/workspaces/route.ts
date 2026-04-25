@@ -2,21 +2,16 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
-import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
 import { createWorkspaceSchema } from '@/src/core/validation/schemas';
 import { z } from 'zod';
 
-export async function GET(req: NextRequest) {
-    const guard = requireAuth(req);
-    if ('error' in guard) return guard.error;
-    const { auth } = guard;
-
+export async function GET() {
     try {
         const db = await getDb();
         const { WorkspaceService } = await import('@/src/core/services/WorkspaceService');
         const workspaceService = new WorkspaceService(db);
-        const workspaces = await workspaceService.listByUser(auth.userId);
+        const workspaces = await workspaceService.listAll();
         return ok(workspaces);
     } catch {
         return err('INTERNAL_ERROR', 'Failed to list workspaces', 500);
@@ -24,10 +19,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const guard = requireAuth(req);
-    if ('error' in guard) return guard.error;
-    const { auth } = guard;
-
     try {
         const body = await req.json();
         const input = createWorkspaceSchema.parse(body);
@@ -38,7 +29,7 @@ export async function POST(req: NextRequest) {
             name: input.name,
             slug: input.slug,
             description: input.description,
-            ownerId: auth.userId,
+            ownerId: 'system',
         });
         return ok(workspace, 201);
     } catch (error) {

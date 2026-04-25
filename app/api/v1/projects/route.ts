@@ -1,14 +1,9 @@
 export const runtime = 'nodejs';
 
-import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
-import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
 
-export async function GET(req: NextRequest) {
-    const guard = requireAuth(req);
-    if ('error' in guard) return guard.error;
-
+export async function GET() {
     try {
         const db = await getDb();
         const { ProjectService } = await import('@/src/core/services/ProjectService');

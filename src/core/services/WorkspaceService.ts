@@ -56,6 +56,13 @@ export class WorkspaceService {
     });
   }
 
+  async listAll(): Promise<Workspace[]> {
+    return this.workspaceRepo.find({
+      relations: ['owner', 'projects'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async listByUser(userId: string): Promise<Workspace[]> {
     const members = await this.memberRepo.find({
       where: { userId },
