@@ -7,25 +7,25 @@ import {
   OneToMany,
   ManyToOne,
 } from 'typeorm';
-import { ContextEntry } from './ContextEntry';
-import { Decision } from './Decision';
-import { Workspace } from './Workspace';
+import type { ContextEntry } from './ContextEntry';
+import type { Decision } from './Decision';
+import type { Workspace } from './Workspace';
 
 @Entity()
 export class Project {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('text')
   name: string;
 
   @Column('text', { nullable: true })
   description: string | null;
 
-  @Column({ default: 'active' })
+  @Column('text', { default: 'active' })
   status: string;
 
-  @ManyToOne(() => Workspace, (workspace) => workspace.projects, {
+  @ManyToOne('Workspace', (workspace: Workspace) => workspace.projects, {
     onDelete: 'CASCADE',
   })
   workspace: Workspace;
@@ -36,10 +36,10 @@ export class Project {
   @Column({ type: 'simple-json', nullable: true })
   metadata: Record<string, any> | null;
 
-  @OneToMany(() => ContextEntry, (context) => context.project, { cascade: true })
+  @OneToMany('ContextEntry', (context: ContextEntry) => context.project, { cascade: true })
   contextEntries: ContextEntry[];
 
-  @OneToMany(() => Decision, (decision) => decision.project, { cascade: true })
+  @OneToMany('Decision', (decision: Decision) => decision.project, { cascade: true })
   decisions: Decision[];
 
   @CreateDateColumn()

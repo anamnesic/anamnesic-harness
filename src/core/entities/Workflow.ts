@@ -71,22 +71,22 @@ export class Workflow {
   @Column('integer', { default: 3600000 })
   timeoutMs: number;
 
-  @Column({ default: 'active' })
+  @Column({ type: 'text', default: 'active' })
   status: 'active' | 'paused' | 'archived';
 
   @Column('simple-json', { default: '[]' })
   executionHistory: WorkflowExecution[];
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastExecutedAt: Date | null;
 
-  @Column({ default: 0 })
+  @Column('integer', { default: 0 })
   totalExecutions: number;
 
-  @Column({ default: 0 })
+  @Column('integer', { default: 0 })
   successfulExecutions: number;
 
-  @Column({ default: 0 })
+  @Column('integer', { default: 0 })
   failedExecutions: number;
 
   @CreateDateColumn()

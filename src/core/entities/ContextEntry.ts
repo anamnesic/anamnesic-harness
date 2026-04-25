@@ -1,27 +1,27 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
-import { Project } from './Project';
+import type { Project } from './Project';
 
 @Entity()
 export class ContextEntry {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('text')
   key: string;
 
   @Column('text')
   value: string;
 
-  @Column({ default: 'general' })
+  @Column({ type: 'text', default: 'general' })
   category: string;
 
   @Column({ type: 'simple-json', nullable: true })
   metadata: Record<string, any> | null;
 
-  @Column({ default: 1 })
+  @Column('integer', { default: 1 })
   priority: number;
 
-  @ManyToOne(() => Project, (project) => project.contextEntries, { onDelete: 'CASCADE' })
+  @ManyToOne('Project', (project: Project) => project.contextEntries, { onDelete: 'CASCADE' })
   project: Project;
 
   @CreateDateColumn()

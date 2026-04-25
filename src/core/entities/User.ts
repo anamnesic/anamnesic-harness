@@ -7,7 +7,7 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
-import { WorkspaceMember } from './WorkspaceMember';
+import type { WorkspaceMember } from './WorkspaceMember';
 
 @Entity()
 @Index(['email'], { unique: true })
@@ -27,15 +27,15 @@ export class User {
   @Column('text', { nullable: true })
   avatar: string | null;
 
-  @Column({ default: 'active' })
+  @Column({ type: 'text', default: 'active' })
   status: 'active' | 'inactive' | 'suspended';
 
   @Column({ type: 'simple-json', nullable: true })
   metadata: Record<string, any> | null;
 
   @OneToMany(
-    () => WorkspaceMember,
-    (member) => member.user,
+    'WorkspaceMember',
+    (member: WorkspaceMember) => member.user,
     { cascade: true, onDelete: 'CASCADE' }
   )
   workspaceMembers: WorkspaceMember[];
@@ -46,6 +46,6 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastLoginAt: Date | null;
 }

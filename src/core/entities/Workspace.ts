@@ -8,9 +8,9 @@ import {
   ManyToOne,
   Index,
 } from 'typeorm';
-import { Project } from './Project';
-import { WorkspaceMember } from './WorkspaceMember';
-import { User } from './User';
+import type { Project } from './Project';
+import type { WorkspaceMember } from './WorkspaceMember';
+import type { User } from './User';
 
 @Entity()
 @Index(['slug'], { unique: true })
@@ -27,28 +27,28 @@ export class Workspace {
   @Column('text', { nullable: true })
   description: string | null;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne('User', { onDelete: 'CASCADE' })
   owner: User;
 
   @Column('uuid')
   ownerId: string;
 
-  @Column({ default: 'active' })
+  @Column({ type: 'text', default: 'active' })
   status: 'active' | 'archived' | 'deleted';
 
   @Column({ type: 'simple-json', nullable: true })
   metadata: Record<string, any> | null;
 
   @OneToMany(
-    () => Project,
-    (project) => project.workspace,
+    'Project',
+    (project: Project) => project.workspace,
     { cascade: true, onDelete: 'CASCADE' }
   )
   projects: Project[];
 
   @OneToMany(
-    () => WorkspaceMember,
-    (member) => member.workspace,
+    'WorkspaceMember',
+    (member: WorkspaceMember) => member.workspace,
     { cascade: true, onDelete: 'CASCADE' }
   )
   members: WorkspaceMember[];

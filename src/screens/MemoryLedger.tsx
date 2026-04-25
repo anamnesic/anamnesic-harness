@@ -8,7 +8,7 @@ import { useToast } from '@/src/components/Toast';
 import { Skeleton } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 
-interface HistoryData { data: any[]; count: number }
+interface HistoryData { data?: any[] | { items?: any[]; total?: number }; count?: number }
 
 export function MemoryLedger() {
     const { data, loading, refetch } = useApi<HistoryData>('/api/chat/history');
@@ -19,7 +19,10 @@ export function MemoryLedger() {
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState<Set<string>>(new Set());
 
-    const entries = data?.data ?? [];
+    const inner = data?.data;
+    const entries: any[] = Array.isArray(inner)
+        ? inner
+        : (inner && Array.isArray((inner as { items?: any[] }).items) ? (inner as { items: any[] }).items : []);
 
     async function handleDelete(id: string) {
         setDeleting(prev => new Set(prev).add(id));

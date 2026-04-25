@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Download } from 'lucide-react';
+import { Download, ScrollText } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
+import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
+import { AuditTrailModal } from '@/src/components/AuditTrailModal';
 import { cn } from '@/src/lib/utils';
 
 interface Run {
@@ -25,12 +28,23 @@ interface Plan {
 }
 
 export function ControlCenter() {
-    const { data: runs, loading: runsLoading, refetch } = useApi<Run[]>('/api/v1/orchestrator/runs');
-    const { data: plans, loading: plansLoading } = useApi<Plan[]>('/api/v1/orchestrator/plans');
+    const { data: runs, loading: runsLoading, refetch } = useApi<Run[] | { items?: Run[] }>('/api/v1/orchestrator/runs');
+    const { data: plans, loading: plansLoading } = useApi<Plan[] | { items?: Plan[] }>('/api/v1/orchestrator/plans');
     const { toast } = useToast();
+    const [auditPipelineId, setAuditPipelineId] = useState<string | null>(null);
+    const [liveRuns, setLiveRuns] = useState<Run[] | null>(null);
 
-    const allRuns = Array.isArray(runs) ? runs : [];
-    const allPlans = Array.isArray(plans) ? plans : [];
+    useEventStream<{ runs: Run[] }>('runs.snapshot', snap => {
+        setLiveRuns(Array.isArray(snap.runs) ? snap.runs : []);
+    });
+
+    const fetched: Run[] = Array.isArray(runs)
+        ? runs
+        : (runs && Array.isArray((runs as { items?: Run[] }).items) ? (runs as { items: Run[] }).items : []);
+    const allRuns = liveRuns ?? fetched;
+    const allPlans: Plan[] = Array.isArray(plans)
+        ? plans
+        : (plans && Array.isArray((plans as { items?: Plan[] }).items) ? (plans as { items: Plan[] }).items : []);
 
     async function executeRun(runId: string) {
         try {
@@ -170,12 +184,22 @@ export function ControlCenter() {
                                             {run.id.slice(0, 8)}…
                                         </span>
                                     </div>
-                                    <span className={cn(
-                                        'text-[8px] font-black tracking-widest px-2 py-0.5 rounded shrink-0',
-                                        run.status === 'failed' ? 'bg-red-900/20 text-red-500' : 'bg-primary/10 text-primary',
-                                    )}>
-                                        {run.status.toUpperCase()}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setAuditPipelineId(run.id)}
+                                            aria-label="View audit trail"
+                                            title="View audit trail"
+                                            className="p-1.5 rounded-md text-text-dim hover:text-primary hover:bg-card transition-colors"
+                                        >
+                                            <ScrollText className="size-3.5" />
+                                        </button>
+                                        <span className={cn(
+                                            'text-[8px] font-black tracking-widest px-2 py-0.5 rounded shrink-0',
+                                            run.status === 'failed' ? 'bg-red-900/20 text-red-500' : 'bg-primary/10 text-primary',
+                                        )}>
+                                            {run.status.toUpperCase()}
+                                        </span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -230,6 +254,13 @@ export function ControlCenter() {
                     <p className="text-sm text-text-dim">No plans yet.</p>
                 )}
             </div>
+
+            {auditPipelineId && (
+                <AuditTrailModal
+                    pipelineId={auditPipelineId}
+                    onClose={() => setAuditPipelineId(null)}
+                />
+            )}
         </motion.div>
     );
 }

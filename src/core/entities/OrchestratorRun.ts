@@ -51,7 +51,7 @@ export class OrchestratorRunRecord {
   @Column('text', { nullable: true })
   failureReason: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   completedAt: Date | null;
 
   @CreateDateColumn()

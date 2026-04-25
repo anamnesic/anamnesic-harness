@@ -6,17 +6,23 @@ import { ok, err } from '@/app/api/_lib/response';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
-    const workspaceId = searchParams.get('workspaceId');
+    const workspaceId = searchParams.get('workspaceId') ?? undefined;
     const status = searchParams.get('status') ?? undefined;
+
+    const parsedLimit = Number.parseInt(searchParams.get('limit') ?? '', 10);
+    const parsedOffset = Number.parseInt(searchParams.get('offset') ?? '', 10);
+    const limit = Math.min(
+        Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 50, 1),
+        200
+    );
+    const offset = Math.max(Number.isFinite(parsedOffset) ? parsedOffset : 0, 0);
 
     try {
         const db = await getDb();
         const { OrchestratorRuntimeService } = await import('@/src/core/services/OrchestratorRuntimeService');
         const service = new OrchestratorRuntimeService(db);
-        const runs = workspaceId
-            ? await service.listRuns(workspaceId, status)
-            : await service.listAllRuns(status);
-        return ok(runs);
+        const { items, total } = await service.listRunsPaginated({ workspaceId, status, limit, offset });
+        return ok({ items, total, limit, offset });
     } catch {
         return err('INTERNAL_ERROR', 'Failed to list orchestrator runs', 500);
     }

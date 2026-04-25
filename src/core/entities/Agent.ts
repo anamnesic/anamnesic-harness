@@ -33,10 +33,10 @@ export class Agent {
   @Column('simple-array', { default: 'reasoning' })
   capabilities: AgentCapability[];
 
-  @Column({ default: 'idle' })
+  @Column({ type: 'text', default: 'idle' })
   state: AgentState;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
   @Column('simple-json', { nullable: true })
@@ -61,7 +61,7 @@ export class Agent {
   @Column('integer', { default: 0 })
   tasksFailed: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastActivityAt: Date | null;
 
   @CreateDateColumn()

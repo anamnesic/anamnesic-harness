@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity } from 'lucide-react';
-import { useApi } from '@/src/lib/api';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch } from 'lucide-react';
+import { usePolling } from '@/src/lib/usePolling';
+import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonRow } from '@/src/components/Skeleton';
 
@@ -11,20 +12,36 @@ const ACTION_ICONS = [Code2, MemoryStick, Shield, Activity];
 
 interface HealthData { status: string; service: string; timestamp: string }
 interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number }
-interface HistoryData { data: any[]; count: number }
+interface HistoryData { data?: any[] | { items?: any[]; total?: number }; count?: number }
+interface AgentStats { totalAgents: number; activeAgents: number; totalTasksCompleted: number; totalTasksFailed: number; byState: Record<string, number> }
+interface WorkflowStats { total: number; active: number; totalExecutions: number; successfulExecutions: number; failedExecutions: number; successRate: number }
+interface RunsData { data?: Array<{ status: string }> | { items?: Array<{ status: string }>; total?: number }; count?: number }
 
 export function Dashboard() {
-    const { data: health, error: healthErr } = useApi<HealthData>('/api/health');
-    const { data: metrics, loading: metricsLoading } = useApi<MetricsData>('/api/v1/metrics');
-    const { data: history, loading: histLoading } = useApi<HistoryData>('/api/chat/history?limit=3');
+    const { data: health, error: healthErr } = usePolling<HealthData>('/api/health', 5000);
+    const { data: metrics, loading: metricsLoading } = usePolling<MetricsData>('/api/v1/metrics', 5000);
+    const { data: history, loading: histLoading } = usePolling<HistoryData>('/api/chat/history?limit=3', 5000);
+    const { data: agentStats } = usePolling<AgentStats>('/api/v1/agents/stats', 5000);
+    const { data: workflowStats } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 5000);
+    const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
+    const { connected } = useEventStream<{ runs: Array<{ status: string }> }>(
+        'runs.snapshot',
+        snap => setLiveRuns(snap.runs ?? []),
+    );
     const { toast } = useToast();
+
+    const runningCount = liveRuns.filter(r => r.status === 'running').length;
+    const pausedCount = liveRuns.filter(r => r.status === 'paused').length;
 
     useEffect(() => {
         if (healthErr) toast('Could not reach health endpoint', 'error');
     }, [healthErr]);
 
     const isOnline = health?.status === 'ok';
-    const actions = history?.data ?? [];
+    const histInner = history?.data;
+    const actions: any[] = Array.isArray(histInner)
+        ? histInner
+        : (histInner && Array.isArray((histInner as { items?: any[] }).items) ? (histInner as { items: any[] }).items : []);
 
     return (
         <motion.div
@@ -32,6 +49,16 @@ export function Dashboard() {
             animate={{ opacity: 1 }}
             className="flex-1 p-6 pb-32 max-w-4xl mx-auto w-full"
         >
+            <div className="flex items-center gap-2 mb-4">
+                <span
+                    className={
+                        connected
+                            ? 'size-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_12px_rgba(34,197,94,0.6)]'
+                            : 'size-2 rounded-full bg-border'
+                    }
+                />
+                <span className="label-caps">{connected ? 'Live • streaming' : 'Live • disconnected'}</span>
+            </div>
             <div className="grid grid-cols-4 gap-4">
                 {/* Hero Card */}
                 <div className="bento-card col-span-4 md:col-span-2 md:row-span-2 overflow-hidden">
@@ -109,6 +136,76 @@ export function Dashboard() {
                             ? <Skeleton className="h-9 w-16" />
                             : <p className="text-3xl font-bold tracking-tighter">{metrics?.loadAvg ?? '—'}</p>}
                         <p className="text-[10px] text-text-dim mt-1">1-min</p>
+                    </div>
+                </div>
+
+                {/* Stat: Agents */}
+                <div className="bento-card col-span-4 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                        <span className="label-caps">Agents</span>
+                        <Bot className="size-4 text-text-dim" />
+                    </div>
+                    <div className="mt-auto pt-4 grid grid-cols-2 gap-3">
+                        <div>
+                            <p className="text-3xl font-bold tracking-tighter">{agentStats?.totalAgents ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Total</p>
+                        </div>
+                        <div>
+                            <p className="text-3xl font-bold tracking-tighter text-green-500">{agentStats?.activeAgents ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Active</p>
+                        </div>
+                        <div>
+                            <p className="text-lg font-bold font-mono">{agentStats?.totalTasksCompleted ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Tasks Completed</p>
+                        </div>
+                        <div>
+                            <p className="text-lg font-bold font-mono text-red-500">{agentStats?.totalTasksFailed ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Tasks Failed</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Stat: Workflows */}
+                <div className="bento-card col-span-4 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                        <span className="label-caps">Workflows</span>
+                        <GitBranch className="size-4 text-text-dim" />
+                    </div>
+                    <div className="mt-auto pt-4 grid grid-cols-2 gap-3">
+                        <div>
+                            <p className="text-3xl font-bold tracking-tighter">{workflowStats?.total ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Total</p>
+                        </div>
+                        <div>
+                            <p className="text-3xl font-bold tracking-tighter text-green-500">{workflowStats?.active ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Active</p>
+                        </div>
+                        <div>
+                            <p className="text-lg font-bold font-mono">{workflowStats?.totalExecutions ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Executions</p>
+                        </div>
+                        <div>
+                            <p className="text-lg font-bold font-mono text-highlight">{workflowStats?.successRate ?? 0}%</p>
+                            <p className="text-[10px] text-text-dim mt-1">Success Rate</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Stat: Live Runs */}
+                <div className="bento-card col-span-4 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                        <span className="label-caps">Live Runs</span>
+                        <Activity className="size-4 text-text-dim" />
+                    </div>
+                    <div className="mt-auto pt-4 grid grid-cols-2 gap-3">
+                        <div>
+                            <p className="text-3xl font-bold tracking-tighter text-green-500">{runningCount}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Running</p>
+                        </div>
+                        <div>
+                            <p className="text-3xl font-bold tracking-tighter text-yellow-500">{pausedCount}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Paused</p>
+                        </div>
                     </div>
                 </div>
 

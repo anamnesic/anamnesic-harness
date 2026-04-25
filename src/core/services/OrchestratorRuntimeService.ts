@@ -137,6 +137,19 @@ export class OrchestratorRuntimeService {
     return this.planRepo.find({ order: { createdAt: 'DESC' } });
   }
 
+  async listPlansPaginated(
+    options: { workspaceId?: string; limit: number; offset: number }
+  ): Promise<{ items: OrchestratorPlanRecord[]; total: number }> {
+    const where = options.workspaceId ? { workspaceId: options.workspaceId } : {};
+    const [items, total] = await this.planRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      take: options.limit,
+      skip: options.offset,
+    });
+    return { items, total };
+  }
+
   async startRun(input: StartOrchestratorRunInput): Promise<OrchestratorRunRecord> {
     const plan = await this.getPlan(input.planId);
     if (!plan || plan.workspaceId !== input.workspaceId) {
@@ -211,6 +224,21 @@ export class OrchestratorRuntimeService {
       where: status ? ({ status } as any) : {},
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async listRunsPaginated(
+    options: { workspaceId?: string; status?: string; limit: number; offset: number }
+  ): Promise<{ items: OrchestratorRunRecord[]; total: number }> {
+    const where: Record<string, any> = {};
+    if (options.workspaceId) where.workspaceId = options.workspaceId;
+    if (options.status) where.status = options.status;
+    const [items, total] = await this.runRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      take: options.limit,
+      skip: options.offset,
+    });
+    return { items, total };
   }
 
   async pauseRun(runId: string): Promise<OrchestratorRunRecord> {

@@ -47,6 +47,18 @@ export class ChatHistoryService {
     });
   }
 
+  async getHistoryPaginated(
+    options: { limit: number; offset: number }
+  ): Promise<{ items: ChatHistory[]; total: number }> {
+    const repo = this.db.getRepository(ChatHistory);
+    const [items, total] = await repo.findAndCount({
+      order: { createdAt: 'DESC' },
+      take: options.limit,
+      skip: options.offset,
+    });
+    return { items, total };
+  }
+
   async deleteEntry(id: string): Promise<void> {
     const repo = this.db.getRepository(ChatHistory);
     const entry = await repo.findOneBy({ id });

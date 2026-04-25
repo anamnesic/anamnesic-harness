@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, X, FolderOpen, ArrowLeft } from 'lucide-react';
+import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
+import { FolderBrowser } from '@/src/components/FolderBrowser';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -15,6 +16,7 @@ interface Project {
     description?: string | null;
     status?: string;
     workspaceId?: string | null;
+    metadata?: { localPath?: string;[k: string]: any } | null;
     createdAt?: string;
 }
 
@@ -32,36 +34,73 @@ function StatusBadge({ status }: { status?: string }) {
     );
 }
 
+interface ApiResponse<T> {
+    success: boolean;
+    data?: T;
+    timestamp: string;
+}
+
 export function Projects() {
-    const { data, loading, refetch } = useApi<Project[]>('/api/v1/projects');
+    const { data, loading, refetch } = useApi<ApiResponse<Project[]>>('/api/v1/projects');
     const { toast } = useToast();
 
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-    const [showModal, setShowModal] = useState(false);
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
+    const [showBrowser, setShowBrowser] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
+    const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
+        open: false,
+        folderPath: '',
+        folderName: '',
+        gitSubfolders: [],
+    });
 
-    function closeModal() {
-        setShowModal(false);
-        setName('');
-        setDescription('');
-    }
-
-    async function handleSubmit() {
-        if (!name.trim()) { toast('Name is required', 'error'); return; }
+    async function handleFolderSelected(folderPath: string) {
+        const base = folderPath.split(/[\\/]/).filter(Boolean).pop() || 'Project';
+        setShowBrowser(false);
         setSubmitting(true);
         try {
             await apiFetch('/api/v1/projects', {
                 method: 'POST',
-                body: JSON.stringify({ name: name.trim(), description: description.trim() || undefined }),
+                body: JSON.stringify({ name: base, localPath: folderPath }),
             });
-            toast('Project created', 'success');
+            toast(`Imported "${base}"`, 'success');
             refetch();
-            closeModal();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to create project', 'error');
+            // Check if it's a NO_GIT_REPO error with git subfolders
+            if (e?.code === 'NO_GIT_REPO' && e?.details?.gitSubfolders?.length > 0) {
+                setNoGitDialog({
+                    open: true,
+                    folderPath,
+                    folderName: base,
+                    gitSubfolders: e.details.gitSubfolders,
+                });
+                setSubmitting(false);
+                return;
+            }
+            toast(e.message ?? 'Failed to import folder', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleOpenAsWorkspace() {
+        const { folderPath, folderName } = noGitDialog;
+        setNoGitDialog({ open: false, folderPath: '', folderName: '', gitSubfolders: [] });
+        setSubmitting(true);
+        try {
+            await apiFetch('/api/v1/workspaces', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: folderName,
+                    slug: folderName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+                    description: `Workspace with git repositories`,
+                }),
+            });
+            toast(`Created workspace "${folderName}"`, 'success');
+            // Note: In a real app, you might want to navigate to the workspace
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to create workspace', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -80,7 +119,7 @@ export function Projects() {
         }
     }
 
-    const projects = data ?? [];
+    const projects = data?.data ?? [];
     const selectedProject = projects.find(p => p.id === selectedProjectId);
 
     if (selectedProject) {
@@ -106,6 +145,12 @@ export function Projects() {
                     {selectedProject.description && (
                         <p className="text-sm text-text-dim leading-relaxed">{selectedProject.description}</p>
                     )}
+                    {selectedProject.metadata?.localPath && (
+                        <div className="flex items-center gap-2 text-xs text-text-dim font-mono">
+                            <FolderGit2 className="size-3.5 text-primary shrink-0" />
+                            <span className="truncate">{selectedProject.metadata.localPath}</span>
+                        </div>
+                    )}
                 </div>
                 <ProjectContext projectId={selectedProject.id} />
             </motion.div>
@@ -122,11 +167,12 @@ export function Projects() {
             <div className="mb-8 flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Projects</h2>
                 <button
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
+                    onClick={() => setShowBrowser(true)}
+                    disabled={submitting}
+                    className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
                 >
-                    <Plus className="size-3.5" />
-                    New Project
+                    <FolderOpen className="size-3.5" />
+                    {submitting ? 'Importing…' : 'Select Folder'}
                 </button>
             </div>
 
@@ -164,7 +210,13 @@ export function Projects() {
                             {project.description && (
                                 <p className="text-sm text-text-dim leading-relaxed">{project.description}</p>
                             )}
-                            {project.workspaceId && (
+                            {project.metadata?.localPath && (
+                                <div className="flex items-center gap-2 text-xs text-text-dim font-mono truncate">
+                                    <FolderGit2 className="size-3.5 text-primary shrink-0" />
+                                    <span className="truncate">{project.metadata.localPath}</span>
+                                </div>
+                            )}
+                            {!project.metadata?.localPath && project.workspaceId && (
                                 <p className="text-xs text-text-dim font-mono truncate">{project.workspaceId}</p>
                             )}
                             {project.createdAt && (
@@ -176,66 +228,69 @@ export function Projects() {
             )}
 
             <AnimatePresence>
-                {showModal && (
+                {noGitDialog.open && (
                     <motion.div
-                        key="project-modal-overlay"
+                        key="no-git-dialog-overlay"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 backdrop-blur-sm p-4"
-                        onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+                        onClick={(e) => { if (e.target === e.currentTarget) setNoGitDialog({ ...noGitDialog, open: false }); }}
                     >
                         <motion.div
-                            key="project-modal"
+                            key="no-git-dialog"
                             initial={{ opacity: 0, y: 40 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 40 }}
                             className="bento-card w-full max-w-md space-y-4"
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold">New Project</h3>
-                                <button onClick={closeModal} className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors">
+                                <h3 className="text-lg font-bold">No Git Repository Found</h3>
+                                <button
+                                    onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
+                                    className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
+                                >
                                     <X className="size-4" />
                                 </button>
                             </div>
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="label-caps block mb-1">Name</label>
-                                    <input
-                                        className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary"
-                                        placeholder="My Project"
-                                        value={name}
-                                        onChange={e => setName(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label-caps block mb-1">Description</label>
-                                    <textarea
-                                        rows={3}
-                                        className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary resize-none"
-                                        placeholder="Optional description…"
-                                        value={description}
-                                        onChange={e => setDescription(e.target.value)}
-                                    />
-                                </div>
+
+                            <div className="space-y-2 text-sm text-text-dim">
+                                <p>
+                                    <span className="font-semibold text-text">{noGitDialog.folderName}</span> doesn't have a git repository, but found {noGitDialog.gitSubfolders.length} git repositor{noGitDialog.gitSubfolders.length === 1 ? 'y' : 'ies'} in subfolders:
+                                </p>
+                                <ul className="list-disc list-inside space-y-1 text-xs font-mono">
+                                    {noGitDialog.gitSubfolders.map((folder, i) => (
+                                        <li key={i}>{folder}</li>
+                                    ))}
+                                </ul>
                             </div>
-                            <div className="flex gap-3 pt-2">
+
+                            <div className="flex items-center gap-3">
                                 <button
-                                    onClick={closeModal}
-                                    className="flex-1 rounded-xl border border-border py-3 text-sm font-bold text-text-dim hover:text-accent transition-colors"
+                                    onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
+                                    className="flex-1 rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dim hover:text-text transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
-                                    onClick={handleSubmit}
+                                    onClick={handleOpenAsWorkspace}
                                     disabled={submitting}
-                                    className="flex-1 rounded-xl bg-highlight py-3 text-sm font-bold text-bg hover:bg-accent transition-colors disabled:opacity-50"
+                                    className="flex-1 rounded-lg bg-accent/20 border border-accent/40 px-4 py-2 text-xs font-bold text-accent hover:bg-accent/30 transition-colors disabled:opacity-50"
                                 >
-                                    {submitting ? 'Creating…' : 'Create'}
+                                    {submitting ? 'Creating…' : 'Open as Workspace'}
                                 </button>
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showBrowser && (
+                    <FolderBrowser
+                        onClose={() => setShowBrowser(false)}
+                        onSelect={handleFolderSelected}
+                    />
                 )}
             </AnimatePresence>
         </motion.div>

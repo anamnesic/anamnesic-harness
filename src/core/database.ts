@@ -5,23 +5,6 @@
 import { DataSource } from 'typeorm';
 import path from 'path';
 import fs from 'fs';
-import { User } from './entities/User';
-import { Workspace } from './entities/Workspace';
-import { WorkspaceMember } from './entities/WorkspaceMember';
-import { Project } from './entities/Project';
-import { ChatHistory } from './entities/ChatHistory';
-import { ContextEntry } from './entities/ContextEntry';
-import { Decision } from './entities/Decision';
-import { ApiKey } from './entities/ApiKey';
-import { SyncConfig } from './entities/SyncConfig';
-import { Agent } from './entities/Agent';
-import { Task } from './entities/Task';
-import { Workflow } from './entities/Workflow';
-import { SecurityAnalysis } from './entities/SecurityAnalysis';
-import { ExecutionLog } from './entities/ExecutionLog';
-import { OrchestratorPlanRecord } from './entities/OrchestratorPlan';
-import { OrchestratorRunRecord } from './entities/OrchestratorRun';
-import { PolicyDecisionAudit } from './entities/PolicyDecisionAudit';
 
 const DATA_DIR = process.env.Kairos_DATA_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '.', '.Kairos');
 const DB_PATH = path.join(DATA_DIR, 'data.sqlite');
@@ -32,43 +15,82 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 let dataSource: DataSource | null = null;
+let initPromise: Promise<DataSource> | null = null;
+
+async function loadEntities() {
+  // Dynamic, sequential imports defer entity-module evaluation to runtime so that
+  // the circular references between Project / Workspace / WorkspaceMember / etc.
+  // resolve in a deterministic order and avoid ESM TDZ ("Cannot access 'Project'
+  // before initialization") when this module is imported by Next.js route handlers.
+  const { User } = await import('./entities/User');
+  const { Workspace } = await import('./entities/Workspace');
+  const { WorkspaceMember } = await import('./entities/WorkspaceMember');
+  const { Project } = await import('./entities/Project');
+  const { ChatHistory } = await import('./entities/ChatHistory');
+  const { ContextEntry } = await import('./entities/ContextEntry');
+  const { Decision } = await import('./entities/Decision');
+  const { ApiKey } = await import('./entities/ApiKey');
+  const { SyncConfig } = await import('./entities/SyncConfig');
+  const { Agent } = await import('./entities/Agent');
+  const { Task } = await import('./entities/Task');
+  const { Workflow } = await import('./entities/Workflow');
+  const { SecurityAnalysis } = await import('./entities/SecurityAnalysis');
+  const { ExecutionLog } = await import('./entities/ExecutionLog');
+  const { OrchestratorPlanRecord } = await import('./entities/OrchestratorPlan');
+  const { OrchestratorRunRecord } = await import('./entities/OrchestratorRun');
+  const { PolicyDecisionAudit } = await import('./entities/PolicyDecisionAudit');
+
+  return [
+    User,
+    Workspace,
+    WorkspaceMember,
+    Project,
+    ChatHistory,
+    ContextEntry,
+    Decision,
+    ApiKey,
+    SyncConfig,
+    Agent,
+    Task,
+    Workflow,
+    SecurityAnalysis,
+    ExecutionLog,
+    OrchestratorPlanRecord,
+    OrchestratorRunRecord,
+    PolicyDecisionAudit,
+  ];
+}
 
 export const getDatabase = async (): Promise<DataSource> => {
   if (dataSource && dataSource.isInitialized) {
     return dataSource;
   }
-
-  dataSource = new DataSource({
-    type: 'sqlite',
-    database: DB_PATH,
-    entities: [
-      User,
-      Workspace,
-      WorkspaceMember,
-      Project,
-      ChatHistory,
-      ContextEntry,
-      Decision,
-      ApiKey,
-      SyncConfig,
-      Agent,
-      Task,
-      Workflow,
-      SecurityAnalysis,
-      ExecutionLog,
-      OrchestratorPlanRecord,
-      OrchestratorRunRecord,
-      PolicyDecisionAudit,
-    ],
-    synchronize: process.env.NODE_ENV !== 'production',
-    logging: process.env.Kairos_DB_LOGGING === 'true',
-  });
-
-  if (!dataSource.isInitialized) {
-    await dataSource.initialize();
+  if (initPromise) {
+    return initPromise;
   }
 
-  return dataSource;
+  initPromise = (async () => {
+    const entities = await loadEntities();
+
+    const ds = new DataSource({
+      type: 'sqlite',
+      database: DB_PATH,
+      entities,
+      synchronize: process.env.NODE_ENV !== 'production',
+      logging: process.env.Kairos_DB_LOGGING === 'true',
+    });
+
+    await ds.initialize();
+    dataSource = ds;
+    return ds;
+  })();
+
+  try {
+    return await initPromise;
+  } catch (e) {
+    initPromise = null;
+    throw e;
+  }
 };
 
 export { DataSource };

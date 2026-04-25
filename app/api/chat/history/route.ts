@@ -5,16 +5,21 @@ import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
 
 export async function GET(req: NextRequest) {
+    const { searchParams } = new URL(req.url);
+    const parsedLimit = Number.parseInt(searchParams.get('limit') ?? '', 10);
+    const parsedOffset = Number.parseInt(searchParams.get('offset') ?? '', 10);
+    const limit = Math.min(
+        Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 50, 1),
+        200
+    );
+    const offset = Math.max(Number.isFinite(parsedOffset) ? parsedOffset : 0, 0);
+
     try {
         const db = await getDb();
         const { ChatHistoryService } = await import('@/src/core/services/ChatHistoryService');
         const service = new ChatHistoryService(db);
-        const { searchParams } = new URL(req.url);
-        const history = await service.getHistory({
-            limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : undefined,
-            offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!, 10) : undefined,
-        });
-        return ok({ data: history, count: history.length });
+        const { items, total } = await service.getHistoryPaginated({ limit, offset });
+        return ok({ items, total, limit, offset });
     } catch {
         return err('INTERNAL_ERROR', 'Failed to list chat histories', 500);
     }

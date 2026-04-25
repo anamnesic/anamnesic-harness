@@ -2,16 +2,12 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
-import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
 
 export async function GET(
-    req: NextRequest,
+    _req: NextRequest,
     { params }: { params: Promise<{ runId: string }> }
 ) {
-    const guard = requireAuth(req);
-    if ('error' in guard) return guard.error;
-
     try {
         const { runId } = await params;
         const db = await getDb();

@@ -198,8 +198,14 @@ export function ProjectContext({ projectId }: { projectId: string }) {
             ? `/api/v1/projects/${projectId}/context`
             : `/api/v1/projects/${projectId}/context?category=${activeCategory}`;
 
-    const { data, loading, refetch } = useApi<ContextEntry[]>(apiPath);
-    const entries = data ?? [];
+    interface ApiResponse<T> {
+        success: boolean;
+        data?: T;
+        timestamp: string;
+    }
+
+    const { data, loading, refetch } = useApi<ApiResponse<ContextEntry[]>>(apiPath);
+    const entries = data?.data ?? [];
 
     function openAdd() {
         setEditing(null);

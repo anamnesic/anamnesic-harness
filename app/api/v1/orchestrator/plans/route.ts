@@ -7,16 +7,22 @@ import { z } from 'zod';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
-    const workspaceId = searchParams.get('workspaceId');
+    const workspaceId = searchParams.get('workspaceId') ?? undefined;
+
+    const parsedLimit = Number.parseInt(searchParams.get('limit') ?? '', 10);
+    const parsedOffset = Number.parseInt(searchParams.get('offset') ?? '', 10);
+    const limit = Math.min(
+        Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 50, 1),
+        200
+    );
+    const offset = Math.max(Number.isFinite(parsedOffset) ? parsedOffset : 0, 0);
 
     try {
         const db = await getDb();
         const { OrchestratorRuntimeService } = await import('@/src/core/services/OrchestratorRuntimeService');
         const service = new OrchestratorRuntimeService(db);
-        const plans = workspaceId
-            ? await service.listPlans(workspaceId)
-            : await service.listAllPlans();
-        return ok(plans);
+        const { items, total } = await service.listPlansPaginated({ workspaceId, limit, offset });
+        return ok({ items, total, limit, offset });
     } catch {
         return err('INTERNAL_ERROR', 'Failed to list orchestrator plans', 500);
     }

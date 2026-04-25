@@ -1,5 +1,5 @@
 ﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Project } from './Project';
+import type { Project } from './Project';
 
 export type SyncTarget = 'copilot' | 'claude' | 'cursor';
 export type SyncTrigger = 'manual' | 'on-change' | 'scheduled';
@@ -13,19 +13,19 @@ export class SyncConfig {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Project, { onDelete: 'CASCADE' })
+  @ManyToOne('Project', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'projectId' })
   project!: Project;
 
-  @Column()
+  @Column('uuid')
   projectId!: string;
 
   /** Target AI tool: copilot, claude, cursor */
-  @Column()
+  @Column({ type: 'text' })
   target!: SyncTarget;
 
   /** When to trigger sync: manual, on-change, scheduled */
-  @Column({ default: 'manual' })
+  @Column({ type: 'text', default: 'manual' })
   trigger!: SyncTrigger;
 
   /** Cron expression for scheduled syncs (e.g., "0 9 * * *" for daily at 9am) */
@@ -33,11 +33,11 @@ export class SyncConfig {
   cronSchedule!: string | null;
 
   /** Absolute path to the workspace/repo where config file should be written */
-  @Column()
+  @Column('text')
   workspacePath!: string;
 
   /** Whether this sync config is active */
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   enabled!: boolean;
 
   /** Last successful sync timestamp */
@@ -45,7 +45,7 @@ export class SyncConfig {
   lastSyncAt!: Date | null;
 
   /** Last sync status: 'success', 'failed', 'pending' */
-  @Column({ default: 'pending' })
+  @Column({ type: 'text', default: 'pending' })
   lastSyncStatus!: string;
 
   /** Error message if last sync failed */
@@ -53,7 +53,7 @@ export class SyncConfig {
   lastSyncError!: string | null;
 
   /** Number of consecutive failures */
-  @Column({ default: 0 })
+  @Column('integer', { default: 0 })
   failureCount!: number;
 
   /** Custom output path override (null = use default for target) */

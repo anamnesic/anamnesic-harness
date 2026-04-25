@@ -7,7 +7,7 @@ import {
   ManyToOne,
   Index,
 } from 'typeorm';
-import { Agent } from './Agent';
+import type { Agent } from './Agent';
 
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'paused' | 'cancelled';
 export type TaskType =
@@ -59,7 +59,7 @@ export class Task {
   @Column('uuid')
   workspaceId: string;
 
-  @ManyToOne(() => Agent, (agent) => agent.tasks, { onDelete: 'CASCADE' })
+  @ManyToOne('Agent', (agent: Agent) => agent.tasks, { onDelete: 'CASCADE' })
   agent: Agent;
 
   @Column('uuid')
@@ -74,7 +74,7 @@ export class Task {
   @Column('simple-json')
   input: Record<string, any>;
 
-  @Column({ default: 'pending' })
+  @Column({ type: 'text', default: 'pending' })
   status: TaskStatus;
 
   @Column('simple-json', { nullable: true })
@@ -89,19 +89,19 @@ export class Task {
   @Column('simple-json', { default: '[]' })
   history: TaskStep[];
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   startedAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   completedAt: Date | null;
 
   @Column('integer', { default: 0 })
   durationMs: number;
 
-  @Column({ default: 1 })
+  @Column('integer', { default: 1 })
   retryCount: number;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   parentTaskId: string | null;
 
   @CreateDateColumn()

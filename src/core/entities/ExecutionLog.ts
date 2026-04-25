@@ -40,7 +40,7 @@ export class ExecutionLog {
   @Column('text', { nullable: true })
   reasoning: string | null;
 
-  @Column({ nullable: true })
+  @Column('integer', { nullable: true })
   duration: number | null; // milliseconds
 
   @Column('text', { nullable: true })

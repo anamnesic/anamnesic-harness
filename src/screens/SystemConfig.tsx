@@ -7,6 +7,7 @@ import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
+import { ApiKeys } from './ApiKeys';
 
 const FLAG_LABELS: Record<string, string> = {
     enableStreaming: 'Streaming',
@@ -19,15 +20,18 @@ const FLAG_LABELS: Record<string, string> = {
 
 interface SettingsData { flags: Record<string, boolean> }
 interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number; platform: string; nodeVersion: string }
+interface Project { id: string; name: string }
 
 export function SystemConfig() {
     const { data: settings, loading: settingsLoading } = useApi<SettingsData>('/api/v1/settings');
     const { data: metrics, loading: metricsLoading } = useApi<MetricsData>('/api/v1/metrics');
+    const { data: projects } = useApi<Project[]>('/api/v1/projects');
     const { toast } = useToast();
 
     const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
     useEffect(() => {
         if (settings?.flags) {
@@ -152,6 +156,30 @@ export function SystemConfig() {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* API Keys */}
+            <div className="bento-card space-y-4">
+                <div>
+                    <span className="label-caps">Manage API Keys</span>
+                    <p className="text-xs text-text-dim mt-1">Select a project to manage its API keys</p>
+                </div>
+                <div>
+                    <label className="label-caps mb-1.5 block">Select Project</label>
+                    <select
+                        value={selectedProjectId ?? ''}
+                        onChange={e => setSelectedProjectId(e.target.value || null)}
+                        className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary transition-colors"
+                    >
+                        <option value="">— Choose a project —</option>
+                        {Array.isArray(projects) && projects.map((p: Project) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                </div>
+                {selectedProjectId && (
+                    <ApiKeys projectId={selectedProjectId} />
+                )}
             </div>
 
             {/* Action buttons */}

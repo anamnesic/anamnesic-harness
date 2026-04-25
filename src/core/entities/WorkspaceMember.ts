@@ -7,8 +7,8 @@ import {
   ManyToOne,
   Index,
 } from 'typeorm';
-import { User } from './User';
-import { Workspace } from './Workspace';
+import type { User } from './User';
+import type { Workspace } from './Workspace';
 
 export type WorkspaceRole = 'owner' | 'admin' | 'editor' | 'viewer';
 
@@ -18,7 +18,7 @@ export class WorkspaceMember {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Workspace, (workspace) => workspace.members, {
+  @ManyToOne('Workspace', (workspace: Workspace) => workspace.members, {
     onDelete: 'CASCADE',
   })
   workspace: Workspace;
@@ -26,7 +26,7 @@ export class WorkspaceMember {
   @Column('uuid')
   workspaceId: string;
 
-  @ManyToOne(() => User, (user) => user.workspaceMembers, {
+  @ManyToOne('User', (user: User) => user.workspaceMembers, {
     onDelete: 'CASCADE',
   })
   user: User;

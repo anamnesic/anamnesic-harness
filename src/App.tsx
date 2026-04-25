@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
   Shield,
+  ShieldCheck,
   Eye,
   History,
   Settings2,
@@ -13,6 +14,7 @@ import {
   Activity,
   Boxes,
   FolderKanban,
+  Bot,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -23,6 +25,9 @@ import { ControlCenter } from './screens/ControlCenter';
 import { SystemConfig } from './screens/SystemConfig';
 import { Workspaces } from './screens/Workspaces';
 import { Projects } from './screens/Projects';
+import { Agents } from './screens/Agents';
+import { Workflows } from './screens/Workflows';
+import { Security } from './screens/Security';
 
 const Header = ({ title, subtitle, onBack, rightElement }: {
   title: string;
@@ -64,13 +69,14 @@ const Header = ({ title, subtitle, onBack, rightElement }: {
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
   { id: 'control', label: 'Safety', icon: Shield },
-  { id: 'workspaces', label: 'Spaces', icon: Boxes },
+  { id: 'agents', label: 'Agents', icon: Bot },
   { id: 'projects', label: 'Projects', icon: FolderKanban },
+  { id: 'security', label: 'Audit', icon: ShieldCheck },
   { id: 'system', label: 'Core', icon: Settings2 },
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers';
+type SecondaryTabId = 'ledger' | 'observers' | 'workspaces' | 'workflows';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
@@ -118,8 +124,14 @@ function useScreenConfig(active: TabId, goHome: () => void) {
       return { title: 'Security', subtitle: 'Safety Guardrails', element: <ControlCenter />, onBack: goHome, rightElement: undefined };
     case 'workspaces':
       return { title: 'Workspaces', subtitle: 'Manage Workspaces', element: <Workspaces />, onBack: goHome, rightElement: undefined };
+    case 'agents':
+      return { title: 'Agents', subtitle: 'Agent Registry', element: <Agents />, onBack: goHome, rightElement: undefined };
+    case 'workflows':
+      return { title: 'Workflows', subtitle: 'Automation Pipelines', element: <Workflows />, onBack: goHome, rightElement: undefined };
     case 'projects':
       return { title: 'Projects', subtitle: 'Manage Projects', element: <Projects />, onBack: goHome, rightElement: undefined };
+    case 'security':
+      return { title: 'Security', subtitle: 'Vulnerability Audit', element: <Security />, onBack: goHome, rightElement: undefined };
     case 'system':
       return {
         title: 'Engine',

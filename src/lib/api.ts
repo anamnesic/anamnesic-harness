@@ -2,6 +2,18 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+class ApiError extends Error {
+    code: string;
+    details?: unknown;
+
+    constructor(code: string, message: string, details?: unknown) {
+        super(message);
+        this.code = code;
+        this.details = details;
+        Object.setPrototypeOf(this, ApiError.prototype);
+    }
+}
+
 export async function apiFetch<T = unknown>(
     path: string,
     init?: RequestInit,
@@ -12,7 +24,12 @@ export async function apiFetch<T = unknown>(
     });
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error((body as any).message || `HTTP ${res.status}`);
+        const error = (body as any).error || {};
+        throw new ApiError(
+            error.code || 'UNKNOWN_ERROR',
+            error.message || `HTTP ${res.status}`,
+            error.details
+        );
     }
     return res.json() as Promise<T>;
 }

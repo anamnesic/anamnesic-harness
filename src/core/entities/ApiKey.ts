@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, Index } from 'typeorm';
-import { Project } from './Project';
+import type { Project } from './Project';
 
 @Entity()
 @Index(['keyHash', 'project'])
@@ -7,7 +7,7 @@ export class ApiKey {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('text')
   name: string;
 
   @Column('varchar', { length: 255 })
@@ -16,10 +16,10 @@ export class ApiKey {
   @Column('varchar', { length: 100, nullable: true })
   lastUsed: string;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @ManyToOne(() => Project)
+  @ManyToOne('Project')
   project: Project;
 
   @CreateDateColumn()

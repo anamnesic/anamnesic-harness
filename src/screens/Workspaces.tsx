@@ -39,7 +39,13 @@ function StatusBadge({ status }: { status?: string }) {
 }
 
 export function Workspaces() {
-    const { data, loading, refetch } = useApi<Workspace[]>('/api/v1/workspaces');
+    interface ApiResponse<T> {
+        success: boolean;
+        data?: T;
+        timestamp: string;
+    }
+
+    const { data, loading, refetch } = useApi<ApiResponse<Workspace[]>>('/api/v1/workspaces');
     const { toast } = useToast();
 
     const [showModal, setShowModal] = useState(false);
@@ -79,7 +85,7 @@ export function Workspaces() {
         }
     }
 
-    const workspaces = data ?? [];
+    const workspaces = data?.data ?? [];
 
     return (
         <motion.div
