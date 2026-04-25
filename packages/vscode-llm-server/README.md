@@ -19,6 +19,7 @@ http://127.0.0.1:11434
 | `GET` | `/api/version` | Returns server version |
 | `GET` | `/api/tags` | Lists available VS Code LM models |
 | `GET` | `/v1/models` | OpenAI-compatible model list |
+| `POST` | `/v1/messages` | Anthropic-compatible messages API (Claude Code) |
 | `POST` | `/api/generate` | Generate a completion (streaming + non-streaming) |
 | `POST` | `/api/chat` | Chat completion (streaming + non-streaming) |
 | `POST` | `/api/show` | Show model details |
@@ -56,6 +57,26 @@ curl http://127.0.0.1:11434/api/generate -d '{
   "stream": false
 }'
 ```
+
+## Claude Code Compatibility
+
+The server now exposes an Anthropic-compatible `POST /v1/messages` endpoint,
+so Claude Code can call it as a drop-in base URL.
+
+Example request:
+
+```bash
+curl http://127.0.0.1:11434/v1/messages -d '{
+  "model": "claude-sonnet-4.5:copilot",
+  "max_tokens": 512,
+  "messages": [
+    {"role": "user", "content": "Say hello in one short sentence."}
+  ]
+}'
+```
+
+Configure Claude Code to use this local server by setting your Anthropic base URL
+to `http://127.0.0.1:11434` (and keep any API key value required by your client).
 
 ## Settings
 

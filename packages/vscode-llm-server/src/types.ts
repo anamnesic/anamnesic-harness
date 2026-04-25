@@ -143,3 +143,42 @@ export interface OllamaErrorResponse {
 export interface OllamaVersionResponse {
     version: string;
 }
+
+// Anthropic-compatible API types (Claude Code)
+
+export interface AnthropicMessageTextBlock {
+    type: 'text';
+    text: string;
+}
+
+export interface AnthropicMessageContentBlock {
+    type: string;
+    text?: string;
+}
+
+export interface AnthropicMessageInput {
+    role: 'user' | 'assistant';
+    content: string | AnthropicMessageContentBlock[];
+}
+
+export interface AnthropicMessagesRequest {
+    model: string;
+    messages: AnthropicMessageInput[];
+    system?: string | AnthropicMessageContentBlock[];
+    max_tokens?: number;
+    stream?: boolean;
+}
+
+export interface AnthropicMessagesResponse {
+    id: string;
+    type: 'message';
+    role: 'assistant';
+    model: string;
+    content: AnthropicMessageTextBlock[];
+    stop_reason: 'end_turn';
+    stop_sequence: null;
+    usage: {
+        input_tokens: number;
+        output_tokens: number;
+    };
+}

@@ -12,6 +12,10 @@ import {
     ROUTER_MODEL_FAMILY,
 } from './modelBridge';
 import type {
+    AnthropicMessageContentBlock,
+    AnthropicMessageInput,
+    AnthropicMessagesRequest,
+    AnthropicMessagesResponse,
     OllamaChatChunk,
     OllamaChatMessage,
     OllamaChatRequest,
@@ -54,6 +58,44 @@ function sendError(res: http.ServerResponse, status: number, message: string): v
 
 function nowNano(): number {
     return Number(process.hrtime.bigint());
+}
+
+function asAnthropicText(content: string | AnthropicMessageContentBlock[] | undefined): string {
+    if (!content) return '';
+    if (typeof content === 'string') return content;
+    return content
+        .filter((part) => part && typeof part === 'object' && part.type === 'text')
+        .map((part) => part.text ?? '')
+        .join('');
+}
+
+function toOllamaFromAnthropic(
+    system: AnthropicMessagesRequest['system'],
+    messages: AnthropicMessageInput[],
+): OllamaChatMessage[] {
+    const out: OllamaChatMessage[] = [];
+
+    const systemText = asAnthropicText(system);
+    if (systemText.trim()) {
+        out.push({ role: 'system', content: systemText });
+    }
+
+    for (const msg of messages) {
+        const text = asAnthropicText(msg.content);
+        if (!text.trim()) continue;
+        out.push({ role: msg.role, content: text });
+    }
+
+    return out;
+}
+
+function sseWrite(res: http.ServerResponse, event: string, data: unknown): void {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function makeMessageId(): string {
+    return `msg_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 }
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
@@ -338,6 +380,177 @@ async function handleChat(
     }
 }
 
+async function handleAnthropicMessages(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    output: vscode.OutputChannel,
+): Promise<void> {
+    const raw = await readBody(req);
+    let payload: AnthropicMessagesRequest;
+    try {
+        payload = JSON.parse(raw);
+    } catch {
+        sendError(res, 400, 'invalid JSON in request body');
+        return;
+    }
+
+    if (!payload.model || !Array.isArray(payload.messages) || payload.messages.length === 0) {
+        sendError(res, 400, 'model and non-empty messages are required');
+        return;
+    }
+
+    const ollamaMessages = toOllamaFromAnthropic(payload.system, payload.messages);
+    if (ollamaMessages.length === 0) {
+        sendError(res, 400, 'no valid text content in messages');
+        return;
+    }
+
+    const stream = payload.stream === true;
+    const cts = new vscode.CancellationTokenSource();
+    const startNs = nowNano();
+
+    let model: vscode.LanguageModelChat;
+    let messages: vscode.LanguageModelChatMessage[];
+
+    try {
+        if (isAutoModel(payload.model)) {
+            const autoResult = await routeAuto(ollamaMessages, cts.token);
+            model = autoResult.model;
+            messages = autoResult.messages;
+            output.appendLine(`[/v1/messages] auto-routed to '${autoResult.selectedModelName}'`);
+        } else {
+            const found = await findModel(payload.model);
+            if (!found) {
+                sendError(res, 404, `model '${payload.model}' not found`);
+                cts.dispose();
+                return;
+            }
+            model = found;
+            messages = toVSCodeMessages(ollamaMessages);
+        }
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        output.appendLine(`[/v1/messages] Routing error: ${msg}`);
+        sendError(res, 500, `routing failed: ${msg}`);
+        cts.dispose();
+        return;
+    }
+
+    if (messages.length === 0) {
+        sendError(res, 400, 'no valid messages after filtering');
+        cts.dispose();
+        return;
+    }
+
+    const promptChars = countMessageChars(ollamaMessages);
+    const responseModelName = modelToOllamaName(model);
+    const responseId = makeMessageId();
+
+    try {
+        const lmResponse = await model.sendRequest(
+            messages,
+            { justification: 'VS Code LLM Server /v1/messages request' },
+            cts.token,
+        );
+
+        if (stream) {
+            res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                Connection: 'keep-alive',
+            });
+
+            sseWrite(res, 'message_start', {
+                type: 'message_start',
+                message: {
+                    id: responseId,
+                    type: 'message',
+                    role: 'assistant',
+                    model: responseModelName,
+                    content: [],
+                    stop_reason: null,
+                    stop_sequence: null,
+                    usage: {
+                        input_tokens: promptChars,
+                        output_tokens: 0,
+                    },
+                },
+            });
+            sseWrite(res, 'content_block_start', {
+                type: 'content_block_start',
+                index: 0,
+                content_block: { type: 'text', text: '' },
+            });
+
+            let outputChars = 0;
+            for await (const text of lmResponse.text) {
+                outputChars += text.length;
+                sseWrite(res, 'content_block_delta', {
+                    type: 'content_block_delta',
+                    index: 0,
+                    delta: {
+                        type: 'text_delta',
+                        text,
+                    },
+                });
+            }
+
+            sseWrite(res, 'content_block_stop', {
+                type: 'content_block_stop',
+                index: 0,
+            });
+
+            sseWrite(res, 'message_delta', {
+                type: 'message_delta',
+                delta: {
+                    stop_reason: 'end_turn',
+                    stop_sequence: null,
+                },
+                usage: {
+                    output_tokens: Math.max(1, Math.ceil(outputChars / 4)),
+                },
+            });
+
+            sseWrite(res, 'message_stop', { type: 'message_stop' });
+            res.end();
+            return;
+        }
+
+        let fullText = '';
+        for await (const text of lmResponse.text) {
+            fullText += text;
+        }
+
+        const totalNs = nowNano() - startNs;
+        const body: AnthropicMessagesResponse = {
+            id: responseId,
+            type: 'message',
+            role: 'assistant',
+            model: responseModelName,
+            content: [{ type: 'text', text: fullText }],
+            stop_reason: 'end_turn',
+            stop_sequence: null,
+            usage: {
+                input_tokens: promptChars,
+                output_tokens: Math.max(1, Math.ceil(fullText.length / 4)),
+            },
+        };
+
+        void totalNs;
+        sendJson(res, 200, body);
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        output.appendLine(`[/v1/messages] Error: ${message}`);
+        if (!res.headersSent) {
+            sendError(res, 500, `chat failed: ${message}`);
+        } else {
+            res.end();
+        }
+    } finally {
+        cts.dispose();
+    }
+}
+
 async function handleShow(
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -481,6 +694,12 @@ export function createServer(output: vscode.OutputChannel): http.Server {
 
             if (method === 'POST' && url === '/api/chat') {
                 await handleChat(req, res, output);
+                return;
+            }
+
+            // Anthropic-compatible messages endpoint (Claude Code)
+            if (method === 'POST' && url === '/v1/messages') {
+                await handleAnthropicMessages(req, res, output);
                 return;
             }
 
