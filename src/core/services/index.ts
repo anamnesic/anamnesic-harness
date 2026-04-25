@@ -66,9 +66,9 @@ export type { StreamConfig, StreamMessage } from './StreamingChatService';
 
 // Persistence & Sync Services
 export { PersistentEventStore, EventEntity } from './PersistentEventStore';
-export type {} from './PersistentEventStore';
+export type { } from './PersistentEventStore';
 
-export { PersistentEventBus, getPersistentEventBus } from '../events/PersistentEventBus';
+export { PersistentEventBus } from '../events/PersistentEventBus';
 export { ChatSyncService } from './ChatSyncService';
 export type { SyncStatus } from './ChatSyncService';
 

@@ -105,3 +105,21 @@ export {
     type ProviderConfig,
 } from './providers/multi-provider';
 
+// Validation schemas
+export {
+    signupSchema,
+    loginSchema,
+    createWorkspaceSchema,
+    updateWorkspaceSchema,
+    createProjectSchema,
+    updateProjectSchema,
+    createContextEntrySchema,
+    updateContextEntrySchema,
+    createDecisionSchema,
+    updateDecisionSchema,
+    createApiKeySchema,
+    type SignupInput,
+    type LoginInput,
+    type CreateWorkspaceInput,
+    type CreateProjectInput,
+} from './validation/schemas';
