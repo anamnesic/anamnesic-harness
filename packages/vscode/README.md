@@ -1,4 +1,4 @@
-# ThinkCoffee VS Code Extension
+# Kairos VS Code Extension
 
 VS Code extension for autonomous workflows, defensive analysis, and orchestrator integration.
 
@@ -44,67 +44,67 @@ Install the generated `.vsix` from VS Code Extensions sidebar ("Install from VSI
 
 Working commands (implemented handlers):
 
-- `ThinkCoffee: Advanced Code Generation`
-- `ThinkCoffee: AI-Powered Code Debugging`
-- `ThinkCoffee: Intelligent Code Refactoring`
-- `ThinkCoffee: Comprehensive Security Scan`
-- `ThinkCoffee: Attack Simulation (Controlled)`
-- `ThinkCoffee: Zero-Day Vulnerability Discovery`
-- `ThinkCoffee: AI Image Analysis`
-- `ThinkCoffee: Diagram Interpretation`
-- `ThinkCoffee: Knowledge Synthesis`
-- `ThinkCoffee: Multi-Step Problem Solving`
-- `ThinkCoffee: Adaptive Deep Reasoning`
-- `ThinkCoffee: Create Complex Workflow`
-- `ThinkCoffee: Execute Autonomous Workflow`
-- `ThinkCoffee: Orchestrator Run Status`
-- `ThinkCoffee: Orchestrator Checkpoints`
-- `ThinkCoffee: Pause Orchestrator Run`
-- `ThinkCoffee: Resume Orchestrator Run`
-- `ThinkCoffee: Select Orchestrator Run`
-- `ThinkCoffee: Run Current Phase (Start Agents)` (PM/delegation command; not shown in chat title actions)
-- `ThinkCoffee: Stop All Agents`
-- `ThinkCoffee: Invoke Agent`
+- `Kairos: Advanced Code Generation`
+- `Kairos: AI-Powered Code Debugging`
+- `Kairos: Intelligent Code Refactoring`
+- `Kairos: Comprehensive Security Scan`
+- `Kairos: Attack Simulation (Controlled)`
+- `Kairos: Zero-Day Vulnerability Discovery`
+- `Kairos: AI Image Analysis`
+- `Kairos: Diagram Interpretation`
+- `Kairos: Knowledge Synthesis`
+- `Kairos: Multi-Step Problem Solving`
+- `Kairos: Adaptive Deep Reasoning`
+- `Kairos: Create Complex Workflow`
+- `Kairos: Execute Autonomous Workflow`
+- `Kairos: Orchestrator Run Status`
+- `Kairos: Orchestrator Checkpoints`
+- `Kairos: Pause Orchestrator Run`
+- `Kairos: Resume Orchestrator Run`
+- `Kairos: Select Orchestrator Run`
+- `Kairos: Run Current Phase (Start Agents)` (PM/delegation command; not shown in chat title actions)
+- `Kairos: Stop All Agents`
+- `Kairos: Invoke Agent`
 
 PM-delegated commands (formerly placeholders, now functional):
 
-- `ThinkCoffee: Refresh Projects`
-- `ThinkCoffee: Create Project`
-- `ThinkCoffee: Add Context Entry`
-- `ThinkCoffee: Add File as Context`
-- `ThinkCoffee: Add Selection as Context`
-- `ThinkCoffee: Add Workspace Structure as Context`
-- `ThinkCoffee: Record Decision`
-- `ThinkCoffee: Sync to AI Tools`
-- `ThinkCoffee: Export Context`
-- `ThinkCoffee: Open Context File`
-- `ThinkCoffee: View Context Entry`
-- `ThinkCoffee: Open AI Chat`
-- `ThinkCoffee: Create Pipeline`
-- `ThinkCoffee: Approve Phase`
-- `ThinkCoffee: Reject Phase`
-- `ThinkCoffee: View Task Output`
-- `ThinkCoffee: Refresh Pipeline`
-- `ThinkCoffee: Open Other Project`
-- `ThinkCoffee: Configure Agent Models`
-- `ThinkCoffee: View Agent Models`
-- `ThinkCoffee: Toggle Dry-Run Mode`
-- `ThinkCoffee: Open Safety Net Panel`
-- `ThinkCoffee: Rollback Phase`
-- `ThinkCoffee: List Available Snapshots`
-- `ThinkCoffee: Cleanup Old Snapshots`
+- `Kairos: Refresh Projects`
+- `Kairos: Create Project`
+- `Kairos: Add Context Entry`
+- `Kairos: Add File as Context`
+- `Kairos: Add Selection as Context`
+- `Kairos: Add Workspace Structure as Context`
+- `Kairos: Record Decision`
+- `Kairos: Sync to AI Tools`
+- `Kairos: Export Context`
+- `Kairos: Open Context File`
+- `Kairos: View Context Entry`
+- `Kairos: Open AI Chat`
+- `Kairos: Create Pipeline`
+- `Kairos: Approve Phase`
+- `Kairos: Reject Phase`
+- `Kairos: View Task Output`
+- `Kairos: Refresh Pipeline`
+- `Kairos: Open Other Project`
+- `Kairos: Configure Agent Models`
+- `Kairos: View Agent Models`
+- `Kairos: Toggle Dry-Run Mode`
+- `Kairos: Open Safety Net Panel`
+- `Kairos: Rollback Phase`
+- `Kairos: List Available Snapshots`
+- `Kairos: Cleanup Old Snapshots`
 
 ## Orchestrator Configuration
 
-Remote orchestrator commands are enabled when `thinkcoffee.orchestrator.baseUrl` is set.
+Remote orchestrator commands are enabled when `Kairos.orchestrator.baseUrl` is set.
 
 Supported settings:
 
-- `thinkcoffee.orchestrator.baseUrl`
-- `thinkcoffee.orchestrator.token`
-- `thinkcoffee.orchestrator.workspaceId`
+- `Kairos.orchestrator.baseUrl`
+- `Kairos.orchestrator.token`
+- `Kairos.orchestrator.workspaceId`
 
-Runtime also reads `thinkcoffee.orchestrator.timeoutMs` (default `30000`) if defined in user settings.
+Runtime also reads `Kairos.orchestrator.timeoutMs` (default `30000`) if defined in user settings.
 
 ## Data and State
 

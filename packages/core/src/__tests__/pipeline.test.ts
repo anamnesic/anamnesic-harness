@@ -11,7 +11,7 @@ vi.mock('os');
 describe('PipelineService', () => {
   let service: PipelineService;
   const mockProjectId = 'test-project-123';
-  const mockPipelinesDir = '/home/user/.thinkcoffee/pipelines/test-project-123';
+  const mockPipelinesDir = '/home/user/.Kairos/pipelines/test-project-123';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -112,7 +112,7 @@ describe('PipelineService', () => {
 
       expect(fs.writeFileSync).toHaveBeenCalled();
       const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      expect(writeCall[0]).toContain('.thinkcoffee/pipelines');
+      expect(writeCall[0]).toContain('.Kairos/pipelines');
       expect(writeCall[0]).toContain(`${mockProjectId}`);
     });
   });
@@ -263,7 +263,7 @@ describe('PipelineService', () => {
         service.startTask(mockProjectId, pipeline.id, taskId);
 
         const firstStart = pipeline.phases[0].tasks[0].startedAt;
-        
+
         vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(pipeline));
         const updated = service.startTask(mockProjectId, pipeline.id, taskId);
 
@@ -323,7 +323,7 @@ describe('PipelineService', () => {
       const taskId = pipeline.phases[0].tasks[0].id;
       pipeline.phases[0].status = 'awaiting-approval';
       pipeline.phases[0].tasks[0].status = 'completed';
-      
+
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(pipeline));
     });
@@ -373,7 +373,7 @@ describe('PipelineService', () => {
   describe('getStatusSummary', () => {
     it('should generate formatted status summary', () => {
       const pipeline = service.create(mockProjectId, 'Build API', '/workspace');
-      
+
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(pipeline));
 

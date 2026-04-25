@@ -1,7 +1,7 @@
-# Configuração de CI/CD para ThinkCoffee
+# Configuração de CI/CD para Kairos
 
 ## Objetivo
-Organizar o pipeline de CI/CD para o projeto ThinkCoffee, garantindo a automação de builds, testes e deploys.
+Organizar o pipeline de CI/CD para o projeto Kairos, garantindo a automação de builds, testes e deploys.
 
 ## Estrutura do Pipeline
 1. **Build**: Compilar o código e gerar a imagem Docker.
@@ -37,7 +37,7 @@ jobs:
         run: npm install
 
       - name: Build Docker image
-        run: docker build -t thinkcoffee:latest .
+        run: docker build -t Kairos:latest .
 
       - name: Run tests
         run: npm test

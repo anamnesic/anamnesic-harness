@@ -1,75 +1,72 @@
 # ==============================================================================
-# ThinkCoffee CLI - Dockerfile (V5 - Agent Safety Net)
+# Kairos CLI - Dockerfile
 # ==============================================================================
-# Build: docker build -f Dockerfile.cli -t thinkcoffee/cli:latest .
-# Run:   docker run -v $(pwd):/workspace thinkcoffee/cli export
-#        docker run -v $(pwd):/workspace thinkcoffee/cli rollback <pipelineId>
-#        docker run -v $(pwd):/workspace thinkcoffee/cli pipeline run --dry-run
+# Build: docker build -f docker/Dockerfile.cli -t kairos/cli:latest .
+# Run:   docker run -v $(pwd):/workspace kairos/cli export
+#        docker run -v $(pwd):/workspace kairos/cli rollback <pipelineId>
 # ==============================================================================
 
 FROM node:20-alpine AS builder
 
-ARG THINKCOFFEE_VERSION=dev
+ARG KAIROS_VERSION=dev
 
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY tsconfig.base.json ./
-COPY packages/core/package.json ./packages/core/
-COPY packages/cli/package.json ./packages/cli/
+COPY package.json pnpm-lock.yaml ./
+COPY tsconfig.json ./
 
 RUN pnpm install --frozen-lockfile
 
-COPY packages/core/src ./packages/core/src
-COPY packages/core/tsconfig.json ./packages/core/
-COPY packages/cli/src ./packages/cli/src
-COPY packages/cli/tsconfig.json ./packages/cli/
+COPY src ./src
 
-RUN pnpm build:core && pnpm build:cli
+RUN pnpm build
 
 # Write version file
-RUN echo "{\"version\":\"${THINKCOFFEE_VERSION}\",\"buildDate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
-    > /app/packages/cli/dist/version.json
+RUN echo "{\"version\":\"${KAIROS_VERSION}\",\"buildDate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" \
+    > /app/dist/interfaces/cli/version.json
 
 # --- Production ---------------------------------------------------------------
 FROM node:20-alpine AS production
 
-ARG THINKCOFFEE_VERSION=dev
+ARG KAIROS_VERSION=dev
 
-LABEL org.opencontainers.image.title="ThinkCoffee CLI"
-LABEL org.opencontainers.image.description="AI Context Management CLI (V5 Agent Safety Net)"
-LABEL org.opencontainers.image.version="${THINKCOFFEE_VERSION}"
+LABEL org.opencontainers.image.title="Kairos CLI"
+LABEL org.opencontainers.image.description="AI Agent CLI Interface"
+LABEL org.opencontainers.image.version="${KAIROS_VERSION}"
 
 RUN apk add --no-cache tini
 
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-RUN addgroup -S thinkcoffee && adduser -S thinkcoffee -G thinkcoffee
+RUN addgroup -S kairos && adduser -S kairos -G kairos
 
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/core/package.json ./packages/core/
-COPY packages/cli/package.json ./packages/cli/
+COPY package.json pnpm-lock.yaml ./
 
 RUN pnpm install --frozen-lockfile --prod && pnpm store prune
 
-COPY --from=builder /app/packages/core/dist ./packages/core/dist
-COPY --from=builder /app/packages/cli/dist ./packages/cli/dist
+COPY --from=builder /app/dist ./dist
 
-# Data dirs for snapshots + logs (CLI precisa para rollback)
+# Data dirs for snapshots + logs
 RUN mkdir -p /data/snapshots /data/logs && \
-    chown -R thinkcoffee:thinkcoffee /app /data && \
+    chown -R kairos:kairos /app /data && \
     chmod 750 /data /data/snapshots /data/logs
 
-USER thinkcoffee
+USER kairos
 
 ENV NODE_ENV=production \
-    THINKCOFFEE_DATA_DIR=/data \
-    THINKCOFFEE_SNAPSHOT_DIR=/data/snapshots \
-    THINKCOFFEE_LOG_DIR=/data/logs
+    KAIROS_DATA_DIR=/data \
+    KAIROS_SNAPSHOT_DIR=/data/snapshots \
+    KAIROS_LOG_DIR=/data/logs
+
+WORKDIR /workspace
+
+ENTRYPOINT ["/sbin/tini", "--", "node", "/app/dist/interfaces/cli/index.js"]
+CMD ["--help"]
+Kairos_LOG_DIR=/data/logs
 
 WORKDIR /workspace
 

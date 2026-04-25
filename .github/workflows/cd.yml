@@ -1,5 +1,5 @@
 # ==============================================================================
-# ThinkCoffee - CD Pipeline (V5 - Agent Safety Net)
+# Kairos - CD Pipeline (V5 - Agent Safety Net)
 # ==============================================================================
 # Pipeline unico de deploy (substitui deploy.yml duplicado).
 #
@@ -146,7 +146,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}${{ matrix.suffix }}:${{ needs.setup.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}${{ matrix.suffix }}:latest
           build-args: |
-            THINKCOFFEE_VERSION=${{ needs.setup.outputs.version }}
+            Kairos_VERSION=${{ needs.setup.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -191,7 +191,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
-            cd /opt/thinkcoffee
+            cd /opt/Kairos
 
             echo "=== [1/6] Pre-deploy checks ==="
             docker --version
@@ -206,23 +206,23 @@ jobs:
             fi
 
             echo "=== [3/6] Pull images ==="
-            export THINKCOFFEE_VERSION="${{ needs.setup.outputs.version }}"
+            export Kairos_VERSION="${{ needs.setup.outputs.version }}"
             docker compose pull
 
             echo "=== [4/6] Deploy ==="
             export NODE_ENV="${{ needs.setup.outputs.environment }}"
             export LOG_LEVEL="${{ steps.config.outputs.log_level }}"
-            export THINKCOFFEE_SNAPSHOT_RETENTION_DAYS="${{ steps.config.outputs.snapshot_retention }}"
-            export THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB="${{ steps.config.outputs.snapshot_max_mb }}"
-            export THINKCOFFEE_DRY_RUN_DEFAULT="${{ steps.config.outputs.dry_run_default }}"
-            export THINKCOFFEE_DIFF_PREVIEW_MODE="${{ steps.config.outputs.diff_preview }}"
-            export THINKCOFFEE_COMMAND_CONFIRMATION="${{ steps.config.outputs.cmd_confirm }}"
+            export Kairos_SNAPSHOT_RETENTION_DAYS="${{ steps.config.outputs.snapshot_retention }}"
+            export Kairos_SNAPSHOT_MAX_SIZE_MB="${{ steps.config.outputs.snapshot_max_mb }}"
+            export Kairos_DRY_RUN_DEFAULT="${{ steps.config.outputs.dry_run_default }}"
+            export Kairos_DIFF_PREVIEW_MODE="${{ steps.config.outputs.diff_preview }}"
+            export Kairos_COMMAND_CONFIRMATION="${{ steps.config.outputs.cmd_confirm }}"
             export NODE_OPTIONS="--max-old-space-size=${{ steps.config.outputs.node_mem }}"
             docker compose up -d --remove-orphans
 
             echo "=== [5/6] Validate Safety Net storage ==="
-            docker exec thinkcoffee-mcp ls -la /data/snapshots /data/logs || echo "Safety Net dirs will be created on first use"
-            docker exec thinkcoffee-mcp printenv | grep THINKCOFFEE_ || true
+            docker exec Kairos-mcp ls -la /data/snapshots /data/logs || echo "Safety Net dirs will be created on first use"
+            docker exec Kairos-mcp printenv | grep Kairos_ || true
 
             echo "=== [6/6] Health check ==="
             for i in $(seq 1 30); do
@@ -299,18 +299,18 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
-            cd /opt/thinkcoffee
+            cd /opt/Kairos
             echo "ROLLBACK TRIGGERED for deploy ${{ needs.setup.outputs.timestamp }}"
 
             BACKUP_TAG="pre-deploy-${{ needs.setup.outputs.timestamp }}"
-            BACKUP_FILE=$(ls -1t backups/thinkcoffee_${BACKUP_TAG}*.tar.gz 2>/dev/null | head -1)
+            BACKUP_FILE=$(ls -1t backups/Kairos_${BACKUP_TAG}*.tar.gz 2>/dev/null | head -1)
 
             if [[ -n "$BACKUP_FILE" ]]; then
               echo "Rolling back using: $BACKUP_FILE"
               ./scripts/restore.sh "$BACKUP_FILE" <<< "yes"
             else
               echo "No matching backup -- rolling back to latest"
-              LATEST=$(ls -1t backups/thinkcoffee_*.tar.gz 2>/dev/null | head -1)
+              LATEST=$(ls -1t backups/Kairos_*.tar.gz 2>/dev/null | head -1)
               if [[ -n "$LATEST" ]]; then
                 ./scripts/restore.sh "$LATEST" <<< "yes"
               else
@@ -352,6 +352,6 @@ jobs:
             fi
             curl -sf -X POST "${{ secrets.SLACK_WEBHOOK }}" \
               -H "Content-Type: application/json" \
-              -d "{\"text\":\":${STATUS_EMOJI}: ThinkCoffee Deploy | Env: $ENV | Ver: $VER | Deploy: $DEPLOY_STATUS | Verify: $VERIFY_STATUS\"}" \
+              -d "{\"text\":\":${STATUS_EMOJI}: Kairos Deploy | Env: $ENV | Ver: $VER | Deploy: $DEPLOY_STATUS | Verify: $VERIFY_STATUS\"}" \
               || echo "Slack notification failed"
           fi

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AVAILABLE_MODELS, type CostMultiplier } from '@thinkcoffee/core';
+import { AVAILABLE_MODELS, type CostMultiplier } from '@Kairos/core';
 
 // ─── Types ───────────────────────────────────────────────────
 

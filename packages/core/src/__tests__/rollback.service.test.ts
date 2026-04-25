@@ -12,8 +12,8 @@ describe('RollbackService', () => {
   let rollbackService: RollbackService;
 
   beforeEach(async () => {
-    snapshotsDir = path.join(os.tmpdir(), `thinkcoffee-snapshots-${Date.now()}`);
-    workspaceDir = path.join(os.tmpdir(), `thinkcoffee-workspace-${Date.now()}`);
+    snapshotsDir = path.join(os.tmpdir(), `Kairos-snapshots-${Date.now()}`);
+    workspaceDir = path.join(os.tmpdir(), `Kairos-workspace-${Date.now()}`);
 
     await fs.mkdir(snapshotsDir, { recursive: true });
     await fs.mkdir(workspaceDir, { recursive: true });
@@ -264,7 +264,7 @@ describe('RollbackService', () => {
 
   describe('error handling', () => {
     it('should warn when file cannot be deleted', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
       await snapshotService.recordCreatedFile('pipeline-001', 0, 'analysis', 'nonexistent/file.ts');
 

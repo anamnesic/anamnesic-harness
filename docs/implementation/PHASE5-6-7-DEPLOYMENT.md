@@ -76,7 +76,7 @@
 // src/server.ts
 import express from 'express';
 import { createServer } from 'http';
-import { AdvancedFeaturesFactory } from '@thinkcoffee/core';
+import { AdvancedFeaturesFactory } from '@Kairos/core';
 
 const app = express();
 const httpServer = createServer(app);

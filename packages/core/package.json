@@ -1,7 +1,7 @@
 {
-  "name": "@thinkcoffee/core",
+  "name": "@Kairos/core",
   "version": "1.0.0",
-  "description": "Core library for ThinkCoffee - entities, services, and business logic",
+  "description": "Core library for Kairos - entities, services, and business logic",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

@@ -4,8 +4,8 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import * as http from 'http';
 import crypto from 'crypto';
-import { getDatabase, ChatHistoryService, ChatService, WebSocketServer } from '@thinkcoffee/core';
-import type { ChatMessage, SaveHistoryInput, HistoryFilter } from '@thinkcoffee/core';
+import { getDatabase, ChatHistoryService, ChatService, WebSocketServer } from '@Kairos/core';
+import type { ChatMessage, SaveHistoryInput, HistoryFilter } from '@Kairos/core';
 import { requireAuth, optionalAuth, getAuthContext } from './auth-middleware';
 
 const app = new Hono();
@@ -36,7 +36,7 @@ function getChatService(channel: string): ChatService {
 app.get('/health', (c) => {
   return c.json({
     status: 'ok',
-    service: 'thinkcoffee-api',
+    service: 'Kairos-api',
     timestamp: new Date().toISOString(),
     dbConnected: chatHistoryService !== null,
   });
@@ -519,7 +519,7 @@ import { createServicesEndpoints } from './servicesEndpoints';
 import {
   AdvancedFeaturesFactory,
   type AdvancedFeaturesConfig,
-} from '@thinkcoffee/core';
+} from '@Kairos/core';
 
 const db = getDatabase();
 const syncApp = createSyncEndpoints({ db });

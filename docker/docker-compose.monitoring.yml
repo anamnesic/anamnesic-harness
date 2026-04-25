@@ -1,5 +1,5 @@
 # ==============================================================================
-# ThinkCoffee - Docker Compose com Monitoramento
+# Kairos - Docker Compose com Monitoramento
 # ==============================================================================
 # Uso:
 #   docker compose -f docker-compose.monitoring.yml up -d
@@ -10,35 +10,35 @@ version: "3.9"
 services:
   # --- MCP Server -------------------------------------------------------------
   mcp-server:
-    image: thinkcoffee/mcp-server:${THINKCOFFEE_VERSION:-latest}
+    image: Kairos/mcp-server:${Kairos_VERSION:-latest}
     build:
       context: .
       dockerfile: Dockerfile
       target: production
-    container_name: thinkcoffee-mcp
+    container_name: Kairos-mcp
     restart: unless-stopped
     env_file:
       - .env
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      THINKCOFFEE_DB_PATH: /data/data.sqlite
-      THINKCOFFEE_DATA_DIR: /data
-      THINKCOFFEE_SNAPSHOT_DIR: /data/snapshots
-      THINKCOFFEE_LOG_DIR: /data/logs
+      Kairos_DB_PATH: /data/data.sqlite
+      Kairos_DATA_DIR: /data
+      Kairos_SNAPSHOT_DIR: /data/snapshots
+      Kairos_LOG_DIR: /data/logs
       MCP_PORT: 3000
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
-      - thinkcoffee_data:/data
+      - Kairos_data:/data
     ports:
       - "${MCP_PORT:-3000}:3000"
     healthcheck:
-      test: ["CMD", "node", "-e", "const fs=require('fs');try{fs.accessSync('/data',fs.constants.W_OK);process.exit(0)}catch(e){process.exit(1)}"]
+      test: [ "CMD", "node", "-e", "const fs=require('fs');try{fs.accessSync('/data',fs.constants.W_OK);process.exit(0)}catch(e){process.exit(1)}" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
     networks:
-      - thinkcoffee-network
+      - Kairos-network
     logging:
       driver: "json-file"
       options:
@@ -52,7 +52,7 @@ services:
   # --- Prometheus -------------------------------------------------------------
   prometheus:
     image: prom/prometheus:v2.48.0
-    container_name: thinkcoffee-prometheus
+    container_name: Kairos-prometheus
     restart: unless-stopped
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -66,18 +66,18 @@ services:
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     networks:
-      - thinkcoffee-network
+      - Kairos-network
     profiles:
       - monitoring
 
   # --- Grafana ----------------------------------------------------------------
   grafana:
     image: grafana/grafana:10.2.2
-    container_name: thinkcoffee-grafana
+    container_name: Kairos-grafana
     restart: unless-stopped
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-thinkcoffee}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-Kairos}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -86,7 +86,7 @@ services:
     ports:
       - "${GRAFANA_PORT:-3001}:3000"
     networks:
-      - thinkcoffee-network
+      - Kairos-network
     depends_on:
       - prometheus
     profiles:
@@ -95,7 +95,7 @@ services:
   # --- Alertmanager -----------------------------------------------------------
   alertmanager:
     image: prom/alertmanager:v0.26.0
-    container_name: thinkcoffee-alertmanager
+    container_name: Kairos-alertmanager
     restart: unless-stopped
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
@@ -106,12 +106,12 @@ services:
     ports:
       - "${ALERTMANAGER_PORT:-9093}:9093"
     networks:
-      - thinkcoffee-network
+      - Kairos-network
     profiles:
       - monitoring
 
 volumes:
-  thinkcoffee_data:
+  Kairos_data:
     driver: local
   prometheus_data:
     driver: local
@@ -121,5 +121,5 @@ volumes:
     driver: local
 
 networks:
-  thinkcoffee-network:
+  Kairos-network:
     driver: bridge

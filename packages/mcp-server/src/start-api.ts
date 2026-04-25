@@ -10,9 +10,9 @@ import {
   WorkspaceService,
   ProjectService,
   OrchestratorRuntimeService,
-} from '@thinkcoffee/core';
-import type { ApiResponse } from '@thinkcoffee/core';
-import { signupSchema, loginSchema, createWorkspaceSchema } from '@thinkcoffee/core';
+} from '@Kairos/core';
+import type { ApiResponse } from '@Kairos/core';
+import { signupSchema, loginSchema, createWorkspaceSchema } from '@Kairos/core';
 import { z } from 'zod';
 
 const app: Application = express();
@@ -85,7 +85,7 @@ const authenticate = async (req: RequestWithUser, res: Response, next: NextFunct
 
     const token = authHeader.substring(7);
     const user = await authService.validateToken(token);
-    
+
     if (!user) {
       return res.status(401).json(errorResponse('UNAUTHORIZED', 'Invalid or expired token'));
     }
@@ -106,7 +106,7 @@ const authenticate = async (req: RequestWithUser, res: Response, next: NextFunct
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
-    service: 'ThinkCoffee API',
+    service: 'Kairos API',
     version: API_VERSION,
     timestamp: new Date().toISOString(),
   });
@@ -451,8 +451,8 @@ app.use((error: any, _req: express.Request, res: Response, _next: NextFunction) 
 
 async function startServer() {
   try {
-    console.log('Initializing ThinkCoffee API...');
-    
+    console.log('Initializing Kairos API...');
+
     // Initialize database
     const db = await getDatabase();
     console.log('✓ Database connected');
@@ -466,7 +466,7 @@ async function startServer() {
 
     // Start server
     app.listen(PORT, () => {
-      console.log(`\n✓ ThinkCoffee API Server running at http://localhost:${PORT}`);
+      console.log(`\n✓ Kairos API Server running at http://localhost:${PORT}`);
       console.log(`  Base URL: ${BASE_URL}`);
       console.log(`  Health check: GET http://localhost:${PORT}/health`);
       console.log(`  API Docs: coming soon...\n`);

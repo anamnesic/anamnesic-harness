@@ -1,4 +1,4 @@
-# 🚀 ThinkCoffee - Getting Started Guide
+# 🚀 Kairos - Getting Started Guide
 
 ## Quick Start
 
@@ -12,8 +12,8 @@
 
 ```bash
 # Clone repository
-git clone https://github.com/thinkcoffee/thinkcoffee.git
-cd thinkcoffee
+git clone https://github.com/Kairos/Kairos.git
+cd Kairos
 
 # Install dependencies
 pnpm install
@@ -27,7 +27,7 @@ cp .env.example .env.local
 
 ```bash
 # Database
-DATABASE_URL=sqlite:./thinkcoffee.db
+DATABASE_URL=sqlite:./Kairos.db
 
 # JWT
 JWT_SECRET=your-super-secret-key-change-this

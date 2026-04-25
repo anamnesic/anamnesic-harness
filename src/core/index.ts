@@ -1,0 +1,81 @@
+/**
+ * Kairos Core
+ *
+ * Re-exports all modules for use by interfaces (api, cli, dashboard).
+ */
+
+// Database & Storage
+export { getDatabase, DataSource } from './database';
+export * from './export';
+
+// Services
+export * from './services/ActionLogService';
+export * from './services/SnapshotService';
+export * from './services/RollbackService';
+export * from '../utils/safePath';
+export * from './chat';
+export * from './services';
+
+// Events (now in src/observation)
+export * from '../observation';
+
+// Pipeline
+export * from './pipeline';
+
+// Agent Config
+export * from './agent-config';
+
+// Agent System
+export * as AgentsV2 from './agents';
+
+export {
+    type IAgent,
+    type IAgentContext,
+    type IAgentRegistry,
+    type AgentMetadata,
+    type AgentCapability,
+    type AgentResult,
+    BaseAgent,
+    AgentRegistry,
+    AgentContextBuilder,
+    getAgentRegistry,
+    setAgentRegistry,
+    type IAgentLifecycleHook,
+    type IAgentLifecycleManager,
+    type LifecycleEvent,
+    type LifecyclePhase,
+    AgentLifecycleManager,
+    getLifecycleManager,
+} from './agents/contracts';
+
+export {
+    type AgentTool,
+    type ToolResult,
+    type ToolContext,
+    type IToolRegistry,
+    ToolBuilder,
+    ToolRegistry,
+    getToolRegistry,
+} from './agents/tools';
+
+export {
+    type AgentSettings,
+    type KairosConfig,
+    DEFAULT_AGENT_SETTINGS,
+    CONFIG_VERSION,
+} from './agents/config';
+
+// Pipeline System
+export * as PipelineV2 from './pipeline';
+
+export {
+    type PhaseConfig,
+    type PipelineTemplate,
+    type PipelineSettings,
+    type TaskDescription,
+    type PipelineEvent,
+    type PipelineEventType,
+} from './pipeline/contracts';
+
+// API Types
+export type { ApiResponse, PaginatedResponse, ApiErrorResponse, AuthenticatedRequest } from './types/api';

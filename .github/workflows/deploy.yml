@@ -1,5 +1,5 @@
 # ==============================================================================
-# ThinkCoffee - Deploy Pipeline (V3 - Agent Safety Net)
+# Kairos - Deploy Pipeline (V3 - Agent Safety Net)
 # ==============================================================================
 # Suporta staging e production com:
 #   - Backup automatico (production)
@@ -145,11 +145,11 @@ jobs:
           # Backup inclui: database SQLite + snapshots + action logs
           #
           # ssh ${{ secrets.DEPLOY_HOST_PROD }} << EOF
-          #   cd /opt/thinkcoffee
+          #   cd /opt/Kairos
           #   BACKUP_DIR="backups/${TIMESTAMP}"
           #   mkdir -p "\$BACKUP_DIR"
           #   docker run --rm \
-          #     -v thinkcoffee_data:/data \
+          #     -v Kairos_data:/data \
           #     -v "\$(pwd)/\$BACKUP_DIR":/backup \
           #     alpine sh -c "cp -r /data/. /backup/"
           #   echo "Backup created: \$BACKUP_DIR"
@@ -165,15 +165,15 @@ jobs:
 
           echo "Deploying to $ENV (v$VER)..."
           # ssh ${{ secrets.DEPLOY_HOST_PROD }} << EOF
-          #   cd /opt/thinkcoffee
-          #   export THINKCOFFEE_VERSION=$VER
+          #   cd /opt/Kairos
+          #   export Kairos_VERSION=$VER
           #   export NODE_ENV=$ENV
           #   export LOG_LEVEL=${{ steps.config.outputs.log_level }}
-          #   export THINKCOFFEE_SNAPSHOT_RETENTION_DAYS=${{ steps.config.outputs.snapshot_retention_days }}
-          #   export THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB=${{ steps.config.outputs.snapshot_max_size_mb }}
-          #   export THINKCOFFEE_DRY_RUN_DEFAULT=${{ steps.config.outputs.dry_run_default }}
-          #   export THINKCOFFEE_DIFF_PREVIEW_MODE=${{ steps.config.outputs.diff_preview_mode }}
-          #   export THINKCOFFEE_COMMAND_CONFIRMATION=${{ steps.config.outputs.command_confirmation }}
+          #   export Kairos_SNAPSHOT_RETENTION_DAYS=${{ steps.config.outputs.snapshot_retention_days }}
+          #   export Kairos_SNAPSHOT_MAX_SIZE_MB=${{ steps.config.outputs.snapshot_max_size_mb }}
+          #   export Kairos_DRY_RUN_DEFAULT=${{ steps.config.outputs.dry_run_default }}
+          #   export Kairos_DIFF_PREVIEW_MODE=${{ steps.config.outputs.diff_preview_mode }}
+          #   export Kairos_COMMAND_CONFIRMATION=${{ steps.config.outputs.command_confirmation }}
           #   docker compose -f ${{ steps.config.outputs.compose_file }} pull
           #   docker compose -f ${{ steps.config.outputs.compose_file }} up -d
           # EOF
@@ -205,15 +205,15 @@ jobs:
           echo "Validating snapshot storage..."
           # ssh ${{ secrets.DEPLOY_HOST_PROD }} << 'EOF'
           #   # Verificar que o volume de dados tem espaco para snapshots
-          #   USAGE=$(docker run --rm -v thinkcoffee_data:/data alpine df -h /data | tail -1)
+          #   USAGE=$(docker run --rm -v Kairos_data:/data alpine df -h /data | tail -1)
           #   echo "Data volume usage: $USAGE"
           #
           #   # Verificar que o diretorio de snapshots existe
-          #   docker run --rm -v thinkcoffee_data:/data alpine ls -la /data/snapshots/ 2>/dev/null \
+          #   docker run --rm -v Kairos_data:/data alpine ls -la /data/snapshots/ 2>/dev/null \
           #     || echo "Snapshots dir not yet created (first run)"
           #
           #   # Verificar que o diretorio de logs existe
-          #   docker run --rm -v thinkcoffee_data:/data alpine ls -la /data/logs/ 2>/dev/null \
+          #   docker run --rm -v Kairos_data:/data alpine ls -la /data/logs/ 2>/dev/null \
           #     || echo "Logs dir not yet created (first run)"
           # EOF
           echo "Snapshot storage validation completed"
@@ -224,7 +224,7 @@ jobs:
           echo "::error::Deploy failed -- triggering rollback"
           TIMESTAMP="${{ needs.validate.outputs.deploy_timestamp }}"
           # ssh ${{ secrets.DEPLOY_HOST_PROD }} << EOF
-          #   cd /opt/thinkcoffee
+          #   cd /opt/Kairos
           #   BACKUP_DIR="backups/${TIMESTAMP}"
           #   if [ -d "\$BACKUP_DIR" ]; then
           #     ./scripts/rollback.sh "\$BACKUP_DIR"
@@ -291,12 +291,12 @@ jobs:
           # curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
           #   -H "Content-Type: application/json" \
           #   -d "{
-          #     \"text\": \"ThinkCoffee Deploy\",
+          #     \"text\": \"Kairos Deploy\",
           #     \"blocks\": [{
           #       \"type\": \"section\",
           #       \"text\": {
           #         \"type\": \"mrkdwn\",
-          #         \"text\": \"*ThinkCoffee Deploy*\nEnv: $ENV\nVersion: $VER\nDeploy: $DEPLOY_STATUS\nVerify: $VERIFY_STATUS\"
+          #         \"text\": \"*Kairos Deploy*\nEnv: $ENV\nVersion: $VER\nDeploy: $DEPLOY_STATUS\nVerify: $VERIFY_STATUS\"
           #       }
           #     }]
           #   }"

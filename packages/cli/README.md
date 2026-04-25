@@ -1,6 +1,6 @@
-# @thinkcoffee/cli
+# @Kairos/cli
 
-Command-line interface for managing ThinkCoffee context. Binary: `think`.
+Command-line interface for managing Kairos context. Binary: `think`.
 
 ## Install
 
@@ -15,12 +15,12 @@ npm link  # makes `think` available globally
 ### Initialize
 
 ```bash
-think init                          # Init ThinkCoffee in current directory
+think init                          # Init Kairos in current directory
 think init -n "My Project"          # With custom name
 think init -d "Description here"    # With description
 ```
 
-Creates a `.thinkcoffee` marker file with the project ID.
+Creates a `.Kairos` marker file with the project ID.
 
 ### Projects
 
@@ -86,4 +86,4 @@ This writes:
 
 ## Data
 
-Stored in `~/.thinkcoffee/data.sqlite`. Shared with MCP server and VS Code extension.
+Stored in `~/.Kairos/data.sqlite`. Shared with MCP server and VS Code extension.

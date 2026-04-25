@@ -1,4 +1,4 @@
-# Relatório de Limpeza de Código Morto - Agentes (ThinkCoffee)
+# Relatório de Limpeza de Código Morto - Agentes (Kairos)
 
 ## Arquivos Removidos
 - `packages/core/src/agents/index.ts` (arquivo órfão, todos os exports eram de módulos inexistentes ou não utilizados)
@@ -18,4 +18,4 @@
 
 ---
 
-Dead Code Cleaner - ThinkCoffee
+Dead Code Cleaner - Kairos

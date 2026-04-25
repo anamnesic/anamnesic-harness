@@ -1,4 +1,4 @@
-# Reorganização do Projeto ThinkCoffee
+# Reorganização do Projeto Kairos
 
 ## Padrão Escolhido
 - **Padrão MVC (Model-View-Controller)** foi escolhido para organizar a estrutura do projeto.

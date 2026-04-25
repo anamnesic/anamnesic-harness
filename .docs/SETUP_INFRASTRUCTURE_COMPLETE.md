@@ -1,7 +1,7 @@
 ﻿# Setup Infrastructure - Guia Completo de Configuração
 
 ## Objetivo
-Configurar o pipeline CI/CD, containerização Docker, variáveis de ambiente e scripts de deployment para o projeto ThinkCoffee.
+Configurar o pipeline CI/CD, containerização Docker, variáveis de ambiente e scripts de deployment para o projeto Kairos.
 
 ---
 
@@ -36,7 +36,7 @@ Pipeline automatizado que valida qualidade, testa, constrói Docker images e faz
   7. Upload coverage para Codecov
 - **Duração**: ~5-8 minutos por versão de Node
 - **Env vars**:
-  - `DATABASE_URL`: postgres://thinkcoffee_user:testpass123@localhost:5432/thinkcoffee_test
+  - `DATABASE_URL`: postgres://Kairos_user:testpass123@localhost:5432/Kairos_test
   - `NODE_ENV`: test
 
 #### 1.3 Docker Build & Push
@@ -76,7 +76,7 @@ Pipeline automatizado que valida qualidade, testa, constrói Docker images e faz
 - **Duração**: ~5-15 minutos
 - **GitHub Secrets necessários**:
   - `DEPLOY_KEY` (SSH private key)
-  - `DEPLOY_HOST` (production.thinkcoffee.com)
+  - `DEPLOY_HOST` (production.Kairos.com)
   - `DEPLOY_USER` (deploy user)
   - `SLACK_WEBHOOK` (optional)
 
@@ -113,7 +113,7 @@ Serviços orquestrados:
 | redis | redis:7-alpine | 6379 | redis_data/ | redis-cli ping |
 | pgadmin | pgadmin4 | 5050 | none | (dev only) |
 
-**Redes**: `thinkcoffee-network` (bridge)
+**Redes**: `Kairos-network` (bridge)
 
 **Volumes Persistentes**:
 - `postgres_data/`: dados do banco
@@ -132,19 +132,19 @@ Todas as variáveis necessárias:
 ### Application Core
 ```env
 NODE_ENV=development|staging|production
-APP_NAME=thinkcoffee
+APP_NAME=Kairos
 APP_PORT=3000
 APP_URL=http://localhost:3000
 LOG_LEVEL=debug|info|warn|error
-DEBUG=thinkcoffee:*
+DEBUG=Kairos:*
 ```
 
 ### Database (PostgreSQL)
 ```env
 DB_HOST=postgres
 DB_PORT=5432
-DB_NAME=thinkcoffee
-DB_USER=thinkcoffee_user
+DB_NAME=Kairos
+DB_USER=Kairos_user
 DB_PASSWORD=secure_password_here
 DATABASE_URL=postgres://user:pass@host:5432/db
 DB_POOL_MIN=2
@@ -249,8 +249,8 @@ DEPLOY_KEY_PATH=~/.ssh/deploy_key
 **Uso**:
 ```bash
 export DEPLOY_USER=deploy
-export DEPLOY_HOST=production.thinkcoffee.com
-export DOCKER_IMAGE=ghcr.io/org/thinkcoffee:v1.0.0
+export DEPLOY_HOST=production.Kairos.com
+export DOCKER_IMAGE=ghcr.io/org/Kairos:v1.0.0
 bash scripts/deploy.sh
 ```
 
@@ -289,7 +289,7 @@ Para fazer deploy funcionar, configure os seguintes secrets no GitHub:
 | Secret | Value | Example |
 |--------|-------|---------|
 | DEPLOY_KEY | SSH private key (RSA) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
-| DEPLOY_HOST | Hostname do servidor | `production.thinkcoffee.com` |
+| DEPLOY_HOST | Hostname do servidor | `production.Kairos.com` |
 | DEPLOY_USER | SSH user | `deploy` |
 | DOCKER_USERNAME | (opcional) Docker Hub user | `your_username` |
 | DOCKER_PASSWORD | (opcional) Docker Hub token | `dckr_pat_...` |
@@ -377,8 +377,8 @@ nano .env
 
 #### Container won't start
 ```bash
-docker logs thinkcoffee-app
-docker inspect thinkcoffee-app
+docker logs Kairos-app
+docker inspect Kairos-app
 ```
 
 #### Port already in use
@@ -419,7 +419,7 @@ redis-cli -h localhost ping
 ssh deploy@host "curl http://localhost:3000/health"
 
 # Check container logs
-ssh deploy@host "docker logs thinkcoffee-app | tail -50"
+ssh deploy@host "docker logs Kairos-app | tail -50"
 
 # Monitor performance
 ssh deploy@host "docker stats"
@@ -428,10 +428,10 @@ ssh deploy@host "docker stats"
 ### Backup Management
 ```bash
 # List backups
-ls -la /opt/thinkcoffee/backups/
+ls -la /opt/Kairos/backups/
 
 # Manual backup
-cd /opt/thinkcoffee && cp -r . backups/manual_$(date +%s)/
+cd /opt/Kairos && cp -r . backups/manual_$(date +%s)/
 
 # Restore from backup
 cp backups/backup_time/.env .env

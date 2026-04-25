@@ -23,7 +23,7 @@ import {
   AgentModelConfig,
   AGENT_META,
   loadAgentConfig,
-} from '@thinkcoffee/core';
+} from '@Kairos/core';
 ```
 
 ### Depois (v2)
@@ -36,31 +36,31 @@ import {
   IAgentContext,
   IAgentRegistry,
   getAgentRegistry,
-} from '@thinkcoffee/core/agents/contracts';
+} from '@Kairos/core/agents/contracts';
 
 // Tools
 import {
   AgentTool,
   ToolBuilder,
   getToolRegistry,
-} from '@thinkcoffee/core/agents/tools';
+} from '@Kairos/core/agents/tools';
 
 // Config
 import {
   AgentModelConfig,
   QualityPreset,
-} from '@thinkcoffee/core/agents/config';
+} from '@Kairos/core/agents/config';
 
 // Pipeline
 import {
   Pipeline,
   AgentTask,
   PipelinePhase,
-} from '@thinkcoffee/core/pipeline/contracts';
+} from '@Kairos/core/pipeline/contracts';
 ```
 
 ### Compatibilidade
-Os imports antigos continuam funcionando via re-exports em `@thinkcoffee/core`.
+Os imports antigos continuam funcionando via re-exports em `@Kairos/core`.
 
 ---
 
@@ -83,8 +83,8 @@ function buildSystemPrompt(role: AgentRole, ctx: AgentContext): string {
 
 ### Depois (v2)
 ```typescript
-import { IAgent, BaseAgent, AgentMetadata, IAgentContext, AgentResult } from '@thinkcoffee/core';
-import { AgentTool } from '@thinkcoffee/core/agents/tools';
+import { IAgent, BaseAgent, AgentMetadata, IAgentContext, AgentResult } from '@Kairos/core';
+import { AgentTool } from '@Kairos/core/agents/tools';
 
 class MyCustomAgent extends BaseAgent {
   readonly metadata: AgentMetadata = {
@@ -127,7 +127,7 @@ ${context.task.description}
 }
 
 // Registro
-import { getAgentRegistry } from '@thinkcoffee/core';
+import { getAgentRegistry } from '@Kairos/core';
 getAgentRegistry().register(new MyCustomAgent());
 ```
 
@@ -155,7 +155,7 @@ function getAgentTools(workspace: string): vscode.LanguageModelChatTool[] {
 
 ### Depois (v2)
 ```typescript
-import { ToolBuilder, getToolRegistry } from '@thinkcoffee/core/agents/tools';
+import { ToolBuilder, getToolRegistry } from '@Kairos/core/agents/tools';
 
 // Usando builder
 const myTool = new ToolBuilder('my_tool')
@@ -198,7 +198,7 @@ import {
   IAgentLifecycleHook, 
   LifecycleEvent,
   getLifecycleManager,
-} from '@thinkcoffee/core/agents/contracts';
+} from '@Kairos/core/agents/contracts';
 
 // Hook de logging
 const loggingHook: IAgentLifecycleHook = {
@@ -233,7 +233,7 @@ getLifecycleManager().register(loggingHook);
 
 ### Listando Agentes
 ```typescript
-import { getAgentRegistry } from '@thinkcoffee/core';
+import { getAgentRegistry } from '@Kairos/core';
 
 const registry = getAgentRegistry();
 
@@ -281,7 +281,7 @@ const ctx = {
 
 ### Depois (v2)
 ```typescript
-import { AgentContextBuilder } from '@thinkcoffee/core/agents/contracts';
+import { AgentContextBuilder } from '@Kairos/core/agents/contracts';
 
 const ctx = new AgentContextBuilder()
   .setProject('proj-1', 'My Project')

@@ -1,5 +1,5 @@
 # ==============================================================================
-# ThinkCoffee - Release Pipeline (V5 - Agent Safety Net)
+# Kairos - Release Pipeline (V5 - Agent Safety Net)
 # ==============================================================================
 # Triggered by:
 #   - Git tag push (v*.*.*)
@@ -94,16 +94,16 @@ jobs:
         run: pnpm test:unit
         env:
           NODE_ENV: test
-          THINKCOFFEE_DB_PATH: ":memory:"
+          Kairos_DB_PATH: ":memory:"
 
       - name: Run Safety Net tests
         run: |
           pnpm exec vitest run \
-            packages/core/src/services/__tests__/ActionLogService.test.ts \
-            packages/core/src/services/__tests__/SnapshotService.test.ts \
-            packages/core/src/services/__tests__/RollbackService.test.ts \
-            packages/core/src/utils/__tests__/safe-path.test.ts \
-            packages/core/src/tools/__tests__/
+            src/core/services/__tests__/ActionLogService.test.ts \
+            src/core/services/__tests__/SnapshotService.test.ts \
+            src/core/services/__tests__/RollbackService.test.ts \
+            src/utils/__tests__/safe-path.test.ts \
+            src/core/tools/__tests__/
         env:
           NODE_ENV: test
 
@@ -114,9 +114,9 @@ jobs:
 
       - name: Verify build artifacts
         run: |
-          test -f packages/core/dist/index.js
-          test -f packages/cli/dist/index.js
-          test -f packages/mcp-server/dist/index.js
+          test -f dist/interfaces/api/start-api.js
+          test -f dist/interfaces/cli/index.js
+          test -f dist/interfaces/api/index.js
           echo "Build artifacts verified"
 
   # ============================================================================
@@ -145,16 +145,10 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
 
-      - name: Publish packages
+      - name: Publish package
         run: |
-          echo "Publishing @thinkcoffee/core..."
-          pnpm --filter @thinkcoffee/core publish --no-git-checks --access public
-
-          echo "Publishing @thinkcoffee/cli..."
-          pnpm --filter @thinkcoffee/cli publish --no-git-checks --access public
-
-          echo "Publishing @thinkcoffee/mcp-server..."
-          pnpm --filter @thinkcoffee/mcp-server publish --no-git-checks --access public
+          echo "Publishing kairos..."
+          pnpm publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -169,11 +163,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: mcp-server
-            dockerfile: Dockerfile
+          - target: api
+            dockerfile: Dockerfile.prod
             suffix: ""
           - target: cli
-            dockerfile: Dockerfile.cli
+            dockerfile: docker/Dockerfile.cli
             suffix: "-cli"
     steps:
       - uses: actions/checkout@v4
@@ -213,7 +207,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            THINKCOFFEE_VERSION=${{ needs.validate.outputs.version }}
+            KAIROS_VERSION=${{ needs.validate.outputs.version }}
 
   # ============================================================================
   # Job 4: VS Code Extension
@@ -222,7 +216,8 @@ jobs:
     name: Publish VS Code Extension
     runs-on: ubuntu-latest
     needs: validate
-    if: needs.validate.outputs.is_dry_run != 'true' && needs.validate.outputs.is_prerelease == 'false'
+    if: needs.validate.outputs.is_dry_run != 'true' &&
+      needs.validate.outputs.is_prerelease == 'false'
     steps:
       - uses: actions/checkout@v4
 
@@ -239,13 +234,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build extension
-        run: pnpm --filter thinkcoffee-vscode build
+        run: pnpm build:vscode
 
       - name: Typecheck extension
-        run: pnpm --filter thinkcoffee-vscode exec tsc --noEmit
+        run: pnpm typecheck
 
       - name: Package VSIX
-        run: pnpm --filter thinkcoffee-vscode package
+        run: pnpm package:vscode
 
       - name: Validate VSCE token
         run: |
@@ -255,9 +250,7 @@ jobs:
           fi
 
       - name: Publish to VS Code Marketplace
-        run: |
-          cd packages/vscode
-          pnpm exec vsce publish -p ${{ secrets.VSCE_PAT }}
+        run: pnpm exec vsce publish -p ${{ secrets.VSCE_PAT }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
@@ -265,7 +258,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vscode-extension
-          path: packages/vscode/*.vsix
+          path: "*.vsix"
           retention-days: 30
 
   # ============================================================================
@@ -274,7 +267,7 @@ jobs:
   github-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [validate, publish-npm, docker, vscode-extension]
+    needs: [ validate, publish-npm, docker, vscode-extension ]
     if: always() && startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
@@ -302,7 +295,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ThinkCoffee v${{ needs.validate.outputs.version }}
+          name: Kairos v${{ needs.validate.outputs.version }}
           prerelease: ${{ needs.validate.outputs.is_prerelease == 'true' }}
           generate_release_notes: true
           body_path: CHANGELOG_BODY.md

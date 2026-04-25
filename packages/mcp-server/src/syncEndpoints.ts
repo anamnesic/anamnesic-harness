@@ -9,10 +9,10 @@
 
 import { Hono } from 'hono';
 import { DataSource } from 'typeorm';
-import { 
-  SyncConfigService, 
+import {
+  SyncConfigService,
   AutoSyncService,
-} from '@thinkcoffee/core';
+} from '@Kairos/core';
 
 export interface SyncEndpointsConfig {
   db: DataSource;

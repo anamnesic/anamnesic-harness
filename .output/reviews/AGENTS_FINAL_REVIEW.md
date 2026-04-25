@@ -1,7 +1,7 @@
-# Revisão Final das Melhorias nos Agentes — ThinkCoffee VSCode Extension
+# Revisão Final das Melhorias nos Agentes — Kairos VSCode Extension
 
 ## Objetivo
-Revisar todo o código alterado/adicionado referente aos agentes da extensão VSCode do ThinkCoffee, avaliando padrões TypeScript, tipagem, segurança, performance, consistência, boas práticas VSCode, interfaces, robustez do orquestrador e sugerindo correções.
+Revisar todo o código alterado/adicionado referente aos agentes da extensão VSCode do Kairos, avaliando padrões TypeScript, tipagem, segurança, performance, consistência, boas práticas VSCode, interfaces, robustez do orquestrador e sugerindo correções.
 
 ## Itens Revisados
 - `packages/vscode/src/agents/AgentService.ts`
@@ -11,7 +11,7 @@ Revisar todo o código alterado/adicionado referente aos agentes da extensão VS
 ## Pontos de Melhoria e Correções Sugeridas
 
 ### 1. Consistência de Tipagem e Imports
-- **AgentRole**: Garantir que todos os usos estejam tipados corretamente e importados do local correto (`@thinkcoffee/core`).
+- **AgentRole**: Garantir que todos os usos estejam tipados corretamente e importados do local correto (`@Kairos/core`).
 - **Evitar casts desnecessários**: Substituir `as AgentRole` por tipagem direta sempre que possível.
 
 ### 2. Boas Práticas TypeScript

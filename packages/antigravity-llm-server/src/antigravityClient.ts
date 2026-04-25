@@ -123,7 +123,7 @@ export function findRunningLanguageServers(): LanguageServerInfo[] {
 
 /**
  * Picks the LS instance most likely to correspond to the given workspace folder.
- * The workspaceId baked into argv looks like `file_c_3A_GitHub_thinkcoffee`.
+ * The workspaceId baked into argv looks like `file_c_3A_GitHub_Kairos`.
  */
 export function findLanguageServerForWorkspace(
     workspaceFolderFsPath?: string,
@@ -170,7 +170,7 @@ export interface UnaryCallOptions<TReq = unknown> {
 export class LanguageServerClient {
     private resolvedHttpsPort?: number;
 
-    constructor(public readonly info: LanguageServerInfo) {}
+    constructor(public readonly info: LanguageServerInfo) { }
 
     static connect(workspaceFolderFsPath?: string): LanguageServerClient {
         const info = findLanguageServerForWorkspace(workspaceFolderFsPath);

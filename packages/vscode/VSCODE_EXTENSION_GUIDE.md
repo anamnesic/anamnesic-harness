@@ -2,7 +2,7 @@
 
 ## Overview
 
-The ThinkCoffee VS Code extension now includes advanced autonomous AI capabilities for:
+The Kairos VS Code extension now includes advanced autonomous AI capabilities for:
 
 - **Adaptive Reasoning & Extended Thinking**: Deep problem analysis with multi-step decomposition
 - **Advanced Code Generation**: Multi-language code generation with best practices
@@ -147,48 +147,48 @@ class AutonomousRuntime {
 
 | Command | Title | Feature |
 |---------|-------|---------|
-| `thinkcoffee.reasoning.adaptiveThink` | Raciocinio adaptativo e pensamento estendido | Deep reasoning with extended thinking |
-| `thinkcoffee.reasoning.multiStepSolve` | Resolucao de problemas multi-etapas | Multi-step problem decomposition |
+| `Kairos.reasoning.adaptiveThink` | Raciocinio adaptativo e pensamento estendido | Deep reasoning with extended thinking |
+| `Kairos.reasoning.multiStepSolve` | Resolucao de problemas multi-etapas | Multi-step problem decomposition |
 
 ### Code Commands
 
 | Command | Title | Feature |
 |---------|-------|---------|
-| `thinkcoffee.advancedSoftware.generateCode` | Geracao avancada de codigo | Generate production-ready code |
-| `thinkcoffee.advancedSoftware.debugCode` | Debug automatico de sistemas | Automatic debugging |
-| `thinkcoffee.advancedSoftware.refactorCode` | Refatoracao de codigo | Intelligent refactoring |
+| `Kairos.advancedSoftware.generateCode` | Geracao avancada de codigo | Generate production-ready code |
+| `Kairos.advancedSoftware.debugCode` | Debug automatico de sistemas | Automatic debugging |
+| `Kairos.advancedSoftware.refactorCode` | Refatoracao de codigo | Intelligent refactoring |
 
 ### Security Commands
 
 | Command | Title | Feature |
 |---------|-------|---------|
-| `thinkcoffee.advancedSecurity.scanVulnerabilities` | Descoberta de vulnerabilidades | Zero-day vulnerability discovery |
-| `thinkcoffee.advancedSecurity.systemAnalysis` | Analise de seguranca de sistemas | System security analysis |
-| `thinkcoffee.advancedSecurity.simulateAttack` | Simulacao de ataques multi-etapas | Multi-step attack simulation (controlled) |
-| `thinkcoffee.advancedSecurity.zeroDayDiscovery` | Descoberta de zero-days | Zero-day hypothesis generation |
-| `thinkcoffee.advancedSecurity.exploitChainAnalysis` | Encadeamento de exploracao | Exploit chain analysis |
+| `Kairos.advancedSecurity.scanVulnerabilities` | Descoberta de vulnerabilidades | Zero-day vulnerability discovery |
+| `Kairos.advancedSecurity.systemAnalysis` | Analise de seguranca de sistemas | System security analysis |
+| `Kairos.advancedSecurity.simulateAttack` | Simulacao de ataques multi-etapas | Multi-step attack simulation (controlled) |
+| `Kairos.advancedSecurity.zeroDayDiscovery` | Descoberta de zero-days | Zero-day hypothesis generation |
+| `Kairos.advancedSecurity.exploitChainAnalysis` | Encadeamento de exploracao | Exploit chain analysis |
 
 ### Multimodal Commands
 
 | Command | Title | Feature |
 |---------|-------|---------|
-| `thinkcoffee.advancedMultimodal.analyzeImage` | Analise multimodal de imagens | Image analysis and interpretation |
-| `thinkcoffee.advancedMultimodal.analyzeDiagram` | Interpretacao de graficos e diagramas | Diagram and graph interpretation |
-| `thinkcoffee.advancedMultimodal.synthesizeKnowledge` | Sintese de conhecimento interdisciplinar | Interdisciplinary knowledge synthesis |
+| `Kairos.advancedMultimodal.analyzeImage` | Analise multimodal de imagens | Image analysis and interpretation |
+| `Kairos.advancedMultimodal.analyzeDiagram` | Interpretacao de graficos e diagramas | Diagram and graph interpretation |
+| `Kairos.advancedMultimodal.synthesizeKnowledge` | Sintese de conhecimento interdisciplinar | Interdisciplinary knowledge synthesis |
 
 ### Workflow Commands
 
 | Command | Title | Feature |
 |---------|-------|---------|
-| `thinkcoffee.workflow.createComplex` | Planejamento de workflow complexo | Create complex workflows |
-| `thinkcoffee.workflow.executeAutonomous` | Operacao como agente autonomo continuo | Autonomous workflow execution |
+| `Kairos.workflow.createComplex` | Planejamento de workflow complexo | Create complex workflows |
+| `Kairos.workflow.executeAutonomous` | Operacao como agente autonomo continuo | Autonomous workflow execution |
 
 ### General Commands
 
 | Command | Title |
 |---------|-------|
-| `thinkcoffee.stopAgents` | Stop all running autonomous tasks |
-| `thinkcoffee.openChat` | Open chat/agent panel |
+| `Kairos.stopAgents` | Stop all running autonomous tasks |
+| `Kairos.openChat` | Open chat/agent panel |
 
 ## Usage Examples
 
@@ -334,10 +334,10 @@ Configure in VS Code settings.json:
 
 ```json
 {
-  "thinkcoffee.reasoning.deepBudget": 10000,
-  "thinkcoffee.security.maxFilesToScan": 500,
-  "thinkcoffee.multimodal.maxInputs": 10,
-  "thinkcoffee.workflow.maxConcurrentSteps": 3
+  "Kairos.reasoning.deepBudget": 10000,
+  "Kairos.security.maxFilesToScan": 500,
+  "Kairos.multimodal.maxInputs": 10,
+  "Kairos.workflow.maxConcurrentSteps": 3
 }
 ```
 
@@ -361,7 +361,7 @@ Configure in VS Code settings.json:
 # Clean and rebuild
 rm -r dist node_modules
 pnpm install
-pnpm --filter thinkcoffee-vscode build
+pnpm --filter Kairos-vscode build
 ```
 
 ### Runtime Errors
@@ -391,8 +391,8 @@ pnpm --filter thinkcoffee-vscode build
 
 For issues, feature requests, or feedback:
 - Create an issue on GitHub
-- Contact the ThinkCoffee team
-- Check documentation at docs.thinkcoffee.dev
+- Contact the Kairos team
+- Check documentation at docs.Kairos.dev
 
 ## License
 

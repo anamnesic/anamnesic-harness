@@ -1,4 +1,4 @@
-# DEAD CODE CLEANUP — ThinkCoffee
+# DEAD CODE CLEANUP — Kairos
 
 ## Arquivos removidos
 

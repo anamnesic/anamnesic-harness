@@ -1,4 +1,4 @@
-# @thinkcoffee/core
+# @Kairos/core
 
 Shared library with entities, services, database, validation, and export logic. Used by all other packages.
 
@@ -18,7 +18,7 @@ import {
   ContextService,
   DecisionService,
   ApiKeyService,
-} from "@thinkcoffee/core";
+} from "@Kairos/core";
 
 const db = await getDatabase();
 const projects = new ProjectService(db);
@@ -44,13 +44,13 @@ await decisions.create({
 const results = await contexts.search(project.id, "react");
 
 // Export
-import { exportProject } from "@thinkcoffee/core";
+import { exportProject } from "@Kairos/core";
 const markdown = exportProject(project, "copilot"); // -> .github/copilot-instructions.md content
 ```
 
 ## Database
 
-SQLite stored at `~/.thinkcoffee/data.sqlite` by default. Configurable:
+SQLite stored at `~/.Kairos/data.sqlite` by default. Configurable:
 
 ```typescript
 const db = await getDatabase({

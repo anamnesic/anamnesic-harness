@@ -19,11 +19,11 @@ import { AdvancedAgentsPanel, ChatSidebarProvider } from './views';
 let runtime: AutonomousRuntime | undefined;
 let pipelineRunning = false;
 let pipelineCurrentAgent = '';
-const RUN_ID_KEY = 'thinkcoffee.currentOrchestratorRunId';
-const PLAN_ID_KEY = 'thinkcoffee.currentOrchestratorPlanId';
-const WORKSPACE_ID_KEY = 'thinkcoffee.currentOrchestratorWorkspaceId';
-const HISTORY_MEMORY_KEY = 'thinkcoffee.advancedMemory.runSummaries';
-const HISTORY_BACKUP_KEY = 'thinkcoffee.advancedMemory.backup';
+const RUN_ID_KEY = 'Kairos.currentOrchestratorRunId';
+const PLAN_ID_KEY = 'Kairos.currentOrchestratorPlanId';
+const WORKSPACE_ID_KEY = 'Kairos.currentOrchestratorWorkspaceId';
+const HISTORY_MEMORY_KEY = 'Kairos.advancedMemory.runSummaries';
+const HISTORY_BACKUP_KEY = 'Kairos.advancedMemory.backup';
 type PmDelegateMode = 'create-workflow' | 'resume-run' | 'pause-run' | 'show-run' | 'toggle-dry-run' | 'safety-scan' | 'stop-runs';
 interface PmDelegatedCommand {
   command: string;
@@ -46,10 +46,10 @@ interface ChatAskPayload {
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  console.log('[extension] Activating ThinkCoffee extension');
+  console.log('[extension] Activating Kairos extension');
   runtime = new AutonomousRuntime(context);
   const out = runtime.getOutput();
-  out.appendLine('[ThinkCoffee] Extension activated');
+  out.appendLine('[Kairos] Extension activated');
   console.log('[extension] Runtime created:', !!runtime);
   const chatProvider = new ChatSidebarProvider();
   console.log('[extension] ChatProvider created');
@@ -83,17 +83,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     context.subscriptions.push(vscode.commands.registerCommand(command, handler));
   };
 
-  register('thinkcoffee.chat.ask', async (promptArg?: unknown) => {
-    console.log('[thinkcoffee.chat.ask] Command received');
+  register('Kairos.chat.ask', async (promptArg?: unknown) => {
+    console.log('[Kairos.chat.ask] Command received');
 
     if (!runtime) {
-      out.appendLine('[thinkcoffee.chat.ask] Runtime not available');
+      out.appendLine('[Kairos.chat.ask] Runtime not available');
       chatProvider.postError('PM runtime not available');
       return;
     }
 
     const payload = normalizeChatPayload(promptArg);
-    out.appendLine(`[thinkcoffee.chat.ask] prompt="${payload.prompt.slice(0, 60)}…" editor=${payload.includeActiveEditor} images=${payload.images.length}`);
+    out.appendLine(`[Kairos.chat.ask] prompt="${payload.prompt.slice(0, 60)}…" editor=${payload.includeActiveEditor} images=${payload.images.length}`);
 
     if (!payload.prompt && !payload.includeActiveEditor && payload.images.length === 0) {
       return;
@@ -123,7 +123,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ].join('').trim();
 
     // Derive the project ID from the workspace folder name (same logic as getWorkspaceId())
-    const projectId = (await getWorkspaceId()) ?? `thinkcoffee-${process.pid}`;
+    const projectId = (await getWorkspaceId()) ?? `Kairos-${process.pid}`;
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
 
     // Record the user message in the shared ChatService JSONL channel
@@ -154,7 +154,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // PM analyses and assigns tasks to each mentioned agent
       chatProvider.postStatus(`PM routing task to ${agentLabels}…`);
 
-      const pmAssignment = await runtime.runLongTask('ThinkCoffee PM', async (_progress, _token) => {
+      const pmAssignment = await runtime.runLongTask('Kairos PM', async (_progress, _token) => {
         const assignPrompt = `The user mentioned specific agents: ${agentLabels}
 User request: "${taskText}"
 
@@ -257,7 +257,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     const pipelineStatus = activePipeline ? formatPipelineStatus(activePipeline) : undefined;
 
     try {
-      const result = await runtime.runLongTask('ThinkCoffee PM', async (_progress, token) => {
+      const result = await runtime.runLongTask('Kairos PM', async (_progress, token) => {
         return runtime!.pmChat(fullPrompt, { projectId, pipelineStatus }, token);
       });
 
@@ -395,7 +395,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
   });
 
-  register('thinkcoffee.chat.capability', async (capArg?: unknown) => {
+  register('Kairos.chat.capability', async (capArg?: unknown) => {
     if (!runtime) {
       chatProvider.postError('PM runtime not available');
       return;
@@ -433,7 +433,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
           const depth = ['deep-reasoning', 'multi-step-solve', 'complex-systems', 'scientific-analysis'].includes(cap) ? 'deep' : 'standard';
           const topic = await vscode.window.showInputBox({ prompt: `Describe the topic for ${cap}` });
           if (!topic) { chatProvider.postDone(); return; }
-          const result = await runtime.runLongTask(`ThinkCoffee: ${cap}`, async () => {
+          const result = await runtime.runLongTask(`Kairos: ${cap}`, async () => {
             return runtime!.adaptiveReasoning(topic, depth as 'standard' | 'deep');
           });
           if (!result) { chatProvider.postError('Task was canceled.'); return; }
@@ -455,7 +455,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
           if (!req) { chatProvider.postDone(); return; }
           const lang = await vscode.window.showQuickPick(['typescript', 'javascript', 'python'], { placeHolder: 'Target language' });
           if (!lang) { chatProvider.postDone(); return; }
-          const codeResult = await runtime.runLongTask('ThinkCoffee: code generation', async () => {
+          const codeResult = await runtime.runLongTask('Kairos: code generation', async () => {
             return runtime!.generateAdvancedCode(req, lang);
           });
           if (!codeResult) { chatProvider.postError('Task was canceled.'); return; }
@@ -470,7 +470,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
           if (!editor) { chatProvider.postError('Open a file to run debug analysis.'); return; }
           const issue = await vscode.window.showInputBox({ prompt: 'What is failing?' });
           if (!issue) { chatProvider.postDone(); return; }
-          const dbgResult = await runtime.runLongTask('ThinkCoffee: debug analysis', async () => {
+          const dbgResult = await runtime.runLongTask('Kairos: debug analysis', async () => {
             return runtime!.debugCode(editor.document.getText(), issue);
           });
           if (!dbgResult) { chatProvider.postError('Task was canceled.'); return; }
@@ -494,7 +494,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
             { placeHolder: 'Refactoring strategy' },
           );
           if (!strategy) { chatProvider.postDone(); return; }
-          const refResult = await runtime.runLongTask('ThinkCoffee: refactoring', async () => {
+          const refResult = await runtime.runLongTask('Kairos: refactoring', async () => {
             return runtime!.refactorCode(refEditor.document.getText(), strategy);
           });
           if (!refResult) { chatProvider.postError('Task was canceled.'); return; }
@@ -511,7 +511,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
         case 'task-decomposition': {
           const devGoal = await vscode.window.showInputBox({ prompt: 'Describe the development goal' });
           if (!devGoal) { chatProvider.postDone(); return; }
-          const devResult = await runtime.runLongTask(`ThinkCoffee: ${cap}`, async () => {
+          const devResult = await runtime.runLongTask(`Kairos: ${cap}`, async () => {
             return runtime!.adaptiveReasoning(
               `Autonomous software development task:\n${devGoal}\nDecompose into actionable steps, estimate complexity, and provide implementation plan.`,
               'deep',
@@ -527,7 +527,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
         case 'defensive-security': {
           const folder = vscode.workspace.workspaceFolders?.[0];
           if (!folder) { chatProvider.postError('Open a workspace folder first.'); return; }
-          const scanResult = await runtime.runLongTask('ThinkCoffee: security scan', async () => {
+          const scanResult = await runtime.runLongTask('Kairos: security scan', async () => {
             return runtime!.runSecurityDefenseScan(folder.uri.fsPath);
           });
           if (!scanResult) { chatProvider.postError('Task was canceled.'); return; }
@@ -561,7 +561,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
           if (cap === 'evasion-testing') {
             chatProvider.postStep('Note: Only controlled defensive boundary test plans are supported.');
           }
-          const secResult = await runtime.runLongTask(`ThinkCoffee: ${cap}`, async () => {
+          const secResult = await runtime.runLongTask(`Kairos: ${cap}`, async () => {
             return runtime!.adaptiveReasoning(
               `Defensive ${cap} analysis for controlled testing on: ${target}`,
               'deep',
@@ -576,7 +576,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
         case 'long-task': {
           const taskDesc = await vscode.window.showInputBox({ prompt: 'Describe the long-running task' });
           if (!taskDesc) { chatProvider.postDone(); return; }
-          const ltResult = await runtime.runLongTask('ThinkCoffee: long-running task', async () => {
+          const ltResult = await runtime.runLongTask('Kairos: long-running task', async () => {
             return runtime!.adaptiveReasoning(taskDesc, 'deep');
           });
           if (!ltResult) { chatProvider.postError('Task was canceled.'); return; }
@@ -585,14 +585,14 @@ Respond ONLY with a valid JSON object (no markdown fences):
         }
 
         case 'workflow-planning': {
-          await vscode.commands.executeCommand('thinkcoffee.workflow.createComplex');
+          await vscode.commands.executeCommand('Kairos.workflow.createComplex');
           chatProvider.postCapabilityResult('Workflow created. Use Autonomous Agent to execute.');
           break;
         }
 
         case 'autonomous-agent': {
           chatProvider.postStep('Starting autonomous workflow execution...');
-          await vscode.commands.executeCommand('thinkcoffee.workflow.executeAutonomous');
+          await vscode.commands.executeCommand('Kairos.workflow.executeAutonomous');
           chatProvider.postCapabilityResult('Autonomous execution completed. Check output for details.');
           break;
         }
@@ -612,7 +612,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
           });
           if (!selected || selected.length === 0) { chatProvider.postDone(); return; }
           const mmTopic = await vscode.window.showInputBox({ prompt: 'Analysis topic' }) || cap;
-          const mmResult = await runtime.runLongTask(`ThinkCoffee: ${cap}`, async () => {
+          const mmResult = await runtime.runLongTask(`Kairos: ${cap}`, async () => {
             return runtime!.analyzeMultimodal(selected.map(x => x.fsPath), mmTopic);
           });
           if (!mmResult) { chatProvider.postError('Task was canceled.'); return; }
@@ -630,7 +630,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
   });
 
-  register('thinkcoffee.advancedSoftware.generateCode', async () => {
+  register('Kairos.advancedSoftware.generateCode', async () => {
     const prompt = await vscode.window.showInputBox({ prompt: 'Describe the code you need' });
     if (!prompt || !runtime) return;
 
@@ -639,7 +639,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     });
     if (!language) return;
 
-    const result = await runtime.runLongTask('ThinkCoffee: advanced code generation', async (_progress, _token) => {
+    const result = await runtime.runLongTask('Kairos: advanced code generation', async (_progress, _token) => {
       return runtime!.generateAdvancedCode(prompt, language);
     });
     if (!result) return;
@@ -649,7 +649,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.appendLine(`[generateCode] ${result.explanation}`);
   });
 
-  register('thinkcoffee.advancedSoftware.debugCode', async () => {
+  register('Kairos.advancedSoftware.debugCode', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor || !runtime) {
       vscode.window.showWarningMessage('Open a file to run debug analysis.');
@@ -660,7 +660,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     if (!issue) return;
 
     const source = editor.document.getText();
-    const result = await runtime.runLongTask('ThinkCoffee: automatic debug analysis', async (_progress, _token) => {
+    const result = await runtime.runLongTask('Kairos: automatic debug analysis', async (_progress, _token) => {
       return runtime!.debugCode(source, issue);
     });
     if (!result) return;
@@ -670,7 +670,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.advancedSoftware.refactorCode', async () => {
+  register('Kairos.advancedSoftware.refactorCode', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor || !runtime) return;
 
@@ -681,7 +681,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     if (!strategy) return;
 
     const source = editor.document.getText();
-    const result = await runtime.runLongTask('ThinkCoffee: code refactoring', async (_progress, _token) => {
+    const result = await runtime.runLongTask('Kairos: code refactoring', async (_progress, _token) => {
       return runtime!.refactorCode(source, strategy);
     });
     if (!result) return;
@@ -693,11 +693,11 @@ Respond ONLY with a valid JSON object (no markdown fences):
     await vscode.window.showTextDocument(doc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
   });
 
-  register('thinkcoffee.advancedSecurity.scanVulnerabilities', async () => {
+  register('Kairos.advancedSecurity.scanVulnerabilities', async () => {
     const folder = vscode.workspace.workspaceFolders?.[0];
     if (!folder || !runtime) return;
 
-    const result = await runtime.runLongTask('ThinkCoffee: defensive security scan', async (_progress, _token) => {
+    const result = await runtime.runLongTask('Kairos: defensive security scan', async (_progress, _token) => {
       return runtime!.runSecurityDefenseScan(folder.uri.fsPath);
     });
     if (!result) return;
@@ -709,7 +709,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.advancedSecurity.simulateAttack', async () => {
+  register('Kairos.advancedSecurity.simulateAttack', async () => {
     const target = await vscode.window.showInputBox({ prompt: 'Target for controlled simulation' });
     if (!target || !runtime) return;
 
@@ -722,7 +722,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.advancedSecurity.zeroDayDiscovery', async () => {
+  register('Kairos.advancedSecurity.zeroDayDiscovery', async () => {
     const system = await vscode.window.showInputBox({ prompt: 'System description for defensive zero-day hypotheses' });
     if (!system || !runtime) return;
 
@@ -735,7 +735,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.advancedMultimodal.analyzeImage', async () => {
+  register('Kairos.advancedMultimodal.analyzeImage', async () => {
     const selected = await vscode.window.showOpenDialog({
       canSelectMany: true,
       canSelectFolders: false,
@@ -748,7 +748,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.advancedMultimodal.analyzeDiagram', async () => {
+  register('Kairos.advancedMultimodal.analyzeDiagram', async () => {
     const selected = await vscode.window.showOpenDialog({
       canSelectMany: true,
       canSelectFolders: false,
@@ -761,7 +761,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.advancedMultimodal.synthesizeKnowledge', async () => {
+  register('Kairos.advancedMultimodal.synthesizeKnowledge', async () => {
     const selected = await vscode.window.showOpenDialog({ canSelectMany: true, canSelectFolders: false });
     if (!selected || selected.length === 0 || !runtime) return;
 
@@ -773,7 +773,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.reasoning.multiStepSolve', async () => {
+  register('Kairos.reasoning.multiStepSolve', async () => {
     const problem = await vscode.window.showInputBox({ prompt: 'Describe a complex multi-step problem' });
     if (!problem || !runtime) return;
 
@@ -782,7 +782,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.reasoning.adaptiveThink', async () => {
+  register('Kairos.reasoning.adaptiveThink', async () => {
     const topic = await vscode.window.showInputBox({ prompt: 'Topic for adaptive deep reasoning' });
     if (!topic || !runtime) return;
 
@@ -791,7 +791,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     out.show(true);
   });
 
-  register('thinkcoffee.workflow.createComplex', async () => {
+  register('Kairos.workflow.createComplex', async () => {
     if (!runtime) return;
     const name = await vscode.window.showInputBox({ prompt: 'Workflow name' });
     if (!name) return;
@@ -808,7 +808,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     if (remote) {
       const workspaceId = await getWorkspaceId();
       if (!workspaceId) {
-        vscode.window.showWarningMessage('Set thinkcoffee.orchestrator.workspaceId or open a folder-based workspace.');
+        vscode.window.showWarningMessage('Set Kairos.orchestrator.workspaceId or open a folder-based workspace.');
         return;
       }
 
@@ -838,11 +838,11 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
 
     const workflow = runtime.createWorkflow(name, goal, steps);
-    await context.workspaceState.update('thinkcoffee.currentWorkflow', workflow);
+    await context.workspaceState.update('Kairos.currentWorkflow', workflow);
     vscode.window.showInformationMessage(`Workflow ${workflow.name} created with ${workflow.steps.length} steps.`);
   });
 
-  register('thinkcoffee.workflow.executeAutonomous', async () => {
+  register('Kairos.workflow.executeAutonomous', async () => {
     const remote = getOrchestratorClient();
     const planId = context.workspaceState.get<string>(PLAN_ID_KEY);
     const workspaceId = context.workspaceState.get<string>(WORKSPACE_ID_KEY) || await getWorkspaceId();
@@ -872,7 +872,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
       }
     }
 
-    const stored = context.workspaceState.get<WorkflowDefinition>('thinkcoffee.currentWorkflow');
+    const stored = context.workspaceState.get<WorkflowDefinition>('Kairos.currentWorkflow');
 
     if (!stored || !runtime) {
       vscode.window.showWarningMessage('No workflow found. Create one first.');
@@ -932,10 +932,10 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
   });
 
-  register('thinkcoffee.orchestrator.showRunStatus', async () => {
+  register('Kairos.orchestrator.showRunStatus', async () => {
     const remote = getOrchestratorClient();
     if (!remote) {
-      vscode.window.showWarningMessage('Configure thinkcoffee.orchestrator.baseUrl to use remote run management.');
+      vscode.window.showWarningMessage('Configure Kairos.orchestrator.baseUrl to use remote run management.');
       return;
     }
 
@@ -965,10 +965,10 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
   });
 
-  register('thinkcoffee.orchestrator.showCheckpoints', async () => {
+  register('Kairos.orchestrator.showCheckpoints', async () => {
     const remote = getOrchestratorClient();
     if (!remote) {
-      vscode.window.showWarningMessage('Configure thinkcoffee.orchestrator.baseUrl to use remote run management.');
+      vscode.window.showWarningMessage('Configure Kairos.orchestrator.baseUrl to use remote run management.');
       return;
     }
 
@@ -996,10 +996,10 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
   });
 
-  register('thinkcoffee.orchestrator.pauseRun', async () => {
+  register('Kairos.orchestrator.pauseRun', async () => {
     const remote = getOrchestratorClient();
     if (!remote) {
-      vscode.window.showWarningMessage('Configure thinkcoffee.orchestrator.baseUrl to use remote run management.');
+      vscode.window.showWarningMessage('Configure Kairos.orchestrator.baseUrl to use remote run management.');
       return;
     }
 
@@ -1019,10 +1019,10 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
   });
 
-  register('thinkcoffee.orchestrator.resumeRun', async () => {
+  register('Kairos.orchestrator.resumeRun', async () => {
     const remote = getOrchestratorClient();
     if (!remote) {
-      vscode.window.showWarningMessage('Configure thinkcoffee.orchestrator.baseUrl to use remote run management.');
+      vscode.window.showWarningMessage('Configure Kairos.orchestrator.baseUrl to use remote run management.');
       return;
     }
 
@@ -1042,16 +1042,16 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
   });
 
-  register('thinkcoffee.orchestrator.selectRun', async () => {
+  register('Kairos.orchestrator.selectRun', async () => {
     const remote = getOrchestratorClient();
     if (!remote) {
-      vscode.window.showWarningMessage('Configure thinkcoffee.orchestrator.baseUrl to use remote run management.');
+      vscode.window.showWarningMessage('Configure Kairos.orchestrator.baseUrl to use remote run management.');
       return;
     }
 
     const workspaceId = context.workspaceState.get<string>(WORKSPACE_ID_KEY) || await getWorkspaceId();
     if (!workspaceId) {
-      vscode.window.showWarningMessage('Set thinkcoffee.orchestrator.workspaceId or open a folder-based workspace.');
+      vscode.window.showWarningMessage('Set Kairos.orchestrator.workspaceId or open a folder-based workspace.');
       return;
     }
 
@@ -1078,7 +1078,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     }
   });
 
-  register('thinkcoffee.stopAgents', async () => {
+  register('Kairos.stopAgents', async () => {
     if (!runtime) return;
     const canceled = runtime.cancelAllRuns();
     chatProvider.postDone();
@@ -1086,11 +1086,11 @@ Respond ONLY with a valid JSON object (no markdown fences):
     vscode.window.showInformationMessage(`Stopped ${canceled} running task(s).`);
   });
 
-  register('thinkcoffee.runPhase', async () => {
-    await vscode.commands.executeCommand('thinkcoffee.workflow.executeAutonomous');
+  register('Kairos.runPhase', async () => {
+    await vscode.commands.executeCommand('Kairos.workflow.executeAutonomous');
   });
 
-  register('thinkcoffee.invokeAgent', async () => {
+  register('Kairos.invokeAgent', async () => {
     const action = await vscode.window.showQuickPick(
       [
         'adaptive-reasoning',
@@ -1115,16 +1115,16 @@ Respond ONLY with a valid JSON object (no markdown fences):
     runtime.getOutput().show(true);
   });
 
-  register('thinkcoffee.showHistory', async () => {
+  register('Kairos.showHistory', async () => {
     if (!runtime) return;
-    await openHistoryDocument(runtime.getMemory(), 'ThinkCoffee: Pipeline History');
+    await openHistoryDocument(runtime.getMemory(), 'Kairos: Pipeline History');
   });
 
-  register('thinkcoffee.history.refresh', async () => {
-    await vscode.commands.executeCommand('thinkcoffee.showHistory');
+  register('Kairos.history.refresh', async () => {
+    await vscode.commands.executeCommand('Kairos.showHistory');
   });
 
-  register('thinkcoffee.backupHistory', async () => {
+  register('Kairos.backupHistory', async () => {
     const history = runtime?.getMemory() || [];
     await context.globalState.update(HISTORY_BACKUP_KEY, {
       at: new Date().toISOString(),
@@ -1133,7 +1133,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
     vscode.window.showInformationMessage(`Pipeline history backup saved (${history.length} items).`);
   });
 
-  register('thinkcoffee.restoreHistory', async () => {
+  register('Kairos.restoreHistory', async () => {
     const backup = context.globalState.get<{ at: string; items: unknown[] }>(HISTORY_BACKUP_KEY);
     if (!backup || !Array.isArray(backup.items)) {
       vscode.window.showWarningMessage('No history backup found.');
@@ -1144,11 +1144,11 @@ Respond ONLY with a valid JSON object (no markdown fences):
     vscode.window.showInformationMessage(`Pipeline history restored from backup (${backup.items.length} items).`);
   });
 
-  register('thinkcoffee.exportHistory', async () => {
+  register('Kairos.exportHistory', async () => {
     const history = runtime?.getMemory() || [];
     const uri = await vscode.window.showSaveDialog({
       saveLabel: 'Export History',
-      defaultUri: vscode.Uri.file('thinkcoffee-history.json'),
+      defaultUri: vscode.Uri.file('Kairos-history.json'),
       filters: {
         JSON: ['json'],
       },
@@ -1164,36 +1164,36 @@ Respond ONLY with a valid JSON object (no markdown fences):
     vscode.window.showInformationMessage(`Pipeline history exported to ${uri.fsPath}.`);
   });
 
-  register('thinkcoffee.openAdvancedAgents', async () => {
+  register('Kairos.openAdvancedAgents', async () => {
     AdvancedAgentsPanel.createOrShow(context.extensionUri);
   });
 
   const pmDelegated: PmDelegatedCommand[] = [
-    { command: 'thinkcoffee.refreshProjects', goal: 'Refresh project context graph and dependencies' },
-    { command: 'thinkcoffee.createProject', goal: 'Create a new project context and baseline plan', ask: 'Project name or objective' },
-    { command: 'thinkcoffee.addContext', goal: 'Add context entry for PM planning', ask: 'Context to add' },
-    { command: 'thinkcoffee.addFileAsContext', goal: 'Summarize selected file as context for PM and agents' },
-    { command: 'thinkcoffee.addSelectionAsContext', goal: 'Summarize editor selection as context for PM and agents' },
-    { command: 'thinkcoffee.addStructureAsContext', goal: 'Capture workspace structure as context for PM and agents' },
-    { command: 'thinkcoffee.addDecision', goal: 'Record a technical decision with rationale', ask: 'Decision statement' },
-    { command: 'thinkcoffee.syncContext', goal: 'Sync managed context to configured AI tools' },
-    { command: 'thinkcoffee.exportContext', goal: 'Export consolidated context package' },
-    { command: 'thinkcoffee.openContextFile', goal: 'Open context artifact selected by PM' },
-    { command: 'thinkcoffee.viewContext', goal: 'Inspect a context entry and decision links' },
-    { command: 'thinkcoffee.openChat', goal: 'Open PM chat session and route next actions' },
-    { command: 'thinkcoffee.createPipeline', goal: 'Create phased delivery pipeline', delegate: 'create-workflow' },
-    { command: 'thinkcoffee.approvePhase', goal: 'Approve current phase and move to next', delegate: 'resume-run' },
-    { command: 'thinkcoffee.rejectPhase', goal: 'Reject current phase and pause for rework', delegate: 'pause-run' },
-    { command: 'thinkcoffee.viewTaskOutput', goal: 'Show output from latest delegated PM task' },
-    { command: 'thinkcoffee.refreshPipeline', goal: 'Refresh pipeline execution status', delegate: 'show-run' },
-    { command: 'thinkcoffee.openOtherProject', goal: 'Switch PM context to another project', ask: 'Project identifier' },
-    { command: 'thinkcoffee.configureAgentModels', goal: 'Configure model strategy by role and budget' },
-    { command: 'thinkcoffee.viewAgentModels', goal: 'Display active model assignments by role' },
-    { command: 'thinkcoffee.toggleDryRun', goal: 'Toggle PM dry-run mode without applying changes', delegate: 'toggle-dry-run' },
-    { command: 'thinkcoffee.openSafetyNet', goal: 'Run safety-net checks and defensive scan', delegate: 'safety-scan' },
-    { command: 'thinkcoffee.rollback', goal: 'Rollback current phase to previous stable checkpoint', delegate: 'stop-runs' },
-    { command: 'thinkcoffee.listSnapshots', goal: 'List snapshots available for rollback' },
-    { command: 'thinkcoffee.cleanupSnapshots', goal: 'Cleanup stale snapshots based on retention policy' },
+    { command: 'Kairos.refreshProjects', goal: 'Refresh project context graph and dependencies' },
+    { command: 'Kairos.createProject', goal: 'Create a new project context and baseline plan', ask: 'Project name or objective' },
+    { command: 'Kairos.addContext', goal: 'Add context entry for PM planning', ask: 'Context to add' },
+    { command: 'Kairos.addFileAsContext', goal: 'Summarize selected file as context for PM and agents' },
+    { command: 'Kairos.addSelectionAsContext', goal: 'Summarize editor selection as context for PM and agents' },
+    { command: 'Kairos.addStructureAsContext', goal: 'Capture workspace structure as context for PM and agents' },
+    { command: 'Kairos.addDecision', goal: 'Record a technical decision with rationale', ask: 'Decision statement' },
+    { command: 'Kairos.syncContext', goal: 'Sync managed context to configured AI tools' },
+    { command: 'Kairos.exportContext', goal: 'Export consolidated context package' },
+    { command: 'Kairos.openContextFile', goal: 'Open context artifact selected by PM' },
+    { command: 'Kairos.viewContext', goal: 'Inspect a context entry and decision links' },
+    { command: 'Kairos.openChat', goal: 'Open PM chat session and route next actions' },
+    { command: 'Kairos.createPipeline', goal: 'Create phased delivery pipeline', delegate: 'create-workflow' },
+    { command: 'Kairos.approvePhase', goal: 'Approve current phase and move to next', delegate: 'resume-run' },
+    { command: 'Kairos.rejectPhase', goal: 'Reject current phase and pause for rework', delegate: 'pause-run' },
+    { command: 'Kairos.viewTaskOutput', goal: 'Show output from latest delegated PM task' },
+    { command: 'Kairos.refreshPipeline', goal: 'Refresh pipeline execution status', delegate: 'show-run' },
+    { command: 'Kairos.openOtherProject', goal: 'Switch PM context to another project', ask: 'Project identifier' },
+    { command: 'Kairos.configureAgentModels', goal: 'Configure model strategy by role and budget' },
+    { command: 'Kairos.viewAgentModels', goal: 'Display active model assignments by role' },
+    { command: 'Kairos.toggleDryRun', goal: 'Toggle PM dry-run mode without applying changes', delegate: 'toggle-dry-run' },
+    { command: 'Kairos.openSafetyNet', goal: 'Run safety-net checks and defensive scan', delegate: 'safety-scan' },
+    { command: 'Kairos.rollback', goal: 'Rollback current phase to previous stable checkpoint', delegate: 'stop-runs' },
+    { command: 'Kairos.listSnapshots', goal: 'List snapshots available for rollback' },
+    { command: 'Kairos.cleanupSnapshots', goal: 'Cleanup stale snapshots based on retention policy' },
   ];
 
   const delegateToPm = async (
@@ -1205,35 +1205,35 @@ Respond ONLY with a valid JSON object (no markdown fences):
     if (!runtime) return;
 
     if (delegate === 'create-workflow') {
-      await vscode.commands.executeCommand('thinkcoffee.workflow.createComplex');
+      await vscode.commands.executeCommand('Kairos.workflow.createComplex');
       return;
     }
     if (delegate === 'resume-run') {
-      await vscode.commands.executeCommand('thinkcoffee.orchestrator.resumeRun');
+      await vscode.commands.executeCommand('Kairos.orchestrator.resumeRun');
       return;
     }
     if (delegate === 'pause-run') {
-      await vscode.commands.executeCommand('thinkcoffee.orchestrator.pauseRun');
+      await vscode.commands.executeCommand('Kairos.orchestrator.pauseRun');
       return;
     }
     if (delegate === 'show-run') {
-      await vscode.commands.executeCommand('thinkcoffee.orchestrator.showRunStatus');
+      await vscode.commands.executeCommand('Kairos.orchestrator.showRunStatus');
       return;
     }
     if (delegate === 'safety-scan') {
-      await vscode.commands.executeCommand('thinkcoffee.advancedSecurity.scanVulnerabilities');
+      await vscode.commands.executeCommand('Kairos.advancedSecurity.scanVulnerabilities');
       return;
     }
     if (delegate === 'stop-runs') {
-      await vscode.commands.executeCommand('thinkcoffee.stopAgents');
+      await vscode.commands.executeCommand('Kairos.stopAgents');
       return;
     }
     if (delegate === 'toggle-dry-run') {
-      const key = 'thinkcoffee.pmDryRun';
+      const key = 'Kairos.pmDryRun';
       const current = context.workspaceState.get<boolean>(key) ?? true;
       const next = !current;
       await context.workspaceState.update(key, next);
-      vscode.window.showInformationMessage(`ThinkCoffee PM dry-run: ${next ? 'ON' : 'OFF'}`);
+      vscode.window.showInformationMessage(`Kairos PM dry-run: ${next ? 'ON' : 'OFF'}`);
       return;
     }
 
@@ -1246,7 +1246,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
       ? await vscode.window.showInputBox({ prompt: ask, placeHolder: 'Optional details to refine PM orchestration' })
       : undefined;
 
-    const summary = await runtime.runLongTask(`ThinkCoffee PM delegation: ${command}`, async (_progress, _token) => {
+    const summary = await runtime.runLongTask(`Kairos PM delegation: ${command}`, async (_progress, _token) => {
       return runtime!.adaptiveReasoning(
         [
           `PM command: ${command}`,
@@ -1330,7 +1330,7 @@ export function deactivate(): void {
 }
 
 function getOrchestratorClient(): OrchestratorClient | undefined {
-  const cfg = vscode.workspace.getConfiguration('thinkcoffee.orchestrator');
+  const cfg = vscode.workspace.getConfiguration('Kairos.orchestrator');
   const baseUrl = cfg.get<string>('baseUrl') || '';
   const token = cfg.get<string>('token') || '';
   const timeoutMs = cfg.get<number>('timeoutMs') || 30_000;
@@ -1344,10 +1344,10 @@ function toOrchestratorUserMessage(error: unknown): string {
     : '';
   if (error instanceof OrchestratorHttpError) {
     if (error.statusCode === 401 || error.statusCode === 403) {
-      return 'Authentication failed. Check thinkcoffee.orchestrator.token.';
+      return 'Authentication failed. Check Kairos.orchestrator.token.';
     }
     if (error.statusCode === 404) {
-      return 'Endpoint not found. Verify thinkcoffee.orchestrator.baseUrl points to the API root.';
+      return 'Endpoint not found. Verify Kairos.orchestrator.baseUrl points to the API root.';
     }
     if (error.statusCode >= 500) {
       return 'Server error from orchestrator API.';
@@ -1404,7 +1404,7 @@ async function resolveRunId(
 }
 
 async function getWorkspaceId(): Promise<string | undefined> {
-  const cfg = vscode.workspace.getConfiguration('thinkcoffee.orchestrator');
+  const cfg = vscode.workspace.getConfiguration('Kairos.orchestrator');
   const explicit = cfg.get<string>('workspaceId');
   if (explicit && explicit.trim()) {
     return explicit.trim();

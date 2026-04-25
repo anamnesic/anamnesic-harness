@@ -1,7 +1,7 @@
-# ThinkCoffee Advanced AI Agents Architecture
+# Kairos Advanced AI Agents Architecture
 
 ## Vision
-Transform ThinkCoffee into an **autonomous AI agent platform** that provides:
+Transform Kairos into an **autonomous AI agent platform** that provides:
 - Advanced reasoning and problem-solving
 - Multi-step task decomposition and execution
 - Continuous autonomous operation
@@ -14,7 +14,7 @@ Transform ThinkCoffee into an **autonomous AI agent platform** that provides:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│           ThinkCoffee Agent Platform (Frontend)              │
+│           Kairos Agent Platform (Frontend)              │
 │  - Dashboard, workflows, task scheduling, monitoring         │
 └────────────────────┬─────────────────────────────────────────┘
                      │

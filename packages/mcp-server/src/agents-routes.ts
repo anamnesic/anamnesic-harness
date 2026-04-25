@@ -7,7 +7,7 @@ import {
   WorkflowService,
   SecurityAnalysisService,
   ExecutionLogService,
-} from '@thinkcoffee/core';
+} from '@Kairos/core';
 import { z } from 'zod';
 
 const router = Router();

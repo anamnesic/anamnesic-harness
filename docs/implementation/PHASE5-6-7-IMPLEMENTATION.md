@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-ThinkCoffee now includes three advanced phases:
+Kairos now includes three advanced phases:
 - **Phase 5**: Sandboxing & Real-time WebSocket Updates
 - **Phase 6**: Workflow Execution Engine
 - **Phase 7**: Advanced Security Analysis & Attack Simulation
@@ -48,7 +48,7 @@ ThinkCoffee now includes three advanced phases:
 #### 1. Task Execution
 
 ```typescript
-import { TaskExecutorService, SandboxConfig } from '@thinkcoffee/core';
+import { TaskExecutorService, SandboxConfig } from '@Kairos/core';
 
 const executor = new TaskExecutorService(aiProvider);
 
@@ -95,7 +95,7 @@ console.log(result);
 #### 2. Real-time WebSocket Updates
 
 ```typescript
-import { WebSocketServer } from '@thinkcoffee/core';
+import { WebSocketServer } from '@Kairos/core';
 import { createServer } from 'http';
 
 const httpServer = createServer();
@@ -211,7 +211,7 @@ Workflow Definition:
 #### 1. Define Workflow
 
 ```typescript
-import { WorkflowExecutionEngine, WorkflowDefinition } from '@thinkcoffee/core';
+import { WorkflowExecutionEngine, WorkflowDefinition } from '@Kairos/core';
 
 const engine = new WorkflowExecutionEngine();
 
@@ -426,7 +426,7 @@ Security Analysis Pipeline:
 #### 1. Security Analysis
 
 ```typescript
-import { AdvancedSecurityAnalysisService } from '@thinkcoffee/core';
+import { AdvancedSecurityAnalysisService } from '@Kairos/core';
 
 const securityAnalysis = new AdvancedSecurityAnalysisService(aiProvider);
 
@@ -487,7 +487,7 @@ for (const rec of result.recommendations) {
 #### 2. Attack Simulation
 
 ```typescript
-import { AttackSimulationFramework } from '@thinkcoffee/core';
+import { AttackSimulationFramework } from '@Kairos/core';
 
 const attackSimulation = new AttackSimulationFramework();
 
@@ -616,7 +616,7 @@ console.log(`
 ## Integration Example
 
 ```typescript
-import { AdvancedFeaturesFactory } from '@thinkcoffee/core';
+import { AdvancedFeaturesFactory } from '@Kairos/core';
 import { createServer } from 'http';
 import express from 'express';
 

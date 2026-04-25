@@ -92,4 +92,4 @@ A infraestrutura solicitada **ja existe no projeto**:
 
 ---
 
-*Code Reviewer - ThinkCoffee Team*
+*Code Reviewer - Kairos Team*

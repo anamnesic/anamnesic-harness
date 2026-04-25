@@ -1,4 +1,4 @@
-﻿# ThinkCoffee - Setup Infrastructure Completado
+﻿# Kairos - Setup Infrastructure Completado
 
 **Data**: 05/04/2026
 **Agente**: DevOps Engineer
@@ -95,5 +95,5 @@ Features: Pré-validação, backup automático, blue-green deploy, health checks
 
 ---
 
-Assinado: DevOps Engineer (ThinkCoffee Team)
+Assinado: DevOps Engineer (Kairos Team)
 Data: 05/04/2026

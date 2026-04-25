@@ -97,7 +97,7 @@ index.ts
 
 [tool:list_files] 
 
-[tool:list_files] Error listing files: ENOENT: no such file or directory, scandir 'c:\Users\luann\Documents\GitHub\thinkcoffee\services'
+[tool:list_files] Error listing files: ENOENT: no such file or directory, scandir 'c:\Users\luann\Documents\GitHub\Kairos\services'
 
 [tool:list_files] __tests__/
 api/

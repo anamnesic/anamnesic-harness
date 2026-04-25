@@ -1,6 +1,6 @@
-# @thinkcoffee/mcp-server
+# @Kairos/mcp-server
 
-MCP (Model Context Protocol) server for ThinkCoffee. Allows AI assistants to query and manage project context directly.
+MCP (Model Context Protocol) server for Kairos. Allows AI assistants to query and manage project context directly.
 
 ## Setup
 
@@ -18,7 +18,7 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "thinkcoffee": {
+    "Kairos": {
       "command": "node",
       "args": ["/absolute/path/to/packages/mcp-server/dist/index.js"]
     }
@@ -34,7 +34,7 @@ Add to `.vscode/settings.json` or user settings:
 {
   "mcp": {
     "servers": {
-      "thinkcoffee": {
+      "Kairos": {
         "command": "node",
         "args": ["./packages/mcp-server/dist/index.js"]
       }
@@ -77,8 +77,8 @@ Add to Cursor's MCP settings with the same `command` + `args` pattern.
 
 ## Resources
 
-- `thinkcoffee://projects` - JSON list of all projects
-- `thinkcoffee://projects/{projectId}/context` - Full project context as markdown
+- `Kairos://projects` - JSON list of all projects
+- `Kairos://projects/{projectId}/context` - Full project context as markdown
 
 ## Prompts
 
@@ -89,7 +89,7 @@ Add to Cursor's MCP settings with the same `command` + `args` pattern.
 
 After connecting, ask your AI:
 
-> "List my ThinkCoffee projects"
+> "List my Kairos projects"
 
 > "Add architecture context to project X: We use a microservices architecture with gRPC communication"
 

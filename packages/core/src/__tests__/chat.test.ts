@@ -8,7 +8,7 @@ vi.mock('fs');
 vi.mock('os');
 
 describe('ChatService', () => {
-  const mockChatDir = '/home/user/.thinkcoffee/chat';
+  const mockChatDir = '/home/user/.Kairos/chat';
   const mockChatFile = path.join(mockChatDir, 'default.jsonl');
 
   beforeEach(() => {
@@ -34,7 +34,7 @@ describe('ChatService', () => {
 
     it('should create file if not exists', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
-      
+
       new ChatService();
 
       expect(fs.writeFileSync).toHaveBeenCalledWith(
@@ -53,7 +53,7 @@ describe('ChatService', () => {
   describe('send', () => {
     it('should send message and generate id and timestamp', () => {
       const service = new ChatService();
-      
+
       const message = service.send({
         sender: 'user',
         content: 'Hello world',
@@ -69,7 +69,7 @@ describe('ChatService', () => {
 
     it('should append message to file', () => {
       const service = new ChatService();
-      
+
       service.send({
         sender: 'agent',
         content: 'Response',
@@ -85,7 +85,7 @@ describe('ChatService', () => {
 
     it('should include optional fields', () => {
       const service = new ChatService();
-      
+
       const message = service.send({
         sender: 'programmer',
         senderLabel: 'John Doe',
@@ -106,7 +106,7 @@ describe('ChatService', () => {
   describe('getHistory', () => {
     it('should return empty array for empty file', () => {
       vi.mocked(fs.readFileSync).mockReturnValue('');
-      
+
       const service = new ChatService();
       const history = service.getHistory();
 
@@ -118,7 +118,7 @@ describe('ChatService', () => {
         { id: '1', timestamp: '2024-01-01', sender: 'user', content: 'Hi', type: 'request' },
         { id: '2', timestamp: '2024-01-02', sender: 'agent', content: 'Hello', type: 'response' },
       ];
-      
+
       vi.mocked(fs.readFileSync).mockReturnValue(
         messages.map(m => JSON.stringify(m)).join('\n')
       );
@@ -288,7 +288,7 @@ describe('ChatService', () => {
   describe('watch', () => {
     it('should setup file watcher', () => {
       vi.mocked(fs.watchFile).mockReturnValue(undefined as any);
-      
+
       const service = new ChatService();
       const callback = vi.fn();
 

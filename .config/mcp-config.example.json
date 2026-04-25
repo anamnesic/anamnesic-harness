@@ -1,8 +1,10 @@
 {
   "mcpServers": {
-    "thinkcoffee": {
+    "Kairos": {
       "command": "node",
-      "args": ["packages/mcp-server/dist/index.js"]
+      "args": [
+        "packages/mcp-server/dist/index.js"
+      ]
     }
   }
 }

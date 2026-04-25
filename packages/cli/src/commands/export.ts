@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { getServices } from '../utils';
-import { exportProject, getExportFilename, ExportFormat } from '@thinkcoffee/core';
+import { exportProject, getExportFilename, ExportFormat } from '@Kairos/core';
 import fs from 'fs';
 import path from 'path';
 

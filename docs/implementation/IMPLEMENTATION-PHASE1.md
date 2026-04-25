@@ -1,7 +1,7 @@
-# ThinkCoffee SaaS Implementation - Phase 1: Authentication & API
+# Kairos SaaS Implementation - Phase 1: Authentication & API
 
 ## Overview
-Implementação profissional de autenticação e API REST para transformar ThinkCoffee em um SaaS escalável.
+Implementação profissional de autenticação e API REST para transformar Kairos em um SaaS escalável.
 
 ## Completed Tasks ✓
 
@@ -217,13 +217,13 @@ Implementação profissional de autenticação e API REST para transformar Think
 pnpm install
 pnpm build:core
 pnpm build:mcp
-pnpm --filter @thinkcoffee/mcp-server start:api
+pnpm --filter @Kairos/mcp-server start:api
 
 # Or with tsx for fast iteration
-pnpm --filter @thinkcoffee/mcp-server dev:api
+pnpm --filter @Kairos/mcp-server dev:api
 
 # Production
-NODE_ENV=production pnpm --filter @thinkcoffee/mcp-server start:api
+NODE_ENV=production pnpm --filter @Kairos/mcp-server start:api
 ```
 
 ## Environment Variables
@@ -241,7 +241,7 @@ JWT_EXPIRY=604800  # 7 days in seconds
 CORS_ORIGIN=*
 
 # Database
-DATABASE_URL=sqlite:~/.thinkcoffee/data.sqlite
+DATABASE_URL=sqlite:~/.Kairos/data.sqlite
 ```
 
 ## Git Commits Summary

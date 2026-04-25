@@ -53,11 +53,11 @@ jobs:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_USER: thinkcoffee_user
+          POSTGRES_USER: Kairos_user
           POSTGRES_PASSWORD: testpass123
-          POSTGRES_DB: thinkcoffee_test
+          POSTGRES_DB: Kairos_test
         options: >-
-          --health-cmd "pg_isready -U thinkcoffee_user"
+          --health-cmd "pg_isready -U Kairos_user"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -98,7 +98,7 @@ jobs:
       - name: Run integration tests
         run: npm run test || true
         env:
-          DATABASE_URL: postgres://thinkcoffee_user:testpass123@localhost:5432/thinkcoffee_test
+          DATABASE_URL: postgres://Kairos_user:testpass123@localhost:5432/Kairos_test
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           NODE_ENV: test
@@ -195,7 +195,7 @@ jobs:
     
     environment:
       name: production
-      url: https://thinkcoffee.com
+      url: https://Kairos.com
     
     steps:
       - name: Checkout code

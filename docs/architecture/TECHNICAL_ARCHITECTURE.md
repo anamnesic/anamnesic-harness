@@ -1,4 +1,4 @@
-# Arquitetura Técnica - ThinkCoffee
+# Arquitetura Técnica - Kairos
 
 ## Stack Tecnológica
 - **Backend**: Node.js com Express.js

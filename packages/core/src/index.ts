@@ -1,5 +1,5 @@
 /**
- * ThinkCoffee Core Package
+ * Kairos Core Package
  * 
  * Re-exports de todos os modulos para backward compatibility.
  */
@@ -59,7 +59,7 @@ export {
 
 export {
   type AgentSettings,
-  type ThinkCoffeeConfig,
+  type KairosConfig,
   DEFAULT_AGENT_SETTINGS,
   CONFIG_VERSION,
 } from './agents/config';

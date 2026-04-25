@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers deploying ThinkCoffee to production using Docker, Kubernetes, and CI/CD automation.
+This guide covers deploying Kairos to production using Docker, Kubernetes, and CI/CD automation.
 
 ## Architecture
 
@@ -87,15 +87,15 @@ docker-compose -f docker-compose.prod.yml exec api \
 
 ```bash
 # Health check
-curl https://api.thinkcoffee.dev/health
+curl https://api.Kairos.dev/health
 
 # API test
-curl -X GET https://api.thinkcoffee.dev/api/agents \
+curl -X GET https://api.Kairos.dev/api/agents \
   -H "Authorization: Bearer YOUR_TOKEN"
 
 # Database check
 docker-compose -f docker-compose.prod.yml exec postgres \
-  psql -U thinkcoffee -d thinkcoffee -c "SELECT version();"
+  psql -U Kairos -d Kairos -c "SELECT version();"
 ```
 
 ### 4. Monitor
@@ -118,18 +118,18 @@ docker stats
 
 ```bash
 # Create namespace
-kubectl create namespace thinkcoffee
+kubectl create namespace Kairos
 
 # Create ConfigMaps
-kubectl create configmap thinkcoffee-config \
+kubectl create configmap Kairos-config \
   --from-file=.env.production \
-  -n thinkcoffee
+  -n Kairos
 
 # Create secrets
-kubectl create secret generic thinkcoffee-secrets \
+kubectl create secret generic Kairos-secrets \
   --from-literal=db-password=your-password \
   --from-literal=jwt-secret=your-secret \
-  -n thinkcoffee
+  -n Kairos
 ```
 
 ### 2. Deploy Services
@@ -143,19 +143,19 @@ kubectl apply -f k8s/api.yml
 kubectl apply -f k8s/nginx.yml
 
 # Verify deployment
-kubectl get pods -n thinkcoffee
-kubectl get services -n thinkcoffee
+kubectl get pods -n Kairos
+kubectl get services -n Kairos
 ```
 
 ### 3. Scale Services
 
 ```bash
 # Scale API replicas
-kubectl scale deployment api --replicas=3 -n thinkcoffee
+kubectl scale deployment api --replicas=3 -n Kairos
 
 # Check scaling status
-kubectl get deployment api -n thinkcoffee
-kubectl get pods -n thinkcoffee -l app=api
+kubectl get deployment api -n Kairos
+kubectl get pods -n Kairos -l app=api
 ```
 
 ### 4. Monitor Kubernetes
@@ -166,13 +166,13 @@ kubectl cluster-info
 
 # View resource usage
 kubectl top nodes
-kubectl top pods -n thinkcoffee
+kubectl top pods -n Kairos
 
 # View logs
-kubectl logs -f deployment/api -n thinkcoffee
+kubectl logs -f deployment/api -n Kairos
 
 # Describe pod (troubleshooting)
-kubectl describe pod <pod-name> -n thinkcoffee
+kubectl describe pod <pod-name> -n Kairos
 ```
 
 ## CI/CD Pipeline
@@ -207,15 +207,15 @@ gh run view <run-id> --log
 ```bash
 # Backup PostgreSQL
 docker-compose -f docker-compose.prod.yml exec postgres \
-  pg_dump -U thinkcoffee thinkcoffee > backup.sql
+  pg_dump -U Kairos Kairos > backup.sql
 
 # Restore from backup
 docker-compose -f docker-compose.prod.yml exec postgres \
-  psql -U thinkcoffee thinkcoffee < backup.sql
+  psql -U Kairos Kairos < backup.sql
 
 # Schedule automated backups (cron)
 0 2 * * * docker-compose -f docker-compose.prod.yml exec postgres \
-  pg_dump -U thinkcoffee thinkcoffee > backups/db-$(date +\%Y\%m\%d).sql
+  pg_dump -U Kairos Kairos > backups/db-$(date +\%Y\%m\%d).sql
 ```
 
 ### Redis Backup
@@ -226,7 +226,7 @@ docker-compose -f docker-compose.prod.yml exec redis \
   redis-cli BGSAVE
 
 # Extract dump
-docker cp thinkcoffee-cache:/data/dump.rdb ./redis-backup.rdb
+docker cp Kairos-cache:/data/dump.rdb ./redis-backup.rdb
 ```
 
 ### Rollback Procedure
@@ -236,7 +236,7 @@ docker cp thinkcoffee-cache:/data/dump.rdb ./redis-backup.rdb
 docker-compose -f docker-compose.prod.yml down
 
 # Revert to previous image tag
-docker tag thinkcoffee:v1.1.0 thinkcoffee:latest
+docker tag Kairos:v1.1.0 Kairos:latest
 
 # Restart with previous version
 docker-compose -f docker-compose.prod.yml up -d
@@ -254,7 +254,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 # Use Let's Encrypt (production)
 docker run -it --rm -v $(pwd)/certs:/etc/letsencrypt \
   certbot/certbot certonly --standalone \
-  -d api.thinkcoffee.dev --email admin@thinkcoffee.dev
+  -d api.Kairos.dev --email admin@Kairos.dev
 ```
 
 ### Configure Firewall
@@ -292,7 +292,7 @@ tail -f logs/access.log
 ```bash
 # Create indexes
 docker-compose -f docker-compose.prod.yml exec postgres \
-  psql -U thinkcoffee -d thinkcoffee -f scripts/indexes.sql
+  psql -U Kairos -d Kairos -f scripts/indexes.sql
 
 # Analyze query performance
 EXPLAIN ANALYZE SELECT * FROM agents WHERE id = 1;
@@ -317,7 +317,7 @@ docker-compose -f docker-compose.prod.yml exec redis \
 npm install -g autocannon
 
 # Run load test
-autocannon -c 100 -d 30 https://api.thinkcoffee.dev/health
+autocannon -c 100 -d 30 https://api.Kairos.dev/health
 ```
 
 ## Monitoring & Alerting
@@ -326,11 +326,11 @@ autocannon -c 100 -d 30 https://api.thinkcoffee.dev/health
 
 ```bash
 # API health
-curl -i https://api.thinkcoffee.dev/health
+curl -i https://api.Kairos.dev/health
 
 # Database health
 docker-compose -f docker-compose.prod.yml exec postgres \
-  pg_isready -U thinkcoffee
+  pg_isready -U Kairos
 
 # Cache health
 docker-compose -f docker-compose.prod.yml exec redis \

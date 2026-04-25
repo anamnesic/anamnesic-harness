@@ -22,8 +22,8 @@ Se dois processos (ex: Claude Desktop + Cursor) chamarem `markRead` simultaneame
 Adotar um arquivo separado de "lidos": `default.read.json`
 
 ```
-~/.thinkcoffee/chat/default.jsonl       ← append-only, nunca reescrito
-~/.thinkcoffee/chat/default.read.json   ← { "ids": Set<string> }
+~/.Kairos/chat/default.jsonl       ← append-only, nunca reescrito
+~/.Kairos/chat/default.read.json   ← { "ids": Set<string> }
 ```
 
 ### Implementação

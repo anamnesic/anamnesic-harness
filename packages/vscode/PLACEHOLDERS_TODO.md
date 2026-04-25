@@ -12,41 +12,41 @@ This list tracks commands that still use placeholder handlers and must be implem
 
 All commands below were migrated from info-only placeholders to PM-delegated functional handlers in `src/extension.ts`.
 
-- [x] thinkcoffee.refreshProjects
-- [x] thinkcoffee.createProject
-- [x] thinkcoffee.addContext
-- [x] thinkcoffee.addFileAsContext
-- [x] thinkcoffee.addSelectionAsContext
-- [x] thinkcoffee.addStructureAsContext
-- [x] thinkcoffee.addDecision
-- [x] thinkcoffee.syncContext
-- [x] thinkcoffee.exportContext
-- [x] thinkcoffee.openContextFile
-- [x] thinkcoffee.viewContext
-- [x] thinkcoffee.openChat
-- [x] thinkcoffee.createPipeline
-- [x] thinkcoffee.approvePhase
-- [x] thinkcoffee.rejectPhase
-- [x] thinkcoffee.viewTaskOutput
-- [x] thinkcoffee.refreshPipeline
-- [x] thinkcoffee.openOtherProject
-- [x] thinkcoffee.configureAgentModels
-- [x] thinkcoffee.viewAgentModels
-- [x] thinkcoffee.toggleDryRun
-- [x] thinkcoffee.openSafetyNet
-- [x] thinkcoffee.rollback
-- [x] thinkcoffee.listSnapshots
-- [x] thinkcoffee.cleanupSnapshots
+- [x] Kairos.refreshProjects
+- [x] Kairos.createProject
+- [x] Kairos.addContext
+- [x] Kairos.addFileAsContext
+- [x] Kairos.addSelectionAsContext
+- [x] Kairos.addStructureAsContext
+- [x] Kairos.addDecision
+- [x] Kairos.syncContext
+- [x] Kairos.exportContext
+- [x] Kairos.openContextFile
+- [x] Kairos.viewContext
+- [x] Kairos.openChat
+- [x] Kairos.createPipeline
+- [x] Kairos.approvePhase
+- [x] Kairos.rejectPhase
+- [x] Kairos.viewTaskOutput
+- [x] Kairos.refreshPipeline
+- [x] Kairos.openOtherProject
+- [x] Kairos.configureAgentModels
+- [x] Kairos.viewAgentModels
+- [x] Kairos.toggleDryRun
+- [x] Kairos.openSafetyNet
+- [x] Kairos.rollback
+- [x] Kairos.listSnapshots
+- [x] Kairos.cleanupSnapshots
 
 ## Non-Placeholder (Already Wired)
 
-- thinkcoffee.runPhase (delegates to workflow.executeAutonomous)
-- thinkcoffee.stopAgents
-- thinkcoffee.invokeAgent
-- thinkcoffee.workflow.createComplex
-- thinkcoffee.workflow.executeAutonomous
-- thinkcoffee.orchestrator.showRunStatus
-- thinkcoffee.orchestrator.showCheckpoints
-- thinkcoffee.orchestrator.pauseRun
-- thinkcoffee.orchestrator.resumeRun
-- thinkcoffee.orchestrator.selectRun
+- Kairos.runPhase (delegates to workflow.executeAutonomous)
+- Kairos.stopAgents
+- Kairos.invokeAgent
+- Kairos.workflow.createComplex
+- Kairos.workflow.executeAutonomous
+- Kairos.orchestrator.showRunStatus
+- Kairos.orchestrator.showCheckpoints
+- Kairos.orchestrator.pauseRun
+- Kairos.orchestrator.resumeRun
+- Kairos.orchestrator.selectRun

@@ -8,14 +8,14 @@
 ## 1. Instalar dependencias (raiz do monorepo)
 
 ```bash
-cd thinkcoffee
+cd Kairos
 pnpm install
 ```
 
 ## 2. Build do core (dependencia da extensao)
 
 ```bash
-pnpm --filter @thinkcoffee/core build
+pnpm --filter @Kairos/core build
 ```
 
 ## 3. Build da extensao
@@ -41,12 +41,12 @@ cd packages/vscode
 pnpm exec vsce package --no-dependencies
 ```
 
-Gera `thinkcoffee-vscode-1.0.0.vsix` no diretorio atual.
+Gera `Kairos-vscode-1.0.0.vsix` no diretorio atual.
 
 ## 5. Instalar no VS Code
 
 ```bash
-code --install-extension thinkcoffee-vscode-1.0.0.vsix --force
+code --install-extension Kairos-vscode-1.0.0.vsix --force
 ```
 
 Reinicie o VS Code apos a instalacao.
@@ -55,7 +55,7 @@ Reinicie o VS Code apos a instalacao.
 
 ```bash
 cd packages/vscode
-node esbuild.js && pnpm exec vsce package --no-dependencies && code --install-extension thinkcoffee-vscode-1.0.0.vsix --force
+node esbuild.js && pnpm exec vsce package --no-dependencies && code --install-extension Kairos-vscode-1.0.0.vsix --force
 ```
 
 ## Notas

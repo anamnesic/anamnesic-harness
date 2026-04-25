@@ -4,15 +4,15 @@
 
 ---
 
-## 🧠 Overview
+## Overview
 
-KAIROS is an experimental AI agent architecture designed to move beyond reactive assistants into **continuous, context-aware, and proactive systems**.
+KAIROS is an AI agent architecture designed to move beyond reactive assistants into **continuous, context-aware, and proactive systems**.
 
 Unlike traditional assistants that require explicit prompts, KAIROS operates as a **background cognitive layer** — observing, recording, reasoning, and acting over time.
 
 ---
 
-## 🚀 Core Principles
+## Core Principles
 
 * **Persistence over statelessness**
 * **Observation over instruction**
@@ -21,58 +21,124 @@ Unlike traditional assistants that require explicit prompts, KAIROS operates as 
 
 ---
 
-## ⚙️ Key Features
+## Getting Started
 
-### 1. 📓 Append-Only Memory Logs
+### Requirements
+
+* Node.js 20+
+* pnpm 9+
+
+### Install
+
+```bash
+pnpm install
+```
+
+### Build
+
+```bash
+pnpm build
+```
+
+### Run
+
+```bash
+# Start the main agent
+node dist/main.js
+
+# Start the MCP/API interface
+node dist/interfaces/api.js
+
+# Start the CLI interface
+node dist/interfaces/cli.js
+```
+
+### Development (watch mode)
+
+```bash
+pnpm dev
+```
+
+### Tests
+
+```bash
+pnpm test           # integration tests
+pnpm test:unit      # unit tests with coverage
+```
+
+---
+
+## Project Structure
+
+```
+kairos/
+├── src/
+│   ├── core/               # Agent loop, decision engine, action engine, scheduler
+│   ├── memory/             # Memory manager, vector store, metadata store, summaries
+│   ├── observation/        # Event bus, file watcher, observers (code, terminal, api)
+│   ├── recall/             # Retriever, ranking, context builder
+│   ├── sleep/              # Consolidator, summarizer, pruning
+│   ├── actions/            # Base action, code, notification, system actions
+│   ├── policies/           # Permissions, guardrails, approval flow
+│   ├── config/             # Settings, feature flags
+│   ├── interfaces/
+│   │   ├── cli.ts          # CLI interface (Commander.js)
+│   │   ├── api.ts          # MCP server interface
+│   │   └── dashboard/      # VS Code extension
+│   ├── utils/              # Logger, time, embeddings
+│   └── main.ts             # Entry point
+├── data/                   # Runtime persistence (outside src)
+│   ├── logs/               # Append-only observation logs
+│   ├── index/              # Vector and metadata indexes
+│   └── summaries/          # Daily summaries from sleep cycle
+├── tests/
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## Key Features
+
+### 1. Append-Only Memory Logs
 
 * Immutable daily logs of observations
 * Full traceability of agent perception
 * Time-based memory indexing
 
----
-
-### 2. 👁️ Continuous Observation
+### 2. Continuous Observation
 
 * Monitors environment (code, files, workflows)
 * Detects changes and behavioral patterns
 * Builds long-term contextual understanding
 
----
-
-### 3. ⚡ Proactive Execution
+### 3. Proactive Execution
 
 * Triggers actions without explicit prompts
 * Suggests improvements and optimizations
 * Alerts on anomalies, risks, or opportunities
 
----
-
-### 4. 🌙 Memory Consolidation ("Sleep Cycle")
+### 4. Memory Consolidation (Sleep Cycle)
 
 * Periodic background process (typically nightly)
 * Summarizes and compresses daily logs
 * Prunes irrelevant or redundant data
 * Extracts patterns and long-term insights
 
----
-
-### 5. 🧩 Contextual Recall Engine
+### 5. Contextual Recall Engine
 
 * Retrieves relevant memory across time
 * Prioritizes high-signal information
 * Enables continuity across sessions
 
----
-
-### 6. 🔁 Self-Optimization
+### 6. Self-Optimization
 
 * Continuously refines memory relevance
 * Improves decision-making over time
 * Adapts to user behavior and workflows
 
----
-
-### 7. 🖥️ Background Runtime Layer
+### 7. Background Runtime Layer
 
 * Runs independently of user prompts
 * Acts as a persistent cognitive daemon
@@ -80,7 +146,7 @@ Unlike traditional assistants that require explicit prompts, KAIROS operates as 
 
 ---
 
-## 🏗️ Architecture (Conceptual)
+## Architecture
 
 ```
                 ┌────────────────────┐
@@ -111,22 +177,22 @@ Unlike traditional assistants that require explicit prompts, KAIROS operates as 
 
 ---
 
-## 🔐 Safety & Control
+## Safety & Control
 
 KAIROS is designed with strict internal gating due to the implications of continuous observation and autonomous action.
 
-### Safeguards include:
+Safeguards include:
 
-* Feature flag restrictions (internal-only activation)
+* Feature flag restrictions (`src/config/featureFlags.ts`)
 * Scoped observation boundaries
-* Action approval layers (optional)
+* Action approval layers (optional, via `src/policies/approvalFlow.ts`)
 * Full audit logs of all decisions and actions
 
 ---
 
-## ⚠️ Known Challenges
+## Known Challenges
 
-### 1. Privacy
+### Privacy
 
 Continuous observation requires:
 
@@ -134,51 +200,27 @@ Continuous observation requires:
 * Clear data boundaries
 * Secure storage
 
----
-
-### 2. Autonomy Control
+### Autonomy Control
 
 Balancing:
 
 * Helpfulness vs intrusiveness
 * Automation vs user authority
 
----
-
-### 3. Memory Scaling
+### Memory Scaling
 
 * Long-term storage costs
 * Efficient retrieval mechanisms
 * Avoiding memory bloat
 
----
-
-### 4. Trust & Interpretability
+### Trust & Interpretability
 
 * Explaining why actions were taken
 * Avoiding incorrect pattern inference
 
 ---
 
-## 🧪 Status
-
-> ⚠️ Experimental / Internal Concept
-
-* Not available in public releases
-* Controlled via internal feature flags
-* Subject to ongoing research and iteration
-
----
-
-## 🔮 Vision
-
-KAIROS represents a shift toward:
-
-> **AI systems that don't just respond — but continuously think, learn, and act alongside you.**
-
----
-
-## 📌 Summary
+## Capability Summary
 
 | Capability       | Traditional Assistants | KAIROS     |
 | ---------------- | ---------------------- | ---------- |
@@ -189,8 +231,6 @@ KAIROS represents a shift toward:
 | Execution        | On-demand              | Autonomous |
 
 ---
-
-## 🤔 Final Thought
 
 KAIROS is less of a tool and more of a **system layer** — one that challenges current assumptions about agency, control, and human–AI interaction.
 

@@ -33,7 +33,7 @@ export {
 ### Phase 5: Task Executor
 
 ```typescript
-import { TaskExecutorService } from '@thinkcoffee/core';
+import { TaskExecutorService } from '@Kairos/core';
 
 const executor = new TaskExecutorService(aiProvider);
 
@@ -54,7 +54,7 @@ console.log(result); // { success: true, ... }
 ### Phase 5: WebSocket Server
 
 ```typescript
-import { WebSocketServer } from '@thinkcoffee/core';
+import { WebSocketServer } from '@Kairos/core';
 
 const wsServer = new WebSocketServer(httpServer, jwtSecret);
 
@@ -72,7 +72,7 @@ wsServer.broadcastTaskUpdate({
 ### Phase 6: Workflow Engine
 
 ```typescript
-import { WorkflowExecutionEngine } from '@thinkcoffee/core';
+import { WorkflowExecutionEngine } from '@Kairos/core';
 
 const engine = new WorkflowExecutionEngine();
 
@@ -92,7 +92,7 @@ console.log(execution.status); // 'completed' | 'failed' | ...
 ### Phase 7: Security Analysis
 
 ```typescript
-import { AdvancedSecurityAnalysisService } from '@thinkcoffee/core';
+import { AdvancedSecurityAnalysisService } from '@Kairos/core';
 
 const security = new AdvancedSecurityAnalysisService(aiProvider);
 
@@ -106,7 +106,7 @@ console.log(analysis.vulnerabilities); // Array of vulnerabilities
 ### Phase 7: Attack Simulation
 
 ```typescript
-import { AttackSimulationFramework } from '@thinkcoffee/core';
+import { AttackSimulationFramework } from '@Kairos/core';
 
 const attack = new AttackSimulationFramework();
 
@@ -129,7 +129,7 @@ console.log(simulation.metrics.blockRatePercent); // Detection %
 ```typescript
 import express from 'express';
 import { createServer } from 'http';
-import { AdvancedFeaturesFactory } from '@thinkcoffee/core';
+import { AdvancedFeaturesFactory } from '@Kairos/core';
 
 const app = express();
 const httpServer = createServer(app);

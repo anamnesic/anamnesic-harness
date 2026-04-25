@@ -1,4 +1,4 @@
-﻿# ThinkCoffee - Infrastructure Validation Report
+﻿# Kairos - Infrastructure Validation Report
 
 **Generated**: 05/04/2026
 **Status**: ALL SYSTEMS OPERATIONAL
@@ -48,7 +48,7 @@
 ✅ Service: pgadmin (Admin) on port 5050
 ✅ Health Checks: All 3 core services have health checks
 ✅ Volumes: Named volumes for postgres_data and redis_data
-✅ Networking: Isolated bridge network (thinkcoffee-network)
+✅ Networking: Isolated bridge network (Kairos-network)
 ✅ Logging: JSON-file driver with rotation
 
 #### docker-compose.dev.yml
@@ -88,7 +88,7 @@
 
 #### Application Config
 ✅ NODE_ENV (development/test/staging/production)
-✅ APP_NAME (thinkcoffee)
+✅ APP_NAME (Kairos)
 ✅ APP_PORT (3000)
 ✅ APP_URL 
 ✅ LOG_LEVEL (debug/info/warn/error)
@@ -329,7 +329,7 @@
 
 2. Prepare production server:
    - Docker and docker-compose installed
-   - Directory structure created: /opt/thinkcoffee
+   - Directory structure created: /opt/Kairos
    - SSH user setup (deploy user)
 
 3. Configure production env file:
@@ -345,7 +345,7 @@
 
 ### Ongoing Operations
 1. Run health checks: scripts/health-check.sh
-2. Monitor logs: docker logs -f thinkcoffee-app
+2. Monitor logs: docker logs -f Kairos-app
 3. Weekly backups: scripts/backup.sh
 4. Infrastructure validation: scripts/validate-infrastructure.sh
 

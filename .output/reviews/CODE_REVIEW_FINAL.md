@@ -1,4 +1,4 @@
-# Revisão Final — thinkcoffee
+# Revisão Final — Kairos
 
 Resumo curto
 - Objetivo: Revisão de padrões de código, segurança, performance e consistência.

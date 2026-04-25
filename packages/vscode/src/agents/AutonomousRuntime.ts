@@ -75,7 +75,7 @@ export interface PmChatResult {
   objective?: string;
 }
 
-const PM_SYSTEM_PROMPT = `You are the Product Manager (PM) AI for ThinkCoffee, an AI-powered software development pipeline system.
+const PM_SYSTEM_PROMPT = `You are the Product Manager (PM) AI for Kairos, an AI-powered software development pipeline system.
 
 Your role:
 - Understand the developer's natural-language request about software development
@@ -109,9 +109,9 @@ Decision rules:
 - "show-status": user asks about status, progress, what is happening, show pipeline, etc.
 - "none": general questions, explanations, or anything that does not require pipeline action`;
 
-const MEMORY_KEY = 'thinkcoffee.advancedMemory.runSummaries';
+const MEMORY_KEY = 'Kairos.advancedMemory.runSummaries';
 const MAX_MEMORY_ITEMS = 40;
-const WORKFLOW_STATE_PREFIX = 'thinkcoffee.workflowState.';
+const WORKFLOW_STATE_PREFIX = 'Kairos.workflowState.';
 
 // ─── Agent role definitions ──────────────────────────────────
 
@@ -171,7 +171,7 @@ export class AutonomousRuntime {
     private readonly extensionContext: vscode.ExtensionContext,
     output?: vscode.OutputChannel,
   ) {
-    this.output = output ?? vscode.window.createOutputChannel('ThinkCoffee Advanced');
+    this.output = output ?? vscode.window.createOutputChannel('Kairos Advanced');
   }
 
   getOutput(): vscode.OutputChannel {
@@ -471,7 +471,7 @@ Respond ONLY with a valid JSON object (no markdown fences):
 
   /** Get the configured model family for an agent role */
   private getModelForRole(role: AgentRole): string {
-    // Use the model mapping from @thinkcoffee/core agent-config
+    // Use the model mapping from @Kairos/core agent-config
     const FREE_TIER_MODELS: Record<string, string> = {
       'product-manager': 'gpt-4.1',
       'architect': 'gpt-4o',

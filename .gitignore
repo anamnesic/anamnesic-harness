@@ -53,3 +53,11 @@ tests/
 # TypeORM
 typeorm/
 migrations/
+
+# Runtime persistence - keep dirs, ignore content
+data/logs/*
+!data/logs/.gitkeep
+data/index/*
+!data/index/.gitkeep
+data/summaries/*
+!data/summaries/.gitkeep

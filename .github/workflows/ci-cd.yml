@@ -22,8 +22,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: thinkcoffee_test
-          POSTGRES_USER: thinkcoffee
+          POSTGRES_DB: Kairos_test
+          POSTGRES_USER: Kairos
           POSTGRES_PASSWORD: test
         options: >-
           --health-cmd pg_isready
@@ -84,9 +84,9 @@ jobs:
         run: pnpm test
         env:
           DB_HOST: localhost
-          DB_USER: thinkcoffee
+          DB_USER: Kairos
           DB_PASSWORD: test
-          DB_NAME: thinkcoffee_test
+          DB_NAME: Kairos_test
           REDIS_URL: redis://localhost:6379
 
       - name: Upload coverage
@@ -169,7 +169,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     environment:
       name: staging
-      url: https://staging.thinkcoffee.dev
+      url: https://staging.Kairos.dev
 
     steps:
       - uses: actions/checkout@v3
@@ -202,7 +202,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://api.thinkcoffee.dev
+      url: https://api.Kairos.dev
     concurrency:
       group: production-deployment
       cancel-in-progress: false
@@ -235,7 +235,7 @@ jobs:
         run: |
           echo "Running health checks..."
           for i in {1..30}; do
-            if curl -f https://api.thinkcoffee.dev/health; then
+            if curl -f https://api.Kairos.dev/health; then
               echo "Health check passed"
               exit 0
             fi
@@ -254,7 +254,7 @@ jobs:
               repo: context.repo.repo,
               deployment_id: ${{ steps.deployment.outputs.result }},
               state: 'success',
-              environment_url: 'https://api.thinkcoffee.dev'
+              environment_url: 'https://api.Kairos.dev'
             });
 
       - name: Mark deployment as failed

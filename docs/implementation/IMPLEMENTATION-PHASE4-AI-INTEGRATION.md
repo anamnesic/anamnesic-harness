@@ -1,7 +1,7 @@
-# ThinkCoffee AI Integration - Phase 4 Implementation
+# Kairos AI Integration - Phase 4 Implementation
 
 ## Overview
-Implementação completa de integração de IA em ThinkCoffee com suporte para múltiplos provedores (Claude, OpenAI, Ollama, Copilot) e execução automática de tarefas de agentes com raciocínio estendido.
+Implementação completa de integração de IA em Kairos com suporte para múltiplos provedores (Claude, OpenAI, Ollama, Copilot) e execução automática de tarefas de agentes com raciocínio estendido.
 
 ## Architecture
 
@@ -250,7 +250,7 @@ COPILOT_ENABLE=true
 
 ### Programmatic Configuration
 ```typescript
-import { AITaskService, getAIProvider, initializeProviders } from '@thinkcoffee/core';
+import { AITaskService, getAIProvider, initializeProviders } from '@Kairos/core';
 
 // Initialize all providers
 await initializeProviders({

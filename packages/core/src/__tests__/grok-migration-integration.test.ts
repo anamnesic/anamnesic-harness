@@ -23,7 +23,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     pipelineService = new PipelineService();
-    
+
     vi.mocked(os.homedir).mockReturnValue('/home/user');
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
@@ -37,12 +37,12 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
       const pipeline = pipelineService.create(
         mockProjectId,
         'Implement coffee machine API',
-        '/workspace/thinkcoffee'
+        '/workspace/Kairos'
       );
 
       expect(pipeline.objective).toBe('Implement coffee machine API');
       expect(pipeline.phases.length).toBeGreaterThan(0);
-      
+
       // Backend agent should have a valid free model (not Grok)
       const backendModel = config.models['backend'];
       expect(backendModel).not.toMatch(/^grok/i);
@@ -72,7 +72,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
         const tasksForRole = pipeline.phases
           .flatMap(p => p.tasks)
           .filter(t => t.agent === role);
-        
+
         // Cada papel pode ter tarefas em diferentes fases
         expect(tasksForRole.length).toBeGreaterThanOrEqual(0);
       });
@@ -83,7 +83,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
 
       presets.forEach(preset => {
         const config = applyQualityPreset(preset);
-        
+
         // Nenhum modelo deve ser Grok
         Object.values(config.models).forEach(model => {
           expect(model).not.toMatch(/^grok/i);
@@ -114,7 +114,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
 
     it('should support model assignment for all roles', () => {
       const config = applyQualityPreset('cafe-soluvel');
-      
+
       const roles: AgentRole[] = [
         'product-manager',
         'architect',
@@ -157,10 +157,10 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
 
     it('should execute implementation phase with available models', () => {
       const implPhase = pipeline.phases.find(p => p.name === 'Implementation');
-      
+
       if (implPhase) {
         expect(implPhase.agents).toContain('backend');
-        
+
         const backendTask = implPhase.tasks.find(t => t.agent === 'backend');
         expect(backendTask).toBeDefined();
         expect(backendTask?.status).toBe('pending');
@@ -169,7 +169,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
 
     it('should support parallel execution of backend, frontend, devops', () => {
       const implPhase = pipeline.phases.find(p => p.name === 'Implementation');
-      
+
       expect(implPhase?.parallel).toBe(true);
       expect(implPhase?.agents).toContain('backend');
       expect(implPhase?.agents).toContain('frontend');
@@ -210,7 +210,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
   describe('Configuration persistence', () => {
     it('should save pipeline configuration without Grok', () => {
       const config = applyQualityPreset('cafe-soluvel');
-      
+
       expect(fs.writeFileSync).toHaveBeenCalled();
       expect(config.models['backend']).not.toMatch(/^grok/i);
     });
@@ -242,7 +242,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
       const phase = pipeline.phases[0];
       phase.status = 'awaiting-approval';
       phase.tasks[0].status = 'completed';
-      
+
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(pipeline));
       const updated = pipelineService.approvePhase(mockProjectId, pipeline.id);
 
@@ -253,7 +253,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
     it('should maintain phase rejection with feedback', () => {
       const phase = pipeline.phases[0];
       phase.status = 'awaiting-approval';
-      
+
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(pipeline));
       const feedback = 'Please revise backend implementation';
       const updated = pipelineService.rejectPhase(
@@ -271,7 +271,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
       const lastPhase = pipeline.phases[4];
       lastPhase.status = 'awaiting-approval';
       lastPhase.tasks[0].status = 'completed';
-      
+
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(pipeline));
       const updated = pipelineService.approvePhase(mockProjectId, pipeline.id);
 
@@ -282,7 +282,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
     it('should support failed pipeline resumption', () => {
       pipeline.status = 'failed';
       pipeline.phases[0].status = 'failed';
-      
+
       const resumed = pipelineService.resumeFailed(mockProjectId, pipeline.id);
 
       expect(resumed?.status).toBe('active');
@@ -302,7 +302,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
   describe('Cost awareness without Grok', () => {
     it('cafe-soluvel should remain free tier', () => {
       const preset = QUALITY_PRESETS['cafe-soluvel'];
-      
+
       expect(preset.costRange.min).toBe(0);
       expect(preset.costRange.max).toBe(0);
     });
@@ -310,20 +310,20 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
     it('should indicate zero cost explicitly', () => {
       const preset = QUALITY_PRESETS['cafe-soluvel'];
       const description = preset.description.toLowerCase();
-      
+
       expect(description).toContain('zero custo');
     });
 
     it('coado-com-carinho should remain in mid-tier', () => {
       const preset = QUALITY_PRESETS['coado-com-carinho'];
-      
+
       expect(preset.costRange.min).toBeGreaterThan(0);
       expect(preset.costRange.max).toBeLessThanOrEqual(1);
     });
 
     it('espresso-duplo should remain premium', () => {
       const preset = QUALITY_PRESETS['espresso-duplo'];
-      
+
       expect(preset.costRange.min).toBe(3);
       expect(preset.costRange.max).toBe(3);
     });
@@ -350,7 +350,7 @@ describe('Pipeline Integration - Post-Grok Migration', () => {
 
     it('should support upgrading old configuration to new presets', () => {
       const newConfig = applyQualityPreset('cafe-soluvel');
-      
+
       // Should have all required fields
       expect(newConfig.mode).toBeDefined();
       expect(newConfig.models).toBeDefined();

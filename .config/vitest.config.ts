@@ -28,7 +28,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@thinkcoffee/core': path.resolve(__dirname, './packages/core/src'),
+      '@Kairos/core': path.resolve(__dirname, './packages/core/src'),
     },
   },
 });

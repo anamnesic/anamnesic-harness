@@ -1,56 +1,46 @@
 # ==============================================================================
-# ThinkCoffee - Docker Compose Development (V4 - Agent Safety Net)
+# Kairos - Docker Compose Development
 # ==============================================================================
-# Uso:
-#   docker compose -f docker-compose.dev.yml up -d
-#   docker compose -f docker-compose.dev.yml logs -f mcp-server
-#
-# Inclui:
-#   - Hot reload via volume mount
-#   - Node.js debugger na porta 9229
-#   - Volumes dedicados para snapshots e logs (V3)
-#   - LOG_LEVEL=debug por padrao
+# Usage:
+#   docker compose -f docker/docker-compose.dev.yml up -d
+#   docker compose -f docker/docker-compose.dev.yml logs -f kairos
 # ==============================================================================
 
 services:
-  mcp-server:
+  kairos:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
       target: builder
-    container_name: thinkcoffee-mcp-dev
-    command: ["pnpm", "dev:mcp"]
+    container_name: kairos-dev
+    command: ["pnpm", "dev"]
     environment:
       NODE_ENV: development
-      THINKCOFFEE_DB_PATH: /data/data.sqlite
-      THINKCOFFEE_DATA_DIR: /data
-      THINKCOFFEE_SNAPSHOT_DIR: /data/snapshots
-      THINKCOFFEE_LOG_DIR: /data/logs
+      KAIROS_DB_PATH: /data/data.sqlite
+      KAIROS_DATA_DIR: /data
+      KAIROS_SNAPSHOT_DIR: /data/snapshots
+      KAIROS_LOG_DIR: /data/logs
       MCP_PORT: "3000"
       LOG_LEVEL: debug
-      THINKCOFFEE_DB_LOGGING: "true"
-      # V3/V4 Safety Net -- modo dev (menos restritivo)
-      THINKCOFFEE_SNAPSHOT_RETENTION_DAYS: "3"
-      THINKCOFFEE_SNAPSHOT_MAX_SIZE_MB: "25"
-      THINKCOFFEE_DRY_RUN_DEFAULT: "false"
-      THINKCOFFEE_DIFF_PREVIEW_MODE: "existing-only"
-      THINKCOFFEE_COMMAND_CONFIRMATION: "destructive-only"
+      KAIROS_SNAPSHOT_RETENTION_DAYS: "3"
+      KAIROS_SNAPSHOT_MAX_SIZE_MB: "25"
+      KAIROS_DRY_RUN_DEFAULT: "false"
+      KAIROS_DIFF_PREVIEW_MODE: "existing-only"
+      KAIROS_COMMAND_CONFIRMATION: "destructive-only"
     volumes:
-      - thinkcoffee_dev_data:/data
-      # Live-reload: mount source for fast iteration
-      - ./packages/core/src:/app/packages/core/src:ro
-      - ./packages/mcp-server/src:/app/packages/mcp-server/src:ro
-      - ./packages/cli/src:/app/packages/cli/src:ro
+      - kairos_dev_data:/data
+      # Live-reload: mount single src/ dir
+      - ../src:/app/src:ro
     ports:
       - "3000:3000"
-      - "9229:9229"  # Node.js debugger
+      - "9229:9229"
     networks:
-      - thinkcoffee-network
+      - kairos-network
 
 volumes:
-  thinkcoffee_dev_data:
+  kairos_dev_data:
     driver: local
 
 networks:
-  thinkcoffee-network:
+  kairos-network:
     driver: bridge

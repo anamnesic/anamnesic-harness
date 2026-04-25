@@ -1,4 +1,4 @@
-import { loadOllamaConfig, type OllamaConfig } from '@thinkcoffee/core';
+import { loadOllamaConfig, type OllamaConfig } from '@Kairos/core';
 import * as http from 'http';
 import * as https from 'https';
 

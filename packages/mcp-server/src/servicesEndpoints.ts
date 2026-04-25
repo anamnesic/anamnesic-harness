@@ -34,8 +34,8 @@ import type {
   FallbackStrategy,
   RetentionPolicy,
   WorkflowStep,
-} from '@thinkcoffee/core';
-import { ChatMessage } from '@thinkcoffee/core';
+} from '@Kairos/core';
+import { ChatMessage } from '@Kairos/core';
 
 export interface ServicesEndpointsConfig {
   pipelineExecutor?: PipelineTaskExecutionService;

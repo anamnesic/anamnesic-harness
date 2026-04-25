@@ -1,6 +1,6 @@
 /**
  * Minimal file-based helpers that mirror the ChatService / PipelineService contracts
- * from @thinkcoffee/core without requiring a cross-package import or built dist files.
+ * from @Kairos/core without requiring a cross-package import or built dist files.
  *
  * Paths are intentionally identical to what the core services use so that messages
  * written here are visible to MCP tools, the REST API, and any other consumer.
@@ -49,7 +49,7 @@ export interface Pipeline {
 
 function chatFile(projectId: string): string {
   const safe = projectId.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const dir = path.join(os.homedir(), '.thinkcoffee', 'chat');
+  const dir = path.join(os.homedir(), '.Kairos', 'chat');
   try { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); } catch { /* ignore */ }
   return path.join(dir, `${safe}.jsonl`);
 }
@@ -78,16 +78,16 @@ export function appendChatMessage(
 // ─── Pipeline helpers ─────────────────────────────────────────
 
 const DEFAULT_PHASES: Array<{ name: string; agents: string[] }> = [
-  { name: 'Planning',        agents: ['product-manager'] },
-  { name: 'Architecture',    agents: ['architect'] },
-  { name: 'Implementation',  agents: ['backend', 'frontend', 'devops'] },
-  { name: 'Testing',         agents: ['qa'] },
-  { name: 'Code Review',     agents: ['code-review'] },
+  { name: 'Planning', agents: ['product-manager'] },
+  { name: 'Architecture', agents: ['architect'] },
+  { name: 'Implementation', agents: ['backend', 'frontend', 'devops'] },
+  { name: 'Testing', agents: ['qa'] },
+  { name: 'Code Review', agents: ['code-review'] },
 ];
 
 function pipelinesDir(projectId: string): string {
   const safe = projectId.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const dir = path.join(os.homedir(), '.thinkcoffee', 'pipelines', safe);
+  const dir = path.join(os.homedir(), '.Kairos', 'pipelines', safe);
   try { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); } catch { /* ignore */ }
   return dir;
 }

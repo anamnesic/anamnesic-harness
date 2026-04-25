@@ -1,7 +1,7 @@
 # Relatório de Validação da Migração Grok → GPT-4.1
 
 **Data de Execução:** 2024  
-**QA Engineer:** ThinkCoffee QA Team  
+**QA Engineer:** Kairos QA Team  
 **Status:** ✅ APROVADO - Migração validada sem regressões
 
 ---
@@ -254,6 +254,6 @@ A migração do modelo `grok-code-fast-1` para `gpt-5.4-mini` (free tier) foi **
 
 ---
 
-**Assinado por:** QA Engineer - ThinkCoffee Team  
+**Assinado por:** QA Engineer - Kairos Team  
 **Data:** 2024  
 **Próxima revisão:** Após 1 mês de produção

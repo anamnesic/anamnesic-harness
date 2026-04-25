@@ -1,16 +1,16 @@
 {
-  "name": "thinkcoffee-vscode",
-  "displayName": "ThinkCoffee",
+  "name": "Kairos-vscode",
+  "displayName": "Kairos",
   "description": "AI Context Management - maintain project context across all AI assistants",
   "version": "1.0.1",
-  "publisher": "thinkcoffee",
+  "publisher": "Kairos",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chronokairo/thinkcoffee.git"
+    "url": "https://github.com/chronokairo/Kairos.git"
   },
-  "homepage": "https://github.com/chronokairo/thinkcoffee",
+  "homepage": "https://github.com/chronokairo/Kairos",
   "bugs": {
-    "url": "https://github.com/chronokairo/thinkcoffee/issues"
+    "url": "https://github.com/chronokairo/Kairos/issues"
   },
   "engines": {
     "vscode": "^1.90.0",
@@ -24,281 +24,281 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "thinkcoffee",
-          "title": "ThinkCoffee",
+          "id": "Kairos",
+          "title": "Kairos",
           "icon": "resources/icon.svg"
         }
       ]
     },
     "views": {
-      "thinkcoffee": [
+      "Kairos": [
         {
           "type": "webview",
-          "id": "thinkcoffee.chat",
+          "id": "Kairos.chat",
           "name": "Chat"
         }
       ]
     },
     "commands": [
       {
-        "command": "thinkcoffee.refreshProjects",
-        "title": "ThinkCoffee: Refresh Projects"
+        "command": "Kairos.refreshProjects",
+        "title": "Kairos: Refresh Projects"
       },
       {
-        "command": "thinkcoffee.createProject",
-        "title": "ThinkCoffee: Create Project"
+        "command": "Kairos.createProject",
+        "title": "Kairos: Create Project"
       },
       {
-        "command": "thinkcoffee.addContext",
-        "title": "ThinkCoffee: Add Context Entry"
+        "command": "Kairos.addContext",
+        "title": "Kairos: Add Context Entry"
       },
       {
-        "command": "thinkcoffee.addFileAsContext",
-        "title": "ThinkCoffee: Add File as Context"
+        "command": "Kairos.addFileAsContext",
+        "title": "Kairos: Add File as Context"
       },
       {
-        "command": "thinkcoffee.addSelectionAsContext",
-        "title": "ThinkCoffee: Add Selection as Context"
+        "command": "Kairos.addSelectionAsContext",
+        "title": "Kairos: Add Selection as Context"
       },
       {
-        "command": "thinkcoffee.addStructureAsContext",
-        "title": "ThinkCoffee: Add Workspace Structure as Context"
+        "command": "Kairos.addStructureAsContext",
+        "title": "Kairos: Add Workspace Structure as Context"
       },
       {
-        "command": "thinkcoffee.addDecision",
-        "title": "ThinkCoffee: Record Decision"
+        "command": "Kairos.addDecision",
+        "title": "Kairos: Record Decision"
       },
       {
-        "command": "thinkcoffee.syncContext",
-        "title": "ThinkCoffee: Sync to AI Tools"
+        "command": "Kairos.syncContext",
+        "title": "Kairos: Sync to AI Tools"
       },
       {
-        "command": "thinkcoffee.exportContext",
-        "title": "ThinkCoffee: Export Context"
+        "command": "Kairos.exportContext",
+        "title": "Kairos: Export Context"
       },
       {
-        "command": "thinkcoffee.openContextFile",
-        "title": "ThinkCoffee: Open Context File"
+        "command": "Kairos.openContextFile",
+        "title": "Kairos: Open Context File"
       },
       {
-        "command": "thinkcoffee.viewContext",
-        "title": "ThinkCoffee: View Context Entry"
+        "command": "Kairos.viewContext",
+        "title": "Kairos: View Context Entry"
       },
       {
-        "command": "thinkcoffee.openChat",
-        "title": "ThinkCoffee: Open AI Chat"
+        "command": "Kairos.openChat",
+        "title": "Kairos: Open AI Chat"
       },
       {
-        "command": "thinkcoffee.createPipeline",
-        "title": "ThinkCoffee: Create Pipeline"
+        "command": "Kairos.createPipeline",
+        "title": "Kairos: Create Pipeline"
       },
       {
-        "command": "thinkcoffee.approvePhase",
-        "title": "ThinkCoffee: Approve Phase"
+        "command": "Kairos.approvePhase",
+        "title": "Kairos: Approve Phase"
       },
       {
-        "command": "thinkcoffee.rejectPhase",
-        "title": "ThinkCoffee: Reject Phase"
+        "command": "Kairos.rejectPhase",
+        "title": "Kairos: Reject Phase"
       },
       {
-        "command": "thinkcoffee.viewTaskOutput",
-        "title": "ThinkCoffee: View Task Output"
+        "command": "Kairos.viewTaskOutput",
+        "title": "Kairos: View Task Output"
       },
       {
-        "command": "thinkcoffee.refreshPipeline",
-        "title": "ThinkCoffee: Refresh Pipeline"
+        "command": "Kairos.refreshPipeline",
+        "title": "Kairos: Refresh Pipeline"
       },
       {
-        "command": "thinkcoffee.openOtherProject",
-        "title": "ThinkCoffee: Open Other Project"
+        "command": "Kairos.openOtherProject",
+        "title": "Kairos: Open Other Project"
       },
       {
-        "command": "thinkcoffee.configureAgentModels",
-        "title": "ThinkCoffee: Configure Agent Models"
+        "command": "Kairos.configureAgentModels",
+        "title": "Kairos: Configure Agent Models"
       },
       {
-        "command": "thinkcoffee.runPhase",
-        "title": "ThinkCoffee: Run Current Phase (Start Agents)"
+        "command": "Kairos.runPhase",
+        "title": "Kairos: Run Current Phase (Start Agents)"
       },
       {
-        "command": "thinkcoffee.stopAgents",
-        "title": "ThinkCoffee: Stop All Agents"
+        "command": "Kairos.stopAgents",
+        "title": "Kairos: Stop All Agents"
       },
       {
-        "command": "thinkcoffee.invokeAgent",
-        "title": "ThinkCoffee: Invoke Agent"
+        "command": "Kairos.invokeAgent",
+        "title": "Kairos: Invoke Agent"
       },
       {
-        "command": "thinkcoffee.viewAgentModels",
-        "title": "ThinkCoffee: View Agent Models"
+        "command": "Kairos.viewAgentModels",
+        "title": "Kairos: View Agent Models"
       },
       {
-        "command": "thinkcoffee.showHistory",
-        "title": "ThinkCoffee: Show Pipeline History",
+        "command": "Kairos.showHistory",
+        "title": "Kairos: Show Pipeline History",
         "icon": "$(history)"
       },
       {
-        "command": "thinkcoffee.backupHistory",
-        "title": "ThinkCoffee: Backup Pipeline History"
+        "command": "Kairos.backupHistory",
+        "title": "Kairos: Backup Pipeline History"
       },
       {
-        "command": "thinkcoffee.restoreHistory",
-        "title": "ThinkCoffee: Restore Pipeline History"
+        "command": "Kairos.restoreHistory",
+        "title": "Kairos: Restore Pipeline History"
       },
       {
-        "command": "thinkcoffee.exportHistory",
-        "title": "ThinkCoffee: Export Pipeline History"
+        "command": "Kairos.exportHistory",
+        "title": "Kairos: Export Pipeline History"
       },
       {
-        "command": "thinkcoffee.toggleDryRun",
-        "title": "ThinkCoffee: Toggle Dry-Run Mode",
+        "command": "Kairos.toggleDryRun",
+        "title": "Kairos: Toggle Dry-Run Mode",
         "icon": "$(beaker)"
       },
       {
-        "command": "thinkcoffee.openSafetyNet",
-        "title": "ThinkCoffee: Open Safety Net Panel",
+        "command": "Kairos.openSafetyNet",
+        "title": "Kairos: Open Safety Net Panel",
         "icon": "$(shield)"
       },
       {
-        "command": "thinkcoffee.rollback",
-        "title": "ThinkCoffee: Rollback Phase",
+        "command": "Kairos.rollback",
+        "title": "Kairos: Rollback Phase",
         "icon": "$(discard)"
       },
       {
-        "command": "thinkcoffee.listSnapshots",
-        "title": "ThinkCoffee: List Available Snapshots"
+        "command": "Kairos.listSnapshots",
+        "title": "Kairos: List Available Snapshots"
       },
       {
-        "command": "thinkcoffee.cleanupSnapshots",
-        "title": "ThinkCoffee: Cleanup Old Snapshots"
+        "command": "Kairos.cleanupSnapshots",
+        "title": "Kairos: Cleanup Old Snapshots"
       },
       {
-        "command": "thinkcoffee.history.refresh",
-        "title": "ThinkCoffee: Refresh History",
+        "command": "Kairos.history.refresh",
+        "title": "Kairos: Refresh History",
         "icon": "$(refresh)"
       },
       {
-        "command": "thinkcoffee.advancedSoftware.generateCode",
-        "title": "ThinkCoffee: Advanced Code Generation",
+        "command": "Kairos.advancedSoftware.generateCode",
+        "title": "Kairos: Advanced Code Generation",
         "icon": "$(code)"
       },
       {
-        "command": "thinkcoffee.advancedSoftware.debugCode",
-        "title": "ThinkCoffee: AI-Powered Code Debugging",
+        "command": "Kairos.advancedSoftware.debugCode",
+        "title": "Kairos: AI-Powered Code Debugging",
         "icon": "$(debug)"
       },
       {
-        "command": "thinkcoffee.advancedSoftware.refactorCode",
-        "title": "ThinkCoffee: Intelligent Code Refactoring",
+        "command": "Kairos.advancedSoftware.refactorCode",
+        "title": "Kairos: Intelligent Code Refactoring",
         "icon": "$(tools)"
       },
       {
-        "command": "thinkcoffee.advancedSecurity.scanVulnerabilities",
-        "title": "ThinkCoffee: Comprehensive Security Scan",
+        "command": "Kairos.advancedSecurity.scanVulnerabilities",
+        "title": "Kairos: Comprehensive Security Scan",
         "icon": "$(shield-check)"
       },
       {
-        "command": "thinkcoffee.advancedSecurity.simulateAttack",
-        "title": "ThinkCoffee: Attack Simulation (Controlled)",
+        "command": "Kairos.advancedSecurity.simulateAttack",
+        "title": "Kairos: Attack Simulation (Controlled)",
         "icon": "$(warning)"
       },
       {
-        "command": "thinkcoffee.advancedSecurity.zeroDayDiscovery",
-        "title": "ThinkCoffee: Zero-Day Vulnerability Discovery",
+        "command": "Kairos.advancedSecurity.zeroDayDiscovery",
+        "title": "Kairos: Zero-Day Vulnerability Discovery",
         "icon": "$(search)"
       },
       {
-        "command": "thinkcoffee.advancedMultimodal.analyzeImage",
-        "title": "ThinkCoffee: AI Image Analysis",
+        "command": "Kairos.advancedMultimodal.analyzeImage",
+        "title": "Kairos: AI Image Analysis",
         "icon": "$(file-media)"
       },
       {
-        "command": "thinkcoffee.advancedMultimodal.analyzeDiagram",
-        "title": "ThinkCoffee: Diagram Interpretation",
+        "command": "Kairos.advancedMultimodal.analyzeDiagram",
+        "title": "Kairos: Diagram Interpretation",
         "icon": "$(graph)"
       },
       {
-        "command": "thinkcoffee.advancedMultimodal.synthesizeKnowledge",
-        "title": "ThinkCoffee: Knowledge Synthesis",
+        "command": "Kairos.advancedMultimodal.synthesizeKnowledge",
+        "title": "Kairos: Knowledge Synthesis",
         "icon": "$(book)"
       },
       {
-        "command": "thinkcoffee.reasoning.multiStepSolve",
-        "title": "ThinkCoffee: Multi-Step Problem Solving",
+        "command": "Kairos.reasoning.multiStepSolve",
+        "title": "Kairos: Multi-Step Problem Solving",
         "icon": "$(lightbulb)"
       },
       {
-        "command": "thinkcoffee.reasoning.adaptiveThink",
-        "title": "ThinkCoffee: Adaptive Deep Reasoning",
+        "command": "Kairos.reasoning.adaptiveThink",
+        "title": "Kairos: Adaptive Deep Reasoning",
         "icon": "$(brain)"
       },
       {
-        "command": "thinkcoffee.workflow.createComplex",
-        "title": "ThinkCoffee: Create Complex Workflow",
+        "command": "Kairos.workflow.createComplex",
+        "title": "Kairos: Create Complex Workflow",
         "icon": "$(workflow)"
       },
       {
-        "command": "thinkcoffee.workflow.executeAutonomous",
-        "title": "ThinkCoffee: Execute Autonomous Workflow",
+        "command": "Kairos.workflow.executeAutonomous",
+        "title": "Kairos: Execute Autonomous Workflow",
         "icon": "$(play-circle)"
       },
       {
-        "command": "thinkcoffee.orchestrator.showRunStatus",
-        "title": "ThinkCoffee: Orchestrator Run Status",
+        "command": "Kairos.orchestrator.showRunStatus",
+        "title": "Kairos: Orchestrator Run Status",
         "icon": "$(pulse)"
       },
       {
-        "command": "thinkcoffee.orchestrator.showCheckpoints",
-        "title": "ThinkCoffee: Orchestrator Checkpoints",
+        "command": "Kairos.orchestrator.showCheckpoints",
+        "title": "Kairos: Orchestrator Checkpoints",
         "icon": "$(list-unordered)"
       },
       {
-        "command": "thinkcoffee.orchestrator.pauseRun",
-        "title": "ThinkCoffee: Pause Orchestrator Run",
+        "command": "Kairos.orchestrator.pauseRun",
+        "title": "Kairos: Pause Orchestrator Run",
         "icon": "$(debug-pause)"
       },
       {
-        "command": "thinkcoffee.orchestrator.resumeRun",
-        "title": "ThinkCoffee: Resume Orchestrator Run",
+        "command": "Kairos.orchestrator.resumeRun",
+        "title": "Kairos: Resume Orchestrator Run",
         "icon": "$(debug-start)"
       },
       {
-        "command": "thinkcoffee.orchestrator.selectRun",
-        "title": "ThinkCoffee: Select Orchestrator Run",
+        "command": "Kairos.orchestrator.selectRun",
+        "title": "Kairos: Select Orchestrator Run",
         "icon": "$(symbol-key)"
       },
       {
-        "command": "thinkcoffee.openAdvancedAgents",
-        "title": "ThinkCoffee: Open Advanced AI Agents Panel",
+        "command": "Kairos.openAdvancedAgents",
+        "title": "Kairos: Open Advanced AI Agents Panel",
         "icon": "$(robot)"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "thinkcoffee.addSelectionAsContext",
+          "command": "Kairos.addSelectionAsContext",
           "when": "editorHasSelection",
-          "group": "thinkcoffee"
+          "group": "Kairos"
         },
         {
-          "command": "thinkcoffee.addFileAsContext",
-          "group": "thinkcoffee"
+          "command": "Kairos.addFileAsContext",
+          "group": "Kairos"
         }
       ],
       "explorer/context": [
         {
-          "command": "thinkcoffee.addFileAsContext",
+          "command": "Kairos.addFileAsContext",
           "when": "!explorerResourceIsFolder",
-          "group": "thinkcoffee"
+          "group": "Kairos"
         }
       ],
       "view/title": [],
       "view/item/context": []
     },
     "configuration": {
-      "title": "ThinkCoffee",
+      "title": "Kairos",
       "properties": {
-        "thinkcoffee.diffPreview": {
+        "Kairos.diffPreview": {
           "type": "string",
           "enum": [
             "always",
@@ -313,7 +313,7 @@
             "Never show diff preview, write files directly"
           ]
         },
-        "thinkcoffee.commandConfirmation": {
+        "Kairos.commandConfirmation": {
           "type": "string",
           "enum": [
             "always",
@@ -328,36 +328,36 @@
             "Never ask for confirmation, run commands directly"
           ]
         },
-        "thinkcoffee.safetynet.autoCleanup": {
+        "Kairos.safetynet.autoCleanup": {
           "type": "boolean",
           "default": true,
           "description": "Automatically cleanup old snapshots on extension activation."
         },
-        "thinkcoffee.safetynet.retentionDays": {
+        "Kairos.safetynet.retentionDays": {
           "type": "number",
           "default": 7,
           "minimum": 1,
           "maximum": 30,
           "description": "Number of days to retain snapshots before automatic cleanup."
         },
-        "thinkcoffee.safetynet.maxSizeMB": {
+        "Kairos.safetynet.maxSizeMB": {
           "type": "number",
           "default": 100,
           "minimum": 10,
           "maximum": 1000,
           "description": "Maximum total size in MB for snapshots per pipeline."
         },
-        "thinkcoffee.orchestrator.baseUrl": {
+        "Kairos.orchestrator.baseUrl": {
           "type": "string",
           "default": "",
-          "description": "Base URL for ThinkCoffee orchestrator API (example: http://localhost:3000)."
+          "description": "Base URL for Kairos orchestrator API (example: http://localhost:3000)."
         },
-        "thinkcoffee.orchestrator.token": {
+        "Kairos.orchestrator.token": {
           "type": "string",
           "default": "",
           "description": "Bearer token for orchestrator API authentication."
         },
-        "thinkcoffee.orchestrator.workspaceId": {
+        "Kairos.orchestrator.workspaceId": {
           "type": "string",
           "default": "",
           "description": "Workspace ID used by remote orchestrator. If empty, derives from current folder name."
@@ -375,7 +375,7 @@
     "vscode:prepublish": "node esbuild.js"
   },
   "devDependencies": {
-    "@thinkcoffee/core": "workspace:*",
+    "@Kairos/core": "workspace:*",
     "@types/node": "^20.19.39",
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.7.1",
