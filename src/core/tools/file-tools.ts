@@ -517,3 +517,101 @@ async function logAndReturn(
 
   return result;
 }
+
+// ─── Edit File ─────────────────────────────────────────────────
+
+export interface EditFileInput {
+  path: string;
+  oldString: string;
+  newString: string;
+  replaceAll?: boolean;
+}
+
+/**
+ * Search-and-replace in a file.
+ * Ported from packages/cowork/src-tauri/src/tools/file_edit.rs
+ *
+ * Errors if oldString appears 0 times, or more than once unless replaceAll=true.
+ */
+export async function editFile(ctx: ToolContext, input: EditFileInput): Promise<ToolResult> {
+  const startTime = Date.now();
+  const { oldString, newString, replaceAll = false } = input;
+
+  try {
+    const filePath = safePath(ctx.workspaceRoot, input.path);
+
+    if (!fs.existsSync(filePath)) {
+      return logAndReturn(ctx, 'write_file', input, startTime, {
+        success: false,
+        error: `File not found: ${input.path}`,
+        output: '',
+      });
+    }
+
+    const original = fs.readFileSync(filePath, 'utf8');
+
+    // Count occurrences
+    let count = 0;
+    let idx = 0;
+    while (true) {
+      idx = original.indexOf(oldString, idx);
+      if (idx === -1) break;
+      count++;
+      idx += oldString.length;
+    }
+
+    if (count === 0) {
+      return logAndReturn(ctx, 'write_file', input, startTime, {
+        success: false,
+        error: `oldString not found in file: ${input.path}`,
+        output: '',
+      });
+    }
+
+    if (count > 1 && !replaceAll) {
+      return logAndReturn(ctx, 'write_file', input, startTime, {
+        success: false,
+        error: `oldString matches ${count} times in ${input.path}. Use replaceAll: true to replace all, or make oldString more specific.`,
+        output: '',
+      });
+    }
+
+    if (ctx.dryRun) {
+      return logAndReturn(ctx, 'write_file', input, startTime, {
+        success: true,
+        output: `[dry-run] would replace ${count} occurrence(s) in ${input.path}`,
+        filesAffected: [{ path: input.path, action: 'write' as FileAction }],
+      }, true);
+    }
+
+    const updated = replaceAll
+      ? original.split(oldString).join(newString)
+      : original.replace(oldString, newString);
+
+    if (ctx.snapshotService) {
+      const originalContent = fs.readFileSync(filePath);
+      await ctx.snapshotService.saveFileContent(
+        ctx.pipelineId,
+        ctx.phaseIndex,
+        ctx.phaseName,
+        input.path,
+        'modified',
+        originalContent
+      );
+    }
+
+    fs.writeFileSync(filePath, updated, 'utf8');
+
+    return logAndReturn(ctx, 'write_file', input, startTime, {
+      success: true,
+      output: `Replaced ${count} occurrence(s) in ${input.path}`,
+      filesAffected: [{ path: input.path, action: 'write' as FileAction }],
+    });
+  } catch (err) {
+    return logAndReturn(ctx, 'write_file', input, startTime, {
+      success: false,
+      error: `editFile failed: ${err instanceof Error ? err.message : String(err)}`,
+      output: '',
+    });
+  }
+}

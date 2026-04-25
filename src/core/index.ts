@@ -79,3 +79,29 @@ export {
 
 // API Types
 export type { ApiResponse, PaginatedResponse, ApiErrorResponse, AuthenticatedRequest } from './types/api';
+
+// Tools (file, search, docker)
+export * from './tools';
+
+// Skills
+export * from './skills';
+
+// MCP client
+export * from './mcp-client';
+
+// Agentic task runner
+export * from './tasks';
+
+// Multi-provider AI client
+export {
+    multiProviderChat,
+    testMultiProviderConnection,
+    discoverLocalModels,
+    checkLocalService,
+    PROVIDER_PRESETS,
+    OPENAI_COMPATIBLE_PROVIDERS,
+    type MultiProviderMessage,
+    type MultiProviderSettings,
+    type ProviderConfig,
+} from './providers/multi-provider';
+
