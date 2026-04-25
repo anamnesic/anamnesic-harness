@@ -4,8 +4,8 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { WorkspaceService } from '@/src/core';
-import { createWorkspaceSchema } from '@/src/core';
+import { WorkspaceService } from '@/src/core/services/WorkspaceService';
+import { createWorkspaceSchema } from '@/src/core/validation/schemas';
 import { z } from 'zod';
 
 export async function GET(req: NextRequest) {

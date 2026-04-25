@@ -4,8 +4,8 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth, getAuthContext } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { ChatHistoryService } from '@/src/core';
-import type { HistoryFilter, SaveHistoryInput } from '@/src/core';
+import { ChatHistoryService } from '@/src/core/services/ChatHistoryService';
+import type { HistoryFilter, SaveHistoryInput } from '@/src/core/services/ChatHistoryService';
 
 export async function GET(req: NextRequest) {
     const auth = getAuthContext(req);

@@ -3,8 +3,8 @@ export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
-import { ChatHistoryService } from '@/src/core';
-import type { ChatMessage } from '@/src/core';
+import { ChatHistoryService } from '@/src/core/services/ChatHistoryService';
+import type { ChatMessage } from '@/src/core/services/ChatHistoryService';
 import crypto from 'crypto';
 
 export async function GET(

@@ -4,8 +4,8 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { AuthService } from '@/src/core';
-import { signupSchema } from '@/src/core';
+import { AuthService } from '@/src/core/services/AuthService';
+import { signupSchema } from '@/src/core/validation/schemas';
 import { z } from 'zod';
 
 export async function POST(req: NextRequest) {

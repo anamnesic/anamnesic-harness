@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { OrchestratorRuntimeService } from '@/src/core';
+import { OrchestratorRuntimeService } from '@/src/core/services/OrchestratorRuntimeService';
 import { z } from 'zod';
 
 export async function GET(req: NextRequest) {

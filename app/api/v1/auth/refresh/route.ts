@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { AuthService } from '@/src/core';
+import { AuthService } from '@/src/core/services/AuthService';
 
 export async function POST(req: NextRequest) {
     const guard = requireAuth(req);

@@ -3,8 +3,8 @@ export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
-import { AuthService } from '@/src/core';
-import { loginSchema } from '@/src/core';
+import { AuthService } from '@/src/core/services/AuthService';
+import { loginSchema } from '@/src/core/validation/schemas';
 import { z } from 'zod';
 
 export async function POST(req: NextRequest) {
