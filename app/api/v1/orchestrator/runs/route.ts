@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { OrchestratorRuntimeService } from '@/src/core/services/OrchestratorRuntimeService';
 
 export async function GET(req: NextRequest) {
     const guard = requireAuth(req);
@@ -18,6 +17,7 @@ export async function GET(req: NextRequest) {
 
     try {
         const db = await getDb();
+        const { OrchestratorRuntimeService } = await import('@/src/core/services/OrchestratorRuntimeService');
         const service = new OrchestratorRuntimeService(db);
         const runs = await service.listRuns(workspaceId, status);
         return ok(runs);
@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
         if (!workspaceId || !planId) return err('VALIDATION_ERROR', 'workspaceId and planId are required', 400);
 
         const db = await getDb();
-        const service = new OrchestratorRuntimeService(db);
+        const { OrchestratorRuntimeService: OrchestratorRTService } = await import('@/src/core/services/OrchestratorRuntimeService');
+        const service = new OrchestratorRTService(db);
         const run = await service.startRun({
             workspaceId,
             planId,

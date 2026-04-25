@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { WorkspaceService } from '@/src/core/services/WorkspaceService';
 
 export async function GET(
     req: NextRequest,
@@ -16,6 +15,7 @@ export async function GET(
     try {
         const { workspaceId } = await params;
         const db = await getDb();
+        const { WorkspaceService } = await import('@/src/core/services/WorkspaceService');
         const workspaceService = new WorkspaceService(db);
         const workspace = await workspaceService.getById(workspaceId);
         if (!workspace) return err('NOT_FOUND', 'Workspace not found', 404);

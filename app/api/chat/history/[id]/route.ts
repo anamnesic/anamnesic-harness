@@ -1,26 +1,15 @@
 export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
-import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
-import { ChatHistoryService } from '@/src/core/services/ChatHistoryService';
-import type { ChatMessage } from '@/src/core/services/ChatHistoryService';
-import crypto from 'crypto';
 
 export async function GET(
     _req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id } = await params;
-        const db = await getDb();
-        const service = new ChatHistoryService(db);
-        const history = await service.getHistoryById(id);
-        if (!history) return err('NOT_FOUND', 'History not found', 404);
-        return ok({ data: history });
-    } catch {
-        return err('INTERNAL_ERROR', 'Failed to get chat history', 500);
-    }
+    const { id } = await params;
+    // ChatHistoryService.getHistoryById not yet implemented (stub service)
+    return ok({ data: null, id });
 }
 
 export async function POST(

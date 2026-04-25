@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { WorkspaceService } from '@/src/core/services/WorkspaceService';
 import { createWorkspaceSchema } from '@/src/core/validation/schemas';
 import { z } from 'zod';
 
@@ -15,6 +14,7 @@ export async function GET(req: NextRequest) {
 
     try {
         const db = await getDb();
+        const { WorkspaceService } = await import('@/src/core/services/WorkspaceService');
         const workspaceService = new WorkspaceService(db);
         const workspaces = await workspaceService.listByUser(auth.userId);
         return ok(workspaces);
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const input = createWorkspaceSchema.parse(body);
         const db = await getDb();
+        const { WorkspaceService } = await import('@/src/core/services/WorkspaceService');
         const workspaceService = new WorkspaceService(db);
         const workspace = await workspaceService.create({
             name: input.name,

@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { OrchestratorRuntimeService } from '@/src/core/services/OrchestratorRuntimeService';
 import { z } from 'zod';
 
 export async function GET(req: NextRequest) {
@@ -17,6 +16,7 @@ export async function GET(req: NextRequest) {
 
     try {
         const db = await getDb();
+        const { OrchestratorRuntimeService } = await import('@/src/core/services/OrchestratorRuntimeService');
         const service = new OrchestratorRuntimeService(db);
         const plans = await service.listPlans(workspaceId);
         return ok(plans);
@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
         }
 
         const db = await getDb();
-        const service = new OrchestratorRuntimeService(db);
+        const { OrchestratorRuntimeService: OrchestratorRTService } = await import('@/src/core/services/OrchestratorRuntimeService');
+        const service = new OrchestratorRTService(db);
         const result = await service.createPlan({
             workspaceId,
             projectId,

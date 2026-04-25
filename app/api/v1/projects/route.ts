@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { ProjectService } from '@/src/core/services/ProjectService';
 
 export async function GET(req: NextRequest) {
     const guard = requireAuth(req);
@@ -12,6 +11,7 @@ export async function GET(req: NextRequest) {
 
     try {
         const db = await getDb();
+        const { ProjectService } = await import('@/src/core/services/ProjectService');
         const projectService = new ProjectService(db);
         const projects = await projectService.list();
         return ok(projects);

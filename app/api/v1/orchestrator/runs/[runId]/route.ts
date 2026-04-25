@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { requireAuth } from '@/app/api/_lib/auth';
 import { ok, err } from '@/app/api/_lib/response';
-import { OrchestratorRuntimeService } from '@/src/core/services/OrchestratorRuntimeService';
 
 export async function GET(
     req: NextRequest,
@@ -16,6 +15,7 @@ export async function GET(
     try {
         const { runId } = await params;
         const db = await getDb();
+        const { OrchestratorRuntimeService } = await import('@/src/core/services/OrchestratorRuntimeService');
         const service = new OrchestratorRuntimeService(db);
         const run = await service.getRun(runId);
         if (!run) return err('NOT_FOUND', 'Orchestrator run not found', 404);
