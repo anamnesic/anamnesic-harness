@@ -28,7 +28,8 @@ export class FileWatcher {
         this.watcher = watch(paths, {
             persistent: false,
             ignoreInitial: true,
-            ignored: ignored ?? /(node_modules|\.git|dist)/,
+            ignorePermissionErrors: true,
+            ignored: ignored ?? /(node_modules|\.git|dist|\.next)/,
         });
 
         const emit = (type: FileChangeEvent['type']) => (filePath: string) => {
