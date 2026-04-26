@@ -25,7 +25,7 @@ function getAuthHeaders(extra?: Record<string, string>): Record<string, string> 
 type CliTab = 'claude' | 'gemini' | 'copilot' | 'codex';
 
 const CLI_TABS: { id: CliTab; label: string; colorClass: string }[] = [
-    { id: 'claude', label: 'Claude', colorClass: 'text-orange-400' },
+    { id: 'claude', label: 'Claude', colorClass: 'text-stone-200' },
     { id: 'gemini', label: 'Gemini', colorClass: 'text-blue-400' },
     { id: 'copilot', label: 'Copilot', colorClass: 'text-purple-400' },
     { id: 'codex', label: 'Codex', colorClass: 'text-green-400' },

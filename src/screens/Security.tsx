@@ -52,7 +52,7 @@ interface SecurityScan {
 
 const SEVERITY_BADGE: Record<Severity, string> = {
     critical: 'bg-red-500/15 text-red-400 border border-red-500/30',
-    high: 'bg-orange-500/15 text-orange-400 border border-orange-500/30',
+    high: 'bg-stone-50/10 text-stone-200 border border-stone-100/30',
     medium: 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30',
     low: 'bg-blue-500/15 text-blue-400 border border-blue-500/30',
 };
@@ -433,7 +433,7 @@ export function Security() {
                                         </div>
                                     </div>
                                 )}
-                                                            </div>
+                            </div>
 
                             <div className="flex items-center justify-end gap-2 pt-2">
                                 <button

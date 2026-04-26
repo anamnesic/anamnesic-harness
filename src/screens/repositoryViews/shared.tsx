@@ -100,7 +100,7 @@ export function getFileIcon(filePath: string) {
         return <FileCode2 className="size-3.5 shrink-0 text-sky-400" />;
     }
     if (['json', 'jsonc'].includes(ext)) {
-        return <FileJson className="size-3.5 shrink-0 text-amber-400" />;
+        return <FileJson className="size-3.5 shrink-0 text-stone-200" />;
     }
     if (['md', 'mdx'].includes(ext)) {
         return <FileText className="size-3.5 shrink-0 text-blue-300" />;
@@ -209,9 +209,9 @@ export function RepositoryTreeView({
                                     <ChevronDown className="size-3 shrink-0 text-text-dim" />
                                 )}
                                 {isCollapsed ? (
-                                    <Folder className="size-3.5 shrink-0 text-amber-300" />
+                                    <Folder className="size-3.5 shrink-0 text-stone-300" />
                                 ) : (
-                                    <FolderOpen className="size-3.5 shrink-0 text-amber-300" />
+                                    <FolderOpen className="size-3.5 shrink-0 text-stone-300" />
                                 )}
                                 <span className="truncate text-xs text-highlight">{node.name}</span>
                             </button>

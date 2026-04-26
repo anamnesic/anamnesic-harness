@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  CheckCircle, 
-  Clock, 
-  AlertCircle, 
-  Play, 
-  Pause, 
-  Square, 
-  ChevronRight, 
+import {
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Play,
+  Pause,
+  Square,
+  ChevronRight,
   ChevronDown,
   Search,
   Filter,
@@ -55,14 +55,14 @@ const STATUS_CONFIG = {
   running: { icon: Play, color: 'bg-blue-500/15 text-blue-400', label: 'Executando' },
   completed: { icon: CheckCircle, color: 'bg-green-500/15 text-green-400', label: 'Completed' },
   failed: { icon: AlertCircle, color: 'bg-red-500/15 text-red-400', label: 'Failed' },
-  paused: { icon: Pause, color: 'bg-orange-500/15 text-orange-400', label: 'Pausado' },
+  paused: { icon: Pause, color: 'bg-stone-50/10 text-stone-200', label: 'Pausado' },
   cancelled: { icon: Square, color: 'bg-gray-500/15 text-gray-400', label: 'Cancelled' },
 };
 
 function StatusBadge({ status }: { status: keyof typeof STATUS_CONFIG }) {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
-  
+
   return (
     <div className={cn('flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-widest', config.color)}>
       <Icon className="size-3" />
@@ -125,7 +125,7 @@ function TaskRow({ task, agent, onTaskAction, onSelect }: TaskRowProps) {
             </button>
             <StatusBadge status={task.status} />
           </div>
-          
+
           <div className="flex items-center gap-4 text-xs text-text-dim">
             {agent && (
               <div className="flex items-center gap-1">
@@ -161,7 +161,7 @@ function TaskRow({ task, agent, onTaskAction, onSelect }: TaskRowProps) {
             <button
               onClick={() => handleAction('pause')}
               disabled={loading}
-              className="rounded-lg p-1.5 text-text-dim hover:text-orange-400 transition-colors disabled:opacity-40"
+              className="rounded-lg p-1.5 text-text-dim hover:text-stone-200 transition-colors disabled:opacity-40"
               title="Pause task"
             >
               <Pause className="size-3.5" />
@@ -192,7 +192,7 @@ function TaskRow({ task, agent, onTaskAction, onSelect }: TaskRowProps) {
             <h4 className="text-xs font-bold uppercase tracking-widest text-text-dim mb-1">Type</h4>
             <p className="text-sm font-mono">{task.type}</p>
           </div>
-          
+
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest text-text-dim mb-1">Input</h4>
             <pre className="text-xs font-mono bg-bg/60 p-2 rounded-lg overflow-auto max-h-32">
@@ -226,12 +226,12 @@ function TaskRow({ task, agent, onTaskAction, onSelect }: TaskRowProps) {
 export function Tasks() {
   const { workspace } = useWorkspace();
   const { toast } = useToast();
-  
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  
+
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const limit = 20;
@@ -253,27 +253,27 @@ export function Tasks() {
     try {
       setLoading(true);
       if (!workspace) return;
-      
+
       const params = new URLSearchParams();
       params.set('workspaceId', workspace.id);
       params.set('limit', limit.toString());
       params.set('offset', offset.toString());
-      
+
       if (filters.status) params.set('status', filters.status);
       if (filters.agentId) params.set('agentId', filters.agentId);
       if (filters.search) params.set('search', filters.search);
-      
+
       const res = await apiFetch<any>(`/api/v1/tasks?${params.toString()}`);
-      
+
       if (res && res.items) {
-          setTasks(res.items);
-          setTotal(res.total || 0);
+        setTasks(res.items);
+        setTotal(res.total || 0);
       } else if (Array.isArray(res)) {
-          setTasks(res);
-          setTotal(res.length);
+        setTasks(res);
+        setTotal(res.length);
       } else {
-          setTasks([]);
-          setTotal(0);
+        setTasks([]);
+        setTotal(0);
       }
     } catch (error: any) {
       toast(error?.message || 'Falha ao carregar tarefas', 'error');
@@ -294,7 +294,7 @@ export function Tasks() {
   async function handleTaskAction(taskId: string, action: string) {
     try {
       let endpoint = `/api/v1/tasks/${taskId}`;
-      
+
       switch (action) {
         case 'start':
           endpoint += '/start';
@@ -337,7 +337,7 @@ export function Tasks() {
           <ChevronRight className="size-4 rotate-180" />
           Back to Tasks
         </button>
-        
+
         <div className="bento-card space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -411,7 +411,7 @@ export function Tasks() {
     <div className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full">
       <div className="mb-6 space-y-4">
         <h2 className="text-2xl font-bold">Tasks</h2>
-        
+
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-dim" />
@@ -420,18 +420,18 @@ export function Tasks() {
               placeholder="Buscar tarefas..."
               value={filters.search}
               onChange={(e) => {
-                  setFilters({ ...filters, search: e.target.value });
-                  setOffset(0);
+                setFilters({ ...filters, search: e.target.value });
+                setOffset(0);
               }}
               className="w-full pl-10 pr-4 py-2 bg-bg border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
             />
           </div>
-          
+
           <select
             value={filters.status}
             onChange={(e) => {
-                setFilters({ ...filters, status: e.target.value });
-                setOffset(0);
+              setFilters({ ...filters, status: e.target.value });
+              setOffset(0);
             }}
             className="px-4 py-2 bg-bg border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
           >
@@ -440,12 +440,12 @@ export function Tasks() {
               <option key={value} value={value}>{config.label}</option>
             ))}
           </select>
-          
+
           <select
             value={filters.agentId}
             onChange={(e) => {
-                setFilters({ ...filters, agentId: e.target.value });
-                setOffset(0);
+              setFilters({ ...filters, agentId: e.target.value });
+              setOffset(0);
             }}
             className="px-4 py-2 bg-bg border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
           >
@@ -487,7 +487,7 @@ export function Tasks() {
               onSelect={setSelectedTask}
             />
           ))}
-          
+
           <Paginator
             total={total}
             limit={limit}

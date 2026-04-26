@@ -127,9 +127,9 @@ export function ProjectContext({ projectId }: { projectId: string }) {
                                 <ChevronDown className="size-3 shrink-0 text-text-dim" />
                             )}
                             {isCollapsed ? (
-                                <Folder className="size-3.5 shrink-0 text-amber-300" />
+                                <Folder className="size-3.5 shrink-0 text-stone-300" />
                             ) : (
-                                <FolderOpen className="size-3.5 shrink-0 text-amber-300" />
+                                <FolderOpen className="size-3.5 shrink-0 text-stone-300" />
                             )}
                             <span className="truncate text-xs text-highlight">{node.name}</span>
                         </button>

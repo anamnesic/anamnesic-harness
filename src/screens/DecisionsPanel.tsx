@@ -27,7 +27,7 @@ interface ApiResponse<T> {
 const STATUS_STYLES: Record<string, string> = {
     active: 'bg-green-500/15 text-green-400',
     deprecated: 'bg-zinc-500/15 text-zinc-400',
-    superseded: 'bg-orange-500/15 text-orange-400',
+    superseded: 'bg-stone-50/10 text-stone-200',
 };
 
 function StatusBadge({ status }: { status: string }) {
