@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { ok, err } from '@/app/api/_lib/response';
-import { getSnapshot } from '../../_store';
+import { getSnapshot, restoreSnapshot } from '../../_store';
 
 export async function POST(
     _req: NextRequest,
@@ -13,17 +13,17 @@ export async function POST(
         const snap = await getSnapshot(snapshotId);
         if (!snap) return err('NOT_FOUND', 'Snapshot not found', 404);
 
-        // The underlying SnapshotService.restore(pipelineId, phaseIndex, workspaceRoot)
-        // operates on per-pipeline file snapshots, not on system-wide named manifests.
-        // Without a stored pipeline binding on the manifest, we cannot perform a
-        // physical restore here. Return a stub success so the round-trip works and
-        // the UI can display the operation result.
+        // Perform actual restore
+        const result = await restoreSnapshot(snapshotId);
+        
         return ok({
-            restored: true,
+            restored: result.restored,
+            errors: result.errors,
             snapshotId,
             scope: snap.scope,
-            note: 'service-stub',
-            message: 'System snapshot restore is a stub; SnapshotService.restore() is per pipeline+phase.',
+            fileCount: snap.fileCount,
+            workspaceRoot: snap.workspaceRoot,
+            message: `Restored ${result.restored} files${result.errors.length > 0 ? ` with ${result.errors.length} errors` : ''}`,
         });
     } catch (error) {
         if (error instanceof Error) return err('SNAPSHOT_ERROR', error.message, 500);

@@ -11,6 +11,9 @@ export interface SaveHistoryInput {
 export interface HistoryFilter {
   limit?: number;
   offset?: number;
+  search?: string;
+  channel?: string;
+  dateFilter?: string;
 }
 
 export interface BackupInfo {
@@ -48,14 +51,52 @@ export class ChatHistoryService {
   }
 
   async getHistoryPaginated(
-    options: { limit: number; offset: number }
+    options: { limit: number; offset: number; search?: string; channel?: string; dateFilter?: string }
   ): Promise<{ items: ChatHistory[]; total: number }> {
     const repo = this.db.getRepository(ChatHistory);
-    const [items, total] = await repo.findAndCount({
-      order: { createdAt: 'DESC' },
-      take: options.limit,
-      skip: options.offset,
-    });
+    
+    // Build query conditions
+    const queryBuilder = repo.createQueryBuilder('chat')
+      .orderBy('chat.createdAt', 'DESC')
+      .take(options.limit)
+      .skip(options.offset);
+
+    // Add search filter
+    if (options.search) {
+      queryBuilder.andWhere(
+        '(chat.message ILIKE :search OR chat.channelId ILIKE :search)',
+        { search: `%${options.search}%` }
+      );
+    }
+
+    // Add channel filter
+    if (options.channel) {
+      queryBuilder.andWhere('chat.channelId = :channel', { channel: options.channel });
+    }
+
+    // Add date filter
+    if (options.dateFilter) {
+      const now = new Date();
+      let startDate: Date;
+
+      switch (options.dateFilter) {
+        case 'today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        default:
+          startDate = new Date(0); // Beginning of time
+      }
+
+      queryBuilder.andWhere('chat.createdAt >= :startDate', { startDate });
+    }
+
+    const [items, total] = await queryBuilder.getManyAndCount();
     return { items, total };
   }
 

@@ -14,6 +14,15 @@ interface Snapshot {
     description: string;
     scope: string;
     createdAt: string;
+    fileCount?: number;
+    totalSize?: number;
+    workspaceRoot?: string;
+    files?: Array<{
+        path: string;
+        hash: string;
+        size: number;
+        modified: string;
+    }>;
 }
 
 function formatRelative(iso: string): string {
@@ -29,6 +38,23 @@ function formatRelative(iso: string): string {
     }
 }
 
+function formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
+}
+
+function getScopeColor(scope: string): string {
+    switch (scope) {
+        case 'system': return 'bg-blue-500/15 text-blue-400 border border-blue-500/30';
+        case 'src': return 'bg-green-500/15 text-green-400 border border-green-500/30';
+        case 'config': return 'bg-purple-500/15 text-purple-400 border border-purple-500/30';
+        default: return 'bg-primary/15 text-primary border border-primary/30';
+    }
+}
+
 export function Snapshots() {
     const { data, loading, refetch } = useApi<any>('/api/v1/snapshots');
     const { toast } = useToast();
@@ -37,7 +63,7 @@ export function Snapshots() {
     const [submitting, setSubmitting] = useState(false);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [scope, setScope] = useState('');
+    const [scope, setScope] = useState('system');
 
     const items: Snapshot[] = (data as any)?.data ?? data ?? [];
     const list = Array.isArray(items) ? items : [];
@@ -46,7 +72,7 @@ export function Snapshots() {
         setShowModal(false);
         setName('');
         setDescription('');
-        setScope('');
+        setScope('system');
     }
 
     async function handleCreate() {
@@ -75,11 +101,19 @@ export function Snapshots() {
     }
 
     async function handleRestore(snap: Snapshot) {
-        if (!window.confirm(`Restore snapshot "${snap.name}"? This may overwrite current state.`)) return;
+        const confirmMessage = `Restore snapshot "${snap.name}"? This will overwrite ${snap.fileCount || 0} files to their previous state.`;
+        if (!window.confirm(confirmMessage)) return;
+        
         try {
             const res = await apiFetch<any>(`/api/v1/snapshots/${snap.id}/restore`, { method: 'POST' });
-            const note = res?.data?.note;
-            toast(note === 'service-stub' ? 'Restore acknowledged (stub)' : 'Snapshot restored', 'success');
+            const result = res?.data;
+            
+            if (result.errors && result.errors.length > 0) {
+                toast(`Restored ${result.restored} files with ${result.errors.length} errors`, 'error');
+                console.warn('Restore errors:', result.errors);
+            } else {
+                toast(`Successfully restored ${result.restored} files`, 'success');
+            }
         } catch (e: any) {
             toast(e.message ?? 'Restore failed', 'error');
         }
@@ -132,25 +166,61 @@ export function Snapshots() {
                     {list.map(snap => (
                         <div key={snap.id} className="bento-card space-y-3">
                             <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                     <p className="font-bold text-accent truncate">{snap.name}</p>
                                     <p className="text-[10px] font-mono text-text-dim mt-1">
                                         {formatRelative(snap.createdAt)}
                                     </p>
                                 </div>
-                                <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest shrink-0">
+                                <span className={cn(
+                                    'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest shrink-0',
+                                    getScopeColor(snap.scope || 'system')
+                                )}>
                                     {snap.scope || 'system'}
                                 </span>
                             </div>
+                            
+                            {/* File Stats */}
+                            {(snap.fileCount !== undefined || snap.totalSize !== undefined) && (
+                                <div className="flex items-center gap-4 text-xs text-text-dim">
+                                    {snap.fileCount !== undefined && (
+                                        <span className="flex items-center gap-1">
+                                            <Camera className="size-3" />
+                                            {snap.fileCount} files
+                                        </span>
+                                    )}
+                                    {snap.totalSize !== undefined && (
+                                        <span className="flex items-center gap-1">
+                                            <Plus className="size-3" />
+                                            {formatFileSize(snap.totalSize)}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                            
                             {snap.description && (
                                 <p className="text-xs text-text-dim leading-relaxed line-clamp-3">
                                     {snap.description}
                                 </p>
                             )}
+                            
+                            {/* Workspace Root */}
+                            {snap.workspaceRoot && (
+                                <div className="text-xs font-mono text-text-dim/80 bg-bg/50 rounded px-2 py-1 truncate" title={snap.workspaceRoot}>
+                                    📁 {snap.workspaceRoot}
+                                </div>
+                            )}
+                            
                             <div className="flex items-center gap-2 pt-2 border-t border-border/40">
                                 <button
                                     onClick={() => handleRestore(snap)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-accent hover:border-primary/60 transition-colors"
+                                    disabled={!snap.fileCount || snap.fileCount === 0}
+                                    className={cn(
+                                        'flex-1 flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                                        snap.fileCount && snap.fileCount > 0
+                                            ? 'border-border text-accent hover:border-primary/60'
+                                            : 'border-border/30 text-text-dim/50 cursor-not-allowed'
+                                    )}
                                 >
                                     <RotateCcw className="size-3" />
                                     Restore
@@ -218,13 +288,20 @@ export function Snapshots() {
                                 </div>
                                 <div>
                                     <label className="label-caps text-text-dim block mb-1">Scope</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         value={scope}
                                         onChange={e => setScope(e.target.value)}
-                                        placeholder="e.g. workspace, project, full"
                                         className="w-full rounded-lg bg-bg border border-border px-3 py-2 text-sm focus:outline-none focus:border-primary/60"
-                                    />
+                                    >
+                                        <option value="system">System (All Config Files)</option>
+                                        <option value="src">Source Code Only</option>
+                                        <option value="full">Full Project</option>
+                                    </select>
+                                    <p className="text-[10px] text-text-dim mt-1">
+                                        {scope === 'system' && 'Captures all configuration and setup files'}
+                                        {scope === 'src' && 'Only captures source code files'}
+                                        {scope === 'full' && 'Captures all project files (larger size)'}
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 pt-2">

@@ -14,11 +14,22 @@ export async function GET(req: NextRequest) {
     );
     const offset = Math.max(Number.isFinite(parsedOffset) ? parsedOffset : 0, 0);
 
+    // Extract search and filter parameters
+    const searchQuery = searchParams.get('search')?.trim() || '';
+    const channelFilter = searchParams.get('channel')?.trim() || '';
+    const dateFilter = searchParams.get('dateFilter')?.trim() || 'all';
+
     try {
         const db = await getDb();
         const { ChatHistoryService } = await import('@/src/core/services/ChatHistoryService');
         const service = new ChatHistoryService(db);
-        const { items, total } = await service.getHistoryPaginated({ limit, offset });
+        const { items, total } = await service.getHistoryPaginated({ 
+            limit, 
+            offset,
+            search: searchQuery,
+            channel: channelFilter !== 'all' ? channelFilter : undefined,
+            dateFilter: dateFilter !== 'all' ? dateFilter : undefined,
+        });
         return ok({ items, total, limit, offset });
     } catch {
         return err('INTERNAL_ERROR', 'Failed to list chat histories', 500);

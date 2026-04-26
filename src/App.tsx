@@ -16,6 +16,7 @@ import {
   FolderKanban,
   Bot,
   Camera,
+  Lightbulb,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -32,6 +33,9 @@ import { Workflows } from './screens/Workflows';
 import { Security } from './screens/Security';
 import { Snapshots } from './screens/Snapshots';
 import { ChatPanel } from './screens/ChatPanel';
+import { DecisionsPanel } from './screens/DecisionsPanel';
+import { Decisions } from './screens/Decisions';
+import { Tasks } from './screens/Tasks';
 
 const Header = ({ title, subtitle, onBack, rightElement }: {
   title: string;
@@ -76,12 +80,13 @@ const TABS = [
   { id: 'control', label: 'Safety', icon: Shield },
   { id: 'agents', label: 'Agents', icon: Bot },
   { id: 'projects', label: 'Projects', icon: FolderKanban },
+  { id: 'decisions', label: 'Decisions', icon: Lightbulb },
   { id: 'security', label: 'Audit', icon: ShieldCheck },
   { id: 'system', label: 'Core', icon: Settings2 },
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat';
+type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat' | 'tasks';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
@@ -147,11 +152,15 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'chat':
       return { title: 'Chat', subtitle: 'AI Assistant', element: <ChatPanel />, onBack: goHome, rightElement: undefined };
     case 'agents':
-      return { title: 'Agents', subtitle: 'Agent Registry', element: <Agents />, onBack: goHome, rightElement: undefined };
+      return { title: 'Agents', subtitle: 'Agent Registry', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
+    case 'tasks':
+      return { title: 'Tasks', subtitle: 'Task Management', element: <Tasks />, onBack: goHome, rightElement: undefined };
     case 'workflows':
       return { title: 'Workflows', subtitle: 'Automation Pipelines', element: <Workflows />, onBack: goHome, rightElement: undefined };
     case 'projects':
       return { title: 'Projects', subtitle: 'Manage Projects', element: <Projects />, onBack: goHome, rightElement: undefined };
+    case 'decisions':
+      return { title: 'Decisions', subtitle: 'Project Decision Log', element: <Decisions />, onBack: goHome, rightElement: undefined };
     case 'security':
       return { title: 'Security', subtitle: 'Vulnerability Audit', element: <Security />, onBack: goHome, rightElement: undefined };
     case 'system':

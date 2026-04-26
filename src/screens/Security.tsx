@@ -7,6 +7,7 @@ import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
+import { useWorkspace } from '@/src/context/WorkspaceContext';
 
 type Severity = 'critical' | 'high' | 'medium' | 'low';
 type ScanType = 'code' | 'system' | 'api' | 'dependency' | 'infrastructure';
@@ -188,17 +189,19 @@ function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void 
 }
 
 export function Security() {
-    const { data, loading, refetch } = useApi<any>('/api/v1/security/scans');
+    const { data, loading, refetch } = useApi('/api/v1/security/scans');
     const { toast } = useToast();
+    const { workspace } = useWorkspace();
 
     const [showModal, setShowModal] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [openId, setOpenId] = useState<string | null>(null);
-
     const [targetName, setTargetName] = useState('');
     const [type, setType] = useState<ScanType>('code');
     const [targetPath, setTargetPath] = useState('');
-    const [workspaceId, setWorkspaceId] = useState('');
+    const [selectedProjectId, setSelectedProjectId] = useState('');
+    const [deepScan, setDeepScan] = useState(false);
+    const [projects, setProjects] = useState<any[]>([]);
+    const [submitting, setSubmitting] = useState(false);
+    const [openId, setOpenId] = useState<string | null>(null);
 
     const list: SecurityScan[] = useMemo(() => {
         const raw = (data as any)?.data ?? data ?? [];
@@ -221,7 +224,8 @@ export function Security() {
         setTargetName('');
         setType('code');
         setTargetPath('');
-        setWorkspaceId('');
+        setSelectedProjectId('');
+        setDeepScan(false);
     }
 
     async function handleSubmit() {
@@ -234,7 +238,9 @@ export function Security() {
                     targetName: targetName.trim(),
                     type,
                     targetPath: targetPath.trim() || undefined,
-                    workspaceId: workspaceId.trim() || undefined,
+                    workspaceId: workspace?.id,
+                    targetId: selectedProjectId || undefined,
+                    deepScan: type === 'code' ? deepScan : undefined,
                 }),
             });
             toast('Scan created', 'success');
@@ -377,16 +383,7 @@ export function Security() {
                                         placeholder="src/"
                                     />
                                 </div>
-                                <div>
-                                    <label className="label-caps block mb-1">Workspace ID (optional)</label>
-                                    <input
-                                        className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
-                                        value={workspaceId}
-                                        onChange={e => setWorkspaceId(e.target.value)}
-                                        placeholder="auto-generated if empty"
-                                    />
-                                </div>
-                            </div>
+                                                            </div>
 
                             <div className="flex items-center justify-end gap-2 pt-2">
                                 <button

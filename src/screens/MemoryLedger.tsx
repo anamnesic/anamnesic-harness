@@ -1,17 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Activity, Shield, Plus, Download, Trash2 } from 'lucide-react';
+import { Activity, Shield, Plus, Download, Trash2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 
-interface HistoryData { data?: any[] | { items?: any[]; total?: number }; count?: number }
+interface HistoryData { data?: any[] | { items?: any[]; total?: number; limit?: number; offset?: number }; count?: number }
 
 export function MemoryLedger() {
-    const { data, loading, refetch } = useApi<HistoryData>('/api/chat/history');
     const { toast } = useToast();
     const [showModal, setShowModal] = useState(false);
     const [channelId, setChannelId] = useState('');
@@ -19,16 +18,80 @@ export function MemoryLedger() {
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState<Set<string>>(new Set());
 
-    const inner = data?.data;
-    const entries: any[] = Array.isArray(inner)
-        ? inner
-        : (inner && Array.isArray((inner as { items?: any[] }).items) ? (inner as { items: any[] }).items : []);
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(20);
+    const [totalEntries, setTotalEntries] = useState(0);
+    
+    // Search and filter state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedChannel, setSelectedChannel] = useState('all');
+    const [dateFilter, setDateFilter] = useState('all');
+    const [showFilters, setShowFilters] = useState(false);
+    
+    // Data state
+    const [entries, setEntries] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [channels, setChannels] = useState<string[]>([]);
+
+    // Build API URL with pagination and filters
+    const apiUrl = useMemo(() => {
+        const params = new URLSearchParams();
+        params.set('limit', pageSize.toString());
+        params.set('offset', ((currentPage - 1) * pageSize).toString());
+        
+        if (searchQuery) {
+            params.set('search', searchQuery);
+        }
+        if (selectedChannel !== 'all') {
+            params.set('channel', selectedChannel);
+        }
+        if (dateFilter !== 'all') {
+            params.set('dateFilter', dateFilter);
+        }
+        
+        return `/api/chat/history?${params.toString()}`;
+    }, [currentPage, pageSize, searchQuery, selectedChannel, dateFilter]);
+
+    // Fetch data
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const response = await apiFetch<HistoryData>(apiUrl);
+            const inner = response?.data;
+            const items: any[] = Array.isArray(inner)
+                ? inner
+                : (inner && Array.isArray((inner as { items?: any[] }).items) ? (inner as { items: any[] }).items : []);
+            
+            setEntries(items);
+            setTotalEntries((inner as any)?.total || 0);
+            
+            // Extract unique channels
+            const uniqueChannels = [...new Set(items.map((entry: any) => entry.channelId).filter(Boolean))];
+            setChannels(uniqueChannels);
+        } catch (error) {
+            toast('Failed to load memory entries', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, [apiUrl]);
+
+    // Reset to first page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedChannel, dateFilter]);
+
+    const totalPages = Math.ceil(totalEntries / pageSize);
 
     async function handleDelete(id: string) {
         setDeleting(prev => new Set(prev).add(id));
         try {
             await apiFetch('/api/chat/history?id=' + id, { method: 'DELETE' });
-            refetch();
+            await fetchData();
             toast('Entry deleted', 'success');
         } catch (e: any) {
             toast(e.message ?? 'Delete failed', 'error');
@@ -49,7 +112,7 @@ export function MemoryLedger() {
             setShowModal(false);
             setChannelId('');
             setMessage('');
-            refetch();
+            await fetchData();
         } catch (e: any) {
             toast(e.message ?? 'Save failed', 'error');
         } finally {
@@ -67,12 +130,89 @@ export function MemoryLedger() {
         >
             <div className="mb-8 flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Memory Ledger</h2>
-                <button
-                    onClick={() => toast('Export not yet implemented', 'info')}
-                    className="rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-accent/40 transition-colors"
-                >
-                    Export Log
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={cn(
+                            'rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold transition-colors',
+                            showFilters ? 'text-accent border-accent/40' : 'text-text-dim hover:border-accent/40'
+                        )}
+                    >
+                        <Filter className="size-3.5" />
+                        Filters
+                    </button>
+                    <button
+                        onClick={() => toast('Export not yet implemented', 'info')}
+                        className="rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-accent/40 transition-colors"
+                    >
+                        Export Log
+                    </button>
+                </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="mb-6 space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-dim" />
+                    <input
+                        type="text"
+                        placeholder="Search memory entries..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-bg border border-border rounded-xl text-sm text-accent placeholder-text-dim focus:outline-none focus:border-primary"
+                    />
+                </div>
+
+                {/* Filters Panel */}
+                {showFilters && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bento-card p-4 space-y-4"
+                    >
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {/* Channel Filter */}
+                            <div>
+                                <label className="label-caps text-text-dim mb-2 block">Channel</label>
+                                <select
+                                    value={selectedChannel}
+                                    onChange={(e) => setSelectedChannel(e.target.value)}
+                                    className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-accent focus:outline-none focus:border-primary"
+                                >
+                                    <option value="all">All Channels</option>
+                                    {channels.map(channel => (
+                                        <option key={channel} value={channel}>{channel}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Date Filter */}
+                            <div>
+                                <label className="label-caps text-text-dim mb-2 block">Date Range</label>
+                                <select
+                                    value={dateFilter}
+                                    onChange={(e) => setDateFilter(e.target.value)}
+                                    className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-accent focus:outline-none focus:border-primary"
+                                >
+                                    <option value="all">All Time</option>
+                                    <option value="today">Today</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month">This Month</option>
+                                </select>
+                            </div>
+
+                            {/* Results Info */}
+                            <div>
+                                <label className="label-caps text-text-dim mb-2 block">Results</label>
+                                <div className="px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text-dim">
+                                    {totalEntries} total entries
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
             </div>
 
             {loading ? (
@@ -139,8 +279,80 @@ export function MemoryLedger() {
             ) : (
                 <div className="text-center py-20 space-y-3">
                     <Activity className="size-10 text-border mx-auto" />
-                    <p className="text-text-dim text-sm">No memory entries yet.</p>
-                    <p className="text-text-dim text-xs">Tap the button below to add the first entry.</p>
+                    <p className="text-text-dim text-sm">No memory entries found.</p>
+                    <p className="text-text-dim text-xs">
+                        {searchQuery || selectedChannel !== 'all' || dateFilter !== 'all' 
+                            ? 'Try adjusting your filters or search query.' 
+                            : 'Tap the button below to add the first entry.'}
+                    </p>
+                </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="mt-8 flex items-center justify-between">
+                    <div className="text-sm text-text-dim">
+                        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalEntries)} of {totalEntries} entries
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className={cn(
+                                'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors',
+                                currentPage === 1 
+                                    ? 'text-text-dim opacity-50 cursor-not-allowed' 
+                                    : 'text-accent bg-card border border-border hover:border-primary/60'
+                            )}
+                        >
+                            <ChevronLeft className="size-3" />
+                            Previous
+                        </button>
+                        
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = currentPage - 2 + i;
+                                }
+                                
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={cn(
+                                            'w-8 h-8 rounded-lg text-xs font-bold transition-colors',
+                                            currentPage === pageNum
+                                                ? 'bg-primary text-bg'
+                                                : 'text-accent bg-card border border-border hover:border-primary/60'
+                                        )}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className={cn(
+                                'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors',
+                                currentPage === totalPages 
+                                    ? 'text-text-dim opacity-50 cursor-not-allowed' 
+                                    : 'text-accent bg-card border border-border hover:border-primary/60'
+                            )}
+                        >
+                            Next
+                            <ChevronRight className="size-3" />
+                        </button>
+                    </div>
                 </div>
             )}
 

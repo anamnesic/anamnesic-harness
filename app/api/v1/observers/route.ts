@@ -2,45 +2,29 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { ok, err } from '@/app/api/_lib/response';
-import path from 'path';
+import { ObserverService } from '@/src/core/services/ObserverService';
 
-// Module-level state — resets on redeploy
-const observers: Record<string, { id: string; title: string; status: string; subtitle: string; active: boolean }> = {
-    fs: {
-        id: 'fs',
-        title: 'FS Watcher',
-        status: 'Active',
-        subtitle: path.join(process.cwd(), 'src'),
-        active: true,
-    },
-    terminal: {
-        id: 'terminal',
-        title: 'Terminal',
-        status: 'Listening',
-        subtitle: 'Shell hooks',
-        active: true,
-    },
-    api: {
-        id: 'api',
-        title: 'API Monitor',
-        status: 'Paused',
-        subtitle: 'REST Hooks',
-        active: false,
-    },
-};
+const observerService = ObserverService.getInstance();
 
 export async function GET() {
-    return ok({ observers: Object.values(observers) });
+    try {
+        const observers = observerService.getObserverStatuses();
+        return ok({ observers });
+    } catch (error) {
+        return err('INTERNAL_ERROR', 'Failed to get observer statuses', 500);
+    }
 }
 
 export async function PATCH(req: NextRequest) {
     try {
         const { id, active }: { id: string; active: boolean } = await req.json();
-        if (!observers[id]) return err('NOT_FOUND', `Observer '${id}' not found`, 404);
-        observers[id].active = active;
-        observers[id].status = active ? (id === 'terminal' ? 'Listening' : 'Active') : 'Paused';
-        return ok({ observer: observers[id] });
-    } catch {
+        
+        const observer = await observerService.toggleObserver(id, active);
+        return ok({ observer });
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('Unknown observer')) {
+            return err('NOT_FOUND', error.message, 404);
+        }
         return err('INTERNAL_ERROR', 'Failed to update observer', 500);
     }
 }

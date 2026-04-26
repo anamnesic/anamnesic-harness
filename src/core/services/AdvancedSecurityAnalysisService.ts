@@ -1,5 +1,5 @@
 import { Logger } from '../utils/Logger';
-import { AIProvider } from '../providers/AIProvider';
+import { IAIProvider } from '../providers/ai-provider';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -90,7 +90,7 @@ export class AdvancedSecurityAnalysisService {
   private cweDatabase: Map<string, any> = new Map();
   private vulnerabilityPatterns: Map<string, RegExp[]> = new Map();
 
-  constructor(private aiProvider: AIProvider) {
+  constructor(private aiProvider: IAIProvider) {
     this.initializeCWEDatabase();
     this.initializeVulnerabilityPatterns();
   }
@@ -320,22 +320,18 @@ Identify:
 
 Format as JSON with vulnerability objects containing: type, cweId, cweName, title, description, severity, cvssScore, attackVector, code snippet.`;
 
-    const response = await this.aiProvider.chat([
+    const response = await this.aiProvider.complete(analysisPrompt, [
       {
         role: 'system',
         content: `You are an expert security researcher specializing in identifying zero-day vulnerabilities and security flaws. Perform deep analysis to find non-obvious security issues.`,
       },
-      {
-        role: 'user',
-        content: analysisPrompt,
-      },
     ], {
-      reasoning: true,
-      budgetTokens: 10000,
+      temperature: 0.3,
+      maxTokens: 4096,
     });
 
     try {
-      const vulnerabilities = JSON.parse(response.message);
+      const vulnerabilities = JSON.parse(response.content);
       return Array.isArray(vulnerabilities) ? vulnerabilities : [];
     } catch {
       logger.warn(`[SecurityAnalysis] Failed to parse AI analysis results`);

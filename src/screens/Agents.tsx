@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, X, Trash2, Bot } from 'lucide-react';
+import { Plus, X, Trash2, Bot, ListTodo } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
+import { useWorkspace } from '@/src/context/WorkspaceContext';
 
 type AgentState = 'idle' | 'running' | 'paused' | 'error' | 'stopped';
 type AgentCapability = 'code-generation' | 'code-analysis' | 'security-analysis' | 'reasoning' | 'execution' | 'learning';
@@ -109,16 +110,21 @@ function StateBadge({
     );
 }
 
-export function Agents() {
+interface AgentsProps {
+    onNavigate?: (tab: 'tasks') => void;
+}
+
+export function Agents({ onNavigate }: AgentsProps) {
     const { data, loading, refetch } = useApi<ApiResponse>('/api/v1/agents');
     const { toast } = useToast();
+    const { workspace } = useWorkspace();
 
     const [showModal, setShowModal] = useState(false);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [workspaceId, setWorkspaceId] = useState('system');
-    const [capabilities, setCapabilities] = useState<AgentCapability[]>(['reasoning']);
+    const [capabilities, setCapabilities] = useState<AgentCapability[]>([]);
     const [submitting, setSubmitting] = useState(false);
+    const [deleting, setDeleting] = useState<string | null>(null);
 
     const agents: Agent[] = (data as any)?.data ?? data ?? [];
 
@@ -131,7 +137,6 @@ export function Agents() {
         setShowModal(false);
         setName('');
         setDescription('');
-        setWorkspaceId('system');
         setCapabilities(['reasoning']);
     }
 
@@ -144,6 +149,8 @@ export function Agents() {
     async function handleSubmit() {
         if (!name.trim()) { toast('Name is required', 'error'); return; }
         if (capabilities.length === 0) { toast('Select at least one capability', 'error'); return; }
+        if (!workspace) { toast('No active workspace', 'error'); return; }
+        
         setSubmitting(true);
         try {
             await apiFetch('/api/v1/agents', {
@@ -151,7 +158,7 @@ export function Agents() {
                 body: JSON.stringify({
                     name: name.trim(),
                     description: description.trim() || undefined,
-                    workspaceId: workspaceId.trim() || 'system',
+                    workspaceId: workspace.id,
                     capabilities,
                 }),
             });
@@ -196,7 +203,16 @@ export function Agents() {
         >
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">Agents</h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-2xl font-bold tracking-tight">Agents</h2>
+                    <button
+                        onClick={() => onNavigate?.('tasks')}
+                        className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+                    >
+                        <ListTodo className="size-3.5" />
+                        View Tasks
+                    </button>
+                </div>
                 <button
                     onClick={() => setShowModal(true)}
                     className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
@@ -337,16 +353,7 @@ export function Agents() {
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="label-caps block mb-1">Workspace ID</label>
-                                    <input
-                                        className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors font-mono"
-                                        value={workspaceId}
-                                        onChange={e => setWorkspaceId(e.target.value)}
-                                        placeholder="system"
-                                    />
-                                </div>
-
+                                
                                 <div>
                                     <label className="label-caps block mb-2">Capabilities</label>
                                     <div className="grid grid-cols-2 gap-1.5">
