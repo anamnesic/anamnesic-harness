@@ -354,63 +354,70 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         setShowBrowser(true);
     };
 
-    if (!workspace) {
-        return (
-            <motion.div
-                key="projects-no-workspace"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
-            >
-                <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
-                    <button
-                        onClick={openFolderBrowser}
-                        disabled={submitting}
-                        className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                    >
-                        <FolderOpen className="size-3.5" />
-                        {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
-                    </button>
-                </div>
-                {recentItems.length > 0 && (
-                    <div className="bento-card mb-6">
-                        <p className="label-caps mb-3">Recentes</p>
-                        <div className="space-y-2">
-                            {recentItems.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5">
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-accent truncate">{item.name}</p>
-                                        {item.localPath && <p className="text-xs text-text-dim truncate font-mono">{item.localPath}</p>}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <button
-                                            onClick={() => handleOpenRecent(item)}
-                                            className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors"
-                                        >
-                                            Abrir
-                                        </button>
-                                        <button
-                                            onClick={() => handleReopenRecent(item)}
-                                            disabled={submitting || !item.localPath}
-                                            className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-text-dim hover:text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                                        >
-                                            <RotateCcw className="size-3" />
-                                            Abrir de novo
-                                        </button>
-                                    </div>
+    const renderRepositoryStartScreen = ({ showWorkspaceHint }: { showWorkspaceHint: boolean }) => (
+        <motion.div
+            key={showWorkspaceHint ? 'projects-start-no-workspace' : 'projects-start-no-open'}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
+        >
+            <div className="mb-8 flex items-center justify-between">
+                <h2 className="text-2xl font-bold tracking-tight">Start</h2>
+                <button
+                    onClick={openFolderBrowser}
+                    disabled={submitting}
+                    className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                >
+                    <FolderOpen className="size-3.5" />
+                    {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
+                </button>
+            </div>
+
+            <div className="bento-card mb-6">
+                <p className="label-caps mb-3">Recentes</p>
+                {recentItems.length > 0 ? (
+                    <div className="space-y-2">
+                        {recentItems.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-accent truncate">{item.name}</p>
+                                    {item.localPath && <p className="text-xs text-text-dim truncate font-mono">{item.localPath}</p>}
                                 </div>
-                            ))}
-                        </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        onClick={() => handleOpenRecent(item)}
+                                        className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors"
+                                    >
+                                        Abrir
+                                    </button>
+                                    <button
+                                        onClick={() => handleReopenRecent(item)}
+                                        disabled={submitting || !item.localPath}
+                                        className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-text-dim hover:text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                                    >
+                                        <RotateCcw className="size-3" />
+                                        Abrir de novo
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
+                ) : (
+                    <p className="text-sm text-text-dim">Nenhum repositório recente ainda.</p>
                 )}
-                <div className="bento-card py-16 text-center space-y-3">
-                    <Building2 className="size-10 text-border mx-auto" />
-                    <h3 className="font-bold text-accent">Selecione um workspace</h3>
-                    <p className="text-sm text-text-dim">Escolha um workspace para visualizar seus repositórios.</p>
+            </div>
+
+            {showWorkspaceHint && (
+                <div className="bento-card py-8 text-center space-y-2">
+                    <Building2 className="size-8 text-border mx-auto" />
+                    <p className="text-sm text-text-dim">Nenhum workspace ativo. Use "Selecionar pasta do repositório" para começar.</p>
                 </div>
-            </motion.div>
-        );
+            )}
+        </motion.div>
+    );
+
+    if (!workspace) {
+        return renderRepositoryStartScreen({ showWorkspaceHint: true });
     }
 
     if (selectedProject) {
@@ -541,123 +548,8 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     }
 
     return (
-        <motion.div
-            key="projects-list"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
-        >
-            <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
-                <button
-                    onClick={openFolderBrowser}
-                    disabled={submitting}
-                    className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                >
-                    <FolderOpen className="size-3.5" />
-                    {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
-                </button>
-            </div>
-
-            {recentItems.length > 0 && (
-                <div className="bento-card mb-6">
-                    <p className="label-caps mb-3">Recentes</p>
-                    <div className="space-y-2">
-                        {recentItems.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5">
-                                <div className="min-w-0">
-                                    <p className="text-sm font-semibold text-accent truncate">{item.name}</p>
-                                    {item.localPath && <p className="text-xs text-text-dim truncate font-mono">{item.localPath}</p>}
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                        onClick={() => handleOpenRecent(item)}
-                                        className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors"
-                                    >
-                                        Abrir
-                                    </button>
-                                    <button
-                                        onClick={() => handleReopenRecent(item)}
-                                        disabled={submitting || !item.localPath}
-                                        className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-text-dim hover:text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                                    >
-                                        <RotateCcw className="size-3" />
-                                        Abrir de novo
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <p className="text-xs text-text-dim -mt-5 mb-6">Workspace ativo: {workspace.name}</p>
-
-            {loading ? (
-                <div className="space-y-4">
-                    {[0, 1, 2].map(i => <SkeletonCard key={i} />)}
-                </div>
-            ) : projects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 space-y-3">
-                    <FolderOpen className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">Ainda não há repositórios neste workspace</p>
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    {projects.map(project => (
-                        <div
-                            key={project.id}
-                            className="bento-card space-y-2 cursor-pointer hover:border-primary/60 transition-colors"
-                            onClick={() => setRepositoryById(project.id)}
-                        >
-                            <div className="flex items-start justify-between gap-3">
-                                <span className="font-bold text-accent">{project.name}</span>
-                                <div className="flex items-center gap-2">
-                                    <StatusBadge status={project.status} />
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingProject(project);
-                                            setEditForm({
-                                                name: project.name,
-                                                description: project.description || '',
-                                                status: project.status || 'active'
-                                            });
-                                        }}
-                                        className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
-                                        aria-label="Editar repositório"
-                                    >
-                                        <Pencil className="size-3.5" />
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
-                                        disabled={deleting === project.id}
-                                        className="rounded-lg p-1.5 text-text-dim hover:text-red-400 transition-colors disabled:opacity-40"
-                                        aria-label="Excluir repositório"
-                                    >
-                                        <Trash2 className="size-3.5" />
-                                    </button>
-                                </div>
-                            </div>
-                            {project.description && (
-                                <p className="text-sm text-text-dim leading-relaxed">{project.description}</p>
-                            )}
-                            {project.metadata?.localPath && (
-                                <div className="flex items-center gap-2 text-xs text-text-dim font-mono truncate">
-                                    <FolderGit2 className="size-3.5 text-primary shrink-0" />
-                                    <span className="truncate">{project.metadata.localPath}</span>
-                                </div>
-                            )}
-                            {!project.metadata?.localPath && project.workspaceId && (
-                                <p className="text-xs text-text-dim font-mono truncate">{project.workspaceId}</p>
-                            )}
-                            {project.createdAt && (
-                                <p className="label-caps">{new Date(project.createdAt).toLocaleDateString()}</p>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
+        <div className={embedded ? 'w-full' : 'flex-1'}>
+            {renderRepositoryStartScreen({ showWorkspaceHint: false })}
 
             <AnimatePresence>
                 {noGitDialog.open && (
@@ -804,6 +696,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     />
                 )}
             </AnimatePresence>
-        </motion.div>
+        </div>
     );
 }
