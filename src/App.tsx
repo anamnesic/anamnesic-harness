@@ -22,7 +22,7 @@ import { WorkspaceProvider } from './context/WorkspaceContext';
 import { RepositoryProvider } from './context/RepositoryContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RepositorySelector } from './components/RepositorySelector';
-import { Dashboard } from './screens/Dashboard';
+import { MonitorPanel } from './screens/MonitorPanel';
 import { MemoryLedger } from './screens/MemoryLedger';
 import { Observers } from './screens/Observers';
 import { SystemConfig } from './screens/SystemConfig';
@@ -128,7 +128,7 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
 };
 
 const TABS = [
-  { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
+  { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
   { id: 'repo-files', label: 'Repo', icon: FileText },
   { id: 'repo-context', label: 'Wiki', icon: BookOpen },
   { id: 'repo-decisions', label: 'Decisoes', icon: Lightbulb },
@@ -149,7 +149,7 @@ const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
     </div>
     <nav className="flex-1 overflow-y-auto p-3 space-y-1">
       {[
-        { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
+        { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
         { id: 'control', label: 'Segurança', icon: Shield },
         { id: 'agents', label: 'Agentes', icon: Bot },
         { id: 'decisions', label: 'Decisões', icon: Lightbulb },
@@ -178,8 +178,8 @@ function useScreenConfig(
     case 'dashboard':
       return {
         title: 'KAIROS',
-        subtitle: 'Painel de Agentes',
-        element: <Dashboard onNavigate={setActive} />,
+        subtitle: 'Painel Operacional',
+        element: <MonitorPanel onNavigate={setActive} />,
         onBack: undefined,
         rightElement: (
           <div className="flex items-center gap-2">
