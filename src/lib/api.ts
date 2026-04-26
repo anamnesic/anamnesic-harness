@@ -52,13 +52,32 @@ export async function apiFetch<T = unknown>(
         ...init,
     });
     if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        const error = (body as any).error || {};
-        console.error(`[apiFetch Error] ${path} returned ${res.status}:`, error);
+        const raw = await res.text().catch(() => '');
+
+        let body: any = {};
+        if (raw) {
+            try {
+                body = JSON.parse(raw);
+            } catch {
+                body = {};
+            }
+        }
+
+        const error = body?.error || {};
+        const fallbackText = raw && raw.length < 500 ? raw : undefined;
+        const message = error.message || body?.message || fallbackText || `HTTP ${res.status}`;
+        const code = error.code || body?.code || 'UNKNOWN_ERROR';
+        const details = error.details || body?.details || { status: res.status, statusText: res.statusText };
+
+        console.error(`[apiFetch Error] ${path} returned ${res.status}:`, {
+            code,
+            message,
+            details,
+        });
         throw new ApiError(
-            error.code || 'UNKNOWN_ERROR',
-            error.message || `HTTP ${res.status}`,
-            error.details
+            code,
+            message,
+            details
         );
     }
     return res.json() as Promise<T>;

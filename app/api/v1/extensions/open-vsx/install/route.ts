@@ -57,6 +57,14 @@ export async function POST(req: NextRequest) {
             },
         }, 201);
     } catch (e: any) {
-        return err('OPEN_VSX_INSTALL_FAILED', e?.message ?? 'Failed to install extension', 500);
+        return err(
+            'OPEN_VSX_INSTALL_FAILED',
+            e?.message ?? 'Failed to install extension',
+            500,
+            {
+                name: e?.name,
+                cause: e?.cause,
+            },
+        );
     }
 }

@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -38,9 +39,30 @@ function commandExists(command: string): boolean {
     if (!command) {
         return false;
     }
+
+    const maybePathLike = /[\\/]/.test(command) || /\.[a-zA-Z0-9]+$/.test(command);
+    if (maybePathLike && existsSync(command)) {
+        return true;
+    }
+
     const checker = process.platform === 'win32' ? 'where' : 'which';
     const result = spawnSync(checker, [command], { stdio: 'ignore' });
     return result.status === 0;
+}
+
+function windowsCliCandidates(): string[] {
+    const localAppData = process.env.LOCALAPPDATA ?? '';
+    const programFiles = process.env.ProgramFiles ?? '';
+    const programFilesX86 = process.env['ProgramFiles(x86)'] ?? '';
+
+    return [
+        resolve(localAppData, 'Programs', 'Microsoft VS Code', 'bin', 'code.cmd'),
+        resolve(localAppData, 'Programs', 'VSCodium', 'bin', 'codium.cmd'),
+        resolve(programFiles, 'Microsoft VS Code', 'bin', 'code.cmd'),
+        resolve(programFilesX86, 'Microsoft VS Code', 'bin', 'code.cmd'),
+        resolve(programFiles, 'VSCodium', 'bin', 'codium.cmd'),
+        resolve(programFilesX86, 'VSCodium', 'bin', 'codium.cmd'),
+    ].filter((item) => item.trim().length > 0);
 }
 
 function parseListLine(line: string): HostInstalledExtension | null {
@@ -87,6 +109,14 @@ export class OpenVsxHostInstaller {
             }
         }
 
+        if (process.platform === 'win32') {
+            for (const candidate of windowsCliCandidates()) {
+                if (commandExists(candidate)) {
+                    return { command: candidate, baseArgs: [] };
+                }
+            }
+        }
+
         throw new Error('No compatible editor CLI found. Set OPEN_VSX_INSTALL_COMMAND, e.g. "code".');
     }
 
@@ -95,7 +125,8 @@ export class OpenVsxHostInstaller {
         const finalArgs = [...resolved.baseArgs, ...args];
         const execution = spawnSync(resolved.command, finalArgs, {
             encoding: 'utf-8',
-            timeout: 60_000,
+            timeout: 180_000,
+            shell: process.platform === 'win32' && /\.(cmd|bat)$/i.test(resolved.command),
         });
 
         const stdout = execution.stdout ?? '';
