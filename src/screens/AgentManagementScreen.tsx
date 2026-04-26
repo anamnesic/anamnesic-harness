@@ -149,9 +149,11 @@ function StateBadge({
 
 interface AgentsProps {
     onNavigate?: (tab: 'tasks') => void;
+    defaultView?: 'agents' | 'skills';
+    hideViewSwitcher?: boolean;
 }
 
-export function Agents({ onNavigate }: AgentsProps) {
+export function AgentManagementScreen({ onNavigate, defaultView = 'agents', hideViewSwitcher = false }: AgentsProps) {
     const { data, loading, refetch } = usePolling<ApiResponse>('/api/v1/agents', 20000);
     const { toast } = useToast();
     const { workspace } = useWorkspace();
@@ -171,7 +173,7 @@ export function Agents({ onNavigate }: AgentsProps) {
     const [newCapabilityPrompt, setNewCapabilityPrompt] = useState('');
 
     const [showTaskModal, setShowTaskModal] = useState(false);
-    const [activeView, setActiveView] = useState<'agents' | 'skills'>('agents');
+    const [activeView, setActiveView] = useState<'agents' | 'skills'>(defaultView);
     const [taskAgent, setTaskAgent] = useState<Agent | null>(null);
     const [taskDescription, setTaskDescription] = useState('');
     const [taskInput, setTaskInput] = useState('{\n  "query": ""\n}');
@@ -496,30 +498,32 @@ export function Agents({ onNavigate }: AgentsProps) {
                 </button>
             </div>
 
-            <div className="mb-6 inline-flex rounded-xl border border-border bg-card/50 p-1">
-                <button
-                    onClick={() => setActiveView('agents')}
-                    className={cn(
-                        'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
-                        activeView === 'agents'
-                            ? 'bg-bg text-highlight border border-border'
-                            : 'text-text-dim hover:text-accent'
-                    )}
-                >
-                    Agentes
-                </button>
-                <button
-                    onClick={() => setActiveView('skills')}
-                    className={cn(
-                        'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
-                        activeView === 'skills'
-                            ? 'bg-bg text-highlight border border-border'
-                            : 'text-text-dim hover:text-accent'
-                    )}
-                >
-                    Skills
-                </button>
-            </div>
+            {!hideViewSwitcher && (
+                <div className="mb-6 inline-flex rounded-xl border border-border bg-card/50 p-1">
+                    <button
+                        onClick={() => setActiveView('agents')}
+                        className={cn(
+                            'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
+                            activeView === 'agents'
+                                ? 'bg-bg text-highlight border border-border'
+                                : 'text-text-dim hover:text-accent'
+                        )}
+                    >
+                        Agentes
+                    </button>
+                    <button
+                        onClick={() => setActiveView('skills')}
+                        className={cn(
+                            'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
+                            activeView === 'skills'
+                                ? 'bg-bg text-highlight border border-border'
+                                : 'text-text-dim hover:text-accent'
+                        )}
+                    >
+                        Skills
+                    </button>
+                </div>
+            )}
 
             {activeView === 'agents' ? (
                 <>

@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Activity,
   Bot,
+  Pencil,
   Lightbulb,
   TrendingUp,
   FileText,
@@ -26,7 +27,8 @@ import { MonitorPanel } from './screens/MonitorPanel';
 import { MemoryLedger } from './screens/MemoryLedger';
 import { Observers } from './screens/Observers';
 import { SystemConfig } from './screens/SystemConfig';
-import { Agents } from './screens/Agents';
+import { AgentManagementScreen } from './screens/AgentManagementScreen';
+import { AgentSkillsScreen } from './screens/AgentSkillsScreen';
 import { Workflows } from './screens/Workflows';
 import { Security } from './screens/Security';
 import { Snapshots } from './screens/Snapshots';
@@ -134,6 +136,7 @@ const TABS = [
   { id: 'repo-decisions', label: 'Decisoes', icon: Lightbulb },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
+  { id: 'skills', label: 'Skills', icon: Pencil },
   { id: 'mcp', label: 'MCP', icon: ServerCog },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
@@ -152,6 +155,7 @@ const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
         { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
         { id: 'control', label: 'Segurança', icon: Shield },
         { id: 'agents', label: 'Agentes', icon: Bot },
+        { id: 'skills', label: 'Skills', icon: Pencil },
         { id: 'decisions', label: 'Decisões', icon: Lightbulb },
         { id: 'system', label: 'Núcleo', icon: Settings2 },
       ].map(item => (
@@ -220,7 +224,9 @@ function useScreenConfig(
     case 'snapshots':
       return { title: 'Snapshots', subtitle: 'Estado em um ponto no tempo', element: <Snapshots />, onBack: goHome, rightElement: undefined };
     case 'agents':
-      return { title: 'Agentes', subtitle: 'Registro de agentes', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
+      return { title: 'Agentes', subtitle: 'Registro de agentes', element: <AgentManagementScreen onNavigate={setActive} defaultView="agents" hideViewSwitcher />, onBack: goHome, rightElement: undefined };
+    case 'skills':
+      return { title: 'Skills', subtitle: 'Gestão de prompts e capacidades', element: <AgentSkillsScreen />, onBack: goHome, rightElement: undefined };
     case 'mcp':
       return {
         title: 'MCP',
