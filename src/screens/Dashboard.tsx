@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, RefreshCcw } from 'lucide-react';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, RefreshCcw, Brain } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -289,6 +289,13 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                         >
                             <Bug className="size-3.5" />
                             Red Team
+                        </button>
+                        <button
+                            onClick={() => onNavigate('inference')}
+                            className="flex-1 flex items-center justify-center gap-2 bg-card border border-border py-2.5 rounded-xl font-bold text-xs hover:border-primary/60 transition-colors"
+                        >
+                            <Brain className="size-3.5" />
+                            Inference
                         </button>
                     </div>
                 </div>

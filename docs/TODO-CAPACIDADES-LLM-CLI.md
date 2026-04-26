@@ -235,10 +235,10 @@ Meta de arquitetura:
 
 ### Frontend
 
-- [ ] Tela para jobs de inferencia
-- [ ] Tela para memoria consolidada semantica
-- [ ] Tela para insights proativos
-- [ ] Exibir provenance do provider usado em cada inferencia
+- [x] Tela para jobs de inferencia
+- [x] Tela para memoria consolidada semantica
+- [x] Tela para insights proativos
+- [x] Exibir provenance do provider usado em cada inferencia
 
 ---
 

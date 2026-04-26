@@ -43,11 +43,13 @@ import { ModelBenchmarks } from './screens/ModelBenchmarks';
 import { RedTeaming } from './screens/RedTeaming';
 import { Integrations } from './screens/Integrations';
 import { Login } from './screens/Login';
+import { Signup } from './screens/Signup';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
 import { TerminalPanel } from './screens/TerminalPanel';
 import { ExtensionsRightSidebar } from './components/ExtensionsRightSidebar';
 import { useApi } from './lib/api';
+import { InferenceHub } from './screens/InferenceHub';
 
 interface TerminalHeaderState {
   repoPath: string;
@@ -131,7 +133,7 @@ const TABS = [
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations';
+type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations' | 'inference';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
@@ -215,6 +217,8 @@ function useScreenConfig(
       };
     case 'benchmarks':
       return { title: 'Benchmarks', subtitle: 'Comparação de desempenho de LLM', element: <ModelBenchmarks />, onBack: goHome, rightElement: undefined };
+    case 'inference':
+      return { title: 'Inference Hub', subtitle: 'Jobs em background e memória semântica', element: <InferenceHub />, onBack: goHome, rightElement: undefined };
     case 'redteaming':
       return { title: 'Red Teaming', subtitle: 'Simulação de ataques', element: <RedTeaming />, onBack: goHome, rightElement: undefined };
     case 'workspaces':
@@ -335,6 +339,7 @@ function useScreenConfig(
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
   const { data: openVsxInstalled } = useApi<{ data?: { extensions?: Array<string | { id?: string; identifier?: string }> } } | Array<string | { id?: string; identifier?: string }> | null>('/api/v1/extensions/open-vsx/installed');
@@ -373,7 +378,11 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    return <Login />;
+    return authView === 'login' ? (
+      <Login onNavigateToSignup={() => setAuthView('signup')} />
+    ) : (
+      <Signup onBackToLogin={() => setAuthView('login')} />
+    );
   }
 
   return (
