@@ -267,11 +267,11 @@ Meta de arquitetura:
 
 ## Artefatos a Produzir
 
-- [ ] `docs/ARQUITETURA-LLM-CLI.md`
-- [ ] `docs/SCHEMAS-LLM-CLI.md`
-- [ ] `docs/PROMPTS-OPERACIONAIS.md`
-- [ ] `docs/MATRIZ-COMPATIBILIDADE-CLIS.md`
-- [ ] `docs/RUNBOOK-JOBS-BACKGROUND.md`
+- [x] `docs/ARQUITETURA-LLM-CLI.md`
+- [x] `docs/SCHEMAS-LLM-CLI.md`
+- [x] `docs/PROMPTS-OPERACIONAIS.md`
+- [x] `docs/MATRIZ-COMPATIBILIDADE-CLIS.md`
+- [x] `docs/RUNBOOK-JOBS-BACKGROUND.md`
 
 ---
 
