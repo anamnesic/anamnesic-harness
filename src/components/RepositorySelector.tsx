@@ -10,19 +10,26 @@ export function RepositorySelector() {
     const { repository, repositories, setRepositoryById, isLoading } = useRepository();
     const [isOpen, setIsOpen] = useState(false);
 
-    if (isLoading || !repositories.length) {
+    if (isLoading) {
         return null;
     }
+
+    const hasRepositories = repositories.length > 0;
 
     return (
         <div className="relative">
             <button
-                onClick={() => setIsOpen((open) => !open)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
+                onClick={() => {
+                    if (hasRepositories) {
+                        setIsOpen((open) => !open);
+                    }
+                }}
+                disabled={!hasRepositories}
+                className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors disabled:opacity-60 disabled:hover:border-border"
             >
                 <FolderGit2 className="size-4 text-primary" />
                 <span className="text-sm font-medium text-highlight truncate max-w-45">
-                    {repository?.name || 'Selecionar repositório'}
+                    {repository?.name || 'Nenhum repositório'}
                 </span>
                 <ChevronDown
                     className={cn(
@@ -33,7 +40,7 @@ export function RepositorySelector() {
             </button>
 
             <AnimatePresence>
-                {isOpen && (
+                {isOpen && hasRepositories && (
                     <>
                         <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
                         <motion.div

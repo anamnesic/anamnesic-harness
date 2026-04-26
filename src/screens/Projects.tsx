@@ -254,6 +254,9 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 animate={{ opacity: 1 }}
                 className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
             >
+                <div className="mb-4">
+                    <RepositorySelector />
+                </div>
                 <div className="bento-card py-16 text-center space-y-3">
                     <Building2 className="size-10 text-border mx-auto" />
                     <h3 className="font-bold text-accent">Selecione um workspace</h3>
