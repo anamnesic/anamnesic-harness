@@ -8,6 +8,7 @@ import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { ApiKeys } from './ApiKeys';
+import { AVAILABLE_MODELS } from '@/src/config/models';
 
 const FLAG_LABELS: Record<string, string> = {
     enableStreaming: 'Streaming',
@@ -18,9 +19,19 @@ const FLAG_LABELS: Record<string, string> = {
     enableMetricsCollection: 'Metrics Collection',
 };
 
-interface SettingsData { flags: Record<string, boolean> }
+interface SettingsData {
+    flags: Record<string, boolean>;
+    aiSettings?: Record<string, unknown>;
+    workspaceId?: string;
+}
 interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number; platform: string; nodeVersion: string }
 interface Project { id: string; name: string }
+
+const CLI_MODEL_IDS = new Set(['gpt-5.2-codex', 'gpt-5.3-codex']);
+
+function isCliModel(modelId: string) {
+    return CLI_MODEL_IDS.has(modelId) || modelId.includes('codex') || modelId.includes('grok-code');
+}
 
 export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void }) {
     const { data: settings, loading: settingsLoading } = useApi<SettingsData>('/api/v1/settings');
@@ -29,15 +40,26 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const { toast } = useToast();
 
     const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
+    const [localModelStates, setLocalModelStates] = useState<Record<string, boolean>>({});
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (settings?.flags) {
-            setLocalFlags(settings.flags);
-            setDirty(false);
+        if (!settings?.flags) {
+            return;
         }
+
+        setLocalFlags(settings.flags);
+
+        const nextModels: Record<string, boolean> = {};
+        for (const model of AVAILABLE_MODELS) {
+            const settingKey = `models.${model.id}`;
+            const raw = settings.aiSettings?.[settingKey];
+            nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
+        }
+        setLocalModelStates(nextModels);
+        setDirty(false);
     }, [settings]);
 
     function toggleFlag(key: string) {
@@ -45,12 +67,26 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         setDirty(true);
     }
 
+    function toggleModel(modelId: string) {
+        setLocalModelStates(prev => ({ ...prev, [modelId]: !prev[modelId] }));
+        setDirty(true);
+    }
+
     async function handleCommit() {
         setSaving(true);
         try {
+            const aiSettingsPayload: Record<string, boolean> = {};
+            for (const [modelId, enabled] of Object.entries(localModelStates)) {
+                aiSettingsPayload[`models.${modelId}`] = enabled;
+            }
+
             await apiFetch('/api/v1/settings', {
                 method: 'PATCH',
-                body: JSON.stringify(localFlags),
+                body: JSON.stringify({
+                    workspaceId: settings?.workspaceId ?? 'system',
+                    flags: localFlags,
+                    aiSettings: aiSettingsPayload,
+                }),
             });
             toast('Settings committed', 'success');
             setDirty(false);
@@ -63,6 +99,13 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
 
     function handleDiscard() {
         if (settings?.flags) setLocalFlags(settings.flags);
+        const nextModels: Record<string, boolean> = {};
+        for (const model of AVAILABLE_MODELS) {
+            const settingKey = `models.${model.id}`;
+            const raw = settings?.aiSettings?.[settingKey];
+            nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
+        }
+        setLocalModelStates(nextModels);
         setDirty(false);
     }
 
@@ -171,6 +214,50 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                             ))}
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* AI Models */}
+            <div className="bento-card">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <span className="label-caps">Modelos de IA</span>
+                        <p className="text-xs text-text-dim mt-1">Ative ou desative os modelos disponíveis no projeto (inclui modelos de CLI).</p>
+                    </div>
+                </div>
+                <div className="space-y-2 mt-4">
+                    {AVAILABLE_MODELS.map((model) => {
+                        const enabled = localModelStates[model.id] ?? true;
+                        const cli = isCliModel(model.id);
+
+                        return (
+                            <div key={model.id} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-bg px-3 py-2.5">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <p className="text-xs font-bold text-accent truncate">{model.name}</p>
+                                        <span className="rounded-full bg-card px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-text-dim shrink-0">
+                                            {model.group}
+                                        </span>
+                                        {cli && (
+                                            <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary shrink-0">
+                                                CLI
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-text-dim truncate">{model.id} · {model.description}</p>
+                                </div>
+                                <button
+                                    onClick={() => toggleModel(model.id)}
+                                    className={cn(
+                                        'h-5 w-9 rounded-full p-0.5 flex items-center transition-colors cursor-pointer shrink-0',
+                                        enabled ? 'bg-primary' : 'bg-border',
+                                    )}
+                                >
+                                    <div className={cn('size-4 bg-white rounded-full transition-transform', enabled ? 'translate-x-4' : 'translate-x-0')} />
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
