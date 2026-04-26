@@ -616,7 +616,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 >
                     <div className="space-y-3">
                         <aside className="bento-card p-1.5">
-                            <div className="flex items-center gap-1 overflow-x-auto">
+                            <div className="flex items-center gap-1">
                                 {tabItems.map((tab) => {
                                     const Icon = tab.icon;
                                     const isActive = activeTab === tab.id;
@@ -647,32 +647,30 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                         </aside>
 
                         <section className="min-w-0">
-                            <div className="bento-card">
-                                {activeTab === 'repository' ? (
-                                    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3 sm:gap-4">
-                                        <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
-                                            <div className="mb-3 flex items-center gap-2">
-                                                <FileText className="size-4 text-primary" />
-                                                <p className="label-caps">Lista de arquivos</p>
-                                            </div>
-                                            {insightsLoading ? (
-                                                <p className="text-sm text-text-dim">Carregando arquivos...</p>
-                                            ) : !insights?.isGitRepo ? (
-                                                <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
-                                            ) : insights?.files?.length ? (
-                                                <div className="max-h-64 overflow-y-auto space-y-1 pr-1 sm:max-h-80">
-                                                    {insights.files.map((filePath, index) => (
-                                                        <p key={`${filePath}-${index}`} className="truncate font-mono text-xs text-text-dim">
-                                                            {filePath}
-                                                        </p>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
-                                            )}
-                                        </div>
+                            {activeTab === 'repository' ? (
+                                <div className="min-h-64 min-w-0 sm:min-h-72">
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <FileText className="size-4 text-primary" />
+                                        <p className="label-caps">Lista de arquivos</p>
                                     </div>
-                                ) : activeTab === 'git' ? (
+                                    {insightsLoading ? (
+                                        <p className="text-sm text-text-dim">Carregando arquivos...</p>
+                                    ) : !insights?.isGitRepo ? (
+                                        <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                    ) : insights?.files?.length ? (
+                                        <div className="max-h-[68vh] space-y-1 overflow-y-auto pr-1">
+                                            {insights.files.map((filePath, index) => (
+                                                <p key={`${filePath}-${index}`} className="truncate font-mono text-xs text-text-dim">
+                                                    {filePath}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
+                                    )}
+                                </div>
+                            ) : activeTab === 'git' ? (
+                                <div className="bento-card">
                                     <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
                                         <div className="mb-3 flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
@@ -812,12 +810,12 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                             )}
                                         </div>
                                     </div>
-                                ) : activeTab === 'context' ? (
-                                    <ProjectContext projectId={selectedProject.id} />
-                                ) : (
-                                    <DecisionsPanel projectId={selectedProject.id} />
-                                )}
-                            </div>
+                                </div>
+                            ) : activeTab === 'context' ? (
+                                <ProjectContext projectId={selectedProject.id} />
+                            ) : (
+                                <DecisionsPanel projectId={selectedProject.id} />
+                            )}
                         </section>
                     </div>
                 </motion.div>
