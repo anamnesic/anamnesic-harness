@@ -2,60 +2,15 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { spawn } from 'node-pty';
-import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { sessions, broadcast, type Session } from '../_sessions';
+import { llmCliRegistry } from '@/src/core/llm-cli';
+import type { LlmCliProvider } from '@/src/core/llm-cli';
 
-type CliType = 'claude' | 'gemini' | 'copilot' | 'codex';
-type CliCommand = { cmd: string; args: string[] };
-type SpawnCommand = { file: string; args: string[] };
+type CliType = LlmCliProvider;
 
 const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex']);
-
-function commandExists(cmd: string): boolean {
-    const checker = process.platform === 'win32' ? 'where' : 'which';
-    const result = spawnSync(checker, [cmd], { stdio: 'ignore' });
-    return result.status === 0;
-}
-
-function firstAvailable(candidates: string[]): string {
-    for (const cmd of candidates) {
-        if (commandExists(cmd)) return cmd;
-    }
-    return candidates[0];
-}
-
-function getCliCommand(cli: CliType): CliCommand {
-    switch (cli) {
-        case 'claude': return { cmd: firstAvailable(['claude', 'claude-code', 'claude-ai']), args: [] };
-        case 'gemini': return { cmd: firstAvailable(['gemini', 'gemini-cli']), args: [] };
-        // Newer copilot CLIs don't support `-t shell`; keep a plain interactive command.
-        case 'copilot':
-            if (commandExists('copilot')) return { cmd: 'copilot', args: [] };
-            return { cmd: 'gh', args: ['copilot'] };
-        case 'codex': return { cmd: 'codex', args: [] };
-    }
-}
-
-function quoteForCmd(value: string): string {
-    if (!/[\s"]/u.test(value)) return value;
-    return `"${value.replace(/"/g, '""')}"`;
-}
-
-function getSpawnCommand(cli: CliType): SpawnCommand {
-    const { cmd, args } = getCliCommand(cli);
-    if (process.platform !== 'win32') {
-        return { file: cmd, args };
-    }
-
-    const comspec = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe';
-    const commandLine = [cmd, ...args].map(quoteForCmd).join(' ');
-    return {
-        file: comspec,
-        args: ['/d', '/c', commandLine],
-    };
-}
 
 export async function POST(req: NextRequest) {
     let body: { cli?: unknown; cwd?: unknown };
@@ -71,7 +26,8 @@ export async function POST(req: NextRequest) {
             ? cwd.trim()
             : process.cwd();
 
-    const { file, args } = getSpawnCommand(cli as CliType);
+    const adapter = llmCliRegistry.get(cli as CliType);
+    const { file, args } = adapter.getSpawnCommand('interactive');
     const sessionId = randomUUID();
 
     let proc: ReturnType<typeof spawn>;

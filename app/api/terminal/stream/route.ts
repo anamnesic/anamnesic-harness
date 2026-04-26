@@ -1,61 +1,12 @@
 export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
-import { spawn } from 'node:child_process';
-import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { CliInferenceService } from '@/src/core/llm-cli';
+import type { LlmCliProvider } from '@/src/core/llm-cli';
 
-type CliType = 'claude' | 'gemini' | 'copilot' | 'codex';
+type CliType = LlmCliProvider;
 
 const ALLOWED_CLI_TYPES = new Set<CliType>(['claude', 'gemini', 'copilot', 'codex']);
-
-function commandExists(cmd: string): boolean {
-    const checker = process.platform === 'win32' ? 'where' : 'which';
-    const result = spawnSync(checker, [cmd], { stdio: 'ignore' });
-    return result.status === 0;
-}
-
-function firstAvailable(candidates: string[]): string {
-    for (const cmd of candidates) {
-        if (commandExists(cmd)) return cmd;
-    }
-    return candidates[0];
-}
-
-function getCliArgs(cli: CliType, prompt: string): { cmd: string; args: string[] } {
-    switch (cli) {
-        case 'claude':
-            return { cmd: firstAvailable(['claude', 'claude-code', 'claude-ai']), args: ['--print', prompt] };
-        case 'gemini':
-            return { cmd: firstAvailable(['gemini', 'gemini-cli']), args: ['-p', prompt] };
-        case 'copilot':
-            if (commandExists('copilot')) {
-                return { cmd: 'copilot', args: ['-s', '-p', prompt] };
-            }
-            return { cmd: 'gh', args: ['copilot', '--', '-s', '-p', prompt] };
-        case 'codex':
-            return { cmd: 'codex', args: [prompt] };
-    }
-}
-
-function quoteForCmd(value: string): string {
-    if (!/[\s"]/u.test(value)) return value;
-    return `"${value.replace(/"/g, '""')}"`;
-}
-
-function getSpawnCommand(cli: CliType, prompt: string): { file: string; args: string[] } {
-    const { cmd, args } = getCliArgs(cli, prompt);
-    if (process.platform !== 'win32') {
-        return { file: cmd, args };
-    }
-
-    const comspec = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe';
-    const commandLine = [cmd, ...args].map(quoteForCmd).join(' ');
-    return {
-        file: comspec,
-        args: ['/d', '/c', commandLine],
-    };
-}
 
 export async function POST(req: NextRequest) {
     let body: { cli?: unknown; prompt?: unknown; cwd?: unknown };
@@ -75,38 +26,12 @@ export async function POST(req: NextRequest) {
         return new Response('Invalid or missing prompt', { status: 400 });
     }
 
-    // Validate and sanitize cwd — only allow an existing directory path
-    const resolvedCwd =
-        typeof cwd === 'string' && cwd.trim() && existsSync(cwd.trim())
-            ? cwd.trim()
-            : process.cwd();
-
-    const { file, args } = getSpawnCommand(cli as CliType, prompt.trim());
+    const inference = new CliInferenceService();
 
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
-        start(controller) {
-            let proc: ReturnType<typeof spawn>;
-            try {
-                proc = spawn(file, args, {
-                    cwd: resolvedCwd,
-                    env: {
-                        ...process.env,
-                        TERM: process.env.TERM || 'xterm-256color',
-                        COLORTERM: process.env.COLORTERM || 'truecolor',
-                    },
-                    stdio: ['ignore', 'pipe', 'pipe'],
-                });
-            } catch (err: unknown) {
-                const msg = err instanceof Error ? err.message : String(err);
-                controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: 'stderr', data: `Falha ao iniciar ${file}: ${msg}` })}\n\n`)
-                );
-                controller.close();
-                return;
-            }
-
+        async start(controller) {
             const send = (type: 'stdout' | 'stderr' | 'exit', data: string) => {
                 try {
                     controller.enqueue(
@@ -117,18 +42,26 @@ export async function POST(req: NextRequest) {
                 }
             };
 
-            proc.stdout?.on('data', (chunk: Buffer) => send('stdout', chunk.toString('utf8')));
-            proc.stderr?.on('data', (chunk: Buffer) => send('stderr', chunk.toString('utf8')));
-
-            proc.on('close', (code: number | null) => {
-                send('exit', `Processo finalizado com código ${code ?? '?'}`);
+            try {
+                const result = await inference.streamPrompt(
+                    {
+                        preferredProvider: cli as CliType,
+                        prompt: prompt.trim(),
+                        cwd: typeof cwd === 'string' ? cwd : undefined,
+                    },
+                    {
+                        onStdout: (chunk) => send('stdout', chunk),
+                        onStderr: (chunk) => send('stderr', chunk),
+                    },
+                );
+                send('exit', `Processo finalizado com código ${result.exitCode ?? '?'}`);
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : String(error);
+                send('stderr', message);
+                send('exit', 'Processo finalizado com erro');
+            } finally {
                 controller.close();
-            });
-
-            proc.on('error', (err: Error) => {
-                send('stderr', `Erro: ${err.message}`);
-                controller.close();
-            });
+            }
         },
     });
 
