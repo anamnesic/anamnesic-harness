@@ -325,44 +325,50 @@ export function Agents({ onNavigate }: AgentsProps) {
                         return (
                             <div key={agent.id} className="bento-card flex h-full flex-col gap-3">
                                 {/* Top row */}
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <span className="font-bold text-accent truncate">{agent.name}</span>
-                                        <span className="text-xs text-text-dim font-mono shrink-0">v{agent.version}</span>
-                                        {isPrebuilt && (
-                                            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-dim">
-                                                pre-feito
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <StateBadge
-                                            state={agent.state}
-                                            agentId={agent.id}
-                                            onStateChange={handleStateChange}
-                                        />
-                                        {isPrebuilt ? (
-                                            <button
-                                                onClick={() => void handleToggleActive(agent)}
-                                                className={cn(
-                                                    'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
-                                                    agent.isActive
-                                                        ? 'border-green-500/40 bg-green-500/15 text-green-400'
-                                                        : 'border-zinc-500/40 bg-zinc-500/15 text-zinc-400'
-                                                )}
-                                                aria-label={agent.isActive ? 'Desativar agente' : 'Ativar agente'}
-                                            >
-                                                {agent.isActive ? 'Ativo' : 'Inativo'}
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleDelete(agent.id, agent.name)}
-                                                className="rounded-lg p-1 text-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                                aria-label="Delete agent"
-                                            >
-                                                <Trash2 className="size-3.5" />
-                                            </button>
-                                        )}
+                                <div className="space-y-2">
+                                    <h3 className="break-words text-base font-bold leading-tight text-accent">
+                                        {agent.name}
+                                    </h3>
+
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-xs text-text-dim font-mono">v{agent.version}</span>
+                                            {isPrebuilt && (
+                                                <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-dim">
+                                                    pre-feito
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <StateBadge
+                                                state={agent.state}
+                                                agentId={agent.id}
+                                                onStateChange={handleStateChange}
+                                            />
+                                            {isPrebuilt ? (
+                                                <button
+                                                    onClick={() => void handleToggleActive(agent)}
+                                                    className={cn(
+                                                        'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                                                        agent.isActive
+                                                            ? 'border-green-500/40 bg-green-500/15 text-green-400'
+                                                            : 'border-zinc-500/40 bg-zinc-500/15 text-zinc-400'
+                                                    )}
+                                                    aria-label={agent.isActive ? 'Desativar agente' : 'Ativar agente'}
+                                                >
+                                                    {agent.isActive ? 'Ativo' : 'Inativo'}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleDelete(agent.id, agent.name)}
+                                                    className="rounded-lg p-1 text-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                    aria-label="Delete agent"
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
