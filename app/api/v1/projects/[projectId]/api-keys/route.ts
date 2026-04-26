@@ -1,8 +1,8 @@
 export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
-import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
+import { readProviderKeyStatuses, setProviderKey } from '@/app/api/_lib/project-env-keys';
 
 export async function GET(
     _req: NextRequest,
@@ -10,13 +10,18 @@ export async function GET(
 ) {
     try {
         const { projectId } = await params;
-        const db = await getDb();
-        const { ApiKeyService } = await import('@/src/core/services/ApiKeyService');
-        const service = new ApiKeyService(db);
-        const keys = await service.listByProject(projectId);
-        return ok(keys);
-    } catch {
-        return err('INTERNAL_ERROR', 'Failed to list API keys', 500);
+        const payload = await readProviderKeyStatuses(projectId);
+        return ok({
+            projectId,
+            repositoryPath: payload.repoPath,
+            envFilePath: payload.envFilePath,
+            keys: payload.keys,
+        });
+    } catch (e) {
+        if (e instanceof Error) {
+            return err('API_KEY_ERROR', e.message, 400);
+        }
+        return err('INTERNAL_ERROR', 'Failed to read repository .env API keys', 500);
     }
 }
 
@@ -27,14 +32,20 @@ export async function POST(
     try {
         const { projectId } = await params;
         const body = await req.json();
-        if (!body.name) return err('VALIDATION_ERROR', 'name is required', 400);
-        const db = await getDb();
-        const { ApiKeyService } = await import('@/src/core/services/ApiKeyService');
-        const service = new ApiKeyService(db);
-        const result = await service.generate(projectId, body.name);
-        return ok(result, 201);
+        const provider = typeof body.provider === 'string' ? body.provider : '';
+        const value = typeof body.value === 'string' ? body.value : '';
+
+        if (!provider) {
+            return err('VALIDATION_ERROR', 'provider is required', 400);
+        }
+        if (!value.trim()) {
+            return err('VALIDATION_ERROR', 'value is required', 400);
+        }
+
+        const keyStatus = await setProviderKey(projectId, provider, value);
+        return ok(keyStatus, 201);
     } catch (e) {
         if (e instanceof Error) return err('API_KEY_ERROR', e.message, 400);
-        return err('INTERNAL_ERROR', 'Failed to generate API key', 500);
+        return err('INTERNAL_ERROR', 'Failed to set provider API key', 500);
     }
 }

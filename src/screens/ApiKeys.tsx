@@ -1,237 +1,201 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Copy, Key } from 'lucide-react';
+import { Key, Save, Trash2 } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 
-interface ApiKey {
-    id: string;
-    name: string;
-    lastUsed: string | null;
-    isAtivo: boolean;
-    project: { id: string; name: string };
-    createdAt: string;
-    revokedAt: string | null;
+type ProviderId = 'claude' | 'chatgpt' | 'gemini';
+
+interface ProviderKeyStatus {
+    provider: ProviderId;
+    envVar: string;
+    isConfigured: boolean;
+    maskedValue: string | null;
 }
 
-interface GeneratedKey extends ApiKey {
-    key: string;
+interface KeysPayload {
+    projectId: string;
+    repositoryPath: string;
+    envFilePath: string;
+    keys: ProviderKeyStatus[];
 }
+
+interface ApiEnvelope<T> {
+    success: boolean;
+    data?: T;
+}
+
+const PROVIDERS: Array<{ id: ProviderId; label: string; helper: string; placeholder: string }> = [
+    {
+        id: 'chatgpt',
+        label: 'ChatGPT (OpenAI)',
+        helper: 'Salva em OPENAI_API_KEY no .env do repositorio.',
+        placeholder: 'sk-...'
+    },
+    {
+        id: 'claude',
+        label: 'Claude (Anthropic)',
+        helper: 'Salva em ANTHROPIC_API_KEY no .env do repositorio.',
+        placeholder: 'sk-ant-...'
+    },
+    {
+        id: 'gemini',
+        label: 'Gemini (Google)',
+        helper: 'Salva em GEMINI_API_KEY no .env do repositorio.',
+        placeholder: 'AIza...'
+    },
+];
 
 export function ApiKeys({ projectId }: { projectId: string }) {
-    const { data: keys, loading, refetch } = useApi<ApiKey[]>(`/api/v1/projects/${projectId}/api-keys`);
+    const { data, loading, refetch } = useApi<ApiEnvelope<KeysPayload>>(`/api/v1/projects/${projectId}/api-keys`);
     const { toast } = useToast();
 
-    const [showModal, setShowModal] = useState(false);
-    const [keyName, setKeyName] = useState('');
-    const [generating, setGenerating] = useState(false);
-    const [generatedKey, setGeneratedKey] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
-    const [revokingId, setRevokingId] = useState<string | null>(null);
+    const payload = data?.data;
+    const [values, setValues] = useState<Record<ProviderId, string>>({
+        chatgpt: '',
+        claude: '',
+        gemini: '',
+    });
+    const [savingProvider, setSavingProvider] = useState<ProviderId | null>(null);
+    const [removingProvider, setRemovingProvider] = useState<ProviderId | null>(null);
 
-    async function handleGenerate() {
-        if (!keyName.trim()) return;
-        setGenerating(true);
+    const statusByProvider = useMemo(() => {
+        const next: Partial<Record<ProviderId, ProviderKeyStatus>> = {};
+        for (const item of payload?.keys ?? []) {
+            next[item.provider] = item;
+        }
+        return next;
+    }, [payload]);
+
+    async function handleSave(provider: ProviderId) {
+        const value = values[provider]?.trim();
+        if (!value) {
+            toast('Digite uma chave antes de salvar.', 'error');
+            return;
+        }
+
+        setSavingProvider(provider);
         try {
-            const result = await apiFetch<GeneratedKey>(`/api/v1/projects/${projectId}/api-keys`, {
+            await apiFetch(`/api/v1/projects/${projectId}/api-keys`, {
                 method: 'POST',
-                body: JSON.stringify({ name: keyName.trim() }),
+                body: JSON.stringify({ provider, value }),
             });
-            setGeneratedKey(result.key);
+            setValues((prev) => ({ ...prev, [provider]: '' }));
+            toast('Chave salva no .env do repositório.', 'success');
             refetch?.();
         } catch (e: any) {
-            toast(e.message ?? 'Falha ao gerar chave', 'error');
-            closeModal();
+            toast(e.message ?? 'Falha ao salvar chave', 'error');
         } finally {
-            setGenerating(false);
+            setSavingProvider(null);
         }
     }
 
-    async function handleRevoke(keyId: string) {
-        setRevokingId(keyId);
+    async function handleRemove(provider: ProviderId) {
+        setRemovingProvider(provider);
         try {
-            await apiFetch(`/api/v1/projects/${projectId}/api-keys/${keyId}`, { method: 'DELETE' });
-            toast('Chave revogada', 'success');
+            await apiFetch(`/api/v1/projects/${projectId}/api-keys/${provider}`, { method: 'DELETE' });
+            toast('Chave removida do .env.', 'success');
             refetch?.();
         } catch (e: any) {
-            toast(e.message ?? 'Falha ao revogar chave', 'error');
+            toast(e.message ?? 'Falha ao remover chave', 'error');
         } finally {
-            setRevokingId(null);
+            setRemovingProvider(null);
         }
-    }
-
-    async function handleCopy() {
-        if (!generatedKey) return;
-        await navigator.clipboard.writeText(generatedKey);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    }
-
-    function closeModal() {
-        setShowModal(false);
-        setKeyName('');
-        setGeneratedKey(null);
-        setCopied(false);
-    }
-
-    function openModal() {
-        setGeneratedKey(null);
-        setKeyName('');
-        setCopied(false);
-        setShowModal(true);
     }
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <span className="label-caps">API Keys</span>
-                <button
-                    onClick={openModal}
-                    className="px-4 py-2 bg-highlight text-bg rounded-xl font-black text-[10px] tracking-widest uppercase hover:opacity-90 transition-opacity"
-                >
-                    Generate Key
-                </button>
+            <div className="flex items-center justify-between gap-3">
+                <span className="label-caps">Chaves IA no .env</span>
+                <p className="text-[10px] text-text-dim uppercase tracking-wider truncate">
+                    {payload?.envFilePath ?? '.env'}
+                </p>
             </div>
 
             {loading ? (
                 <div className="space-y-2">
                     {[0, 1, 2].map(i => <Skeleton key={i} className="h-12 rounded-xl" />)}
                 </div>
-            ) : !keys || keys.length === 0 ? (
-                <p className="text-xs text-text-dim py-4 text-center">Sem chaves de API para este projeto</p>
             ) : (
                 <div className="space-y-2">
-                    {keys.map(k => (
-                        <motion.div
-                            key={k.id}
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="flex items-center justify-between bg-bg border border-border rounded-xl px-4 py-3 gap-4"
-                        >
-                            <div className="flex items-center gap-3 min-w-0">
-                                <Key className="size-4 text-text-dim shrink-0" />
-                                <div className="min-w-0">
-                                    <p className="text-xs font-bold truncate">{k.name}</p>
-                                    <p className="text-[10px] text-text-dim font-mono">
-                                        {'••••••••••' + k.id.slice(-4)}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-6 shrink-0 text-[10px] text-text-dim">
-                                <div className="hidden sm:block">
-                                    <p className="font-black uppercase" style={{ fontSize: '8px' }}>Último uso</p>
-                                    <p>{k.lastUsed ? new Date(k.lastUsed).toLocaleDateString() : 'Never'}</p>
-                                </div>
-                                <div className="hidden sm:block">
-                                    <p className="font-black uppercase" style={{ fontSize: '8px' }}>Criado</p>
-                                    <p>{new Date(k.createdAt).toLocaleDateString()}</p>
-                                </div>
-                                <span
-                                    className={cn(
-                                        'px-2 py-0.5 rounded-full text-[9px] font-black uppercase',
-                                        k.isAtivo
-                                            ? 'bg-green-500/20 text-green-400'
-                                            : 'bg-border text-text-dim',
-                                    )}
-                                >
-                                    {k.isAtivo ? 'Ativo' : 'Revoked'}
-                                </span>
-                                <button
-                                    onClick={() => handleRevoke(k.id)}
-                                    disabled={!k.isAtivo || revokingId === k.id}
-                                    className={cn(
-                                        'p-1 rounded-lg hover:bg-border transition-colors',
-                                        (!k.isAtivo || revokingId === k.id) && 'opacity-30 cursor-not-allowed',
-                                    )}
-                                    title="Revoke key"
-                                >
-                                    <X className="size-3.5 text-text-dim" />
-                                </button>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-            )}
-
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bento-card w-full max-w-md mx-4 space-y-4"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="label-caps">Gerar chave de API</span>
-                            <button onClick={closeModal} className="p-1 hover:bg-border rounded-lg transition-colors">
-                                <X className="size-4" />
-                            </button>
-                        </div>
-
-                        {generatedKey ? (
-                            <div className="space-y-3">
-                                <p className="text-xs font-black text-yellow-400 uppercase tracking-wide">
-                                    This key will only be shown once — copy it now
-                                </p>
-                                <div className="relative">
-                                    <code className="block w-full bg-bg border border-border rounded-xl px-4 py-3 text-xs font-mono break-all pr-12">
-                                        {generatedKey}
-                                    </code>
-                                    <button
-                                        onClick={handleCopy}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-border rounded-lg transition-colors"
-                                        title="Copy key"
-                                    >
-                                        <Copy className="size-4" />
-                                    </button>
-                                </div>
-                                {copied && (
-                                    <p className="text-[10px] text-green-400 font-black uppercase tracking-wide">Copiado!</p>
-                                )}
-                                <button
-                                    onClick={closeModal}
-                                    className="w-full py-2.5 bg-highlight text-bg rounded-xl font-black text-[10px] tracking-widest uppercase hover:opacity-90 transition-opacity"
-                                >
-                                    Done
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="label-caps mb-1.5 block">Nome da chave</label>
-                                    <input
-                                        type="text"
-                                        value={keyName}
-                                        onChange={e => setKeyName(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && !generating && handleGenerate()}
-                                        placeholder="ex.: CI de produção"
-                                        className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary transition-colors"
-                                    />
-                                </div>
-                                <div className="flex gap-2 justify-end">
-                                    <button
-                                        onClick={closeModal}
-                                        className="px-4 py-2 border border-border rounded-xl text-accent font-black text-[10px] tracking-widest uppercase hover:bg-card transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleGenerate}
-                                        disabled={!keyName.trim() || generating}
+                    {PROVIDERS.map((provider) => {
+                        const status = statusByProvider[provider.id];
+                        const isSaving = savingProvider === provider.id;
+                        const isRemoving = removingProvider === provider.id;
+                        return (
+                            <motion.div
+                                key={provider.id}
+                                initial={{ opacity: 0, y: 4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-bg border border-border rounded-xl px-4 py-3 space-y-3"
+                            >
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <Key className="size-4 text-text-dim shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold truncate">{provider.label}</p>
+                                            <p className="text-[10px] text-text-dim">{provider.helper}</p>
+                                            <p className="text-[10px] text-text-dim font-mono mt-1">
+                                                {status?.envVar ?? 'ENV_VAR'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span
                                         className={cn(
-                                            'px-4 py-2 bg-highlight text-bg rounded-xl font-black text-[10px] tracking-widest uppercase hover:opacity-90 transition-opacity',
-                                            (!keyName.trim() || generating) && 'opacity-40 cursor-not-allowed',
+                                            'px-2 py-0.5 rounded-full text-[9px] font-black uppercase shrink-0',
+                                            status?.isConfigured
+                                                ? 'bg-green-500/20 text-green-400'
+                                                : 'bg-border text-text-dim',
                                         )}
                                     >
-                                        {generating ? 'Generating…' : 'Generate'}
+                                        {status?.isConfigured ? 'Configurada' : 'Nao configurada'}
+                                    </span>
+                                </div>
+
+                                {status?.isConfigured && (
+                                    <p className="text-xs text-text-dim font-mono">
+                                        Valor atual: {status.maskedValue}
+                                    </p>
+                                )}
+
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <input
+                                        type="password"
+                                        value={values[provider.id]}
+                                        onChange={(e) => setValues((prev) => ({ ...prev, [provider.id]: e.target.value }))}
+                                        placeholder={provider.placeholder}
+                                        className="flex-1 bg-bg border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary transition-colors"
+                                    />
+                                    <button
+                                        onClick={() => handleSave(provider.id)}
+                                        disabled={!values[provider.id].trim() || isSaving}
+                                        className={cn(
+                                            'inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-highlight text-bg text-[10px] font-black uppercase tracking-wider hover:opacity-90 transition-opacity',
+                                            (!values[provider.id].trim() || isSaving) && 'opacity-40 cursor-not-allowed',
+                                        )}
+                                    >
+                                        <Save className="size-3.5" />
+                                        {isSaving ? 'Salvando' : 'Salvar'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleRemove(provider.id)}
+                                        disabled={!status?.isConfigured || isRemoving}
+                                        className={cn(
+                                            'inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-border text-[10px] font-black uppercase tracking-wider text-accent hover:border-primary/50 transition-colors',
+                                            (!status?.isConfigured || isRemoving) && 'opacity-30 cursor-not-allowed',
+                                        )}
+                                    >
+                                        <Trash2 className="size-3.5" />
+                                        {isRemoving ? 'Removendo' : 'Remover'}
                                     </button>
                                 </div>
-                            </div>
-                        )}
-                    </motion.div>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             )}
         </div>

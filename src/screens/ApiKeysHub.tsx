@@ -9,20 +9,6 @@ export function ApiKeysHub() {
     const { workspace } = useWorkspace();
     const { repository, repositories, isLoading } = useRepository();
 
-    if (!workspace) {
-        return (
-            <div className="flex-1 flex items-center justify-center p-6">
-                <div className="bento-card max-w-md w-full text-center space-y-3">
-                    <KeyRound className="size-8 text-primary mx-auto" />
-                    <h3 className="font-bold text-accent">Nenhum workspace selecionado</h3>
-                    <p className="text-sm text-text-dim">
-                        Selecione um repositório para gerenciar as chaves de API.
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
     if (isLoading) {
         return (
             <div className="flex-1 flex items-center justify-center p-6">
@@ -42,6 +28,14 @@ export function ApiKeysHub() {
                     <p className="text-xs text-text-dim mt-1">
                         Repositório selecionado no app: {repository?.name ?? 'Nenhum'}
                     </p>
+                    <p className="text-xs text-text-dim mt-1">
+                        As chaves sao gravadas no arquivo .env do repositório selecionado (Claude, ChatGPT e Gemini).
+                    </p>
+                    {!workspace && (
+                        <p className="text-xs text-yellow-400 mt-1">
+                            Workspace nao selecionado. A gravacao segue funcionando pelo contexto do repositório.
+                        </p>
+                    )}
                 </div>
 
                 {repository?.id ? (
