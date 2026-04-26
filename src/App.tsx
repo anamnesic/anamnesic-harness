@@ -58,12 +58,13 @@ interface TerminalHeaderState {
   onClearAll: () => void;
 }
 
-const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
+const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
   rightElement?: React.ReactNode;
   activeTab: string;
+  onTabChange: (id: TabId) => void;
 }) => {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg/80 px-3 py-3 backdrop-blur-xl text-highlight sm:px-6 sm:py-5">
@@ -117,6 +118,25 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
           )}
         </div>
       </div>
+      <div className="mt-3 overflow-x-auto">
+        <div className="flex min-w-max items-center gap-1 rounded-xl border border-border bg-card/60 p-1">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                activeTab === tab.id
+                  ? 'bg-bg text-highlight border border-border'
+                  : 'text-text-dim hover:text-accent hover:bg-card/60',
+              )}
+            >
+              <tab.icon className={cn('size-3.5', activeTab === tab.id && 'text-primary')} />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </header>
   );
 };
@@ -136,28 +156,6 @@ const TABS = [
 // Secondary tabs accessible via back navigation (not in bottom nav)
 type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations' | 'inference';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
-
-const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
-  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex w-[calc(100%-3rem)] max-w-xl">
-    <div className="flex w-full gap-1 p-1 bg-card/90 border border-border rounded-2xl backdrop-blur-xl shadow-2xl">
-      {TABS.map(tab => (
-        <button
-          key={tab.id}
-          onClick={() => onChange(tab.id)}
-          className={cn(
-            'flex flex-1 flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all duration-300',
-            active === tab.id
-              ? 'bg-bg text-highlight shadow-sm border border-border'
-              : 'text-text-dim hover:text-accent',
-          )}
-        >
-          <tab.icon className={cn('size-5', active === tab.id && 'text-primary')} />
-          <span className="text-[9px] font-bold tracking-widest uppercase">{tab.label}</span>
-        </button>
-      ))}
-    </div>
-  </div>
-);
 
 const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
   <aside className="w-64 border-r border-border bg-bg/50 flex flex-col h-screen sticky top-0 overflow-hidden">
@@ -372,6 +370,7 @@ function AppContent() {
             onBack={config.onBack}
             rightElement={config.rightElement}
             activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
           <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
             <AnimatePresence mode="wait">
@@ -387,7 +386,6 @@ function AppContent() {
               </motion.div>
             </AnimatePresence>
           </main>
-          <BottomNav active={activeTab} onChange={setActiveTab} />
         </div>
       </div>
     </>
