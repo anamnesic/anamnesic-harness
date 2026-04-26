@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2 } from 'lucide-react';
+import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -389,6 +389,28 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const stagedChanges = insights?.changes?.filter((change) => change.staged) ?? [];
     const unstagedChanges = insights?.changes?.filter((change) => !change.staged) ?? [];
 
+    function getFileIcon(filePath: string) {
+        const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+        if (['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'].includes(ext)) {
+            return <FileCode2 className="size-3.5 shrink-0 text-sky-400" />;
+        }
+        if (['json', 'jsonc'].includes(ext)) {
+            return <FileJson className="size-3.5 shrink-0 text-amber-400" />;
+        }
+        if (['md', 'mdx'].includes(ext)) {
+            return <FileText className="size-3.5 shrink-0 text-blue-300" />;
+        }
+        return <FileText className="size-3.5 shrink-0 text-text-dim" />;
+    }
+
+    function splitFilePath(filePath: string) {
+        const normalized = filePath.replace(/\\/g, '/');
+        const parts = normalized.split('/').filter(Boolean);
+        const name = parts[parts.length - 1] ?? normalized;
+        const dir = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+        return { name, dir };
+    }
+
     const tabItems: Array<{
         id: 'repository' | 'git' | 'context' | 'decisions';
         label: string;
@@ -650,7 +672,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                             {activeTab === 'repository' ? (
                                 <div className="min-h-64 min-w-0 sm:min-h-72">
                                     <div className="mb-3 flex items-center gap-2">
-                                        <FileText className="size-4 text-primary" />
+                                        <Folder className="size-4 text-primary" />
                                         <p className="label-caps">Lista de arquivos</p>
                                     </div>
                                     {insightsLoading ? (
@@ -658,12 +680,23 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     ) : !insights?.isGitRepo ? (
                                         <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
                                     ) : insights?.files?.length ? (
-                                        <div className="max-h-[68vh] space-y-1 overflow-y-auto pr-1">
-                                            {insights.files.map((filePath, index) => (
-                                                <p key={`${filePath}-${index}`} className="truncate font-mono text-xs text-text-dim">
-                                                    {filePath}
-                                                </p>
-                                            ))}
+                                        <div className="max-h-[68vh] space-y-0.5 overflow-y-auto pr-1">
+                                            {insights.files.map((filePath, index) => {
+                                                const { name, dir } = splitFilePath(filePath);
+                                                return (
+                                                    <div
+                                                        key={`${filePath}-${index}`}
+                                                        className="group flex items-center gap-2 rounded px-2 py-1.5 hover:bg-card/40"
+                                                        title={filePath}
+                                                    >
+                                                        {getFileIcon(filePath)}
+                                                        <span className="truncate text-xs text-highlight">{name}</span>
+                                                        {dir && (
+                                                            <span className="truncate text-[10px] text-text-dim/80">{dir}</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     ) : (
                                         <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
