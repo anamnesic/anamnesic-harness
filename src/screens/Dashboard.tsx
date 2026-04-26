@@ -9,6 +9,7 @@ import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonRow } from '@/src/components/Skeleton';
 import { useCallback, useRef } from 'react';
 import { apiFetch } from '@/src/lib/api';
+import { cn } from '@/src/lib/utils';
 
 const ACTION_ICONS = [Code2, MemoryStick, Shield, Activity];
 const TOAST_THROTTLE_MS = 3000;
@@ -36,17 +37,18 @@ interface ProactiveInsightResponse {
     };
 }
 
-interface DashboardProps {
+interface MonitorPanelProps {
     onNavigate: (id: any) => void;
 }
 
-export function Dashboard({ onNavigate }: DashboardProps) {
+export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     const { data: health, error: healthErr } = usePolling<HealthData>('/api/health', 30000);
-    const { data: metrics, loading: metricsLoading } = usePolling<MetricsData>('/api/v1/metrics', 30000);
-    const { data: history, loading: histLoading } = usePolling<HistoryData>('/api/chat/history?limit=3', 60000);
-    const { data: agentStats } = usePolling<AgentStats>('/api/v1/agents/stats', 20000);
-    const { data: workflowStats } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 20000);
-    const { data: proactiveInsights, loading: proactiveLoading, refetch: refetchProactive } = usePolling<ProactiveInsightResponse>('/api/v1/proactive/insights', 45000);
+    const { data: metrics, loading: metricsLoading, error: metricsErr } = usePolling<MetricsData>('/api/v1/metrics', 30000);
+    const { data: history, loading: histLoading, error: historyErr } = usePolling<HistoryData>('/api/chat/history?limit=3', 60000);
+    const { data: agentStats, error: agentsErr } = usePolling<AgentStats>('/api/v1/agents/stats', 20000);
+    const { data: workflowStats, error: workflowsErr } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 20000);
+    const { data: proactiveInsights, loading: proactiveLoading, refetch: refetchProactive, error: proactiveErr } = usePolling<ProactiveInsightResponse>('/api/v1/proactive/insights', 45000);
+    const { data: runsData, error: runsErr } = usePolling<RunsData>('/api/v1/orchestrator/runs?limit=20', 20000);
     const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
     const [proactiveBusy, setProactiveBusy] = useState(false);
     const { toast } = useToast();
@@ -88,8 +90,16 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     useEventStream<any>('task:update', handleTaskUpdate);
     useEventStream<any>('agent:state', handleAgentState);
 
-    const runningCount = liveRuns.filter(r => r.status === 'running').length;
-    const pausedCount = liveRuns.filter(r => r.status === 'paused').length;
+    const polledRuns = Array.isArray(runsData?.data)
+        ? runsData?.data
+        : (runsData?.data && Array.isArray((runsData.data as { items?: Array<{ status: string }> }).items)
+            ? ((runsData.data as { items: Array<{ status: string }> }).items)
+            : []);
+
+    const allRuns = liveRuns.length > 0 ? liveRuns : polledRuns;
+
+    const runningCount = allRuns.filter(r => r.status === 'running').length;
+    const pausedCount = allRuns.filter(r => r.status === 'paused').length;
 
     useEffect(() => {
         if (healthErr) toast('Could not reach health endpoint', 'error');
@@ -105,6 +115,16 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     const topRecommendation = proactiveData?.plan?.recommendations?.[0];
     const topRisk = proactiveData?.plan?.risks?.[0];
     const topPendingApproval = proactiveData?.pendingApprovals?.find((item) => item.status === 'pending') || null;
+
+    const integrationStatus = [
+        { label: 'Health', error: healthErr, loading: !health && !healthErr },
+        { label: 'Metrics', error: metricsErr, loading: metricsLoading },
+        { label: 'History', error: historyErr, loading: histLoading },
+        { label: 'Agents', error: agentsErr, loading: !agentStats && !agentsErr },
+        { label: 'Workflows', error: workflowsErr, loading: !workflowStats && !workflowsErr },
+        { label: 'Proactive', error: proactiveErr, loading: proactiveLoading },
+        { label: 'Runs', error: runsErr, loading: !allRuns.length && !runsErr },
+    ];
 
     async function runProactiveAction(action: 'refresh' | 'approve' | 'reject' | 'postpone', requestId?: string) {
         setProactiveBusy(true);
@@ -150,6 +170,26 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     }
                 />
                 <span className="label-caps">{isOnline ? 'Live • streaming' : 'Live • disconnected'}</span>
+            </div>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+                {integrationStatus.map((item) => {
+                    const tone = item.error
+                        ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                        : item.loading
+                            ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
+                            : 'border-green-500/30 bg-green-500/10 text-green-300';
+                    const label = item.error ? 'erro' : item.loading ? 'carregando' : 'ok';
+
+                    return (
+                        <span
+                            key={item.label}
+                            className={cn('rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider', tone)}
+                            title={item.error ?? `${item.label} ${label}`}
+                        >
+                            {item.label}: {label}
+                        </span>
+                    );
+                })}
             </div>
             <div className="grid grid-cols-4 gap-4">
                 {/* Hero Card */}
@@ -364,8 +404,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                             <p className="text-[10px] text-text-dim mt-1">Ativo</p>
                         </div>
                         <div>
-                            <p className="text-lg font-bold font-mono">{workflowStats?.totalExecuçãos ?? '—'}</p>
-                            <p className="text-[10px] text-text-dim mt-1">Execuçãos</p>
+                            <p className="text-lg font-bold font-mono">{workflowStats?.totalExecutions ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Execuções</p>
                         </div>
                         <div>
                             <p className="text-lg font-bold font-mono text-highlight">{workflowStats?.successRate ?? 0}%</p>
