@@ -18,7 +18,6 @@ import {
   Maximize2,
   Minimize2,
   FileText,
-  GitBranch,
   BookOpen,
   ServerCog,
 } from 'lucide-react';
@@ -125,7 +124,6 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
   { id: 'repo-files', label: 'Repo', icon: FileText },
-  { id: 'repo-git', label: 'Git', icon: GitBranch },
   { id: 'repo-context', label: 'Wiki', icon: BookOpen },
   { id: 'repo-decisions', label: 'Decisoes', icon: Lightbulb },
   { id: 'control', label: 'Segurança', icon: Shield },
@@ -293,14 +291,6 @@ function useScreenConfig(
         title: 'Repositório',
         subtitle: 'Explorer de arquivos',
         element: <Projects embedded activeTab="repository" hideTabBar />,
-        onBack: undefined,
-        rightElement: undefined,
-      };
-    case 'repo-git':
-      return {
-        title: 'Git',
-        subtitle: 'Source control do repositório',
-        element: <Projects embedded activeTab="git" hideTabBar />,
         onBack: undefined,
         rightElement: undefined,
       };
