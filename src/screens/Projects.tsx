@@ -107,7 +107,9 @@ export function Projects({
     const [commitMessage, setCommitMessage] = useState('');
     const [repoQuery, setRepoQuery] = useState('');
     const [selectedRepoFile, setSelectedRepoFile] = useState<string | null>(null);
-    const [repoDraft, setRepoDraft] = useState('');
+    const [openRepoTabs, setOpenRepoTabs] = useState<string[]>([]);
+    const [repoDraftByFile, setRepoDraftByFile] = useState<Record<string, string>>({});
+    const [repoDirtyFiles, setRepoDirtyFiles] = useState<Record<string, boolean>>({});
     const [savingRepoFile, setSavingRepoFile] = useState(false);
     const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
     const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
@@ -284,32 +286,79 @@ export function Projects({
     const { data: repositoryFileResponse, loading: repositoryFileLoading, refetch: refetchRepositoryFile } = useApi<ApiResponse<{ selectedFile: string; content: string; size: number }>>(repositoryFilePath);
     const repositoryFile = repositoryFileResponse?.data;
 
+    const currentRepoDraft = selectedRepoFile
+        ? (repoDraftByFile[selectedRepoFile] ?? repositoryFile?.content ?? '')
+        : '';
+
+    const repoHasUnsavedChanges = selectedRepoFile
+        ? (repoDirtyFiles[selectedRepoFile] ?? false)
+        : false;
+
+    function openRepoFile(filePath: string) {
+        setSelectedRepoFile(filePath);
+        setOpenRepoTabs((prev) => (prev.includes(filePath) ? prev : [...prev, filePath]));
+    }
+
+    function closeRepoTab(filePath: string) {
+        setOpenRepoTabs((prev) => {
+            const idx = prev.indexOf(filePath);
+            if (idx === -1) return prev;
+
+            const next = prev.filter((f) => f !== filePath);
+            if (selectedRepoFile === filePath) {
+                if (!next.length) {
+                    setSelectedRepoFile(null);
+                } else {
+                    const fallbackIndex = Math.max(0, idx - 1);
+                    setSelectedRepoFile(next[fallbackIndex]);
+                }
+            }
+
+            return next;
+        });
+    }
+
     useEffect(() => {
         if (!selectedProject) {
             setSelectedRepoFile(null);
-            setRepoDraft('');
+            setOpenRepoTabs([]);
+            setRepoDraftByFile({});
+            setRepoDirtyFiles({});
             return;
         }
 
         if (!repositoryFiles.length) {
             setSelectedRepoFile(null);
-            setRepoDraft('');
+            setOpenRepoTabs([]);
+            setRepoDraftByFile({});
+            setRepoDirtyFiles({});
             return;
         }
 
         if (!selectedRepoFile || !repositoryFiles.includes(selectedRepoFile)) {
-            setSelectedRepoFile(repositoryFiles[0]);
+            openRepoFile(repositoryFiles[0]);
         }
     }, [selectedProject?.id, repositoryFiles, selectedRepoFile]);
 
     useEffect(() => {
-        setRepoDraft(repositoryFile?.content ?? '');
-    }, [repositoryFile?.selectedFile, repositoryFile?.content]);
+        const filePath = repositoryFile?.selectedFile;
+        if (!filePath) return;
+
+        setRepoDraftByFile((prev) => {
+            const existing = prev[filePath];
+            const isDirty = repoDirtyFiles[filePath] ?? false;
+            if (existing !== undefined && isDirty) {
+                return prev;
+            }
+            if (existing === repositoryFile.content) {
+                return prev;
+            }
+            return { ...prev, [filePath]: repositoryFile.content };
+        });
+    }, [repositoryFile?.selectedFile, repositoryFile?.content, repoDirtyFiles]);
 
     const stagedChanges = insights?.changes?.filter((change) => change.staged) ?? [];
     const unstagedChanges = insights?.changes?.filter((change) => !change.staged) ?? [];
-
-    const repoHasUnsavedChanges = repoDraft !== (repositoryFile?.content ?? '');
 
     async function saveRepositoryFile() {
         if (!selectedProject || !selectedRepoFile) return;
@@ -320,10 +369,11 @@ export function Projects({
                 method: 'PUT',
                 body: JSON.stringify({
                     file: selectedRepoFile,
-                    content: repoDraft,
+                    content: currentRepoDraft,
                 }),
             });
             toast('Arquivo salvo com sucesso', 'success');
+            setRepoDirtyFiles((prev) => ({ ...prev, [selectedRepoFile]: false }));
             await refetchRepositoryFile();
         } catch (e: any) {
             toast(e.message ?? 'Falha ao salvar arquivo', 'error');
@@ -450,7 +500,7 @@ export function Projects({
             return (
                 <button
                     key={node.path}
-                    onClick={() => setSelectedRepoFile(node.path)}
+                    onClick={() => openRepoFile(node.path)}
                     className={cn(
                         'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-card/40',
                         selectedRepoFile === node.path
@@ -678,6 +728,43 @@ export function Projects({
                                     </aside>
 
                                     <section className="bento-card min-h-0">
+                                        <div className="-mx-4 -mt-4 mb-3 flex items-stretch overflow-x-auto border-b border-border/60 bg-bg/40 sm:-mx-6 sm:-mt-6">
+                                            {openRepoTabs.length ? openRepoTabs.map((filePath) => {
+                                                const isActive = selectedRepoFile === filePath;
+                                                const isDirty = repoDirtyFiles[filePath] ?? false;
+                                                const fileName = filePath.split('/').pop() || filePath;
+
+                                                return (
+                                                    <button
+                                                        key={filePath}
+                                                        onClick={() => setSelectedRepoFile(filePath)}
+                                                        className={cn(
+                                                            'group flex max-w-56 shrink-0 items-center gap-2 border-r border-border/60 px-3 py-2 text-xs transition-colors',
+                                                            isActive
+                                                                ? 'bg-card text-highlight'
+                                                                : 'text-text-dim hover:bg-card/40 hover:text-highlight',
+                                                        )}
+                                                        title={filePath}
+                                                    >
+                                                        {getFileIcon(filePath)}
+                                                        <span className="truncate font-mono">{fileName}</span>
+                                                        {isDirty && <span className="text-primary">●</span>}
+                                                        <span
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                closeRepoTab(filePath);
+                                                            }}
+                                                            className="rounded p-0.5 text-text-dim opacity-70 transition hover:bg-card hover:opacity-100"
+                                                        >
+                                                            <X className="size-3" />
+                                                        </span>
+                                                    </button>
+                                                );
+                                            }) : (
+                                                <div className="px-3 py-2 text-xs text-text-dim">Nenhum arquivo aberto</div>
+                                            )}
+                                        </div>
+
                                         <div className="mb-3 flex items-center justify-between gap-2 border-b border-border/60 pb-2">
                                             <div className="flex min-w-0 items-center gap-2">
                                                 <FileCode2 className="size-4 text-primary" />
@@ -711,8 +798,17 @@ export function Projects({
                                             <p className="text-sm text-text-dim">Carregando conteúdo...</p>
                                         ) : (
                                             <textarea
-                                                value={repoDraft}
-                                                onChange={(e) => setRepoDraft(e.target.value)}
+                                                value={currentRepoDraft}
+                                                onChange={(e) => {
+                                                    if (!selectedRepoFile) return;
+                                                    const nextDraft = e.target.value;
+                                                    const baseContent = repositoryFile?.content ?? '';
+                                                    setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
+                                                    setRepoDirtyFiles((prev) => ({
+                                                        ...prev,
+                                                        [selectedRepoFile]: nextDraft !== baseContent,
+                                                    }));
+                                                }}
                                                 spellCheck={false}
                                                 className="h-[64vh] w-full resize-none rounded-lg border border-border bg-bg p-3 font-mono text-xs leading-relaxed text-highlight outline-none transition-colors focus:border-primary/60"
                                             />
