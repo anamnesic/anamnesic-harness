@@ -7,3 +7,6 @@ export * from './CliInferenceService';
 export * from './CliTaskQueue';
 export * from './CliAuditTrail';
 export * from './SecretRedactor';
+export * from './PromptCatalog';
+export * from './ProviderCapabilityMatrix';
+export * from './ProviderRoutingStrategy';

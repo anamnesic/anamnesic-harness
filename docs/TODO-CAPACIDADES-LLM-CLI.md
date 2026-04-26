@@ -246,22 +246,22 @@ Meta de arquitetura:
 
 ### Gemini como padrao
 
-- [ ] Implementar prompts e schemas com `gemini-cli` primeiro
+- [x] Implementar prompts e schemas com `gemini-cli` primeiro
 
 ### Margem para outras CLIs
 
-- [ ] Garantir que prompt templates nao dependam de sintaxe exclusiva do Gemini
-- [ ] Suportar provider fallback por task
-- [ ] Adicionar matriz de capacidade por CLI
-- [ ] Permitir override por configuracao
-- [ ] Permitir testes A/B entre CLIs
+- [x] Garantir que prompt templates nao dependam de sintaxe exclusiva do Gemini
+- [x] Suportar provider fallback por task
+- [x] Adicionar matriz de capacidade por CLI
+- [x] Permitir override por configuracao
+- [x] Permitir testes A/B entre CLIs
 
 ### Matriz minima desejada
 
-- [ ] `gemini-cli` para sumarizacao, enrichment, reranking, proactive planning
-- [ ] `claude` para tasks longas e analise/reflexao profunda
-- [ ] `copilot` para tarefas de codigo e automacao em repositorio
-- [ ] `codex` como opcional quando instalado
+- [x] `gemini-cli` para sumarizacao, enrichment, reranking, proactive planning
+- [x] `claude` para tasks longas e analise/reflexao profunda
+- [x] `copilot` para tarefas de codigo e automacao em repositorio
+- [x] `codex` como opcional quando instalado
 
 ---
 
