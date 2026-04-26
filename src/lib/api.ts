@@ -18,8 +18,23 @@ export async function apiFetch<T = unknown>(
     path: string,
     init?: RequestInit,
 ): Promise<T> {
+    // Get workspace ID from localStorage
+    const workspaceId = typeof window !== 'undefined' 
+        ? localStorage.getItem('kairos-selected-workspace') 
+        : null;
+
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...init?.headers as Record<string, string>,
+    };
+
+    // Add workspace header if available and not already set
+    if (workspaceId && !headers['X-Workspace-Id']) {
+        headers['X-Workspace-Id'] = workspaceId;
+    }
+
     const res = await fetch(path, {
-        headers: { 'Content-Type': 'application/json', ...init?.headers },
+        headers,
         ...init,
     });
     if (!res.ok) {

@@ -1,56 +1,87 @@
 export const runtime = 'nodejs';
 
-import fs from 'fs';
-import path from 'path';
 import { NextRequest } from 'next/server';
+import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
 
-const DATA_DIR = process.env.KAIROS_DATA_DIR || path.join(process.env.USERPROFILE || process.env.HOME || '.', '.Kairos');
-const FLAGS_FILE = path.join(DATA_DIR, 'feature-flags.json');
-
-// Load persisted overrides on module load
-const flagOverrides: Record<string, boolean> = (() => {
+export async function GET(req: NextRequest) {
     try {
-        if (fs.existsSync(FLAGS_FILE)) {
-            return JSON.parse(fs.readFileSync(FLAGS_FILE, 'utf-8'));
-        }
-    } catch {
-        // Invalid JSON or read error — start fresh
-    }
-    return {};
-})();
-
-function persistOverrides(): void {
-    try {
-        if (!fs.existsSync(DATA_DIR)) {
-            fs.mkdirSync(DATA_DIR, { recursive: true });
-        }
-        fs.writeFileSync(FLAGS_FILE, JSON.stringify(flagOverrides, null, 2), 'utf-8');
-    } catch {
-        // Best-effort persist; in-memory state remains valid
-    }
-}
-
-export async function GET() {
-    try {
-        const { featureFlags } = await import('@/src/config/featureFlags');
-        const flags = { ...featureFlags, ...flagOverrides };
-        return ok({ flags });
-    } catch {
+        const { searchParams } = new URL(req.url);
+        const workspaceId = searchParams.get('workspaceId') || 'system';
+        
+        const db = await getDb();
+        const { SettingsService } = await import('@/src/core/services/SettingsService');
+        const settingsService = new SettingsService(db);
+        
+        // Get feature flags for the workspace
+        const flags = await settingsService.getFeatureFlags(workspaceId);
+        
+        // Get AI provider settings
+        const aiSettings = await settingsService.getAIProviderSettings(workspaceId);
+        
+        return ok({ 
+            flags,
+            aiSettings,
+            workspaceId 
+        });
+    } catch (error) {
+        console.error('Settings GET error:', error);
         return err('INTERNAL_ERROR', 'Failed to read settings', 500);
     }
 }
 
 export async function PATCH(req: NextRequest) {
     try {
-        const body: Record<string, boolean> = await req.json();
-        for (const [key, value] of Object.entries(body)) {
-            if (typeof value === 'boolean') flagOverrides[key] = value;
+        const body = await req.json();
+        const { workspaceId = 'system', flags, aiSettings } = body;
+        
+        const db = await getDb();
+        const { SettingsService } = await import('@/src/core/services/SettingsService');
+        const settingsService = new SettingsService(db);
+        
+        // Update feature flags if provided
+        if (flags && typeof flags === 'object') {
+            for (const [key, value] of Object.entries(flags)) {
+                if (typeof value === 'boolean') {
+                    await settingsService.setFeatureFlag(workspaceId, key as any, value);
+                }
+            }
         }
-        persistOverrides();
-        const { featureFlags } = await import('@/src/config/featureFlags');
-        return ok({ flags: { ...featureFlags, ...flagOverrides } });
-    } catch {
+        
+        // Update AI provider settings if provided
+        if (aiSettings && typeof aiSettings === 'object') {
+            for (const [key, value] of Object.entries(aiSettings)) {
+                // Parse provider.setting format
+                const [provider, ...settingParts] = key.split('.');
+                const settingKey = settingParts.join('.');
+                
+                if (provider && settingKey) {
+                    const type = typeof value === 'boolean' ? 'boolean' : 
+                                typeof value === 'number' ? 'number' : 
+                                typeof value === 'object' ? 'json' : 'string';
+                    
+                    await settingsService.setAIProviderSetting(
+                        workspaceId,
+                        provider,
+                        settingKey,
+                        value,
+                        type
+                    );
+                }
+            }
+        }
+        
+        // Return updated settings
+        const updatedFlags = await settingsService.getFeatureFlags(workspaceId);
+        const updatedAiSettings = await settingsService.getAIProviderSettings(workspaceId);
+        
+        return ok({ 
+            flags: updatedFlags,
+            aiSettings: updatedAiSettings,
+            workspaceId 
+        });
+    } catch (error) {
+        console.error('Settings PATCH error:', error);
         return err('INTERNAL_ERROR', 'Failed to update settings', 500);
     }
 }

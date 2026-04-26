@@ -1,0 +1,298 @@
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Send, Loader2, MessageSquare, Trash2 } from 'lucide-react';
+import { cn } from '@/src/lib/utils';
+import { apiFetch } from '@/src/lib/api';
+import { useToast } from '@/src/components/Toast';
+
+interface ChatMessage {
+  id: string;
+  content: string;
+  sender: 'user' | 'assistant';
+  timestamp: string;
+  type?: 'request' | 'response';
+}
+
+interface ChatPanelProps {
+  channelId?: string;
+  className?: string;
+}
+
+export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamContent, setStreamContent] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const { toast } = useToast();
+
+  // Load chat history
+  const loadHistory = useCallback(async () => {
+    try {
+      const response = await apiFetch<{
+        items: Array<{
+          id: string;
+          message: string;
+          sender: string;
+          createdAt: string;
+          metadata?: { type?: string };
+        }>;
+      }>(`/api/chat/history?channelId=${channelId}&limit=50`);
+      
+      const formattedMessages = response.items.map(item => ({
+        id: item.id,
+        content: item.message,
+        sender: item.sender as 'user' | 'assistant',
+        timestamp: item.createdAt,
+        type: item.metadata?.type as 'request' | 'response',
+      }));
+      
+      setMessages(formattedMessages);
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+      toast('Failed to load chat history', 'error');
+    }
+  }, [channelId, toast]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamContent]);
+
+  // Handle streaming response
+  const handleStreamResponse = useCallback(async (message: string) => {
+    setIsStreaming(true);
+    setStreamContent('');
+
+    try {
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          channelId,
+          userId: 'current-user',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Stream request failed');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              switch (data.type) {
+                case 'start':
+                  // Stream started
+                  break;
+                case 'chunk':
+                  setStreamContent(prev => prev + (data.content || ''));
+                  break;
+                case 'end':
+                  // Stream ended
+                  setIsStreaming(false);
+                  setStreamContent('');
+                  await loadHistory(); // Reload history to get the saved message
+                  break;
+                case 'error':
+                  throw new Error(data.error || 'Stream error');
+              }
+            } catch (parseError) {
+              console.error('Failed to parse stream data:', parseError);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Stream error:', error);
+      toast(error instanceof Error ? error.message : 'Stream failed', 'error');
+      setIsStreaming(false);
+      setStreamContent('');
+    }
+  }, [channelId, toast, loadHistory]);
+
+  // Handle sending message
+  const handleSendMessage = useCallback(async () => {
+    if (!input.trim() || isLoading || isStreaming) return;
+
+    const messageContent = input.trim();
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      // Save user message and get streaming response
+      await handleStreamResponse(messageContent);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast('Failed to send message', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [input, isLoading, isStreaming, handleStreamResponse, toast]);
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  }, [handleSendMessage]);
+
+  // Clear chat
+  const handleClearChat = useCallback(async () => {
+    try {
+      // Delete all messages in this channel
+      const response = await apiFetch(`/api/chat/history?channelId=${channelId}`, {
+        method: 'DELETE',
+      });
+      
+      setMessages([]);
+      toast('Chat cleared', 'success');
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+      toast('Failed to clear chat', 'error');
+    }
+  }, [channelId, toast]);
+
+  return (
+    <div className={cn('flex flex-col h-full bg-card border border-border rounded-2xl', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="size-5 text-primary" />
+          <h3 className="font-semibold text-highlight">Chat</h3>
+          <span className="text-xs text-text-dim bg-bg px-2 py-1 rounded-full">
+            {channelId}
+          </span>
+        </div>
+        <button
+          onClick={handleClearChat}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors"
+        >
+          <Trash2 className="size-3" />
+          Clear
+        </button>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <AnimatePresence initial={false}>
+          {messages.map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className={cn(
+                'flex gap-3',
+                message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'
+              )}
+            >
+              <div className={cn(
+                'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold',
+                message.sender === 'user' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-accent text-accent-foreground'
+              )}>
+                {message.sender === 'user' ? 'U' : 'AI'}
+              </div>
+              <div className={cn(
+                'flex-1 max-w-[80%]',
+                message.sender === 'user' ? 'text-right' : 'text-left'
+              )}>
+                <div className={cn(
+                  'inline-block px-4 py-2 rounded-2xl text-sm',
+                  message.sender === 'user'
+                    ? 'bg-primary text-primary-foreground rounded-br-sm'
+                    : 'bg-bg text-highlight rounded-bl-sm border border-border'
+                )}>
+                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                </div>
+                <div className="text-xs text-text-dim mt-1">
+                  {new Date(message.timestamp).toLocaleTimeString()}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+
+          {/* Streaming message */}
+          {isStreaming && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-3"
+            >
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center text-xs font-bold">
+                AI
+              </div>
+              <div className="flex-1 max-w-[80%]">
+                <div className="inline-block px-4 py-2 rounded-2xl rounded-bl-sm text-sm bg-bg text-highlight border border-border">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="size-4 animate-spin text-accent" />
+                    <p className="whitespace-pre-wrap break-words">{streamContent}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 border-t border-border">
+        <div className="flex gap-2">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your message..."
+            disabled={isLoading || isStreaming}
+            className="flex-1 px-4 py-3 bg-bg border border-border rounded-xl resize-none focus:outline-none focus:border-primary/50 transition-colors text-sm text-highlight placeholder-text-dim"
+            rows={1}
+            style={{ minHeight: '44px', maxHeight: '120px' }}
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={!input.trim() || isLoading || isStreaming}
+            className="flex-shrink-0 w-11 h-11 bg-primary text-primary-foreground rounded-xl flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isLoading || isStreaming ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <Send className="size-5" />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

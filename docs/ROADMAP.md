@@ -8,107 +8,133 @@
 
 ## Estado Atual — Resumo Executivo
 
-O projeto tem uma base de serviços backend robusta e uma UI funcionalmente parcial.  
-Os bloqueadores principais são:
+O projeto tem uma base de serviços backend robusta e uma UI funcional.  
+**Todos os bloqueadores P0 foram resolvidos:**
 
-1. **SSE unidirecional** — o agente não age de fato; o frontend só observa polling
-2. **Chat sem LLM real** — `ChatHistoryService` salva mensagens mas nenhuma rota integra LLM
-3. **Pipeline de execução sem loop real** — `pipeline.ts` existe mas não há execução autônoma ativa
-4. **Dados de identidade ausentes** — sem usuário logado, workspaceId global, ou contexto de sessão
-5. **Telas secundárias acessíveis apenas por código** — `Workspaces`, `DecisionsPanel`, `ApiKeys` não têm nav entry
+1. ✅ **Chat com LLM Real** — streaming SSE funcional com ChatPanel
+2. ✅ **Loop de Execução Autônomo** — plan generation inteligente via LLM
+3. ✅ **Contexto de Workspace** — WorkspaceContext global com selector
+4. ✅ **Persistência de Settings** — database-backed configuration
+5. ⏳ **Navegação Secundária** — `Workspaces`, `DecisionsPanel`, `ApiKeys` precisam nav entry (P1)
+
+**Status Atual:** Produto funcional com AI real, workspace management, e configuração persistente.
 
 ---
 
 ## P0 — Bloqueadores Críticos (o produto não funciona sem isso)
 
-### 0.1 Chat com LLM Real
+### 0.1 Chat com LLM Real ✅ **COMPLETED**
 
-**Problema:** não existe nenhuma rota que conecte o frontend a uma LLM. `MemoryLedger` salva texto livre, mas não há inferência.
+**Status:** Todos os itens implementados e funcionando com streaming em tempo real.
 
-**O que falta:**
+| Item | Status | Localização |
+|------|--------|-------------|
+| `POST /api/chat/message` — envia mensagem e recebe resposta | ✅ | `app/api/chat/message/route.ts` |
+| `GET /api/chat/stream` — SSE com tokens em streaming | ✅ | `app/api/chat/stream/route.ts` |
+| Integrar `StreamingChatService` com a rota SSE | ✅ | `src/core/services/StreamingChatServiceNext.ts` |
+| Componente `ChatPanel.tsx` com input, histórico e stream | ✅ | `src/screens/ChatPanel.tsx` |
+| Associar mensagens a `channelId` (por projeto ou workspace) | ✅ | Implementado com workspace context |
 
-| Item | Onde |
-|------|------|
-| `POST /api/chat/message` — envia mensagem e recebe resposta | `app/api/chat/message/route.ts` (criar) |
-| `GET /api/chat/stream` — SSE com tokens em streaming | `app/api/chat/stream/route.ts` (criar) |
-| Integrar `StreamingChatService` com a rota SSE | `src/core/services/StreamingChatService.ts` (adaptar para App Router) |
-| Componente `ChatPanel.tsx` com input, histórico e stream | `src/screens/ChatPanel.tsx` (criar) |
-| Associar mensagens a `channelId` (por projeto ou workspace) | lógica de roteamento |
-
-**Bloqueio:** `StreamingChatService` usa `Context` do Hono (servidor antigo). Precisa ser adaptado para `ReadableStream` do Next.js App Router.
-
----
-
-### 0.2 Loop de Execução Autônomo
-
-**Problema:** KAIROS é descrito como um agente que age sem prompt explícito, mas não há nenhum loop rodando. `pipeline.ts` tem a estrutura mas não é chamado por nada.
-
-**O que falta:**
-
-| Item | Onde |
-|------|------|
-| `POST /api/v1/orchestrator/plans` → criar plano com objetivo real | já existe, mas `AdaptiveOrchestratorService` não chama LLM |
-| `POST /api/v1/orchestrator/runs` → executar plano (aguarda aprovação se policy exigir) | já existe, mas execução é no-op |
-| `OrchestratorRuntimeService.executeRun()` conectado a `TaskExecutorService` real | serviço existe, sem loop ativo |
-| Formulário de criação de plano no `ControlCenter` (objetivo, modo, constraints) | `src/screens/ControlCenter.tsx` (adicionar) |
-| Botão "Resume" para runs pausados | `src/screens/ControlCenter.tsx` (botão existe, lógica falta) |
+**Observações:** 
+- Criado `StreamingChatServiceNext.ts` adaptado para Next.js App Router
+- Chat acessível via botão flutuante no Dashboard
+- Streaming SSE funcional com histórico persistente
 
 ---
 
-### 0.3 Identidade e Contexto de Workspace
+### 0.2 Loop de Execução Autônomo ✅ **COMPLETED**
 
-**Problema:** toda a arquitetura usa `workspaceId` mas o frontend nunca passa isso. Chamadas à API usam strings hardcoded como `'system'`.
+**Status:** Loop autônomo funcional com geração de planos inteligente via LLM.
 
-**O que falta:**
+| Item | Status | Observações |
+|------|--------|-------------|
+| `POST /api/v1/orchestrator/plans` → criar plano com objetivo real | ✅ | `AdaptiveOrchestratorService` agora usa LLM real |
+| `POST /api/v1/orchestrator/runs` → executar plano | ✅ | Execução funcional com task creation |
+| `OrchestratorRuntimeService.executeRun()` conectado a `TaskExecutorService` real | ✅ | Loop completo com checkpoints |
+| Formulário de criação de plano no `ControlCenter` | ✅ | Implementado com modal completo |
+| Botão "Resume" para runs pausados | ✅ | Funcional via `resumeRun()` method |
 
-| Item | Onde |
-|------|------|
-| Context global `WorkspaceContext` com workspace ativo | `src/context/WorkspaceContext.tsx` (criar) |
-| Seletor de workspace no `Header` (ou tela de onboarding) | `src/App.tsx` |
-| `apiFetch` passar `X-Workspace-Id` header automaticamente | `src/lib/api.ts` |
-| `GET /api/v1/workspaces` retornar o workspace padrão se só houver um | `app/api/v1/workspaces/route.ts` |
-| Seed de workspace `system` na inicialização do banco | `app/api/_lib/db.ts` |
+**Observações:**
+- `AdaptiveOrchestratorService` integrado com AI provider para plan generation inteligente
+- Loop de execução cria tasks reais e gerencia dependências
+- Sistema de checkpoints e resume/pause funcional
 
 ---
 
-### 0.4 Persistência Real de Settings
+### 0.3 Identidade e Contexto de Workspace ✅ **COMPLETED**
 
-**Problema:** `PATCH /api/v1/settings` salva em variável de módulo (memória). Reiniciar o servidor apaga todas as configurações.
+**Status:** Sistema de workspace completo com persistência e contexto global.
 
-**O que falta:**
+| Item | Status | Localização |
+|------|--------|-------------|
+| Context global `WorkspaceContext` com workspace ativo | ✅ | `src/context/WorkspaceContext.tsx` |
+| Seletor de workspace no `Header` | ✅ | `src/components/WorkspaceSelector.tsx` |
+| `apiFetch` passar `X-Workspace-Id` header automaticamente | ✅ | `src/lib/api.ts` |
+| `GET /api/v1/workspaces` retornar workspace padrão | ✅ | `app/api/v1/workspaces/route.ts` |
+| Seed de workspace `system` na inicialização do banco | ✅ | `app/api/_lib/seed.ts` |
 
-| Item | Onde |
-|------|------|
-| Entidade `Settings` no TypeORM ou arquivo `settings.json` em disco | `src/core/entities/` ou `src/config/settings.ts` |
-| `GET /api/v1/settings` lendo do banco/arquivo | `app/api/v1/settings/route.ts` (reescrever) |
-| `PATCH /api/v1/settings` persistindo corretamente | idem |
-| Feature flags com chave de provedor AI (OpenAI/Anthropic/etc.) validada no startup | `src/config/featureFlags.ts` |
+**Observações:**
+- Workspace selector dropdown no Header com persistência localStorage
+- Todas as chamadas API automaticamente incluem workspace header
+- Database seeding cria workspace padrão "Default Workspace"
+- Contexto global disponível em toda aplicação
+
+---
+
+### 0.4 Persistência Real de Settings ✅ **COMPLETED**
+
+**Status:** Settings completamente persistidos em banco com suporte para feature flags e configuração de AI providers.
+
+| Item | Status | Localização |
+|------|--------|-------------|
+| Entidade `Settings` no TypeORM | ✅ | `src/core/entities/Settings.ts` |
+| `GET /api/v1/settings` lendo do banco | ✅ | `app/api/v1/settings/route.ts` |
+| `PATCH /api/v1/settings` persistindo corretamente | ✅ | `app/api/v1/settings/route.ts` |
+| Feature flags com validação de AI provider | ✅ | `src/core/services/SettingsService.ts` |
+
+**Observações:**
+- Criada entidade `Settings` com workspace-scoped configuration
+- `SettingsService` gerencia feature flags e AI provider settings
+- Configurações persistem através de restarts do servidor
+- Suporte para diferentes tipos: boolean, string, number, JSON
 
 ---
 
 ## P1 — Funcionalidade Core (o produto existe mas é limitado sem isso)
 
-### 1.1 Tela de Criação e Visualização de Planos
+### 1.1 Tela de Criação e Visualização de Planos ✅ **COMPLETED**
 
-`ControlCenter` exibe runs mas planos são invisíveis.
+**Status:** Interface completa de planos com criação e drill-down funcional.
 
-**O que falta:**
-- Painel "Plans" em `ControlCenter` com lista de planos (objetivo, status, complexityScore, reasoningMode)
-- Modal "New Plan" com campos: objetivo (textarea), modo de raciocínio (`analytical`/`creative`/`critical`/`systematic`), deadline opcional, policy (allowCodeExecution, requireApproval)
-- Drill-down: plano → runs → checkpoints → logs de ação
-- Rota `GET /api/v1/orchestrator/plans/:id/checkpoints` exposta (serviço existe: `getRunCheckpoints`)
+| Item | Status | Observações |
+|------|--------|-------------|
+| Painel "Plans" em `ControlCenter` | ✅ | Lista planos com objetivo, status, complexityScore |
+| Modal "New Plan" completo | ✅ | Todos os campos: objetivo, constraints, priority, deadline, policy |
+| Drill-down: plano → runs → checkpoints | ✅ | Modal detalhado com runs e checkpoints |
+| `GET /api/v1/orchestrator/plans/:id/checkpoints` | ✅ | Rota criada e integrada ao modal |
+
+**Observações:**
+- Plan cards clicáveis com visual drill-down completo
+- Modal detalhado mostra runs, checkpoints e state JSON
+- Interface de criação de planos com todas as opções necessárias
 
 ---
 
-### 1.2 Pipeline de Aprovação Visível
+### 1.2 Pipeline de Aprovação Visível ✅ **COMPLETED**
 
-O sistema tem `requireApproval` e `PolicyDecisionAudit`, mas o usuário nunca vê isso.
+**Status:** Pipeline de aprovação completamente funcional com interface visual.
 
-**O que falta:**
-- Indicador visual de "aguardando aprovação" no run card
-- Modal de aprovação com contexto (o que o agente quer fazer, qual policy foi triggada)
-- `POST /api/v1/orchestrator/runs/:id/execute` com botão explícito "Approve & Execute"
-- Listagem de audits de policy: `GET /api/v1/orchestrator/policy-audits` (criar rota; `listPolicyAudits` existe no serviço)
+| Item | Status | Observações |
+|------|--------|-------------|
+| Indicador visual de "aguardando aprovação" | ✅ | Botão amarelo "Approve & Execute" no run card |
+| Modal de aprovação com contexto | ✅ | Exibe plano, policy context e blocked capabilities |
+| `POST /api/v1/orchestrator/runs/:id/execute` | ✅ | Botão "Approve & Execute" funcional |
+| `GET /api/v1/orchestrator/policy-audits` | ✅ | Rota criada e integrada ao modal |
+
+**Observações:**
+- Modal mostra contexto completo: plano objetivo, detalhes da execução, policy audits
+- Indicadores visuais claros para runs aguardando aprovação
+- Interface de aprovação com segurança e contexto adequado
 
 ---
 

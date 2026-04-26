@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
+import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
+import { WorkspaceSelector } from './components/WorkspaceSelector';
 import { Dashboard } from './screens/Dashboard';
 import { MemoryLedger } from './screens/MemoryLedger';
 import { Observers } from './screens/Observers';
@@ -29,6 +31,7 @@ import { Agents } from './screens/Agents';
 import { Workflows } from './screens/Workflows';
 import { Security } from './screens/Security';
 import { Snapshots } from './screens/Snapshots';
+import { ChatPanel } from './screens/ChatPanel';
 
 const Header = ({ title, subtitle, onBack, rightElement }: {
   title: string;
@@ -38,6 +41,7 @@ const Header = ({ title, subtitle, onBack, rightElement }: {
 }) => (
   <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
     <div className="flex items-center gap-4">
+        <WorkspaceSelector />
       {onBack ? (
         <button
           onClick={onBack}
@@ -77,7 +81,7 @@ const TABS = [
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots';
+type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
@@ -108,7 +112,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
       return {
         title: 'KAIROS',
         subtitle: 'Agent Dashboard',
-        element: <Dashboard />,
+        element: <Dashboard onNavigate={setActive} />,
         onBack: undefined,
         rightElement: (
           <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
@@ -140,6 +144,8 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
       };
     case 'snapshots':
       return { title: 'Snapshots', subtitle: 'Point-in-time State', element: <Snapshots />, onBack: goHome, rightElement: undefined };
+    case 'chat':
+      return { title: 'Chat', subtitle: 'AI Assistant', element: <ChatPanel />, onBack: goHome, rightElement: undefined };
     case 'agents':
       return { title: 'Agents', subtitle: 'Agent Registry', element: <Agents />, onBack: goHome, rightElement: undefined };
     case 'workflows':
@@ -161,6 +167,14 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
           </div>
         ),
       };
+    default:
+      return {
+        title: 'Unknown',
+        subtitle: 'Page not found',
+        element: <div className="flex-1 flex items-center justify-center text-text-dim">Page not found</div>,
+        onBack: goHome,
+        rightElement: undefined,
+      };
   }
 }
 
@@ -169,7 +183,8 @@ export default function App() {
   const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'), setActiveTab);
 
   return (
-    <ToastProvider>
+    <WorkspaceProvider>
+      <ToastProvider>
       <div className="flex min-h-screen flex-col bg-bg font-sans text-highlight selection:bg-primary/20">
         <Header
           title={config.title}
@@ -193,6 +208,7 @@ export default function App() {
         </main>
         <BottomNav active={activeTab} onChange={setActiveTab} />
       </div>
-    </ToastProvider>
+      </ToastProvider>
+    </WorkspaceProvider>
   );
 }

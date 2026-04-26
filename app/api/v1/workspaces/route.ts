@@ -6,14 +6,27 @@ import { ok, err } from '@/app/api/_lib/response';
 import { createWorkspaceSchema } from '@/src/core/validation/schemas';
 import { z } from 'zod';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const { searchParams } = new URL(req.url);
+        const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 100);
+        const offset = parseInt(searchParams.get('offset') || '0');
+        
         const db = await getDb();
         const { WorkspaceService } = await import('@/src/core/services/WorkspaceService');
         const workspaceService = new WorkspaceService(db);
+        
+        // If pagination is requested, use paginated method
+        if (searchParams.has('limit') || searchParams.has('offset')) {
+            const result = await workspaceService.listPaginated({ limit, offset });
+            return ok({ items: result.items, total: result.total });
+        }
+        
+        // Otherwise return all workspaces in expected format
         const workspaces = await workspaceService.listAll();
-        return ok(workspaces);
-    } catch {
+        return ok({ items: workspaces, total: workspaces.length });
+    } catch (error) {
+        console.error('Workspaces GET error:', error);
         return err('INTERNAL_ERROR', 'Failed to list workspaces', 500);
     }
 }

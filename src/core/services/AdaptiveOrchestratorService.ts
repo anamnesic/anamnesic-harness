@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import type { AgentCapability } from '../types/agents';
+import { AIProvider } from '../providers/AIProvider';
+import { ChatMessage } from '../providers/AIProvider';
 
 export type ReasoningMode = 'standard' | 'extended';
 
@@ -85,7 +87,120 @@ const SENSITIVE_CAPABILITIES: AgentCapability[] = [
 ];
 
 export class AdaptiveOrchestratorService {
-  buildPlan(input: OrchestratorRequest): OrchestratorPlan {
+  constructor(private aiProvider?: AIProvider) {}
+
+  async buildPlan(input: OrchestratorRequest): Promise<OrchestratorPlan> {
+    // If AI provider is available, use it for intelligent plan generation
+    if (this.aiProvider && await this.aiProvider.isAvailable()) {
+      return await this.buildPlanWithAI(input);
+    }
+    
+    // Fallback to hardcoded plan generation
+    return this.buildPlanFallback(input);
+  }
+
+  private async buildPlanWithAI(input: OrchestratorRequest): Promise<OrchestratorPlan> {
+    const systemPrompt = `You are KAIROS, an advanced AI orchestrator. Your task is to break down objectives into executable steps.
+
+Available capabilities:
+- adaptive-reasoning: Complex reasoning and decision making
+- long-context-processing: Handle large context windows
+- advanced-context-memory: Remember and utilize context
+- contextual-decision-making: Make context-aware decisions
+- deep-reasoning: Deep analytical thinking
+- multi-step-problem-solving: Break down complex problems
+- auto-task-decomposition: Automatically decompose tasks
+- complex-workflow-planning: Plan complex workflows
+- advanced-code-generation: Generate and modify code
+- auto-debugging: Debug and fix issues
+- refactoring: Refactor existing code
+- autonomous-development: Develop features independently
+- technical-inconsistency-detection: Detect technical issues
+- iterative-self-optimization: Improve over time
+- multimodal-analysis: Analyze images and text
+- diagram-interpretation: Understand diagrams
+- defensive-security-application: Apply security measures
+- security-analysis: Analyze security
+- complex-system-analysis: Analyze complex systems
+- hidden-pattern-discovery: Find hidden patterns
+- vulnerability-discovery: Find vulnerabilities
+- attack-simulation: Simulate attacks
+- exploit-chain-analysis: Analyze exploit chains
+- restriction-evasion-testing: Test restriction evasion
+
+Generate a JSON response with this structure:
+{
+  "complexityScore": 0-100,
+  "reasoningMode": "standard" | "extended",
+  "steps": [
+    {
+      "id": "unique-id",
+      "title": "Step title",
+      "goal": "What this step accomplishes",
+      "dependsOn": ["id1", "id2"],
+      "capabilities": ["capability1", "capability2"],
+      "reasoningMode": "standard" | "extended",
+      "timeoutMs": 60000,
+      "requiresCheckpoint": true
+    }
+  ],
+  "safetyNotes": ["Important safety notes"]
+}
+
+Constraints: ${input.constraints?.join(', ') || 'None'}
+Priority: ${input.priority || 'normal'}
+Deadline: ${input.deadlineMinutes ? `${input.deadlineMinutes} minutes` : 'No deadline'}
+Modalities: ${input.availableModalities?.join(', ') || 'text only'}
+
+Objective: ${input.objective}`;
+
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Generate an execution plan for: ${input.objective}` }
+    ];
+
+    try {
+      const response = await this.aiProvider!.chat({ messages }, 'default');
+      const planContent = response.message.content;
+      
+      // Extract JSON from response
+      const jsonMatch = planContent.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in AI response');
+      }
+      
+      const aiPlan = JSON.parse(jsonMatch[0]);
+      
+      // Validate and structure the plan
+      return {
+        id: crypto.randomUUID(),
+        objective: input.objective,
+        complexityScore: aiPlan.complexityScore || 50,
+        reasoningMode: aiPlan.reasoningMode || 'standard',
+        steps: aiPlan.steps?.map((step: any) => ({
+          id: step.id || crypto.randomUUID(),
+          title: step.title || 'Untitled Step',
+          goal: step.goal || 'No goal specified',
+          dependsOn: Array.isArray(step.dependsOn) ? step.dependsOn : [],
+          capabilities: Array.isArray(step.capabilities) ? step.capabilities : ['adaptive-reasoning'],
+          reasoningMode: step.reasoningMode || 'standard',
+          timeoutMs: typeof step.timeoutMs === 'number' ? step.timeoutMs : 60000,
+          requiresCheckpoint: Boolean(step.requiresCheckpoint),
+        })) || [],
+        safetyNotes: Array.isArray(aiPlan.safetyNotes) ? aiPlan.safetyNotes : [
+          'AI-generated plan - review before execution',
+          'Ensure all capabilities are appropriate for the objective'
+        ],
+        createdAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('[AdaptiveOrchestrator] AI plan generation failed:', error);
+      // Fallback to hardcoded plan
+      return this.buildPlanFallback(input);
+    }
+  }
+
+  private buildPlanFallback(input: OrchestratorRequest): OrchestratorPlan {
     const complexityScore = this.estimateComplexity(input);
     const reasoningMode: ReasoningMode = complexityScore >= 70 ? 'extended' : 'standard';
 

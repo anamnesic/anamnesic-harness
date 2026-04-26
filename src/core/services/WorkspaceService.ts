@@ -63,6 +63,16 @@ export class WorkspaceService {
     });
   }
 
+  async listPaginated(options: { limit: number; offset: number }): Promise<{ items: Workspace[]; total: number }> {
+    const [items, total] = await this.workspaceRepo.findAndCount({
+      relations: ['owner', 'projects'],
+      order: { createdAt: 'DESC' },
+      take: options.limit,
+      skip: options.offset,
+    });
+    return { items, total };
+  }
+
   async listByUser(userId: string): Promise<Workspace[]> {
     const members = await this.memberRepo.find({
       where: { userId },

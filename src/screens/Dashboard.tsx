@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch } from 'lucide-react';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, MessageSquare } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -17,7 +17,11 @@ interface AgentStats { totalAgents: number; activeAgents: number; totalTasksComp
 interface WorkflowStats { total: number; active: number; totalExecutions: number; successfulExecutions: number; failedExecutions: number; successRate: number }
 interface RunsData { data?: Array<{ status: string }> | { items?: Array<{ status: string }>; total?: number }; count?: number }
 
-export function Dashboard() {
+interface DashboardProps {
+  onNavigate?: (id: 'dashboard' | 'control' | 'agents' | 'projects' | 'security' | 'system' | 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat') => void;
+}
+
+export function Dashboard({ onNavigate }: DashboardProps) {
     const { data: health, error: healthErr } = usePolling<HealthData>('/api/health', 5000);
     const { data: metrics, loading: metricsLoading } = usePolling<MetricsData>('/api/v1/metrics', 5000);
     const { data: history, loading: histLoading } = usePolling<HistoryData>('/api/chat/history?limit=3', 5000);
@@ -259,6 +263,20 @@ export function Dashboard() {
                     </div>
                 </div>
             </div>
+            
+            {/* Floating Chat Button */}
+            {onNavigate && (
+                <motion.button
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => onNavigate('chat')}
+                    className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+                >
+                    <MessageSquare className="size-6" />
+                </motion.button>
+            )}
         </motion.div>
     );
 }

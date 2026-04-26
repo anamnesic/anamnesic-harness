@@ -15,6 +15,7 @@ import { AgentService } from './AgentService';
 import { ExecutionLogService } from './ExecutionLogService';
 import type { TaskType } from '../entities/Task';
 import type { AgentCapability } from '../types/agents';
+import { aiProviderRegistry } from '../providers/AIProvider';
 
 export interface CreateOrchestratorPlanInput {
   workspaceId: string;
@@ -42,7 +43,7 @@ export class OrchestratorRuntimeService {
   private runRepo: Repository<OrchestratorRunRecord>;
   private auditRepo: Repository<PolicyDecisionAudit>;
 
-  private orchestrator = new AdaptiveOrchestratorService();
+  private orchestrator: AdaptiveOrchestratorService;
   private tasks: TaskService;
   private workflows: WorkflowService;
   private agents: AgentService;
@@ -53,6 +54,10 @@ export class OrchestratorRuntimeService {
     this.runRepo = db.getRepository(OrchestratorRunRecord);
     this.auditRepo = db.getRepository(PolicyDecisionAudit);
 
+    // Initialize orchestrator with AI provider
+    const aiProvider = aiProviderRegistry.getDefault();
+    this.orchestrator = new AdaptiveOrchestratorService(aiProvider);
+
     this.tasks = new TaskService(db);
     this.workflows = new WorkflowService(db);
     this.agents = new AgentService(db);
@@ -60,7 +65,7 @@ export class OrchestratorRuntimeService {
   }
 
   async createPlan(input: CreateOrchestratorPlanInput): Promise<{ plan: OrchestratorPlanRecord; warnings: string[] }> {
-    const built = this.orchestrator.buildPlan(input.request);
+    const built = await this.orchestrator.buildPlan(input.request);
     const scopedPolicy: Partial<OrchestratorPolicy> = {
       ...(input.policy || {}),
       approvedTestScope: input.policyApproval?.approvedTestScope || input.policy?.approvedTestScope,

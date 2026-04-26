@@ -6,12 +6,12 @@ import { DataSource } from 'typeorm';
 import path from 'path';
 import fs from 'fs';
 
-const DATA_DIR = process.env.Kairos_DATA_DIR || path.join(process.env.HOME || process.env.USERPROFILE || '.', '.Kairos');
-const DB_PATH = path.join(DATA_DIR, 'data.sqlite');
+const DATA_DIR = process.env.Kairos_DATA_DIR || path.join(/*turbopackIgnore: true*/ process.env.HOME || process.env.USERPROFILE || '.', '.Kairos');
+const DB_PATH = path.join(/*turbopackIgnore: true*/ DATA_DIR, 'data.sqlite');
 
 // Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(/*turbopackIgnore: true*/ DATA_DIR)) {
+  fs.mkdirSync(/*turbopackIgnore: true*/ DATA_DIR, { recursive: true });
 }
 
 let dataSource: DataSource | null = null;
@@ -39,6 +39,7 @@ async function loadEntities() {
   const { OrchestratorPlanRecord } = await import('./entities/OrchestratorPlan');
   const { OrchestratorRunRecord } = await import('./entities/OrchestratorRun');
   const { PolicyDecisionAudit } = await import('./entities/PolicyDecisionAudit');
+  const { Settings } = await import('./entities/Settings');
 
   return [
     User,
@@ -58,6 +59,7 @@ async function loadEntities() {
     OrchestratorPlanRecord,
     OrchestratorRunRecord,
     PolicyDecisionAudit,
+    Settings,
   ];
 }
 
@@ -82,6 +84,11 @@ export const getDatabase = async (): Promise<DataSource> => {
 
     await ds.initialize();
     dataSource = ds;
+    
+    // Seed default data if needed
+    const { seedDefaultData } = await import('../../app/api/_lib/seed');
+    await seedDefaultData(ds);
+    
     return ds;
   })();
 
