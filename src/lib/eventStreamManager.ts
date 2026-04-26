@@ -11,6 +11,9 @@ class EventStreamManager {
     private maxReconnectAttempts: number = 5;
     private reconnectDelay: number = 3000;
     private url: string = '/api/v1/events';
+    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    private shouldReconnect: boolean = false;
+    private boundEvents: Set<string> = new Set();
 
     private constructor() {}
 
@@ -26,13 +29,13 @@ class EventStreamManager {
             this.listeners.set(eventName, new Set());
         }
         this.listeners.get(eventName)!.add(listener);
+        this.shouldReconnect = true;
 
         if (!this.source) {
             this.connect();
-        } else if (this.isConnected) {
-            // Re-bind to ensure new events are caught if added dynamically
-            // (though EventSource eventListeners are usually persistent)
+        } else if (this.isConnected && !this.boundEvents.has(eventName)) {
             this.source.addEventListener(eventName, (ev: MessageEvent) => this.handleEvent(eventName, ev));
+            this.boundEvents.add(eventName);
         }
 
         return () => {
@@ -52,6 +55,9 @@ class EventStreamManager {
 
     private connect() {
         if (this.source) return;
+        if (this.listeners.size === 0) return;
+
+        this.shouldReconnect = true;
 
         try {
             this.source = new EventSource(this.url);
@@ -63,13 +69,19 @@ class EventStreamManager {
                 
                 // Re-register all listeners
                 for (const eventName of this.listeners.keys()) {
-                    this.source?.addEventListener(eventName, (ev: MessageEvent) => this.handleEvent(eventName, ev));
+                    if (!this.boundEvents.has(eventName)) {
+                        this.source?.addEventListener(eventName, (ev: MessageEvent) => this.handleEvent(eventName, ev));
+                        this.boundEvents.add(eventName);
+                    }
                 }
             };
 
             this.source.onerror = () => {
                 this.isConnected = false;
                 this.cleanup();
+                if (!this.shouldReconnect || this.listeners.size === 0) {
+                    return;
+                }
                 this.scheduleReconnect();
             };
 
@@ -92,17 +104,32 @@ class EventStreamManager {
     }
 
     private scheduleReconnect() {
+        if (!this.shouldReconnect || this.listeners.size === 0) {
+            return;
+        }
+
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             console.error('[SSE] Max reconnect attempts reached');
             return;
         }
 
         this.reconnectAttempts++;
-        setTimeout(() => this.connect(), this.reconnectDelay);
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+        }
+        this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.connect();
+        }, this.reconnectDelay);
     }
 
     private disconnect() {
         console.log('[SSE] Disconnecting (no active listeners)');
+        this.shouldReconnect = false;
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
         this.cleanup();
     }
 
@@ -111,6 +138,7 @@ class EventStreamManager {
             this.source.close();
             this.source = null;
         }
+        this.boundEvents.clear();
         this.isConnected = false;
     }
 
