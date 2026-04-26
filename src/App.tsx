@@ -48,7 +48,7 @@ import { Signup } from './screens/Signup';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
 import { TerminalPanel } from './screens/TerminalPanel';
-import { McpScreen } from './components/ExtensionsRightSidebar';
+import { McpScreen } from './components/McpScreen';
 import { InferenceHub } from './screens/InferenceHub';
 
 interface TerminalHeaderState {
