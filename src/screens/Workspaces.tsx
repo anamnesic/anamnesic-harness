@@ -8,6 +8,8 @@ import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { Projects } from './Projects';
+import { FolderBrowser } from '@/src/components/FolderBrowser';
+import { useWorkspace } from '@/src/context/WorkspaceContext';
 
 interface Workspace {
     id: string;
@@ -72,10 +74,13 @@ interface ApiResponse<T> {
 export function Workspaces() {
     const { data, loading, refetch } = useApi<ApiResponse<Workspace[]>>('/api/v1/workspaces');
     const { toast } = useToast();
+    const { refreshWorkspaces, setWorkspace } = useWorkspace();
 
     const [showCreate, setShowCreate] = useState(false);
     const [editing, setEditing] = useState<Workspace | null>(null);
     const [detail, setDetail] = useState<Workspace | null>(null);
+    const [showFolderBrowser, setShowFolderBrowser] = useState(false);
+    const [repositoryRefreshToken, setRepositoryRefreshToken] = useState(0);
 
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
@@ -154,6 +159,77 @@ export function Workspaces() {
         }
     }
 
+    function bumpRepositoryRefresh() {
+        setRepositoryRefreshToken((value) => value + 1);
+    }
+
+    function buildFolderName(folderPath: string) {
+        return folderPath.split(/[\\/]/).filter(Boolean).pop() || 'workspace';
+    }
+
+    async function handleWorkspaceFolderSelected(folderPath: string) {
+        const folderName = buildFolderName(folderPath);
+        setShowFolderBrowser(false);
+        setSubmitting(true);
+        try {
+            await apiFetch('/api/v1/projects', {
+                method: 'POST',
+                body: JSON.stringify({ name: folderName, localPath: folderPath }),
+            });
+            toast(`A pasta selecionada virou o repositório "${folderName}"`, 'success');
+            bumpRepositoryRefresh();
+            return;
+        } catch (e: any) {
+            if (e?.code === 'NO_GIT_REPO') {
+                const gitSubfolders: string[] = e?.details?.gitSubfolders ?? [];
+
+                if (gitSubfolders.length === 0) {
+                    toast('Esta pasta não tem repositório Git e não pode ser selecionada.', 'error');
+                    return;
+                }
+
+                if (gitSubfolders.length === 1) {
+                    const singleRepoName = gitSubfolders[0];
+                    const separator = folderPath.includes('\\') ? '\\' : '/';
+                    const singleRepoPath = `${folderPath.replace(/[\\/]$/, '')}${separator}${singleRepoName}`;
+
+                    await apiFetch('/api/v1/projects', {
+                        method: 'POST',
+                        body: JSON.stringify({ name: singleRepoName, localPath: singleRepoPath }),
+                    });
+
+                    toast(`A pasta continha 1 Git e foi importada como repositório: "${singleRepoName}"`, 'success');
+                    bumpRepositoryRefresh();
+                    return;
+                }
+
+                const slug = slugify(folderName);
+                const createdWorkspace = await apiFetch<ApiResponse<Workspace>>('/api/v1/workspaces', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: folderName,
+                        slug,
+                        description: 'Workspace criado a partir de uma pasta com múltiplos repositórios Git',
+                    }),
+                });
+
+                const workspace = createdWorkspace.data;
+                if (workspace) {
+                    setWorkspace(workspace);
+                }
+
+                await Promise.all([refetch(), refreshWorkspaces()]);
+                toast(`Workspace "${folderName}" criado a partir da pasta selecionada`, 'success');
+                bumpRepositoryRefresh();
+                return;
+            }
+
+            toast(e.message ?? 'Falha ao selecionar pasta', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
     const rawData = data?.data;
     const workspacesList = Array.isArray(rawData) ? rawData : (rawData?.items || []);
     const workspaces = workspacesList.filter(ws => ws.status !== 'deleted');
@@ -176,11 +252,11 @@ export function Workspaces() {
                         <p className="text-xs text-text-dim mt-1">Selecione, crie e administre seus workspaces.</p>
                     </div>
                     <button
-                        onClick={openCreate}
+                        onClick={() => setShowFolderBrowser(true)}
                         className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
                     >
-                        <Plus className="size-3.5" />
-                        Novo Espaço
+                        <Building2 className="size-3.5" />
+                        Selecionar pasta
                     </button>
                 </div>
 
@@ -239,7 +315,7 @@ export function Workspaces() {
                     <h3 className="text-xl font-bold tracking-tight">Repositórios</h3>
                     <p className="text-xs text-text-dim mt-1">Os repositórios do workspace atualmente selecionado aparecem logo abaixo.</p>
                 </div>
-                <Projects embedded />
+                <Projects embedded refreshToken={repositoryRefreshToken} />
             </section>
 
             <AnimatePresence>
@@ -264,6 +340,12 @@ export function Workspaces() {
                         key="detail-modal"
                         workspace={detail}
                         onClose={() => setDetail(null)}
+                    />
+                )}
+                {showFolderBrowser && (
+                    <FolderBrowser
+                        onClose={() => setShowFolderBrowser(false)}
+                        onSelect={handleWorkspaceFolderSelected}
                     />
                 )}
             </AnimatePresence>

@@ -42,9 +42,9 @@ interface ApiResponse<T> {
     timestamp: string;
 }
 
-export function Projects({ embedded = false }: { embedded?: boolean }) {
+export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: boolean; refreshToken?: number }) {
     const { workspace } = useWorkspace();
-    const projectsPath = workspace?.id ? `/api/v1/projects?workspaceId=${workspace.id}` : null;
+    const projectsPath = workspace?.id ? `/api/v1/projects?workspaceId=${workspace.id}&refresh=${refreshToken}` : null;
     const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
 
@@ -357,7 +357,7 @@ export function Projects({ embedded = false }: { embedded?: boolean }) {
                     className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
                 >
                     <FolderOpen className="size-3.5" />
-                    {submitting ? 'Importando…' : 'Importar Repositório'}
+                    {submitting ? 'Selecionando…' : 'Selecionar pasta'}
                 </button>
             </div>
 
