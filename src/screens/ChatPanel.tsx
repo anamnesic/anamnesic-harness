@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Loader2, MessageSquare, Trash2, ChevronDown, Check } from 'lucide-react';
+import { Send, Loader2, MessageSquare, Trash2, ChevronDown, Check, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
@@ -58,7 +58,6 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const modelMenuRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Load chat history
@@ -129,25 +128,6 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    const onClickOutside = (event: MouseEvent) => {
-      if (!modelMenuRef.current) {
-        return;
-      }
-      if (!modelMenuRef.current.contains(event.target as Node)) {
-        setIsModelMenuOpen(false);
-      }
-    };
-
-    if (isModelMenuOpen) {
-      document.addEventListener('mousedown', onClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside);
-    };
-  }, [isModelMenuOpen]);
 
   const lastScrollTime = useRef(0);
 
@@ -302,80 +282,15 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="relative" ref={modelMenuRef}>
-            <button
-              onClick={() => setIsModelMenuOpen((open) => !open)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors border border-border"
-            >
-              <span className="font-semibold text-highlight hidden sm:inline">Modelos</span>
-              <span className="font-semibold text-highlight sm:hidden">AI</span>
-              <span className="text-[11px] text-text-dim">{selectedModelIds.length}</span>
-              <ChevronDown className={cn('size-3 transition-transform', isModelMenuOpen && 'rotate-180')} />
-            </button>
-
-            <AnimatePresence>
-              {isModelMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                  className="scrollbar-kairos absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-card shadow-2xl z-[80]"
-                >
-                  <div className="px-3 py-2 border-b border-border text-[11px] font-bold uppercase tracking-wider text-text-dim">
-                    Modelos disponíveis
-                  </div>
-                  <div className="p-2 space-y-1">
-                    {availableModelIds.length === 0 && (
-                      <p className="px-2 py-2 text-xs text-text-dim">Nenhum modelo disponível no momento.</p>
-                    )}
-
-                    {availableModelIds.map((id) => {
-                      const model = AVAILABLE_MODELS.find((m) => m.id === id);
-                      if (!model) {
-                        return null;
-                      }
-
-                      const checked = selectedModelIds.includes(id);
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => {
-                            setSelectedModelIds((current) => {
-                              if (current.includes(id)) {
-                                if (current.length === 1) {
-                                  return current;
-                                }
-                                return current.filter((x) => x !== id);
-                              }
-                              return [...current, id];
-                            });
-                          }}
-                          className={cn(
-                            'w-full flex items-start gap-2 rounded-lg px-2 py-2 text-left transition-colors',
-                            checked ? 'bg-primary/10 text-primary' : 'hover:bg-bg text-accent hover:text-highlight'
-                          )}
-                        >
-                          <span className={cn(
-                            'mt-0.5 flex size-4 items-center justify-center rounded border',
-                            checked ? 'border-primary bg-primary/20' : 'border-border'
-                          )}>
-                            {checked && <Check className="size-3" />}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-xs font-semibold truncate">{model.name}</span>
-                            <span className="block text-[11px] text-text-dim line-clamp-2 leading-relaxed">{model.description}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="px-3 py-2 border-t border-border text-[11px] text-text-dim">
-                    `ask` usa 1 modelo. `coding` usa todos os selecionados em paralelo.
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <button
+            onClick={() => setIsModelMenuOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors border border-border"
+          >
+            <span className="font-semibold text-highlight hidden sm:inline">Modelos</span>
+            <span className="font-semibold text-highlight sm:hidden">AI</span>
+            <span className="text-[11px] text-text-dim">{selectedModelIds.length}</span>
+            <ChevronDown className="size-3" />
+          </button>
 
           <button
             onClick={handleClearChat}
@@ -452,6 +367,99 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
         </AnimatePresence>
         <div ref={messagesEndRef} />
       </div>
+
+      <AnimatePresence>
+        {isModelMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-black/45 backdrop-blur-sm"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                setIsModelMenuOpen(false);
+              }
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+              className="absolute inset-x-3 top-16 bottom-20 md:left-auto md:right-6 md:top-20 md:bottom-8 w-auto md:w-[26rem] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden"
+            >
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-text-dim">Modelos disponíveis</p>
+                  <p className="text-xs text-text-dim mt-1">`ask` usa 1 modelo. `coding` usa todos os selecionados.</p>
+                </div>
+                <button
+                  onClick={() => setIsModelMenuOpen(false)}
+                  className="rounded-lg p-1.5 text-text-dim hover:text-accent hover:bg-bg transition-colors"
+                  title="Fechar"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <div className="scrollbar-kairos flex-1 overflow-y-auto p-2 space-y-1">
+                {availableModelIds.length === 0 && (
+                  <p className="px-2 py-2 text-xs text-text-dim">Nenhum modelo disponível no momento.</p>
+                )}
+
+                {availableModelIds.map((id) => {
+                  const model = AVAILABLE_MODELS.find((m) => m.id === id);
+                  if (!model) {
+                    return null;
+                  }
+
+                  const checked = selectedModelIds.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => {
+                        setSelectedModelIds((current) => {
+                          if (current.includes(id)) {
+                            if (current.length === 1) {
+                              return current;
+                            }
+                            return current.filter((x) => x !== id);
+                          }
+                          return [...current, id];
+                        });
+                      }}
+                      className={cn(
+                        'w-full flex items-start gap-2 rounded-lg px-2 py-2 text-left transition-colors',
+                        checked ? 'bg-primary/10 text-primary' : 'hover:bg-bg text-accent hover:text-highlight'
+                      )}
+                    >
+                      <span className={cn(
+                        'mt-0.5 flex size-4 items-center justify-center rounded border',
+                        checked ? 'border-primary bg-primary/20' : 'border-border'
+                      )}>
+                        {checked && <Check className="size-3" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold truncate">{model.name}</span>
+                        <span className="block text-[11px] text-text-dim line-clamp-2 leading-relaxed">{model.description}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="px-4 py-2 border-t border-border text-[11px] text-text-dim flex items-center justify-between">
+                <span>{selectedModelIds.length} selecionado(s)</span>
+                <button
+                  onClick={() => setIsModelMenuOpen(false)}
+                  className="rounded-lg border border-border px-2.5 py-1 text-[11px] font-semibold text-accent hover:text-highlight hover:border-primary/50 transition-colors"
+                >
+                  Concluir
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Input */}
       <div className="p-4 border-t border-border">
