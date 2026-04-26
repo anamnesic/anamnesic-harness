@@ -693,45 +693,9 @@ export function Projects({
 
                         <section className="min-w-0">
                             {activeTab === 'repository' ? (
-                                <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
-                                    <aside className="bento-card min-h-0">
-                                        <div className="mb-3 flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <Folder className="size-4 text-primary" />
-                                                <p className="label-caps">Repo</p>
-                                            </div>
-                                            <button
-                                                onClick={() => void refetchInsights()}
-                                                className="rounded-md border border-border px-2 py-1 text-[10px] font-bold text-text-dim hover:text-accent transition-colors"
-                                            >
-                                                Refresh
-                                            </button>
-                                        </div>
-
-                                        <input
-                                            value={repoQuery}
-                                            onChange={(e) => setRepoQuery(e.target.value)}
-                                            placeholder="Filtrar arquivos"
-                                            className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
-                                        />
-
-                                        {insightsLoading ? (
-                                            <p className="text-sm text-text-dim">Carregando arquivos...</p>
-                                        ) : !insights?.isGitRepo ? (
-                                            <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
-                                        ) : !repositoryFiles.length ? (
-                                            <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
-                                        ) : (
-                                            <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
-                                                {repositoryTree.length
-                                                    ? renderRepositoryTree(repositoryTree)
-                                                    : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
-                                            </div>
-                                        )}
-                                    </aside>
-
-                                    <section className="min-h-0 overflow-hidden">
-                                        <div className="-mx-4 -mt-4 mb-3 flex items-stretch overflow-x-auto border-b border-border/60 bg-bg/40 sm:-mx-6 sm:-mt-6">
+                                <div className="space-y-3">
+                                    <div className="sticky top-20 z-20 overflow-x-auto rounded-lg border border-border/60 bg-bg/90 backdrop-blur">
+                                        <div className="flex items-stretch">
                                             {openRepoTabs.length ? openRepoTabs.map((filePath) => {
                                                 const isActive = selectedRepoFile === filePath;
                                                 const isDirty = repoDirtyFiles[filePath] ?? false;
@@ -767,59 +731,100 @@ export function Projects({
                                                 <div className="px-3 py-2 text-xs text-text-dim">Nenhum arquivo aberto</div>
                                             )}
                                         </div>
+                                    </div>
 
-                                        {insightsLoading ? (
-                                            <p className="text-sm text-text-dim">Carregando editor...</p>
-                                        ) : !insights?.isGitRepo ? (
-                                            <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
-                                        ) : !selectedRepoFile ? (
-                                            <p className="text-sm text-text-dim">Selecione um arquivo na lateral.</p>
-                                        ) : repositoryFileLoading ? (
-                                            <p className="text-sm text-text-dim">Carregando conteúdo...</p>
-                                        ) : (
-                                            <div className="h-[64vh] overflow-hidden border border-border/60 bg-bg/80">
-                                                <div className="flex h-full">
-                                                    <div
-                                                        ref={repoLineGutterRef}
-                                                        className="w-14 shrink-0 overflow-hidden border-r border-border/60 bg-card/40 px-2 py-3 text-right font-mono text-[11px] leading-relaxed text-text-dim"
-                                                    >
-                                                        {repoLineNumbers.map((lineNumber) => (
-                                                            <div key={lineNumber}>{lineNumber}</div>
-                                                        ))}
-                                                    </div>
-                                                    <textarea
-                                                        ref={repoTextareaRef}
-                                                        value={currentRepoDraft}
-                                                        onChange={(e) => {
-                                                            if (!selectedRepoFile) return;
-                                                            const nextDraft = e.target.value;
-                                                            const baseContent = repositoryFile?.content ?? '';
-                                                            setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
-                                                            setRepoDirtyFiles((prev) => ({
-                                                                ...prev,
-                                                                [selectedRepoFile]: nextDraft !== baseContent,
-                                                            }));
-                                                        }}
-                                                        onKeyDown={(e) => {
-                                                            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-                                                                e.preventDefault();
-                                                                if (!savingRepoFile) {
-                                                                    void saveRepositoryFile();
-                                                                }
-                                                            }
-                                                        }}
-                                                        onScroll={(e) => {
-                                                            if (repoLineGutterRef.current) {
-                                                                repoLineGutterRef.current.scrollTop = e.currentTarget.scrollTop;
-                                                            }
-                                                        }}
-                                                        spellCheck={false}
-                                                        className="h-full flex-1 resize-none bg-transparent px-3 py-3 font-mono text-xs leading-relaxed text-highlight outline-none"
-                                                    />
+                                    <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
+                                        <aside className="bento-card min-h-0">
+                                            <div className="mb-3 flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Folder className="size-4 text-primary" />
+                                                    <p className="label-caps">Repo</p>
                                                 </div>
+                                                <button
+                                                    onClick={() => void refetchInsights()}
+                                                    className="rounded-md border border-border px-2 py-1 text-[10px] font-bold text-text-dim hover:text-accent transition-colors"
+                                                >
+                                                    Refresh
+                                                </button>
                                             </div>
-                                        )}
-                                    </section>
+
+                                            <input
+                                                value={repoQuery}
+                                                onChange={(e) => setRepoQuery(e.target.value)}
+                                                placeholder="Filtrar arquivos"
+                                                className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
+                                            />
+
+                                            {insightsLoading ? (
+                                                <p className="text-sm text-text-dim">Carregando arquivos...</p>
+                                            ) : !insights?.isGitRepo ? (
+                                                <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                            ) : !repositoryFiles.length ? (
+                                                <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
+                                            ) : (
+                                                <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
+                                                    {repositoryTree.length
+                                                        ? renderRepositoryTree(repositoryTree)
+                                                        : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
+                                                </div>
+                                            )}
+                                        </aside>
+
+                                        <section className="min-h-0 overflow-hidden">
+
+                                            {insightsLoading ? (
+                                                <p className="text-sm text-text-dim">Carregando editor...</p>
+                                            ) : !insights?.isGitRepo ? (
+                                                <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                            ) : !selectedRepoFile ? (
+                                                <p className="text-sm text-text-dim">Selecione um arquivo na lateral.</p>
+                                            ) : repositoryFileLoading ? (
+                                                <p className="text-sm text-text-dim">Carregando conteúdo...</p>
+                                            ) : (
+                                                <div className="h-[calc(100vh-19rem)] min-h-[22rem] overflow-hidden border border-border/60 bg-bg/80">
+                                                    <div className="flex h-full">
+                                                        <div
+                                                            ref={repoLineGutterRef}
+                                                            className="w-14 shrink-0 overflow-hidden border-r border-border/60 bg-card/40 px-2 py-3 text-right font-mono text-[11px] leading-relaxed text-text-dim"
+                                                        >
+                                                            {repoLineNumbers.map((lineNumber) => (
+                                                                <div key={lineNumber}>{lineNumber}</div>
+                                                            ))}
+                                                        </div>
+                                                        <textarea
+                                                            ref={repoTextareaRef}
+                                                            value={currentRepoDraft}
+                                                            onChange={(e) => {
+                                                                if (!selectedRepoFile) return;
+                                                                const nextDraft = e.target.value;
+                                                                const baseContent = repositoryFile?.content ?? '';
+                                                                setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
+                                                                setRepoDirtyFiles((prev) => ({
+                                                                    ...prev,
+                                                                    [selectedRepoFile]: nextDraft !== baseContent,
+                                                                }));
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                                                                    e.preventDefault();
+                                                                    if (!savingRepoFile) {
+                                                                        void saveRepositoryFile();
+                                                                    }
+                                                                }
+                                                            }}
+                                                            onScroll={(e) => {
+                                                                if (repoLineGutterRef.current) {
+                                                                    repoLineGutterRef.current.scrollTop = e.currentTarget.scrollTop;
+                                                                }
+                                                            }}
+                                                            spellCheck={false}
+                                                            className="h-full flex-1 resize-none bg-transparent px-3 py-3 font-mono text-xs leading-relaxed text-highlight outline-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </section>
+                                    </div>
                                 </div>
                             ) : activeTab === 'git' ? (
                                 <div className="bento-card">
