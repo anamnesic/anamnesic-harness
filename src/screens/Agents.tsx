@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X, Trash2, Bot, ListTodo, Play, Pencil } from 'lucide-react';
-import { useApi, apiFetch } from '@/src/lib/api';
+import { apiFetch } from '@/src/lib/api';
 import { usePolling } from '@/src/lib/usePolling';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -32,6 +32,14 @@ interface Agent {
 interface ApiResponse {
     success: boolean;
     data: Agent[];
+}
+
+interface PromptCapabilityItem {
+    key: string;
+    title: string;
+    description: string;
+    prompt: string;
+    isCustom?: boolean;
 }
 
 const ALL_CAPABILITIES: AgentCapability[] = [
@@ -127,7 +135,13 @@ export function Agents({ onNavigate }: AgentsProps) {
     const [description, setDescription] = useState('');
     const [capabilities, setCapacidades] = useState<AgentCapability[]>([]);
     const [submitting, setSubmitting] = useState(false);
-    const [deleting, setDeleting] = useState<string | null>(null);
+    const [savingPromptKey, setSavingPromptKey] = useState<string | null>(null);
+    const [addingCapability, setAddingCapability] = useState(false);
+    const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
+    const [newCapabilityKey, setNewCapabilityKey] = useState('');
+    const [newCapabilityTitle, setNewCapabilityTitle] = useState('');
+    const [newCapabilityDescription, setNewCapabilityDescription] = useState('');
+    const [newCapabilityPrompt, setNewCapabilityPrompt] = useState('');
 
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [activeView, setActiveView] = useState<'agents' | 'prompt-engineer'>('agents');
@@ -151,6 +165,9 @@ export function Agents({ onNavigate }: AgentsProps) {
     const activeAgents = sortedAgents.filter(a => a.isActive).length;
     const totalCompleted = sortedAgents.reduce((sum, a) => sum + (a.tasksCompleted ?? 0), 0);
     const totalFailed = sortedAgents.reduce((sum, a) => sum + (a.tasksFailed ?? 0), 0);
+    const promptEngineerAgent = sortedAgents.find(
+        (agent) => agent.name === 'Prompt Engineer' || agent.metadata?.role === 'prompt-engineer'
+    );
 
     const capabilityInfo: Record<AgentCapability, { title: string; description: string }> = {
         'code-generation': {
@@ -178,6 +195,42 @@ export function Agents({ onNavigate }: AgentsProps) {
             description: 'Adapta comportamento conforme contexto e historico de uso.',
         },
     };
+
+    const promptCapabilities = useMemo<PromptCapabilityItem[]>(() => {
+        const metadata = (promptEngineerAgent?.metadata as Record<string, any> | null) ?? null;
+        const templates = (metadata?.promptTemplates as Record<string, string> | undefined) ?? {};
+        const customCapabilities = (metadata?.customPromptCapabilities as PromptCapabilityItem[] | undefined) ?? [];
+
+        const base = ALL_CAPABILITIES.map((capability) => ({
+            key: capability,
+            title: capabilityInfo[capability].title,
+            description: capabilityInfo[capability].description,
+            prompt: templates[capability] ?? '',
+            isCustom: false,
+        }));
+
+        const custom = customCapabilities.map((item) => ({
+            key: item.key,
+            title: item.title,
+            description: item.description,
+            prompt: templates[item.key] ?? item.prompt ?? '',
+            isCustom: true,
+        }));
+
+        return [...base, ...custom];
+    }, [capabilityInfo, promptEngineerAgent]);
+
+    useEffect(() => {
+        setPromptDrafts((prev) => {
+            const next = { ...prev };
+            for (const capability of promptCapabilities) {
+                if (next[capability.key] === undefined) {
+                    next[capability.key] = capability.prompt ?? '';
+                }
+            }
+            return next;
+        });
+    }, [promptCapabilities]);
 
     function closeModal() {
         setShowModal(false);
@@ -313,6 +366,104 @@ export function Agents({ onNavigate }: AgentsProps) {
             refetch();
         } catch (e: any) {
             toast(e.message ?? 'Falha ao atualizar status do agente', 'error');
+        }
+    }
+
+    async function handleSaveCapabilityPrompt(capability: PromptCapabilityItem) {
+        if (!promptEngineerAgent) {
+            toast('Agente Prompt Engineer não encontrado', 'error');
+            return;
+        }
+
+        const metadata = (promptEngineerAgent.metadata as Record<string, any> | null) ?? {};
+        const promptTemplates = {
+            ...((metadata.promptTemplates as Record<string, string> | undefined) ?? {}),
+            [capability.key]: promptDrafts[capability.key] ?? '',
+        };
+
+        const customPromptCapabilities: PromptCapabilityItem[] = [
+            ...(((metadata.customPromptCapabilities as PromptCapabilityItem[] | undefined) ?? []).map((item) => (
+                item.key === capability.key
+                    ? { ...item, prompt: promptDrafts[capability.key] ?? '' }
+                    : item
+            ))),
+        ];
+
+        setSavingPromptKey(capability.key);
+        try {
+            await apiFetch(`/api/v1/agents/${promptEngineerAgent.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    metadata: {
+                        ...metadata,
+                        promptTemplates,
+                        customPromptCapabilities,
+                    },
+                }),
+            });
+            toast('Prompt atualizado', 'success');
+            refetch();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao salvar prompt', 'error');
+        } finally {
+            setSavingPromptKey(null);
+        }
+    }
+
+    async function handleAddPromptCapability() {
+        if (!promptEngineerAgent) {
+            toast('Agente Prompt Engineer não encontrado', 'error');
+            return;
+        }
+
+        const key = newCapabilityKey.trim().toLowerCase().replace(/\s+/g, '-');
+        if (!key) { toast('Chave da capacidade é obrigatória', 'error'); return; }
+        if (!newCapabilityTitle.trim()) { toast('Título é obrigatório', 'error'); return; }
+        if (!newCapabilityPrompt.trim()) { toast('Prompt é obrigatório', 'error'); return; }
+        if (promptCapabilities.some((item) => item.key === key)) {
+            toast('Já existe capacidade com essa chave', 'error');
+            return;
+        }
+
+        const metadata = (promptEngineerAgent.metadata as Record<string, any> | null) ?? {};
+        const customPromptCapabilities = [
+            ...((metadata.customPromptCapabilities as PromptCapabilityItem[] | undefined) ?? []),
+            {
+                key,
+                title: newCapabilityTitle.trim(),
+                description: newCapabilityDescription.trim(),
+                prompt: newCapabilityPrompt,
+                isCustom: true,
+            },
+        ];
+
+        const promptTemplates = {
+            ...((metadata.promptTemplates as Record<string, string> | undefined) ?? {}),
+            [key]: newCapabilityPrompt,
+        };
+
+        setAddingCapability(true);
+        try {
+            await apiFetch(`/api/v1/agents/${promptEngineerAgent.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    metadata: {
+                        ...metadata,
+                        customPromptCapabilities,
+                        promptTemplates,
+                    },
+                }),
+            });
+            toast('Nova capacidade adicionada', 'success');
+            setNewCapabilityKey('');
+            setNewCapabilityTitle('');
+            setNewCapabilityDescription('');
+            setNewCapabilityPrompt('');
+            refetch();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao adicionar capacidade', 'error');
+        } finally {
+            setAddingCapability(false);
         }
     }
 
@@ -496,18 +647,85 @@ export function Agents({ onNavigate }: AgentsProps) {
                     )}
                 </>
             ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {ALL_CAPABILITIES.map((capability) => (
-                        <div key={capability} className="bento-card space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                                <h3 className="text-base font-bold text-accent">{capabilityInfo[capability].title}</h3>
-                                <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
-                                    {capability}
-                                </span>
-                            </div>
-                            <p className="text-sm leading-relaxed text-text-dim">{capabilityInfo[capability].description}</p>
+                <div className="space-y-4">
+                    <div className="bento-card space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-base font-bold text-accent">Nova capacidade</h3>
+                            <span className="label-caps !mb-0">Prompt Enginer</span>
                         </div>
-                    ))}
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <input
+                                value={newCapabilityKey}
+                                onChange={(e) => setNewCapabilityKey(e.target.value)}
+                                placeholder="Chave (ex.: critical-thinking)"
+                                className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
+                            />
+                            <input
+                                value={newCapabilityTitle}
+                                onChange={(e) => setNewCapabilityTitle(e.target.value)}
+                                placeholder="Título"
+                                className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
+                            />
+                        </div>
+
+                        <input
+                            value={newCapabilityDescription}
+                            onChange={(e) => setNewCapabilityDescription(e.target.value)}
+                            placeholder="Descrição da capacidade"
+                            className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
+                        />
+
+                        <textarea
+                            value={newCapabilityPrompt}
+                            onChange={(e) => setNewCapabilityPrompt(e.target.value)}
+                            placeholder="Prompt base da nova capacidade"
+                            rows={4}
+                            className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none resize-none focus:border-primary/60 transition-colors"
+                        />
+
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => void handleAddPromptCapability()}
+                                disabled={addingCapability}
+                                className="rounded-xl bg-primary/90 hover:bg-primary px-4 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
+                            >
+                                {addingCapability ? 'Adicionando...' : 'Adicionar capacidade'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {promptCapabilities.map((capability) => (
+                            <div key={capability.key} className="bento-card space-y-3">
+                                <div className="flex items-start justify-between gap-2">
+                                    <h3 className="text-base font-bold text-accent">{capability.title}</h3>
+                                    <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
+                                        {capability.key}
+                                    </span>
+                                </div>
+
+                                <p className="text-sm leading-relaxed text-text-dim">{capability.description}</p>
+
+                                <textarea
+                                    value={promptDrafts[capability.key] ?? ''}
+                                    onChange={(e) => setPromptDrafts((prev) => ({ ...prev, [capability.key]: e.target.value }))}
+                                    rows={5}
+                                    className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none resize-none focus:border-primary/60 transition-colors"
+                                />
+
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={() => void handleSaveCapabilityPrompt(capability)}
+                                        disabled={savingPromptKey === capability.key}
+                                        className="rounded-xl bg-primary/90 hover:bg-primary px-3 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
+                                    >
+                                        {savingPromptKey === capability.key ? 'Salvando...' : 'Salvar prompt'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
