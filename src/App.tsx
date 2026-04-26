@@ -19,6 +19,7 @@ import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
 import { WorkspaceProvider } from './context/WorkspaceContext';
 import { RepositoryProvider } from './context/RepositoryContext';
+import { useRepository } from './context/RepositoryContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RepositorySelector } from './components/RepositorySelector';
 import { Dashboard } from './screens/Dashboard';
@@ -48,9 +49,13 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   onBack?: () => void;
   rightElement?: React.ReactNode;
   activeTab: string;
-}) => (
+}) => {
+  const { repository } = useRepository();
+  const repoPath = repository?.metadata?.localPath;
+
+  return (
   <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
-    <div className="flex items-center gap-4">
+    <div className="flex min-w-0 items-center gap-4">
       {onBack ? (
         <button
           onClick={onBack}
@@ -63,7 +68,7 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
           <Activity className="size-6" />
         </div>
       )}
-      <div>
+      <div className="min-w-0">
         {activeTab !== 'dashboard' && (
           <Breadcrumbs
             items={[
@@ -76,6 +81,11 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
         <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
         {subtitle && activeTab === 'dashboard' && (
           <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mt-1.5">{subtitle}</p>
+        )}
+        {repoPath && (
+          <p className="mt-1.5 max-w-[44vw] truncate font-mono text-[10px] text-text-dim" title={repoPath}>
+            {repoPath}
+          </p>
         )}
       </div>
     </div>
@@ -92,7 +102,8 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
       )}
     </div>
   </header>
-);
+  );
+};
 
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },

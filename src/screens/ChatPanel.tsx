@@ -135,12 +135,11 @@ export function TerminalPanel() {
   const repoPath = repository?.metadata?.localPath;
 
   return (
-    <aside className="flex h-screen w-[46vw] min-w-xl shrink-0 flex-col border-l border-border bg-[#0a0a0a]">
+    <aside className="flex h-screen w-[46vw] min-w-xl shrink-0 flex-col border-l border-border bg-[#0a0a0a] pb-24">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
         <Terminal className="size-4 text-primary shrink-0" />
         <span className="text-xs font-black uppercase tracking-widest text-text-dim">Terminais</span>
-        {repoPath && <p className="truncate font-mono text-[9px] text-text-dim">{repoPath}</p>}
         <div className="ml-auto flex items-center gap-2">
           <button onClick={clearAllTabs} title="Limpar todos" className="text-text-dim transition-colors hover:text-accent">
             <Trash2 className="size-3.5" />
