@@ -64,7 +64,7 @@ export function Login() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bento-card space-y-6">
+        <form id="kairos-login-form" onSubmit={handleSubmit} className="bento-card space-y-6">
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="label-caps px-1">Email Address</label>
@@ -113,9 +113,19 @@ export function Login() {
           </button>
 
           <div className="text-center pt-2">
-            <p className="text-[10px] text-text-dim uppercase tracking-widest font-bold">
-              Default password: <span className="text-accent">kairos2026</span>
-            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('system@kairos.local');
+                setPassword('kairos2026');
+                setTimeout(() => {
+                  document.getElementById('kairos-login-form')?.requestSubmit();
+                }, 50);
+              }}
+              className="text-[10px] text-text-dim uppercase tracking-widest font-bold hover:text-primary transition-colors cursor-pointer"
+            >
+              Quick Login <span className="text-accent">system@kairos.local</span>
+            </button>
           </div>
         </form>
       </motion.div>
