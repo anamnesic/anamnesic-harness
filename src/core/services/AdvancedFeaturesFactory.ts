@@ -138,7 +138,7 @@ export class AdvancedFeaturesFactory {
 
     // Phase 8: Metrics Service
     if (config.enableMonitoring !== false) {
-      this.metrics = new MetricsService(config.db);
+      this.metrics = MetricsService.getInstance(config.db);
       this.logger.info('[AdvancedFeatures] Metrics Service initialized');
     }
 

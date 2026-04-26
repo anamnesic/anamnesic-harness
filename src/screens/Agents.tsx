@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, X, Trash2, Bot, ListTodo } from 'lucide-react';
+import { Plus, X, Trash2, Bot, ListTodo, Play } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -126,6 +126,12 @@ export function Agents({ onNavigate }: AgentsProps) {
     const [submitting, setSubmitting] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
 
+    const [showTaskModal, setShowTaskModal] = useState(false);
+    const [taskAgent, setTaskAgent] = useState<Agent | null>(null);
+    const [taskDescription, setTaskDescription] = useState('');
+    const [taskInput, setTaskInput] = useState('{\n  "query": ""\n}');
+    const [taskType, setTaskType] = useState('research');
+
     const agents: Agent[] = (data as any)?.data ?? data ?? [];
 
     const totalAgents = agents.length;
@@ -138,6 +144,12 @@ export function Agents({ onNavigate }: AgentsProps) {
         setName('');
         setDescription('');
         setCapabilities(['reasoning']);
+    }
+
+    function closeTaskModal() {
+        setShowTaskModal(false);
+        setTaskAgent(null);
+        setTaskDescription('');
     }
 
     function toggleCapability(cap: AgentCapability) {
@@ -167,6 +179,41 @@ export function Agents({ onNavigate }: AgentsProps) {
             closeModal();
         } catch (e: any) {
             toast(e.message ?? 'Failed to create agent', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleAssignTask() {
+        if (!taskAgent || !taskDescription.trim()) { toast('Description is required', 'error'); return; }
+        if (!workspace) { toast('No active workspace', 'error'); return; }
+
+        setSubmitting(true);
+        try {
+            let input = {};
+            try {
+                input = JSON.parse(taskInput);
+            } catch (e) {
+                toast('Invalid JSON input', 'error');
+                setSubmitting(false);
+                return;
+            }
+
+            await apiFetch('/api/v1/tasks', {
+                method: 'POST',
+                body: JSON.stringify({
+                    workspaceId: workspace.id,
+                    agentId: taskAgent.id,
+                    type: taskType,
+                    description: taskDescription.trim(),
+                    input,
+                }),
+            });
+            toast('Task assigned to agent', 'success');
+            closeTaskModal();
+            refetch();
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to assign task', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -300,12 +347,102 @@ export function Agents({ onNavigate }: AgentsProps) {
                                 <span>
                                     <span className="text-red-400 font-semibold">{agent.tasksFailed ?? 0}</span> failed
                                 </span>
-                                <span className="ml-auto label-caps">{agent.workspaceId}</span>
+                                <button
+                                    onClick={() => { setTaskAgent(agent); setShowTaskModal(true); }}
+                                    className="ml-auto flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20 transition-colors"
+                                >
+                                    <Play className="size-2.5" />
+                                    Assign Task
+                                </button>
+                                <span className="label-caps !mb-0">{agent.workspaceId.slice(0, 8)}</span>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
+
+            {/* Task Assignment Modal */}
+            <AnimatePresence>
+                {showTaskModal && taskAgent && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        onClick={e => { if (e.target === e.currentTarget) closeTaskModal(); }}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                            transition={{ duration: 0.15 }}
+                            className="bento-card w-full max-w-md space-y-4"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <h3 className="font-bold text-base">Assign Task</h3>
+                                    <p className="text-[10px] text-text-dim uppercase tracking-widest font-bold">To: {taskAgent.name}</p>
+                                </div>
+                                <button onClick={closeTaskModal} className="rounded-lg p-1 text-text-dim hover:text-accent transition-colors">
+                                    <X className="size-4" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="label-caps block mb-1">Type</label>
+                                    <select
+                                        className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
+                                        value={taskType}
+                                        onChange={e => setTaskType(e.target.value)}
+                                    >
+                                        <option value="research">Research</option>
+                                        <option value="code">Code</option>
+                                        <option value="analysis">Analysis</option>
+                                        <option value="execution">Execution</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="label-caps block mb-1">Description</label>
+                                    <input
+                                        className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
+                                        value={taskDescription}
+                                        onChange={e => setTaskDescription(e.target.value)}
+                                        placeholder="What should the agent do?"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="label-caps block mb-1">Input JSON</label>
+                                    <textarea
+                                        className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm font-mono outline-none focus:border-primary/60 transition-colors resize-none"
+                                        rows={4}
+                                        value={taskInput}
+                                        onChange={e => setTaskInput(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-1">
+                                <button
+                                    onClick={closeTaskModal}
+                                    className="rounded-xl border border-border px-4 py-2 text-xs font-bold text-text-dim hover:border-border/80 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleAssignTask}
+                                    disabled={submitting}
+                                    className="rounded-xl bg-primary/90 hover:bg-primary px-4 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
+                                >
+                                    {submitting ? 'Assigning...' : 'Assign Task'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* New Agent Modal */}
             <AnimatePresence>

@@ -1,5 +1,6 @@
 import { DataSource, Repository } from 'typeorm';
 import { Agent, AgentState, AgentCapability } from '../entities/Agent';
+import { getEventBus } from '@/src/observation/EventBus';
 
 export interface CreateAgentInput {
   workspaceId: string;
@@ -68,7 +69,11 @@ export class AgentService {
       state,
       lastActivityAt: new Date(),
     });
-    return this.getById(id);
+    const agent = await this.getById(id);
+    if (agent) {
+      getEventBus().emit('agent:state', { id, state, agent });
+    }
+    return agent;
   }
 
   async incrementStats(id: string, success: boolean): Promise<void> {
@@ -82,6 +87,16 @@ export class AgentService {
     }
 
     await this.repo.update(id, { lastActivityAt: new Date() });
+    
+    const updated = await this.getById(id);
+    if (updated) {
+      getEventBus().emit('agent:stats', { 
+        id, 
+        tasksCompleted: updated.tasksCompleted, 
+        tasksFailed: updated.tasksFailed,
+        agent: updated
+      });
+    }
   }
 
   async delete(id: string): Promise<void> {

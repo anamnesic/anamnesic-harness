@@ -1,13 +1,18 @@
 export const runtime = 'nodejs';
 
+import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
+import { getWorkspaceId } from '@/app/api/_lib/workspace';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const workspaceId = getWorkspaceId(req);
         const db = await getDb();
         const { Agent } = await import('@/src/core/entities/Agent');
-        const list = await db.getRepository(Agent).find();
+        const list = await db.getRepository(Agent).find({
+            where: { workspaceId }
+        });
 
         const totalAgents = list.length;
         const activeAgents = list.filter(a => a.isActive).length;

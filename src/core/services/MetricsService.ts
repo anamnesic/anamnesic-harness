@@ -60,6 +60,7 @@ export interface Alert {
 }
 
 export class MetricsService {
+  private static instance: MetricsService;
   private logger = Logger.getInstance();
   private bus = getEventBus('metrics');
   private metrics: ExecutionMetric[] = [];
@@ -75,7 +76,14 @@ export class MetricsService {
     avgDurationCritical: 300000, // 5 minutos
   };
 
-  constructor(private db?: DataSource) {}
+  private constructor(private db?: DataSource) {}
+
+  public static getInstance(db?: DataSource): MetricsService {
+    if (!MetricsService.instance) {
+      MetricsService.instance = new MetricsService(db);
+    }
+    return MetricsService.instance;
+  }
 
   /**
    * Registrar execução de uma tarefa

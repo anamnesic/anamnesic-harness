@@ -18,7 +18,7 @@ interface WorkflowStats { total: number; active: number; totalExecutions: number
 interface RunsData { data?: Array<{ status: string }> | { items?: Array<{ status: string }>; total?: number }; count?: number }
 
 interface DashboardProps {
-  onNavigate?: (id: 'dashboard' | 'control' | 'agents' | 'projects' | 'security' | 'system' | 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat') => void;
+    onNavigate?: (id: 'dashboard' | 'workspaces' | 'control' | 'agents' | 'projects' | 'decisions' | 'apikeys' | 'security' | 'system' | 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat' | 'tasks') => void;
 }
 
 export function Dashboard({ onNavigate }: DashboardProps) {
@@ -28,11 +28,21 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     const { data: agentStats } = usePolling<AgentStats>('/api/v1/agents/stats', 5000);
     const { data: workflowStats } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 5000);
     const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
-    const { connected } = useEventStream<{ runs: Array<{ status: string }> }>(
+    const { toast } = useToast();
+
+    useEventStream<{ runs: Array<{ status: string }> }>(
         'runs.snapshot',
         snap => setLiveRuns(snap.runs ?? []),
     );
-    const { toast } = useToast();
+
+    useEventStream<any>('task:update', event => {
+        toast(`Task ${event.status}: ${event.task?.description?.slice(0, 30)}...`, 
+            event.status === 'completed' ? 'success' : event.status === 'failed' ? 'error' : 'info');
+    });
+
+    useEventStream<any>('agent:state', event => {
+        toast(`Agent ${event.agent?.name} is now ${event.state}`, 'info');
+    });
 
     const runningCount = liveRuns.filter(r => r.status === 'running').length;
     const pausedCount = liveRuns.filter(r => r.status === 'paused').length;
@@ -236,7 +246,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                                             <div className="p-2 rounded-lg bg-border text-accent group-hover:text-highlight transition-colors">
                                                 <Icon className="size-4" />
                                             </div>
-                                            <span className="text-sm font-medium text-accent group-hover:text-highlight transition-colors truncate max-w-[180px]">
+                                            <span className="text-sm font-medium text-accent group-hover:text-highlight transition-colors truncate max-w-45">
                                                 {label}
                                             </span>
                                         </div>
@@ -252,18 +262,18 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
                 {/* Infrastructure Card */}
                 <div
-                    className="bento-card col-span-4 lg:col-span-2 bg-no-repeat bg-cover bg-center overflow-hidden min-h-[160px]"
+                    className="bento-card col-span-4 lg:col-span-2 bg-no-repeat bg-cover bg-center overflow-hidden min-h-40"
                     style={{ backgroundImage: "url('https://images.unsplash.com/photo-1558494949-ef010cbdcc48?q=80&w=2000&auto=format&fit=crop')" }}
                 >
                     <div className="absolute inset-0 bg-bg/60 backdrop-blur-[2px]" />
                     <div className="relative z-10 mt-auto">
-                        <span className="label-caps !text-white/80">Infrastructure</span>
+                        <span className="label-caps text-white/80!">Infrastructure</span>
                         <h4 className="text-white font-bold text-lg">Snapshot Monitor</h4>
                         <p className="text-white/60 text-xs mt-1">All regions operational.</p>
                     </div>
                 </div>
             </div>
-            
+
             {/* Floating Chat Button */}
             {onNavigate && (
                 <motion.button

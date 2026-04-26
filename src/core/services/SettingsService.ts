@@ -22,7 +22,7 @@ export class SettingsService {
   }
 
   async getSettingsByWorkspace(workspaceId: string): Promise<Settings[]> {
-    return this.settingsRepo.find({ 
+    return this.settingsRepo.find({
       where: { workspaceId },
       order: { key: 'ASC' }
     });
@@ -41,7 +41,7 @@ export class SettingsService {
     isSystemSetting: boolean = false
   ): Promise<Settings> {
     let setting = await this.getSetting(workspaceId, key);
-    
+
     if (setting) {
       setting.value = value;
       setting.type = type;
@@ -71,7 +71,7 @@ export class SettingsService {
     // Override with workspace-specific settings if provided
     if (workspaceId) {
       const workspaceFlags = await this.getSettingsByWorkspace(workspaceId);
-      
+
       for (const setting of workspaceFlags) {
         if (setting.type === 'boolean' && setting.key in flags) {
           (flags as any)[setting.key] = setting.value === 'true';
@@ -104,8 +104,8 @@ export class SettingsService {
     for (const setting of settings) {
       if (setting.key.startsWith('ai.provider.')) {
         const providerKey = setting.key.replace('ai.provider.', '');
-        let parsedValue = setting.value;
-        
+        let parsedValue: unknown = setting.value;
+
         if (setting.type === 'boolean') {
           parsedValue = setting.value === 'true';
         } else if (setting.type === 'number') {
@@ -117,7 +117,7 @@ export class SettingsService {
             // Keep as string if JSON parsing fails
           }
         }
-        
+
         aiSettings[providerKey] = parsedValue;
       }
     }

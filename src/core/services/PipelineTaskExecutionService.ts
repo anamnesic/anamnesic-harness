@@ -173,24 +173,31 @@ Generate a response that includes:
 Format your response as JSON with fields: analysis, output, artifacts, status`;
 
       // Chamar completion via AIProvider
-      const response = await this.aiProvider.chat([
+      const modelId = process.env.Kairos_PIPELINE_MODEL || 'gpt-4o-mini';
+      const response = await this.aiProvider.chat(
         {
-          role: 'system',
-          content: systemMessage,
+          messages: [
+            {
+              role: 'system',
+              content: systemMessage,
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
         },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ]);
+        modelId,
+      );
+      const responseText = response.message.content;
 
       // Tentar fazer parse como JSON, senão usar como texto
-      let parsed = { output: response };
+      let parsed: { output: unknown; artifacts?: unknown[] } = { output: responseText };
       try {
-        parsed = JSON.parse(response);
+        parsed = JSON.parse(responseText);
       } catch {
         // Se não for JSON válido, continuar com texto
-        parsed = { output: response, artifacts: [] };
+        parsed = { output: responseText, artifacts: [] };
       }
 
       return {

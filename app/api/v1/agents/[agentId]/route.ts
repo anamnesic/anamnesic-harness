@@ -57,6 +57,11 @@ export async function DELETE(
         const service = new AgentService(db);
         const existing = await service.getById(agentId);
         if (!existing) return err('NOT_FOUND', 'Agent not found', 404);
+        
+        if (existing.state === 'running') {
+            return err('AGENT_ERROR', 'Cannot delete a running agent. Stop it first.', 400);
+        }
+
         await service.delete(agentId);
         return ok({ deleted: true });
     } catch {

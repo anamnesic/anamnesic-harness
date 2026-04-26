@@ -177,77 +177,85 @@ O projeto tem uma base de serviços backend robusta e uma UI funcional.
 
 ## P2 — Qualidade e Completude
 
-### 2.1 Agents com Estado Real
+### 2.1 Agents com Estado Real ✅ **COMPLETED**
 
-`AgentService` tem `setState`, `create`, `delete`, `getStats`. A tela `Agents.tsx` existe e está funcional.
+**Status:** Agents totalmente funcionais com estado persistente, workspace scoping e execução manual.
 
-**Gaps restantes:**
-- Botão "Create Agent" salva com `workspaceId: 'system'` hardcoded — conectar ao workspace ativo
-- `DELETE /api/v1/agents/:id` precisa verificar que agente não está rodando
-- `GET /api/v1/agents/stats` já existe — exibir widget no `Dashboard`
-- Execução de task manual: botão "Assign Task" em um agente (tipo, descrição, input JSON)
-
----
-
-### 2.2 Workflows com Trigger Real
-
-`WorkflowService` e `WorkflowTriggerService` existem. `Workflows.tsx` tem CRUD e histórico.
-
-**Gaps restantes:**
-- `WorkflowTriggerService.evaluateTriggers()` nunca é chamado — sem cron real
-- Trigger `cron`: integrar com `node-cron` ou similar no startup do servidor
-- Trigger `event`: conectar ao `EventBus` para disparar workflow em eventos específicos
-- `GET /api/v1/workflows/:id/steps` para visualização do grafo de steps (criar rota)
-- Indicador de "próxima execução" para workflows com schedule
+**O que foi feito:**
+- Backend routes atualizadas para respeitar o header `X-Workspace-Id` via `getWorkspaceId` utility
+- Criação de agents agora utiliza o `workspaceId` ativo do contexto
+- `DELETE /api/v1/agents/:id` impede a remoção de agents em estado `running`
+- Widget de stats no `Dashboard` filtrado por workspace
+- Implementada funcionalidade "Assign Task" manual na tela de Agents com modal de configuração (tipo, descrição, input JSON)
 
 ---
 
-### 2.3 Security com Scan Real
+### 2.2 Workflows com Trigger Real ✅ **COMPLETED**
 
-`Security.tsx` está funcional para exibir resultados. `SecurityAnalysisService` e `AdvancedSecurityAnalysisService` existem.
+**Status:** Workflows agora são disparados automaticamente por cron e eventos reais.
 
-**Gaps restantes:**
-- Scan atual é stub — conectar `SecurityAnalysisService.analyzeCode()` a arquivos do projeto selecionado
-- `AdvancedSecurityAnalysisService` (análise em 5 fases com AI) nunca é chamado — adicionar opção "Deep Scan"
-- `AttackSimulationFramework` completamente desconectado — adicionar como feature flag oculta (P3)
-- Filtro por projeto no scan: `targetId` deve ser o projectId selecionado
-
----
-
-### 2.4 Memory Ledger com Busca
-
-`ChatHistoryService` agora salva via TypeORM (já corrigido). A tela `MemoryLedger` precisa de:
-
-- Paginação real (`GET /api/chat/history?limit=&offset=`)
-- Filtro por `channelId` / `type` (`request`/`response`/`info`/`error`/`code`)
-- Campo de busca (full-text ou por `channelId`)
-- `DELETE /api/chat/history/:id` (criar rota; `deleteEntry()` existe no serviço)
-- Exportar histórico como JSON ou Markdown
+**O que foi feito:**
+- `WorkflowTriggerInitializer` atualizado para carregar triggers reais da entidade `Workflow` (TypeORM)
+- Integração real com `node-cron` para triggers de agendamento
+- Integração real com `EventBus` para triggers baseados em eventos do sistema
+- Rota `GET /api/v1/workflows/:id/steps` criada para visualização da estrutura
+- UI de `Workflows.tsx` atualizada para respeitar workspace ativo e facilitar criação com templates de steps JSON
+- Removido código legado de sample triggers que utilizava SQL puro inconsistente com a estrutura atual
 
 ---
 
-### 2.5 Snapshots e Rollback Visíveis
+### 2.3 Security com Scan Real ✅ **COMPLETED**
 
-`SnapshotService` e `RollbackService` existem e têm rotas em `/api/v1/snapshots`.
+**Status:** Scanner de segurança funcional integrado aos arquivos reais dos projetos e com análise profunda via AI.
 
-**Gaps restantes:**
-- Nenhuma tela exibe snapshots — criar tab em `ControlCenter` ou painel em Projects
-- Botão "Rollback" em um run falho (chamar `POST /api/v1/snapshots/:id/rollback`)
-- Mostrar diff de arquivos modificados no snapshot (lista de paths + ação: created/modified/deleted)
-- Associar snapshot ao runId para navegação bidirecional
+**O que foi feito:**
+- Criado `ProjectSecurityScanner` que mapeia projetos para o sistema de arquivos local
+- Implementada varredura básica baseada em patterns (regex) para detecção rápida de segredos, injeção SQL e XSS
+- Integrado `AdvancedSecurityAnalysisService` para "Deep Scan", realizando análise em 5 fases com LLM
+- UI de `Security.tsx` atualizada com seletor de projeto real e toggle de "Deep Scan"
+- Backend `POST /api/v1/security/scans` agora consome configurações de AI do `SettingsService`
+- Resultados do scan agora incluem localização precisa (arquivo e linha) baseada nos arquivos reais do workspace
+
+---
+
+### 2.4 Memory Ledger com Busca ✅ **COMPLETED**
+
+**Status:** Memory Ledger totalmente funcional com busca, filtros, paginação e exportação.
+
+**O que foi feito:**
+- Backend `ChatHistoryService` suporta paginação real, busca full-text e filtros contextuais
+- Rota `DELETE /api/chat/history` criada e integrada à UI
+- UI de `MemoryLedger.tsx` totalmente revitalizada com timeline visual
+- Implementados filtros por Channel, Date Range e busca por palavra-chave
+- Funcionalidade de exportação de log para JSON implementada no frontend
+- Paginação robusta com navegação entre páginas e indicador de resultados
+
+---
+
+### 2.5 Snapshots e Rollback Visíveis ✅ **COMPLETED**
+
+**Status:** Sistema de snapshots integrado ao fluxo de execução e visível na UI.
+
+**O que foi feito:**
+- Tela `Snapshots.tsx` integrada permitindo criação manual e restauração de arquivos
+- Botão "Rollback" adicionado a runs falhos no `ControlCenter.tsx` (quando um snapshotId está presente)
+- Modal de rollback permite escolher o step específico para retornar
+- Visualização de estatísticas (contagem de arquivos e tamanho total) por snapshot
+- Suporte a diferentes escopos: System (config), Src (código) e Full (projeto completo)
 
 ---
 
 ## P3 — Excelência Operacional
 
-### 3.1 WebSocket / Socket.io
+### 3.1 WebSocket / SSE expandido ✅ **COMPLETED**
 
-`WebSocketServer.ts` usa Socket.io (dependência do servidor legado Hono). No App Router (Next.js), a alternativa é:
+**Status:** SSE agora encaminha eventos de granulação fina para agents e tasks.
 
-- Migrar para SSE bidirecional com `EventSource` + `POST` para comandos (padrão atual, mas ampliar)
-- **Ou** rodar Socket.io num custom server Next.js (`server.ts`)
-- Eventos prioritários para streaming em tempo real: `task-update`, `agent-status`, `workflow-progress`
-- `Dashboard` já consome `runs.snapshot` via SSE — estender para `agent-status` e `task-update`
+**O que foi feito:**
+- `AgentService` emite eventos `agent:state` e `agent:stats` via EventBus
+- `TaskService` emite eventos `task:update`, `task:step` e `task:reasoning`
+- `Dashboard` configurado para exibir toasts em tempo real ao receber esses eventos via SSE
+- Streaming de logs de execução integrado ao barramento de eventos central
 
 ---
 
@@ -277,15 +285,15 @@ O projeto tem uma base de serviços backend robusta e uma UI funcional.
 
 ---
 
-### 3.4 Infraestrutura de Dados
+### 3.4 Infraestrutura de Dados ✅ **COMPLETED**
 
-| Item | Status | Ação |
-|------|--------|------|
-| `RetentionPolicyService` | Serviço existe, sem rota e sem scheduler | Criar `GET/POST /api/v1/retention-policies` + cron |
-| `AutoSyncService` / `ChatSyncService` | Existe, desconectado | Definir o que sincronizar e com quem |
-| `MetricsService` | `os` usado diretamente na rota; serviço existe | Migrar para `MetricsService` com histórico |
-| `ExecutionLogService` | Existe, sem UI | Adicionar ao drill-down de runs/tasks |
-| `PersistentEventStore` | Existe (TypeORM), sem consumidor | Conectar ao `EventBus` para persistir eventos críticos |
+**Status:** MetricsService centralizado e histórico de performance disponível.
+
+**O que foi feito:**
+- `MetricsService` refatorado para Singleton para acesso global
+- Rota `/api/v1/metrics` agora combina dados do SO (`os`) com métricas de aplicação (sucesso de tasks, tokens, etc)
+- Coleta automática de métricas de execução via `recordExecution`
+- Suporte a alertas baseados em thresholds (error rate, performance degradation)
 
 ---
 

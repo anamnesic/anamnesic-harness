@@ -1,5 +1,5 @@
 import { Logger } from '../utils/Logger';
-import { AIProvider, ModelConfig } from '../providers/AIProvider';
+import { AIProvider } from '../providers/AIProvider';
 import { getEventBus } from '../events';
 
 /**
@@ -46,6 +46,13 @@ export class ModelFallbackService {
     this.initializeModelStats();
   }
 
+  private normalizeMessages(messages: Array<{ role: string; content: string }>) {
+    return messages.map(m => ({
+      role: m.role === 'system' || m.role === 'assistant' || m.role === 'tool' ? m.role : 'user',
+      content: m.content,
+    })) as Array<{ role: 'system' | 'user' | 'assistant' | 'tool'; content: string }>;
+  }
+
   /**
    * Executar com estratégia de fallback
    */
@@ -90,17 +97,19 @@ export class ModelFallbackService {
           }
 
           // Tentar execução com modelo atual
-          const response = await this.aiProvider.chat(messages, {
+          const response = await this.aiProvider.chat(
+            {
+              messages: this.normalizeMessages(messages),
+              stream: options?.streaming,
+            },
             model,
-            streaming: options?.streaming,
-            signal: options?.signal,
-          });
+          );
 
           const duration = Date.now() - startTime;
           const result: ModelExecutionResult = {
             success: true,
             model,
-            output: typeof response === 'string' ? response : String(response),
+            output: response.message.content,
             retriesUsed: retryCount,
             totalDuration: duration,
             timestamp: new Date(),
@@ -184,7 +193,10 @@ export class ModelFallbackService {
           await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        const response = await this.aiProvider.chat(messages, { model });
+        const response = await this.aiProvider.chat(
+          { messages: this.normalizeMessages(messages) },
+          model,
+        );
 
         const duration = Date.now() - startTime;
         this.recordSuccess(model, duration);
@@ -192,7 +204,7 @@ export class ModelFallbackService {
         return {
           success: true,
           model,
-          output: typeof response === 'string' ? response : String(response),
+          output: response.message.content,
           retriesUsed: attempt,
           totalDuration: duration,
           timestamp: new Date(),

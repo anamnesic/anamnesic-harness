@@ -17,6 +17,7 @@ import {
   Bot,
   Camera,
   Lightbulb,
+  Key,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -33,9 +34,10 @@ import { Workflows } from './screens/Workflows';
 import { Security } from './screens/Security';
 import { Snapshots } from './screens/Snapshots';
 import { ChatPanel } from './screens/ChatPanel';
-import { DecisionsPanel } from './screens/DecisionsPanel';
 import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
+import { Workspaces } from './screens/Workspaces';
+import { ApiKeysHub } from './screens/ApiKeysHub';
 
 const Header = ({ title, subtitle, onBack, rightElement }: {
   title: string;
@@ -45,7 +47,7 @@ const Header = ({ title, subtitle, onBack, rightElement }: {
 }) => (
   <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
     <div className="flex items-center gap-4">
-        <WorkspaceSelector />
+      <WorkspaceSelector />
       {onBack ? (
         <button
           onClick={onBack}
@@ -77,10 +79,12 @@ const Header = ({ title, subtitle, onBack, rightElement }: {
 
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
+  { id: 'workspaces', label: 'Workspaces', icon: Boxes },
   { id: 'control', label: 'Safety', icon: Shield },
   { id: 'agents', label: 'Agents', icon: Bot },
   { id: 'projects', label: 'Projects', icon: FolderKanban },
   { id: 'decisions', label: 'Decisions', icon: Lightbulb },
+  { id: 'apikeys', label: 'API Keys', icon: Key },
   { id: 'security', label: 'Audit', icon: ShieldCheck },
   { id: 'system', label: 'Core', icon: Settings2 },
 ] as const;
@@ -126,6 +130,8 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
           </div>
         ),
       };
+    case 'workspaces':
+      return { title: 'Workspaces', subtitle: 'Workspace Management', element: <Workspaces />, onBack: goHome, rightElement: undefined };
     case 'ledger':
       return { title: 'Ledger', subtitle: 'Historical Retrieval', element: <MemoryLedger />, onBack: goHome, rightElement: undefined };
     case 'observers':
@@ -161,6 +167,8 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
       return { title: 'Projects', subtitle: 'Manage Projects', element: <Projects />, onBack: goHome, rightElement: undefined };
     case 'decisions':
       return { title: 'Decisions', subtitle: 'Project Decision Log', element: <Decisions />, onBack: goHome, rightElement: undefined };
+    case 'apikeys':
+      return { title: 'API Keys', subtitle: 'Workspace Project Credentials', element: <ApiKeysHub />, onBack: goHome, rightElement: undefined };
     case 'security':
       return { title: 'Security', subtitle: 'Vulnerability Audit', element: <Security />, onBack: goHome, rightElement: undefined };
     case 'system':
@@ -194,29 +202,29 @@ export default function App() {
   return (
     <WorkspaceProvider>
       <ToastProvider>
-      <div className="flex min-h-screen flex-col bg-bg font-sans text-highlight selection:bg-primary/20">
-        <Header
-          title={config.title}
-          subtitle={config.subtitle}
-          onBack={config.onBack}
-          rightElement={config.rightElement}
-        />
-        <main className="flex-1 flex flex-col overflow-x-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              transition={{ duration: 0.2 }}
-              className="flex-1 flex flex-col"
-            >
-              {config.element}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-        <BottomNav active={activeTab} onChange={setActiveTab} />
-      </div>
+        <div className="flex min-h-screen flex-col bg-bg font-sans text-highlight selection:bg-primary/20">
+          <Header
+            title={config.title}
+            subtitle={config.subtitle}
+            onBack={config.onBack}
+            rightElement={config.rightElement}
+          />
+          <main className="flex-1 flex flex-col overflow-x-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 flex flex-col"
+              >
+                {config.element}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+          <BottomNav active={activeTab} onChange={setActiveTab} />
+        </div>
       </ToastProvider>
     </WorkspaceProvider>
   );

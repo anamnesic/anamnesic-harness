@@ -23,6 +23,7 @@ const SNAPSHOTS_BASE = path.join(
  */
 export class SnapshotService {
   private readonly _snapshotsRoot: string;
+  private readonly _legacySnapshots = new Map<string, { pipelineId: string; phaseIndex: number }>();
 
   constructor(workspaceRoot: string) {
     // Usa hash curto do workspace para evitar colisoes entre projetos
@@ -50,13 +51,46 @@ export class SnapshotService {
    * Cria snapshot de um arquivo ANTES de ser modificado ou deletado.
    * Deve ser chamado por SafetyNetIntegration ANTES de escrever o arquivo.
    */
+  async createSnapshot(description: string): Promise<string>;
   async createSnapshot(
     pipelineId: string,
     phaseIndex: number,
     phaseName: string,
     relativePath: string,
     action: SnapshotFileAction,
-  ): Promise<void> {
+  ): Promise<void>;
+  async createSnapshot(
+    pipelineIdOrDescription: string,
+    phaseIndex?: number,
+    phaseName?: string,
+    relativePath?: string,
+    action?: SnapshotFileAction,
+  ): Promise<void | string> {
+    // Legacy compatibility mode: create an empty snapshot marker and return ID.
+    if (
+      phaseIndex === undefined ||
+      phaseName === undefined ||
+      relativePath === undefined ||
+      action === undefined
+    ) {
+      const legacyId = crypto.randomUUID();
+      const pipelineId = `legacy-${legacyId}`;
+      const legacyPhaseIndex = 0;
+
+      await fs.mkdir(this._phaseDir(pipelineId, legacyPhaseIndex), { recursive: true });
+      await this._saveMetadata(pipelineId, legacyPhaseIndex, {
+        pipelineId,
+        phaseIndex: legacyPhaseIndex,
+        phaseName: pipelineIdOrDescription || 'Legacy Snapshot',
+        timestamp: new Date().toISOString(),
+        files: [],
+      });
+
+      this._legacySnapshots.set(legacyId, { pipelineId, phaseIndex: legacyPhaseIndex });
+      return legacyId;
+    }
+
+    const pipelineId = pipelineIdOrDescription;
     const phaseDir = this._phaseDir(pipelineId, phaseIndex);
     await fs.mkdir(phaseDir, { recursive: true });
 
@@ -165,8 +199,65 @@ export class SnapshotService {
   /**
    * Recupera os metadados de snapshot de uma fase.
    */
-  async getSnapshot(pipelineId: string, phaseIndex: number): Promise<SnapshotMetadata | null> {
-    return this._loadMetadata(pipelineId, phaseIndex);
+  async getSnapshot(snapshotId: string): Promise<SnapshotMetadata | null>;
+  async getSnapshot(pipelineId: string, phaseIndex: number): Promise<SnapshotMetadata | null>;
+  async getSnapshot(pipelineIdOrSnapshotId: string, phaseIndex?: number): Promise<SnapshotMetadata | null> {
+    if (phaseIndex === undefined) {
+      const resolved = this._legacySnapshots.get(pipelineIdOrSnapshotId);
+      if (!resolved) return null;
+      return this._loadMetadata(resolved.pipelineId, resolved.phaseIndex);
+    }
+    return this._loadMetadata(pipelineIdOrSnapshotId, phaseIndex);
+  }
+
+  async listSnapshots(pipelineId: string): Promise<SnapshotMetadata[]> {
+    const baseDir = path.join(this._snapshotsRoot, pipelineId);
+    if (!fsSync.existsSync(baseDir)) return [];
+
+    const phases = await fs.readdir(baseDir, { withFileTypes: true });
+    const snapshots: SnapshotMetadata[] = [];
+
+    for (const phaseDir of phases) {
+      if (!phaseDir.isDirectory()) continue;
+      const phaseIndex = Number(phaseDir.name);
+      if (!Number.isFinite(phaseIndex)) continue;
+      const metadata = await this._loadMetadata(pipelineId, phaseIndex);
+      if (metadata) snapshots.push(metadata);
+    }
+
+    return snapshots.sort((a, b) => a.phaseIndex - b.phaseIndex);
+  }
+
+  getSnapshotFilesDir(pipelineId: string, phaseIndex: number): string {
+    return this._phaseDir(pipelineId, phaseIndex);
+  }
+
+  async deleteSnapshot(snapshotId: string): Promise<boolean>;
+  async deleteSnapshot(pipelineId: string, phaseIndex: number): Promise<boolean>;
+  async deleteSnapshot(pipelineIdOrSnapshotId: string, phaseIndex?: number): Promise<boolean> {
+    if (phaseIndex === undefined) {
+      const resolved = this._legacySnapshots.get(pipelineIdOrSnapshotId);
+      if (!resolved) return false;
+      await fs.rm(this._phaseDir(resolved.pipelineId, resolved.phaseIndex), { recursive: true, force: true });
+      this._legacySnapshots.delete(pipelineIdOrSnapshotId);
+      return true;
+    }
+
+    await fs.rm(this._phaseDir(pipelineIdOrSnapshotId, phaseIndex), { recursive: true, force: true });
+    return true;
+  }
+
+  async restoreSnapshot(snapshotId: string, workspaceRoot?: string): Promise<boolean> {
+    const resolved = this._legacySnapshots.get(snapshotId);
+    if (!resolved) return false;
+
+    const result = await this.restore(
+      resolved.pipelineId,
+      resolved.phaseIndex,
+      workspaceRoot || process.cwd(),
+    );
+
+    return result.errors.length === 0;
   }
 
   /**

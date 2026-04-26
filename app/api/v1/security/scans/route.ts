@@ -8,11 +8,17 @@ import { ok, err } from '@/app/api/_lib/response';
 const VALID_TYPES = ['code', 'system', 'api', 'dependency', 'infrastructure'] as const;
 type ScanType = typeof VALID_TYPES[number];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const { searchParams } = new URL(req.url);
+        const targetId = searchParams.get('targetId');
+        
         const db = await getDb();
         const { SecurityAnalysis } = await import('@/src/core/entities/SecurityAnalysis');
-        const scans = await db.getRepository(SecurityAnalysis).find({
+        const repo = db.getRepository(SecurityAnalysis);
+        
+        const scans = await repo.find({
+            where: targetId ? { targetId } : {},
             order: { analyzedAt: 'DESC' },
             take: 50,
         });
@@ -42,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     const workspaceId = typeof body?.workspaceId === 'string' && body.workspaceId.trim()
         ? body.workspaceId.trim()
-        : null;
+        : 'system';
     const targetId = typeof body?.targetId === 'string' && body.targetId.trim()
         ? body.targetId.trim()
         : null;
@@ -51,16 +57,20 @@ export async function POST(req: NextRequest) {
         const db = await getDb();
         
         // For code scans, use the real project scanner
-        if (type === 'code' && targetId && workspaceId) {
+        if (type === 'code' && targetId) {
             const { ProjectSecurityScanner } = await import('@/src/core/services/ProjectSecurityScanner');
             const { OpenAIProvider } = await import('@/src/core/providers/openai-provider');
+            const { SettingsService } = await import('@/src/core/services/SettingsService');
             
-            // Create an OpenAI provider for security analysis
+            const settingsService = new SettingsService(db);
+            const aiSettings = await settingsService.getAISettings(workspaceId);
+            
+            // Create an OpenAI provider for security analysis using settings
             const aiProvider = new OpenAIProvider({
-                model: 'gpt-4',
+                model: aiSettings.reasoningModel || 'gpt-4',
                 temperature: 0.3,
                 maxTokens: 4096,
-            }, process.env.OPENAI_API_KEY);
+            }, aiSettings.apiKey || process.env.OPENAI_API_KEY);
             
             const scanner = new ProjectSecurityScanner(db, aiProvider);
             

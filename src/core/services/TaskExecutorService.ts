@@ -66,7 +66,7 @@ export class TaskExecutorService {
   private maxConcurrentExecutions: number = 10;
   private executionQueue: string[] = [];
 
-  constructor(private aiProvider?: AIProvider) {}
+  constructor(private aiProvider?: AIProvider) { }
 
   /**
    * Execute a task in a sandboxed environment
@@ -297,28 +297,34 @@ export class TaskExecutorService {
     // Parse analysis request
     const analysisType = code.environment?.type as string || 'generic';
     const input = code.environment?.input as string || '';
+    const modelId = process.env.Kairos_ANALYSIS_MODEL || 'gpt-4o-mini';
 
     // Create analysis prompt
     const systemPrompt = this.getAnalysisSystemPrompt(analysisType);
-    const response = await this.aiProvider.chat([
+    const response = await this.aiProvider.chat(
       {
-        role: 'system',
-        content: systemPrompt,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: input,
+          },
+        ],
       },
-      {
-        role: 'user',
-        content: input,
-      },
-    ]);
+      modelId,
+    );
 
-    context.metrics.tokensUsed = response.tokensUsed || 0;
+    context.metrics.tokensUsed = response.usage?.totalTokens || 0;
 
     // Parse analysis results
     return {
       type: analysisType,
-      result: response.message,
-      analysis: this.parseAnalysisResult(response.message, analysisType),
-      tokensUsed: response.tokensUsed,
+      result: response.message.content,
+      analysis: this.parseAnalysisResult(response.message.content, analysisType),
+      tokensUsed: response.usage?.totalTokens || 0,
     };
   }
 

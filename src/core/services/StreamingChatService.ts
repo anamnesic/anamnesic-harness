@@ -1,7 +1,7 @@
 import { Context } from 'hono';
 import { Logger } from '../utils/Logger';
 import { AIProvider } from '../providers/AIProvider';
-import { ChatMessage } from '../database';
+import type { ChatMessage } from '../chat';
 import { getEventBus } from '../events';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,9 +15,10 @@ import { v4 as uuidv4 } from 'uuid';
  */
 
 export interface StreamConfig {
-  channel: string;
+  channel?: string;
   pipelineId?: string;
   userId: string;
+  modelId?: string;
   maxTokens?: number;
   temperature?: number;
 }
@@ -40,7 +41,7 @@ export class StreamingChatService {
   private activeStreams: Map<string, AbortController> = new Map();
   private bus = getEventBus('streaming-chat');
 
-  constructor(private aiProvider: AIProvider) {}
+  constructor(private aiProvider: AIProvider) { }
 
   /**
    * Criar stream de resposta para requisição HTTP
@@ -52,12 +53,14 @@ export class StreamingChatService {
   ): Promise<void> {
     const streamId = uuidv4();
     const abortController = new AbortController();
+    const channel = config.channel ?? 'default';
+    const modelId = config.modelId ?? process.env.Kairos_STREAM_MODEL ?? 'gpt-4o-mini';
 
     this.activeStreams.set(streamId, abortController);
 
     this.logger.info('[StreamingChat] Stream created', {
       streamId,
-      channel: config.channel,
+      channel,
       messageCount: messages.length,
     });
 
@@ -78,47 +81,40 @@ export class StreamingChatService {
       c.text(`data: ${JSON.stringify(startMessage)}\n\n`);
 
       // Chamar LLM com streaming
-      const response = await this.aiProvider.chat(
-        messages.map(m => ({
-          role: m.sender === 'user' ? 'user' : 'assistant',
-          content: m.content,
-        })),
+      const stream = this.aiProvider.chatStream(
         {
-          streaming: true,
-          signal: abortController.signal,
-        }
+          messages: messages.map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.content,
+          })),
+          stream: true,
+          maxTokens: config.maxTokens,
+          temperature: config.temperature,
+        },
+        modelId,
       );
 
-      // Se resposta for stream, consumir chunk por chunk
-      if (typeof response === 'string') {
-        // Resposta simples, enviar como single chunk
+      for await (const partial of stream) {
+        if (abortController.signal.aborted) {
+          break;
+        }
+
+        const content = partial.message?.content;
+        if (!content) {
+          continue;
+        }
+
         const chunkMessage: StreamMessage = {
           id: streamId,
           type: 'chunk',
-          content: response,
+          content,
           timestamp: new Date().toISOString(),
         };
 
         c.text(`data: ${JSON.stringify(chunkMessage)}\n\n`);
-      } else {
-        // Resposta é iterável/stream
-        for await (const chunk of response as AsyncIterable<string>) {
-          if (abortController.signal.aborted) {
-            break;
-          }
 
-          const chunkMessage: StreamMessage = {
-            id: streamId,
-            type: 'chunk',
-            content: chunk,
-            timestamp: new Date().toISOString(),
-          };
-
-          c.text(`data: ${JSON.stringify(chunkMessage)}\n\n`);
-
-          // Pequeno delay para permitir client cancelar
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
+        // Pequeno delay para permitir client cancelar
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
 
       // Emitir evento de conclusão
@@ -133,7 +129,7 @@ export class StreamingChatService {
       // Emitir evento no bus
       await this.bus.emit('chat:message:streamed', {
         streamId,
-        channel: config.channel,
+        channel,
         pipelineId: config.pipelineId,
         userId: config.userId,
         timestamp: new Date().toISOString(),

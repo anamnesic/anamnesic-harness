@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download, ScrollText, Undo2, X, Plus, Target, Clock, Shield, AlertTriangle, CheckCircle, Play } from 'lucide-react';
+import { Download, ScrollText, Undo2, X, Plus, Target, Clock, Shield, AlertTriangle, CheckCircle, Play, RotateCcw } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -106,6 +106,11 @@ export function ControlCenter() {
         } catch (e: any) {
             toast(e.message ?? 'Resume failed', 'error');
         }
+    }
+
+    function handleRollbackRun(runId: string, snapshotId: string) {
+        setRollbackRunId(runId);
+        setRollbackStep('0');
     }
 
     async function createPlan() {
@@ -1042,6 +1047,15 @@ export function ControlCenter() {
                                                             >
                                                                 {selectedRunForTasks === run.id ? 'Hide Tasks' : 'View Tasks'}
                                                             </button>
+                                                            {run.status === 'failed' && (run as any).snapshotId && (
+                                                                <button
+                                                                    onClick={() => handleRollbackRun(run.id, (run as any).snapshotId)}
+                                                                    className="text-xs font-bold uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <RotateCcw className="size-3" />
+                                                                    Rollback
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     

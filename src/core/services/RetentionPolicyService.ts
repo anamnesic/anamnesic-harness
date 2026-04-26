@@ -33,7 +33,7 @@ export interface CleanupResult {
 export class RetentionPolicyService {
   private logger = Logger.getInstance();
   private bus = getEventBus('retention-policy');
-  private cleanupSchedule: NodeJS.Timer | null = null;
+  private cleanupSchedule: NodeJS.Timeout | null = null;
   private isRunning = false;
 
   private readonly defaultPolicy: RetentionPolicy = {

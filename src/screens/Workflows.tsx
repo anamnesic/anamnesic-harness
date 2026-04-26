@@ -7,6 +7,7 @@ import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
+import { useWorkspace } from '@/src/context/WorkspaceContext';
 
 type WorkflowStatus = 'active' | 'paused' | 'archived';
 type TriggerType = 'cron' | 'event' | 'manual' | 'webhook';
@@ -169,6 +170,7 @@ function HistoryPanel({ workflowId, workflowName, onBack }: { workflowId: string
 export function Workflows() {
     const { data, loading, refetch } = useApi<any>('/api/v1/workflows');
     const { toast } = useToast();
+    const { workspace } = useWorkspace();
 
     const [showModal, setShowModal] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -176,9 +178,8 @@ export function Workflows() {
 
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [workspaceId, setWorkspaceId] = useState('system');
     const [schedule, setSchedule] = useState('');
-    const [stepsJson, setStepsJson] = useState('');
+    const [stepsJson, setStepsJson] = useState('[\n  {\n    "id": "s1",\n    "name": "Initial Analysis",\n    "agentId": "agent-uuid",\n    "taskType": "research",\n    "input": { "query": "Analyze project structure" }\n  }\n]');
     const [triggerType, setTriggerType] = useState<TriggerType>('manual');
 
     const workflows: Workflow[] = (data as any)?.data ?? data ?? [];
@@ -196,14 +197,14 @@ export function Workflows() {
         setShowModal(false);
         setName('');
         setDescription('');
-        setWorkspaceId('system');
         setSchedule('');
-        setStepsJson('');
+        setStepsJson('[\n  {\n    "id": "s1",\n    "name": "Initial Analysis",\n    "agentId": "agent-uuid",\n    "taskType": "research",\n    "input": { "query": "Analyze project structure" }\n  }\n]');
         setTriggerType('manual');
     }
 
     async function handleSubmit() {
         if (!name.trim()) { toast('Name is required', 'error'); return; }
+        if (!workspace) { toast('No active workspace', 'error'); return; }
 
         let parsedSteps: WorkflowStep[] = [];
         if (stepsJson.trim()) {
@@ -223,7 +224,7 @@ export function Workflows() {
                 body: JSON.stringify({
                     name: name.trim(),
                     description: description.trim() || undefined,
-                    workspaceId: workspaceId.trim() || 'system',
+                    workspaceId: workspace.id,
                     schedule: schedule.trim() || undefined,
                     steps: parsedSteps,
                     triggers: [{ type: triggerType, config: {} }],
@@ -455,16 +456,6 @@ export function Workflows() {
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
                                         placeholder="Optional description"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="label-caps block mb-1">Workspace ID</label>
-                                    <input
-                                        className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors font-mono"
-                                        value={workspaceId}
-                                        onChange={e => setWorkspaceId(e.target.value)}
-                                        placeholder="system"
                                     />
                                 </div>
 

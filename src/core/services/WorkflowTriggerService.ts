@@ -2,7 +2,7 @@ import { Logger } from '../utils/Logger';
 import { getEventBus } from '../events';
 import { EventEmitter } from 'events';
 import chokidar from 'chokidar';
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -73,8 +73,8 @@ export class WorkflowTriggerService extends EventEmitter {
   private bus = getEventBus('workflow-triggers');
   private triggers: Map<string, WorkflowTrigger> = new Map();
   private executions: Map<string, TriggerExecution> = new Map();
-  private fileWatchers: Map<string, chokidar.FSWatcher> = new Map();
-  private cronJobs: Map<string, cron.ScheduledTask> = new Map();
+  private fileWatchers: Map<string, ReturnType<typeof chokidar.watch>> = new Map();
+  private cronJobs: Map<string, ScheduledTask> = new Map();
 
   /**
    * Registrar trigger de evento

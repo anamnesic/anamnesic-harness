@@ -3,11 +3,13 @@ export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
+import { getWorkspaceId } from '@/app/api/_lib/workspace';
 
 export async function GET(req: NextRequest) {
     try {
+        const workspaceIdFromCtx = getWorkspaceId(req);
         const { searchParams } = new URL(req.url);
-        const workspaceId = searchParams.get('workspaceId');
+        const workspaceId = searchParams.get('workspaceId') || workspaceIdFromCtx;
         const agentId = searchParams.get('agentId');
         const status = searchParams.get('status');
         const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);

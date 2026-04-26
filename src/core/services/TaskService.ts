@@ -1,5 +1,6 @@
 import { DataSource, Repository } from 'typeorm';
 import { Task, TaskStatus, TaskType, TaskStep, ReasoningContext } from '../entities/Task';
+import { getEventBus } from '@/src/observation/EventBus';
 
 export interface CreateTaskInput {
   workspaceId: string;
@@ -70,7 +71,9 @@ export class TaskService {
       status: 'running',
       startedAt: new Date(),
     });
-    return this.getById(id);
+    const task = await this.getById(id);
+    if (task) getEventBus().emit('task:update', { id, status: 'running', task });
+    return task;
   }
 
   async complete(id: string, output: Record<string, any>): Promise<Task | null> {
@@ -87,7 +90,9 @@ export class TaskService {
       completedAt: new Date(),
       durationMs,
     });
-    return this.getById(id);
+    const updated = await this.getById(id);
+    if (updated) getEventBus().emit('task:update', { id, status: 'completed', task: updated });
+    return updated;
   }
 
   async fail(id: string, error: string): Promise<Task | null> {
@@ -104,7 +109,9 @@ export class TaskService {
       completedAt: new Date(),
       durationMs,
     });
-    return this.getById(id);
+    const updated = await this.getById(id);
+    if (updated) getEventBus().emit('task:update', { id, status: 'failed', task: updated });
+    return updated;
   }
 
   async addStep(id: string, step: TaskStep): Promise<void> {
@@ -113,25 +120,33 @@ export class TaskService {
 
     const history = [...task.history, step];
     await this.repo.update(id, { history });
+    getEventBus().emit('task:step', { id, step });
   }
 
   async setReasoning(id: string, reasoning: ReasoningContext): Promise<void> {
     await this.repo.update(id, { reasoning });
+    getEventBus().emit('task:reasoning', { id, reasoning });
   }
 
   async pause(id: string): Promise<Task | null> {
     await this.repo.update(id, { status: 'paused' });
-    return this.getById(id);
+    const task = await this.getById(id);
+    if (task) getEventBus().emit('task:update', { id, status: 'paused', task });
+    return task;
   }
 
   async resume(id: string): Promise<Task | null> {
     await this.repo.update(id, { status: 'running' });
-    return this.getById(id);
+    const task = await this.getById(id);
+    if (task) getEventBus().emit('task:update', { id, status: 'running', task });
+    return task;
   }
 
   async cancel(id: string): Promise<Task | null> {
     await this.repo.update(id, { status: 'cancelled' });
-    return this.getById(id);
+    const task = await this.getById(id);
+    if (task) getEventBus().emit('task:update', { id, status: 'cancelled', task });
+    return task;
   }
 
   async getStats(workspaceId: string): Promise<{

@@ -2,7 +2,7 @@ import { Logger } from '../utils/Logger';
 import { ChatService } from '../chat';
 import { ChatHistoryService } from './ChatHistoryService';
 import { getEventBus } from '../events';
-import { ChatMessage } from '../database';
+import type { ChatMessage } from '../chat';
 
 /**
  * Chat Sync Service

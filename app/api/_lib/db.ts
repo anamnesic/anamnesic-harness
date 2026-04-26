@@ -61,7 +61,6 @@ async function initializeWorkflowTriggers(database: DataSource): Promise<void> {
         const initializer = new WorkflowTriggerInitializer(triggerService);
         
         await initializer.initialize(database);
-        await initializer.createSampleTriggers(database);
         
         console.log('Workflow triggers initialized successfully');
     } catch (error) {

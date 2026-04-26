@@ -25,14 +25,14 @@ export class WorkflowTriggerInitializer {
     try {
       this.logger.info('Initializing workflow triggers from database');
 
-      // Load workflow triggers from database
-      const triggerRecords = await this.loadTriggersFromDb(db);
+      // Load workflows with triggers from database
+      const workflows = await this.loadWorkflowsWithTriggers(db);
       
-      this.logger.info(`Found ${triggerRecords.length} workflow triggers to initialize`);
+      this.logger.info(`Found ${workflows.length} workflows to initialize triggers for`);
 
-      // Initialize each trigger
-      for (const triggerRecord of triggerRecords) {
-        await this.initializeTrigger(triggerRecord);
+      // Initialize triggers for each workflow
+      for (const workflow of workflows) {
+        await this.initializeWorkflowTriggers(workflow);
       }
 
       // Connect to EventBus for real-time event triggers
@@ -46,97 +46,78 @@ export class WorkflowTriggerInitializer {
   }
 
   /**
-   * Load trigger records from database
+   * Load workflow records from database
    */
-  private async loadTriggersFromDb(db: DataSource): Promise<any[]> {
+  private async loadWorkflowsWithTriggers(db: DataSource): Promise<any[]> {
     try {
-      // Try to get triggers from a WorkflowTrigger entity if it exists
-      const queryRunner = db.createQueryRunner();
-      
-      // Check if workflow_triggers table exists
-      const tableExists = await queryRunner.hasTable('workflow_triggers');
-      
-      if (!tableExists) {
-        this.logger.info('Workflow triggers table does not exist, skipping initialization');
-        return [];
-      }
-
-      // Load triggers from database
-      const triggers = await db.query(`
-        SELECT * FROM workflow_triggers 
-        WHERE enabled = true 
-        ORDER BY created_at DESC
-      `);
-
-      await queryRunner.release();
-      return triggers || [];
+      const { Workflow } = await import('@/src/core/entities/Workflow');
+      const repo = db.getRepository(Workflow);
+      return await repo.find({ where: { status: 'active' } });
     } catch (error) {
-      this.logger.error('Failed to load triggers from database', { error });
+      this.logger.error('Failed to load workflows from database', { error });
       return [];
     }
   }
 
   /**
-   * Initialize a single trigger
+   * Initialize triggers for a workflow
    */
-  private async initializeTrigger(triggerRecord: any): Promise<void> {
+  private async initializeWorkflowTriggers(workflow: any): Promise<void> {
     try {
-      const { id, workflow_id, trigger_type, config } = triggerRecord;
+      const { id, triggers, schedule } = workflow;
       
-      let trigger;
-
-      switch (trigger_type) {
-        case 'event':
-          const eventConfig = JSON.parse(config);
-          trigger = this.triggerService.registerEventTrigger(
-            workflow_id,
-            eventConfig.eventType,
-            eventConfig.eventFilter
-          );
-          break;
-
-        case 'schedule':
-          const scheduleConfig = JSON.parse(config);
-          trigger = this.triggerService.registerScheduleTrigger(
-            workflow_id,
-            scheduleConfig.cronExpression,
-            scheduleConfig.timezone
-          );
-          break;
-
-        case 'file-change':
-          const fileConfig = JSON.parse(config);
-          trigger = this.triggerService.registerFileTrigger(
-            workflow_id,
-            fileConfig.filePatterns,
-            {
-              ignorePatterns: fileConfig.ignorePatterns,
-              changeTypes: fileConfig.changeTypes
-            }
-          );
-          break;
-
-        case 'webhook':
-          const webhookConfig = JSON.parse(config);
-          trigger = this.triggerService.registerWebhookTrigger(
-            workflow_id,
-            webhookConfig.secret,
-            webhookConfig.ipWhitelist
-          );
-          break;
-
-        default:
-          this.logger.warn(`Unknown trigger type: ${trigger_type}`, { triggerId: id });
-          return;
+      // Handle the main schedule (cron) column if present
+      if (schedule) {
+        try {
+          this.triggerService.registerScheduleTrigger(id, schedule);
+          this.logger.info(`Initialized schedule trigger for workflow ${id}`, { schedule });
+        } catch (err) {
+          this.logger.error(`Failed to initialize schedule trigger for workflow ${id}`, { error: err });
+        }
       }
 
-      this.logger.info(`Initialized ${trigger_type} trigger`, {
-        triggerId: id,
-        workflowId: workflow_id
-      });
+      // Handle individual triggers from the triggers array
+      if (Array.isArray(triggers)) {
+        for (const triggerConfig of triggers) {
+          try {
+            switch (triggerConfig.type) {
+              case 'cron':
+                this.triggerService.registerScheduleTrigger(
+                  id,
+                  triggerConfig.config.cronExpression,
+                  triggerConfig.config.timezone
+                );
+                break;
 
+              case 'event':
+                this.triggerService.registerEventTrigger(
+                  id,
+                  triggerConfig.config.eventType,
+                  triggerConfig.config.eventFilter
+                );
+                break;
+
+              case 'webhook':
+                this.triggerService.registerWebhookTrigger(
+                  id,
+                  triggerConfig.config.secret,
+                  triggerConfig.config.ipWhitelist
+                );
+                break;
+
+              default:
+                this.logger.warn(`Unknown trigger type: ${triggerConfig.type}`, { workflowId: id });
+            }
+          } catch (err) {
+            this.logger.error(`Failed to initialize trigger for workflow ${id}`, { 
+              triggerType: triggerConfig.type, 
+              error: err 
+            });
+          }
+        }
+      }
     } catch (error) {
-      this.logger.error(`Failed to initialize trigger ${triggerRecord.id}`, { error });
+      this.logger.error(`Failed to initialize triggers for workflow ${workflow.id}`, { error });
     }
   }
 
@@ -161,109 +142,6 @@ export class WorkflowTriggerInitializer {
     });
 
     this.logger.info('Connected to EventBus for workflow trigger events');
-  }
-
-  /**
-   * Create sample triggers for demonstration (if no triggers exist)
-   */
-  async createSampleTriggers(db: DataSource): Promise<void> {
-    try {
-      // Check if we have any triggers
-      const existingTriggers = await this.loadTriggersFromDb(db);
-      
-      if (existingTriggers.length > 0) {
-        this.logger.info('Triggers already exist, skipping sample creation');
-        return;
-      }
-
-      this.logger.info('Creating sample workflow triggers');
-
-      // Create a sample schedule trigger (runs every 5 minutes)
-      await this.createSampleScheduleTrigger(db);
-
-      // Create a sample event trigger (triggers on file changes)
-      await this.createSampleEventTrigger(db);
-
-      this.logger.info('Sample workflow triggers created');
-    } catch (error) {
-      this.logger.error('Failed to create sample triggers', { error });
-    }
-  }
-
-  /**
-   * Create a sample schedule trigger
-   */
-  private async createSampleScheduleTrigger(db: DataSource): Promise<void> {
-    try {
-      const sampleTrigger = {
-        workflow_id: 'sample-workflow-id',
-        trigger_type: 'schedule',
-        config: JSON.stringify({
-          type: 'schedule',
-          cronExpression: '*/5 * * * *', // Every 5 minutes
-          timezone: 'UTC'
-        }),
-        enabled: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      };
-
-      await db.query(`
-        INSERT INTO workflow_triggers (workflow_id, trigger_type, config, enabled, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [
-        sampleTrigger.workflow_id,
-        sampleTrigger.trigger_type,
-        sampleTrigger.config,
-        sampleTrigger.enabled,
-        sampleTrigger.created_at,
-        sampleTrigger.updated_at
-      ]);
-
-      this.logger.info('Sample schedule trigger created');
-    } catch (error) {
-      // Table might not exist, which is fine for now
-      this.logger.debug('Could not create sample schedule trigger (table may not exist)', { error });
-    }
-  }
-
-  /**
-   * Create a sample event trigger
-   */
-  private async createSampleEventTrigger(db: DataSource): Promise<void> {
-    try {
-      const sampleTrigger = {
-        workflow_id: 'sample-workflow-id',
-        trigger_type: 'event',
-        config: JSON.stringify({
-          type: 'event',
-          eventType: 'fs:change',
-          eventFilter: {
-            'fileExtension': '.ts'
-          }
-        }),
-        enabled: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      };
-
-      await db.query(`
-        INSERT INTO workflow_triggers (workflow_id, trigger_type, config, enabled, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [
-        sampleTrigger.workflow_id,
-        sampleTrigger.trigger_type,
-        sampleTrigger.config,
-        sampleTrigger.enabled,
-        sampleTrigger.created_at,
-        sampleTrigger.updated_at
-      ]);
-
-      this.logger.info('Sample event trigger created');
-    } catch (error) {
-      // Table might not exist, which is fine for now
-      this.logger.debug('Could not create sample event trigger (table may not exist)', { error });
-    }
   }
 
   /**

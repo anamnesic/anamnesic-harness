@@ -189,9 +189,10 @@ function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void 
 }
 
 export function Security() {
-    const { data, loading, refetch } = useApi('/api/v1/security/scans');
-    const { toast } = useToast();
     const { workspace } = useWorkspace();
+    const { data, loading, refetch } = useApi('/api/v1/security/scans');
+    const { data: projectsData } = useApi('/api/v1/projects');
+    const { toast } = useToast();
 
     const [showModal, setShowModal] = useState(false);
     const [targetName, setTargetName] = useState('');
@@ -199,9 +200,13 @@ export function Security() {
     const [targetPath, setTargetPath] = useState('');
     const [selectedProjectId, setSelectedProjectId] = useState('');
     const [deepScan, setDeepScan] = useState(false);
-    const [projects, setProjects] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [openId, setOpenId] = useState<string | null>(null);
+
+    const projects = useMemo(() => {
+        const raw = (projectsData as any)?.data ?? projectsData ?? [];
+        return Array.isArray(raw) ? raw : [];
+    }, [projectsData]);
 
     const list: SecurityScan[] = useMemo(() => {
         const raw = (data as any)?.data ?? data ?? [];
@@ -376,6 +381,19 @@ export function Security() {
                                     </select>
                                 </div>
                                 <div>
+                                    <label className="label-caps block mb-1">Target Project (optional)</label>
+                                    <select
+                                        className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
+                                        value={selectedProjectId}
+                                        onChange={e => setSelectedProjectId(e.target.value)}
+                                    >
+                                        <option value="">No specific project</option>
+                                        {projects.map(p => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
                                     <label className="label-caps block mb-1">Target Path (optional)</label>
                                     <input
                                         className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
@@ -384,6 +402,28 @@ export function Security() {
                                         placeholder="src/"
                                     />
                                 </div>
+                                {type === 'code' && (
+                                    <div className="flex items-center gap-3 pt-2">
+                                        <button
+                                            onClick={() => setDeepScan(!deepScan)}
+                                            className={cn(
+                                                'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                                                deepScan ? 'bg-primary' : 'bg-border'
+                                            )}
+                                        >
+                                            <span
+                                                className={cn(
+                                                    'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                                                    deepScan ? 'translate-x-4' : 'translate-x-0'
+                                                )}
+                                            />
+                                        </button>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-accent">Deep Scan (AI-powered)</span>
+                                            <span className="text-[10px] text-text-dim uppercase tracking-widest font-bold">Comprehensive 5-phase analysis</span>
+                                        </div>
+                                    </div>
+                                )}
                                                             </div>
 
                             <div className="flex items-center justify-end gap-2 pt-2">

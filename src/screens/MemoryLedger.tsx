@@ -120,6 +120,25 @@ export function MemoryLedger() {
         }
     }
 
+    function exportLog() {
+        if (entries.length === 0) {
+            toast('No entries to export', 'info');
+            return;
+        }
+
+        const dataStr = JSON.stringify(entries, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = `memory-ledger-${new Date().toISOString().split('T')[0]}.json`;
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+        
+        toast('Exporting log...', 'success');
+    }
+
     const ENTRY_ICONS = [Activity, Shield, Download];
 
     return (
@@ -142,7 +161,7 @@ export function MemoryLedger() {
                         Filters
                     </button>
                     <button
-                        onClick={() => toast('Export not yet implemented', 'info')}
+                        onClick={exportLog}
                         className="rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-accent/40 transition-colors"
                     >
                         Export Log

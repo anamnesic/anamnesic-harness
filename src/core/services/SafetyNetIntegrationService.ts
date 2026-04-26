@@ -48,30 +48,20 @@ export class SafetyNetIntegrationService {
         phaseName: phase.name,
       });
 
-      // Criar snapshot com SnapshotService
-      const snapshotId = await this.snapshotService.createSnapshot(
-        `Phase: ${phase.name} (Pipeline: ${pipeline.objective})`
-      );
+      const phaseIndex = Number.isFinite(phase.order) ? phase.order : 0;
+      const snapshotId = `${pipeline.id}:${phaseIndex}`;
 
-      if (!snapshotId) {
-        throw new Error('Failed to create snapshot');
-      }
-
-      // Obter informações do snapshot
-      const snapshot = await this.snapshotService.getSnapshot(snapshotId);
-
-      if (!snapshot) {
-        throw new Error('Snapshot not found after creation');
-      }
+      // Obter informações do snapshot já existente para a fase (se houver)
+      const snapshot = await this.snapshotService.getSnapshot(pipeline.id, phaseIndex);
 
       const phaseSnapshot: PhaseSnapshot = {
         id: snapshotId,
         pipelineId: pipeline.id,
         phaseId: phase.id,
         phaseName: phase.name,
-        projectPath: snapshot.path,
-        timestamp: new Date(snapshot.timestamp),
-        filesCount: snapshot.files?.length || 0,
+        projectPath: process.cwd(),
+        timestamp: snapshot ? new Date(snapshot.timestamp) : new Date(),
+        filesCount: snapshot?.files?.length || 0,
         description: `Pre-phase snapshot for ${phase.name}`,
       };
 
@@ -128,8 +118,23 @@ export class SafetyNetIntegrationService {
         phaseId,
       });
 
-      // Restaurar arquivo usando SnapshotService
-      const success = await this.snapshotService.restoreSnapshot(snapshotId);
+      const [, phaseIndexStr] = snapshotId.split(':');
+      const phaseIndex = Number.parseInt(phaseIndexStr ?? '', 10);
+      const phaseSnapshot = this.phaseSnapshots.get(phaseId);
+      const resolvedPhaseIndex = Number.isFinite(phaseIndex)
+        ? phaseIndex
+        : Number.parseInt(phaseSnapshot?.id.split(':')[1] ?? '', 10);
+
+      if (!Number.isFinite(resolvedPhaseIndex)) {
+        throw new Error('Invalid snapshot identifier');
+      }
+
+      const restoreResult = await this.snapshotService.restore(
+        pipelineId,
+        resolvedPhaseIndex,
+        process.cwd(),
+      );
+      const success = restoreResult.errors.length === 0;
 
       if (success) {
         // Emitir evento de rollback bem-sucedido
@@ -195,8 +200,10 @@ export class SafetyNetIntegrationService {
     modified: string[];
   }> {
     try {
-      const snapshot1 = await this.snapshotService.getSnapshot(snapshotId1);
-      const snapshot2 = await this.snapshotService.getSnapshot(snapshotId2);
+      const [pipelineId1, phaseIndex1] = snapshotId1.split(':');
+      const [pipelineId2, phaseIndex2] = snapshotId2.split(':');
+      const snapshot1 = await this.snapshotService.getSnapshot(pipelineId1, Number.parseInt(phaseIndex1 ?? '', 10));
+      const snapshot2 = await this.snapshotService.getSnapshot(pipelineId2, Number.parseInt(phaseIndex2 ?? '', 10));
 
       if (!snapshot1 || !snapshot2) {
         throw new Error('One or both snapshots not found');
@@ -232,7 +239,10 @@ export class SafetyNetIntegrationService {
           snapshot.pipelineId === pipelineId &&
           snapshot.timestamp.getTime() < cutoffTime
         ) {
-          const success = await this.snapshotService.deleteSnapshot(snapshot.id);
+          const phaseIndex = Number.parseInt(snapshot.id.split(':')[1] ?? '', 10);
+          const success = Number.isFinite(phaseIndex)
+            ? await this.snapshotService.deleteSnapshot(pipelineId, phaseIndex)
+            : false;
           if (success) {
             this.phaseSnapshots.delete(phaseId);
             deleted++;
