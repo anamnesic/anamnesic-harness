@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Loader2, MessageSquare, Trash2 } from 'lucide-react';
+import { Send, Loader2, MessageSquare, Trash2, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
+import { AVAILABLE_MODELS } from '@/src/config/models';
 
 interface ChatMessage {
   id: string;
@@ -20,14 +21,44 @@ interface ChatPanelProps {
   className?: string;
 }
 
+type InteractionMode = 'ask' | 'coding';
+
+function detectInteractionMode(message: string): InteractionMode {
+  const normalized = message.trim().toLowerCase();
+
+  if (normalized.startsWith('/ask') || normalized.startsWith('ask:')) {
+    return 'ask';
+  }
+
+  if (normalized.startsWith('/code') || normalized.startsWith('code:')) {
+    return 'coding';
+  }
+
+  const codingSignals = [
+    'codigo', 'code', 'implementar', 'implement', 'refator', 'bug', 'fix',
+    'função', 'funcao', 'function', 'classe', 'class', 'typescript', 'javascript',
+    'python', 'api', 'endpoint', 'teste', 'test', 'debug', 'erro', 'stacktrace',
+  ];
+
+  if (normalized.includes('```')) {
+    return 'coding';
+  }
+
+  return codingSignals.some((signal) => normalized.includes(signal)) ? 'coding' : 'ask';
+}
+
 export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamContent, setStreamContent] = useState('');
+  const [availableModelIds, setAvailableModelIds] = useState<string[]>([]);
+  const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Load chat history
@@ -62,6 +93,62 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
     loadHistory();
   }, [loadHistory]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAvailableModels() {
+      try {
+        const availability = await apiFetch<{ data?: { models?: Record<string, boolean> } } | { models?: Record<string, boolean> }>('/api/v1/system/ai-availability');
+        const payload = (availability as any)?.data ?? availability;
+        const modelFlags: Record<string, boolean> = payload?.models ?? {};
+
+        const enabled = AVAILABLE_MODELS
+          .filter((m) => modelFlags[m.id])
+          .map((m) => m.id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailableModelIds(enabled);
+        setSelectedModelIds((current) => {
+          const kept = current.filter((id) => enabled.includes(id));
+          if (kept.length > 0) {
+            return kept;
+          }
+          return enabled.slice(0, Math.min(3, enabled.length));
+        });
+      } catch (error) {
+        console.error('Falha ao carregar modelos disponíveis:', error);
+      }
+    }
+
+    loadAvailableModels();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      if (!modelMenuRef.current) {
+        return;
+      }
+      if (!modelMenuRef.current.contains(event.target as Node)) {
+        setIsModelMenuOpen(false);
+      }
+    };
+
+    if (isModelMenuOpen) {
+      document.addEventListener('mousedown', onClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+    };
+  }, [isModelMenuOpen]);
+
   const lastScrollTime = useRef(0);
 
   // Auto-scroll to bottom
@@ -73,9 +160,13 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
   }, [messages, streamContent, isStreaming]);
 
   // Handle streaming response
-  const handleStreamResponse = useCallback(async (message: string) => {
+  const handleStreamResponse = useCallback(async (message: string, interactionMode: InteractionMode) => {
     setIsStreaming(true);
     setStreamContent('');
+
+    const modelIds = selectedModelIds.length > 0
+      ? selectedModelIds
+      : availableModelIds.slice(0, 1);
 
     try {
       const response = await fetch('/api/chat/stream', {
@@ -88,6 +179,8 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
           message,
           channelId,
           userId: 'current-user',
+          modelIds,
+          interactionMode,
         }),
       });
 
@@ -150,19 +243,20 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
       setIsStreaming(false);
       setStreamContent('');
     }
-  }, [channelId, toast, loadHistory]);
+  }, [channelId, toast, loadHistory, selectedModelIds, availableModelIds]);
 
   // Handle sending message
   const handleSendMessage = useCallback(async () => {
     if (!input.trim() || isLoading || isStreaming) return;
 
     const messageContent = input.trim();
+    const interactionMode = detectInteractionMode(messageContent);
     setInput('');
     setIsLoading(true);
 
     try {
       // Save user message and get streaming response
-      await handleStreamResponse(messageContent);
+      await handleStreamResponse(messageContent, interactionMode);
     } catch (error) {
       console.error('Falha ao enviar mensagem:', error);
       toast('Falha ao enviar mensagem', 'error');
@@ -199,20 +293,97 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
     <div className={cn('flex flex-col h-full bg-card border border-border rounded-2xl', className)}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <MessageSquare className="size-5 text-primary" />
           <h3 className="font-semibold text-highlight">Chat</h3>
           <span className="text-xs text-text-dim bg-bg px-2 py-1 rounded-full">
             {channelId}
           </span>
         </div>
-        <button
-          onClick={handleClearChat}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors"
-        >
-          <Trash2 className="size-3" />
-          Clear
-        </button>
+
+        <div className="flex items-center gap-2">
+          <div className="relative" ref={modelMenuRef}>
+            <button
+              onClick={() => setIsModelMenuOpen((open) => !open)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors border border-border"
+            >
+              <span className="font-semibold text-highlight">Modelos</span>
+              <span className="text-[11px] text-text-dim">{selectedModelIds.length}</span>
+              <ChevronDown className={cn('size-3 transition-transform', isModelMenuOpen && 'rotate-180')} />
+            </button>
+
+            <AnimatePresence>
+              {isModelMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  className="absolute right-0 mt-2 w-80 max-h-80 overflow-y-auto rounded-xl border border-border bg-card shadow-2xl z-50"
+                >
+                  <div className="px-3 py-2 border-b border-border text-[11px] font-bold uppercase tracking-wider text-text-dim">
+                    Modelos disponíveis
+                  </div>
+                  <div className="p-2 space-y-1">
+                    {availableModelIds.length === 0 && (
+                      <p className="px-2 py-2 text-xs text-text-dim">Nenhum modelo disponível no momento.</p>
+                    )}
+
+                    {availableModelIds.map((id) => {
+                      const model = AVAILABLE_MODELS.find((m) => m.id === id);
+                      if (!model) {
+                        return null;
+                      }
+
+                      const checked = selectedModelIds.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => {
+                            setSelectedModelIds((current) => {
+                              if (current.includes(id)) {
+                                if (current.length === 1) {
+                                  return current;
+                                }
+                                return current.filter((x) => x !== id);
+                              }
+                              return [...current, id];
+                            });
+                          }}
+                          className={cn(
+                            'w-full flex items-start gap-2 rounded-lg px-2 py-2 text-left transition-colors',
+                            checked ? 'bg-primary/10 text-primary' : 'hover:bg-bg text-accent hover:text-highlight'
+                          )}
+                        >
+                          <span className={cn(
+                            'mt-0.5 flex size-4 items-center justify-center rounded border',
+                            checked ? 'border-primary bg-primary/20' : 'border-border'
+                          )}>
+                            {checked && <Check className="size-3" />}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-xs font-semibold truncate">{model.name}</span>
+                            <span className="block text-[11px] text-text-dim truncate">{model.description}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="px-3 py-2 border-t border-border text-[11px] text-text-dim">
+                    `ask` usa 1 modelo. `coding` usa todos os selecionados em paralelo.
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button
+            onClick={handleClearChat}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors"
+          >
+            <Trash2 className="size-3" />
+            Clear
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
