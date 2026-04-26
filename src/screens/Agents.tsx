@@ -319,7 +319,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                     <p className="text-text-dim text-sm">Nenhum agente configurado</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
                     {sortedAgents.map(agent => {
                         const isPrebuilt = Boolean(agent.metadata?.prebuilt);
                         return (
