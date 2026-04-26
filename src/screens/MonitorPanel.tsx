@@ -14,27 +14,30 @@ import { cn } from '@/src/lib/utils';
 const ACTION_ICONS = [Code2, MemoryStick, Shield, Activity];
 const TOAST_THROTTLE_MS = 3000;
 
+interface ApiEnvelope<T> {
+    success: boolean;
+    data: T;
+    timestamp: string;
+}
+
 interface HealthData { status: string; service: string; timestamp: string }
 interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number }
-interface HistoryData { data?: any[] | { items?: any[]; total?: number }; count?: number }
+interface HistoryData { items: any[]; total: number; limit: number; offset: number }
 interface AgentStats { totalAgents: number; activeAgents: number; totalTasksCompleted: number; totalTasksFailed: number; byState: Record<string, number> }
 interface WorkflowStats { total: number; active: number; totalExecutions: number; successfulExecutions: number; failedExecutions: number; successRate: number }
-interface RunsData { data?: Array<{ status: string }> | { items?: Array<{ status: string }>; total?: number }; count?: number }
+interface RunsData { items: Array<{ status: string }>; total: number; limit: number; offset: number }
 
 interface ProactiveInsightResponse {
-    success?: boolean;
-    data?: {
-        generatedAt: string;
-        provider: string;
-        inputEvents: number;
-        plan: {
-            risks: Array<{ title: string; severity: string; evidence: string; recommendedAction: string }>;
-            opportunities: Array<{ title: string; impact: string; evidence: string; suggestedAction: string }>;
-            taskCandidates: Array<{ title: string; description: string; priority: string; rationale: string; sensitivity: string }>;
-            recommendations: Array<{ title: string; rationale: string; action: string }>;
-        };
-        pendingApprovals: Array<{ requestId: string; taskTitle: string; reason: string; status: string }>;
+    generatedAt: string;
+    provider: string;
+    inputEvents: number;
+    plan: {
+        risks: Array<{ title: string; severity: string; evidence: string; recommendedAction: string }>;
+        opportunities: Array<{ title: string; impact: string; evidence: string; suggestedAction: string }>;
+        taskCandidates: Array<{ title: string; description: string; priority: string; rationale: string; sensitivity: string }>;
+        recommendations: Array<{ title: string; rationale: string; action: string }>;
     };
+    pendingApprovals: Array<{ requestId: string; taskTitle: string; reason: string; status: string }>;
 }
 
 interface MonitorPanelProps {
@@ -43,12 +46,12 @@ interface MonitorPanelProps {
 
 export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     const { data: health, error: healthErr } = usePolling<HealthData>('/api/health', 30000);
-    const { data: metrics, loading: metricsLoading, error: metricsErr } = usePolling<MetricsData>('/api/v1/metrics', 30000);
-    const { data: history, loading: histLoading, error: historyErr } = usePolling<HistoryData>('/api/chat/history?limit=3', 60000);
-    const { data: agentStats, error: agentsErr } = usePolling<AgentStats>('/api/v1/agents/stats', 20000);
-    const { data: workflowStats, error: workflowsErr } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 20000);
-    const { data: proactiveInsights, loading: proactiveLoading, refetch: refetchProactive, error: proactiveErr } = usePolling<ProactiveInsightResponse>('/api/v1/proactive/insights', 45000);
-    const { data: runsData, error: runsErr } = usePolling<RunsData>('/api/v1/orchestrator/runs?limit=20', 20000);
+    const { data: metricsResponse, loading: metricsLoading, error: metricsErr } = usePolling<ApiEnvelope<MetricsData>>('/api/v1/metrics', 30000);
+    const { data: historyResponse, loading: histLoading, error: historyErr } = usePolling<ApiEnvelope<HistoryData>>('/api/chat/history?limit=3', 60000);
+    const { data: agentStatsResponse, error: agentsErr } = usePolling<ApiEnvelope<AgentStats>>('/api/v1/agents/stats', 20000);
+    const { data: workflowStatsResponse, error: workflowsErr } = usePolling<ApiEnvelope<WorkflowStats>>('/api/v1/workflows/stats', 20000);
+    const { data: proactiveResponse, loading: proactiveLoading, refetch: refetchProactive, error: proactiveErr } = usePolling<ApiEnvelope<ProactiveInsightResponse>>('/api/v1/proactive/insights', 45000);
+    const { data: runsResponse, error: runsErr } = usePolling<ApiEnvelope<RunsData>>('/api/v1/orchestrator/runs?limit=20', 20000);
     const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
     const [proactiveBusy, setProactiveBusy] = useState(false);
     const { toast } = useToast();
@@ -90,11 +93,12 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     useEventStream<any>('task:update', handleTaskUpdate);
     useEventStream<any>('agent:state', handleAgentState);
 
-    const polledRuns = Array.isArray(runsData?.data)
-        ? runsData?.data
-        : (runsData?.data && Array.isArray((runsData.data as { items?: Array<{ status: string }> }).items)
-            ? ((runsData.data as { items: Array<{ status: string }> }).items)
-            : []);
+    const metrics = metricsResponse?.data;
+    const history = historyResponse?.data;
+    const agentStats = agentStatsResponse?.data;
+    const workflowStats = workflowStatsResponse?.data;
+    const proactiveData = proactiveResponse?.data;
+    const polledRuns = runsResponse?.data?.items ?? [];
 
     const allRuns = liveRuns.length > 0 ? liveRuns : polledRuns;
 
@@ -106,12 +110,8 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     }, [healthErr]);
 
     const isOnline = health?.status === 'ok';
-    const histInner = history?.data;
-    const actions: any[] = Array.isArray(histInner)
-        ? histInner
-        : (histInner && Array.isArray((histInner as { items?: any[] }).items) ? (histInner as { items: any[] }).items : []);
+    const actions: any[] = history?.items ?? [];
 
-    const proactiveData = proactiveInsights?.data;
     const topRecommendation = proactiveData?.plan?.recommendations?.[0];
     const topRisk = proactiveData?.plan?.risks?.[0];
     const topPendingApproval = proactiveData?.pendingApprovals?.find((item) => item.status === 'pending') || null;
