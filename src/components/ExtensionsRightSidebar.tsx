@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Blocks, TerminalSquare, PlugZap, ExternalLink, Search, ServerCog, Store, Bot, ChevronDown } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { LucideIcon } from 'lucide-react';
+import { apiFetch, useApi } from '../lib/api';
+import { useToast } from './Toast';
 
 type HostTabId = 'terminal' | 'integrations';
 
@@ -14,6 +16,35 @@ interface MarketplaceExtension {
     description: string;
     recommended?: boolean;
     openVsxUrl: string;
+}
+
+interface OpenVsxExtension {
+    id: string;
+    namespace: string;
+    name: string;
+    version: string;
+    displayName: string;
+    description: string;
+    verified: boolean;
+    deprecated: boolean;
+    downloadCount: number;
+    files?: {
+        icon?: string;
+        download?: string;
+    };
+}
+
+interface InstalledOpenVsxExtension {
+    id: string;
+    namespace: string;
+    name: string;
+    version: string;
+    displayName: string;
+    description: string;
+    installedAt: string;
+    verified: boolean;
+    downloadUrl?: string;
+    iconUrl?: string;
 }
 
 interface OpenVsxTabExtension {
@@ -133,13 +164,62 @@ interface ExtensionsRightSidebarProps {
 }
 
 export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: ExtensionsRightSidebarProps) {
-    const installedSet = useMemo(() => new Set(installedExtensionIds), [installedExtensionIds]);
+    const { toast } = useToast();
     const [marketQuery, setMarketQuery] = useState('');
+    const [busyExtensionId, setBusyExtensionId] = useState<string | null>(null);
     const [openSections, setOpenSections] = useState({
         installed: true,
         recommended: false,
         mcp: false,
     });
+
+    const searchUrl = useMemo(() => {
+        const params = new URLSearchParams({
+            query: marketQuery,
+            size: '24',
+        });
+        return `/api/v1/extensions/open-vsx/search?${params.toString()}`;
+    }, [marketQuery]);
+
+    const {
+        data: searchData,
+        loading: searchLoading,
+    } = useApi<{ data?: { extensions?: OpenVsxExtension[] } } | null>(searchUrl);
+
+    const {
+        data: mcpData,
+        loading: mcpLoading,
+    } = useApi<{ data?: { extensions?: OpenVsxExtension[] } } | null>('/api/v1/extensions/open-vsx/search?query=mcp&size=12');
+
+    const {
+        data: installedData,
+        loading: installedLoading,
+        refetch: refetchInstalled,
+    } = useApi<{ data?: { extensions?: InstalledOpenVsxExtension[] } } | null>('/api/v1/extensions/open-vsx/installed');
+
+    const installedRecords = useMemo(
+        () => installedData?.data?.extensions ?? [],
+        [installedData],
+    );
+
+    const installedIds = useMemo(() => {
+        if (installedRecords.length > 0) {
+            return installedRecords.map((entry) => entry.id.toLowerCase());
+        }
+        return installedExtensionIds.map((id) => id.toLowerCase());
+    }, [installedRecords, installedExtensionIds]);
+
+    const installedSet = useMemo(() => new Set(installedIds), [installedIds]);
+
+    const searchResults = useMemo(
+        () => searchData?.data?.extensions ?? [],
+        [searchData],
+    );
+
+    const mcpResults = useMemo(
+        () => mcpData?.data?.extensions ?? [],
+        [mcpData],
+    );
 
     const installedWithTab = useMemo(
         () => OPEN_VSX_TAB_EXTENSIONS.filter((extension) => installedSet.has(extension.id)),
@@ -178,30 +258,73 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
     }, [marketQuery]);
 
     const installedMarketExtensions = useMemo(
-        () => MARKET_EXTENSIONS.filter((extension) => installedSet.has(extension.id)),
-        [installedSet],
+        () => installedRecords,
+        [installedRecords],
     );
 
     const filteredInstalled = useMemo(
         () => installedMarketExtensions.filter((extension) => (
-            matchesSearchTerm(`${extension.title} ${extension.publisher} ${extension.description}`, marketQuery)
+            matchesSearchTerm(`${extension.displayName} ${extension.namespace} ${extension.name} ${extension.description}`, marketQuery)
         )),
         [installedMarketExtensions, marketQuery],
     );
 
     const filteredRecommended = useMemo(
-        () => MARKET_EXTENSIONS.filter((extension) => (
-            extension.recommended
-            && !installedSet.has(extension.id)
-            && matchesSearchTerm(`${extension.title} ${extension.publisher} ${extension.description}`, marketQuery)
-        )),
-        [installedSet, marketQuery],
+        () => searchResults
+            .filter((extension) => (
+                !installedSet.has(extension.id.toLowerCase())
+                && !extension.deprecated
+                && matchesSearchTerm(`${extension.displayName} ${extension.namespace} ${extension.name} ${extension.description}`, marketQuery)
+            ))
+            .sort((a, b) => {
+                if (a.verified !== b.verified) {
+                    return a.verified ? -1 : 1;
+                }
+                return (b.downloadCount ?? 0) - (a.downloadCount ?? 0);
+            })
+            .slice(0, 10),
+        [searchResults, installedSet, marketQuery],
     );
 
     const filteredMcp = useMemo(
-        () => MCP_EXTENSIONS.filter((extension) => matchesSearchTerm(`${extension.title} ${extension.description}`, marketQuery)),
-        [marketQuery],
+        () => mcpResults.filter((extension) => (
+            !extension.deprecated
+            && matchesSearchTerm(`${extension.displayName} ${extension.namespace} ${extension.name} ${extension.description}`, marketQuery)
+        )),
+        [mcpResults, marketQuery],
     );
+
+    async function handleInstall(namespace: string, name: string, id: string) {
+        setBusyExtensionId(id);
+        try {
+            await apiFetch('/api/v1/extensions/open-vsx/install', {
+                method: 'POST',
+                body: JSON.stringify({ namespace, name }),
+            });
+            await refetchInstalled();
+            toast('Extensão instalada', 'success');
+        } catch (e: any) {
+            toast(e?.message ?? 'Falha ao instalar extensão', 'error');
+        } finally {
+            setBusyExtensionId(null);
+        }
+    }
+
+    async function handleUninstall(id: string) {
+        setBusyExtensionId(id);
+        try {
+            await apiFetch('/api/v1/extensions/open-vsx/uninstall', {
+                method: 'POST',
+                body: JSON.stringify({ id }),
+            });
+            await refetchInstalled();
+            toast('Extensão removida', 'success');
+        } catch (e: any) {
+            toast(e?.message ?? 'Falha ao remover extensão', 'error');
+        } finally {
+            setBusyExtensionId(null);
+        }
+    }
 
     function toggleSection(section: 'installed' | 'recommended' | 'mcp') {
         setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -272,30 +395,39 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                             </button>
                             {openSections.installed && (
                                 <div className="space-y-2 border-t border-border/60 p-3">
-                                    {filteredInstalled.length === 0 ? (
+                                    {installedLoading ? (
+                                        <p className="text-xs text-text-dim">Carregando extensoes instaladas...</p>
+                                    ) : filteredInstalled.length === 0 ? (
                                         <p className="text-xs text-text-dim">Nenhuma extensao instalada encontrada para esta busca.</p>
                                     ) : filteredInstalled.map((extension) => (
                                         <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
                                             <div className="flex items-start justify-between gap-2">
                                                 <div>
-                                                    <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
-                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.publisher}</p>
+                                                    <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.namespace}</p>
                                                 </div>
-                                                    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                                                <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
                                                     Instalada
                                                 </span>
                                             </div>
                                             <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
                                             <div className="mt-3 flex items-center justify-between gap-2">
-                                                    <a
-                                                        href={extension.openVsxUrl}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                                    >
-                                                        Ver no Open VSX
-                                                        <ExternalLink className="size-3" />
-                                                    </a>
+                                                <a
+                                                    href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                                >
+                                                    Ver no Open VSX
+                                                    <ExternalLink className="size-3" />
+                                                </a>
+                                                <button
+                                                    onClick={() => handleUninstall(extension.id)}
+                                                    disabled={busyExtensionId === extension.id}
+                                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
+                                                >
+                                                    {busyExtensionId === extension.id ? 'Removendo...' : 'Remover'}
+                                                </button>
                                             </div>
                                         </article>
                                     ))}
@@ -314,22 +446,33 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                             </button>
                             {openSections.recommended && (
                                 <div className="space-y-2 border-t border-border/60 p-3">
-                                    {filteredRecommended.length === 0 ? (
+                                    {searchLoading ? (
+                                        <p className="text-xs text-text-dim">Buscando extensoes no Open VSX...</p>
+                                    ) : filteredRecommended.length === 0 ? (
                                         <p className="text-xs text-text-dim">Nenhuma recomendacao disponivel para esta busca.</p>
                                     ) : filteredRecommended.map((extension) => (
                                         <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
-                                            <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.publisher}</p>
+                                            <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.namespace}</p>
                                             <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
-                                            <a
-                                                href={extension.openVsxUrl}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                            >
-                                                Ver no Open VSX
-                                                <ExternalLink className="size-3" />
-                                            </a>
+                                            <div className="mt-3 flex items-center justify-between gap-2">
+                                                <a
+                                                    href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                                >
+                                                    Ver no Open VSX
+                                                    <ExternalLink className="size-3" />
+                                                </a>
+                                                <button
+                                                    onClick={() => handleInstall(extension.namespace, extension.name, extension.id)}
+                                                    disabled={busyExtensionId === extension.id}
+                                                    className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60 disabled:opacity-60"
+                                                >
+                                                    {busyExtensionId === extension.id ? 'Instalando...' : 'Instalar'}
+                                                </button>
+                                            </div>
                                         </article>
                                     ))}
                                 </div>
@@ -347,17 +490,19 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                             </button>
                             {openSections.mcp && (
                                 <div className="space-y-2 border-t border-border/60 p-3">
-                                    {filteredMcp.length === 0 ? (
+                                    {mcpLoading ? (
+                                        <p className="text-xs text-text-dim">Buscando conectores MCP...</p>
+                                    ) : filteredMcp.length === 0 ? (
                                         <p className="text-xs text-text-dim">Nenhum conector MCP encontrado para esta busca.</p>
                                     ) : filteredMcp.map((extension) => (
                                         <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
                                             <div className="flex items-center gap-2">
                                                 <ServerCog className="size-4 text-primary" />
-                                                <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
+                                                <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
                                             </div>
                                             <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
                                             <a
-                                                href={extension.openVsxUrl}
+                                                href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
