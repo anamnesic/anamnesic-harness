@@ -7,13 +7,41 @@ import { existsSync } from 'node:fs';
 import { sessions, broadcast, type Session } from '../_sessions';
 
 type CliType = 'claude' | 'gemini' | 'copilot' | 'codex';
+type CliCommand = { cmd: string; args: string[]; shell?: boolean };
 
 const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex']);
 
-function getCliCommand(cli: CliType): { cmd: string; args: string[] } {
+function getCliCommand(cli: CliType): CliCommand {
     switch (cli) {
         case 'claude': return { cmd: 'claude', args: [] };
-        case 'gemini': return { cmd: 'gemini', args: [] };
+        case 'gemini': {
+            // Gemini exits if started without prompt/stdin. Keep a long-lived wrapper
+            // that converts each incoming line into: gemini --prompt "...".
+            const wrapper = [
+                "const { createInterface } = require('node:readline');",
+                "const { spawn } = require('node:child_process');",
+                "const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });",
+                "async function runPrompt(line){",
+                "  await new Promise((resolve) => {",
+                "    const p = spawn('gemini', ['--prompt', line], { shell: true, stdio: ['ignore','pipe','pipe'] });",
+                "    p.stdout.on('data', (d) => process.stdout.write(d));",
+                "    p.stderr.on('data', (d) => process.stderr.write(d));",
+                "    p.on('close', () => resolve());",
+                "  });",
+                "}",
+                "(async () => {",
+                "  for await (const raw of rl) {",
+                "    const line = String(raw).trim();",
+                "    if (!line) continue;",
+                "    await runPrompt(line);",
+                "  }",
+                "})().catch((e) => {",
+                "  console.error(e?.message ?? String(e));",
+                "  process.exit(1);",
+                "});",
+            ].join(' ');
+            return { cmd: 'node', args: ['-e', wrapper], shell: false };
+        }
         // Newer copilot CLIs don't support `-t shell`; keep a plain interactive command.
         case 'copilot': return { cmd: 'copilot', args: [] };
         case 'codex': return { cmd: 'codex', args: [] };
@@ -34,7 +62,7 @@ export async function POST(req: NextRequest) {
             ? cwd.trim()
             : process.cwd();
 
-    const { cmd, args } = getCliCommand(cli as CliType);
+    const { cmd, args, shell } = getCliCommand(cli as CliType);
     const sessionId = randomUUID();
 
     let proc: ReturnType<typeof spawn>;
@@ -46,7 +74,7 @@ export async function POST(req: NextRequest) {
                 TERM: process.env.TERM || 'xterm-256color',
                 COLORTERM: process.env.COLORTERM || 'truecolor',
             },
-            shell: true,
+            shell: shell ?? true,
             stdio: ['pipe', 'pipe', 'pipe'],
         });
     } catch (e: unknown) {
