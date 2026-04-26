@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Blocks, TerminalSquare, PlugZap, ExternalLink, Search, ServerCog, Store, Bot, ChevronDown, Box } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Blocks, ExternalLink, Search, ServerCog, Store, Bot, ChevronDown, Box } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import { apiFetch, useApi } from '../lib/api';
@@ -126,6 +126,10 @@ interface ExtensionsRightSidebarProps {
     onNavigate: (tab: HostTabId) => void;
 }
 
+function getViewKey(view: ExtensionCompatibilityManifest['views'][number], index: number): string {
+    return `${view.container}:${view.id ?? view.name ?? `view-${index}`}`;
+}
+
 export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: ExtensionsRightSidebarProps) {
     const { toast } = useToast();
     const [marketQuery, setMarketQuery] = useState('');
@@ -137,6 +141,8 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
     });
     const [selectedMarketExtension, setSelectedMarketExtension] = useState<ExtensionDetails | null>(null);
     const [iconLoadError, setIconLoadError] = useState<Record<string, boolean>>({});
+    const [selectedManifestViewKey, setSelectedManifestViewKey] = useState<string | null>(null);
+    const uiFrameRef = useRef<HTMLIFrameElement | null>(null);
 
     const searchUrl = useMemo(() => {
         const params = new URLSearchParams({
@@ -218,20 +224,6 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         return installedRecords.find((extension) => extension.id === extensionId) ?? null;
     }, [activeTab, installedRecords]);
 
-    const selectedHostTab = useMemo<HostTabId | null>(() => {
-        if (!selectedExtension) {
-            return null;
-        }
-        const id = selectedExtension.id.toLowerCase();
-        if (id.includes('integration')) {
-            return 'integrations';
-        }
-        if (id.includes('terminal')) {
-            return 'terminal';
-        }
-        return null;
-    }, [selectedExtension]);
-
     const selectedCompatibilityUrl = useMemo(() => {
         if (!selectedExtension) {
             return null;
@@ -249,6 +241,25 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         [selectedCompatibilityData],
     );
 
+    const selectedManifestViews = useMemo(
+        () => selectedCompatibilityManifest?.views ?? [],
+        [selectedCompatibilityManifest],
+    );
+
+    useEffect(() => {
+        if (selectedManifestViews.length === 0) {
+            setSelectedManifestViewKey(null);
+            return;
+        }
+
+        const validKeys = new Set(selectedManifestViews.map((view, index) => getViewKey(view, index)));
+        if (selectedManifestViewKey && validKeys.has(selectedManifestViewKey)) {
+            return;
+        }
+
+        setSelectedManifestViewKey(getViewKey(selectedManifestViews[0], 0));
+    }, [selectedManifestViews, selectedManifestViewKey]);
+
     const selectedUiRuntimeUrl = useMemo(() => {
         if (!selectedExtension) {
             return null;
@@ -265,6 +276,32 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         () => selectedUiRuntimeData?.data ?? null,
         [selectedUiRuntimeData],
     );
+
+    const selectedUiRenderUrl = useMemo(() => {
+        const baseUrl = selectedUiRuntime?.renderUrl;
+        if (!baseUrl) {
+            return null;
+        }
+
+        if (!selectedManifestViewKey) {
+            return baseUrl;
+        }
+
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        return `${baseUrl}${separator}view=${encodeURIComponent(selectedManifestViewKey)}`;
+    }, [selectedUiRuntime, selectedManifestViewKey]);
+
+    useEffect(() => {
+        if (!selectedManifestViewKey || !uiFrameRef.current?.contentWindow) {
+            return;
+        }
+
+        uiFrameRef.current.contentWindow.postMessage({
+            source: 'kairos-host',
+            type: 'kairos:set-view',
+            viewKey: selectedManifestViewKey,
+        }, '*');
+    }, [selectedManifestViewKey, selectedUiRenderUrl]);
 
     const selectedReadmeUrl = useMemo(() => {
         if (!selectedMarketExtension) {
@@ -714,142 +751,81 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                     </div>
                 ) : selectedExtension ? (
                     <div className="space-y-3">
-                        <div className="rounded-xl border border-border bg-bg/50 p-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Tela real da extensao instalada</p>
-                            <h4 className="mt-2 text-sm font-black text-highlight">{selectedExtension.displayName}</h4>
-                            <p className="mt-2 text-xs text-text-dim">O Kairos tenta carregar a interface original da VSIX instalada, no mesmo estilo de uso da extensao no VS Code.</p>
-
-                            <div className="mt-3 rounded-lg border border-border/70 bg-card/60 p-3">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Runtime da interface</p>
-                                {selectedUiRuntimeLoading ? (
-                                    <p className="mt-1 text-xs text-text-dim">Detectando UI da extensao instalada...</p>
-                                ) : selectedUiRuntime?.available && selectedUiRuntime.renderUrl ? (
-                                    <div className="mt-2 overflow-hidden rounded-lg border border-border/70 bg-bg/50">
-                                        <iframe
-                                            src={selectedUiRuntime.renderUrl}
-                                            title={`ui-${selectedExtension.id}`}
-                                            className="h-105 w-full bg-bg"
-                                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                                        />
-                                    </div>
-                                ) : (
-                                    <p className="mt-1 text-xs text-rose-300">{selectedUiRuntime?.reason ?? 'A interface nativa desta extensao nao foi detectada na VSIX instalada.'}</p>
-                                )}
-                            </div>
-
-                            <div className="mt-3 rounded-lg border border-border/70 bg-card/60 p-3">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Compatibilidade Kairos</p>
-                                {selectedCompatibilityLoading ? (
-                                    <p className="mt-1 text-xs text-text-dim">Lendo manifesto da extensao instalada...</p>
-                                ) : selectedCompatibilityManifest ? (
-                                    <>
-                                        <p className="mt-1 text-xs text-accent">Manifesto carregado: {selectedCompatibilityManifest.publisher}.{selectedCompatibilityManifest.name}@{selectedCompatibilityManifest.version}</p>
-                                        <div className="mt-3 grid grid-cols-3 gap-2">
-                                            <div className="rounded-md border border-border/70 bg-bg/50 p-2 text-center">
-                                                <p className="text-[9px] uppercase tracking-wider text-text-dim">Comandos</p>
-                                                <p className="text-sm font-black text-highlight">{selectedCompatibilityManifest.commands.length}</p>
-                                            </div>
-                                            <div className="rounded-md border border-border/70 bg-bg/50 p-2 text-center">
-                                                <p className="text-[9px] uppercase tracking-wider text-text-dim">Views</p>
-                                                <p className="text-sm font-black text-highlight">{selectedCompatibilityManifest.views.length}</p>
-                                            </div>
-                                            <div className="rounded-md border border-border/70 bg-bg/50 p-2 text-center">
-                                                <p className="text-[9px] uppercase tracking-wider text-text-dim">Settings</p>
-                                                <p className="text-sm font-black text-highlight">{selectedCompatibilityManifest.settings.length}</p>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <p className="mt-1 text-xs text-rose-300">Nao foi possivel carregar o manifesto da VSIX instalada.</p>
-                                )}
-                            </div>
-
-                            {selectedHostTab ? (
+                        <div className="rounded-xl border border-border bg-bg/50 p-3">
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-highlight">{selectedExtension.displayName}</p>
+                                    <p className="truncate text-[10px] text-text-dim">{selectedExtension.namespace}.{selectedExtension.name}</p>
+                                </div>
                                 <button
-                                    onClick={() => onNavigate(selectedHostTab)}
-                                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
+                                    onClick={() => {
+                                        setActiveTab('market');
+                                        setSelectedMarketExtension({
+                                            id: selectedExtension.id,
+                                            namespace: selectedExtension.namespace,
+                                            name: selectedExtension.name,
+                                            displayName: selectedExtension.displayName,
+                                            description: selectedExtension.description,
+                                            version: selectedExtension.version,
+                                            verified: selectedExtension.verified,
+                                            iconUrl: selectedExtension.iconUrl,
+                                        });
+                                    }}
+                                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
                                 >
-                                    {selectedHostTab === 'terminal' ? <TerminalSquare className="size-4" /> : <PlugZap className="size-4" />}
-                                    Abrir tela real da extensao
+                                    Market
                                 </button>
-                            ) : (
-                                <p className="mt-3 rounded-lg border border-border/70 bg-card/60 p-3 text-xs text-text-dim">
-                                    Esta extensao nao possui painel nativo mapeado; use os blocos de Comandos, Views e Settings para integrar no Kairos.
-                                </p>
-                            )}
+                            </div>
 
-                            <button
-                                onClick={() => {
-                                    setActiveTab('market');
-                                    setSelectedMarketExtension({
-                                        id: selectedExtension.id,
-                                        namespace: selectedExtension.namespace,
-                                        name: selectedExtension.name,
-                                        displayName: selectedExtension.displayName,
-                                        description: selectedExtension.description,
-                                        version: selectedExtension.version,
-                                        verified: selectedExtension.verified,
-                                        iconUrl: selectedExtension.iconUrl,
-                                    });
-                                }}
-                                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                            >
-                                Ver detalhes no Market
-                            </button>
-                        </div>
+                            <p className="text-[10px] text-text-dim">Views da extensao carregadas da VSIX instalada, para uso direto no Kairos.</p>
 
-                        {selectedCompatibilityManifest && (
-                            <>
-                                <div className="rounded-xl border border-border bg-bg/50 p-4">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Comandos da extensao</p>
-                                    {selectedCompatibilityManifest.commands.length === 0 ? (
-                                        <p className="mt-2 text-xs text-text-dim">A extensao nao declara comandos no manifesto.</p>
-                                    ) : (
-                                        <div className="mt-2 space-y-2">
-                                            {selectedCompatibilityManifest.commands.slice(0, 8).map((command) => (
-                                                <div key={command.command} className="rounded-lg border border-border/70 bg-card/60 p-2">
-                                                    <p className="text-xs font-bold text-highlight">{command.title ?? command.command}</p>
-                                                    <p className="text-[10px] text-text-dim">{command.command}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                                {selectedCompatibilityLoading ? (
+                                    <span className="text-[10px] text-text-dim">Carregando views...</span>
+                                ) : selectedManifestViews.length > 0 ? (
+                                    selectedManifestViews.map((view, index) => {
+                                        const key = getViewKey(view, index);
+                                        const active = selectedManifestViewKey === key;
+                                        return (
+                                            <button
+                                                key={key}
+                                                onClick={() => setSelectedManifestViewKey(key)}
+                                                className={cn(
+                                                    'rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-colors',
+                                                    active
+                                                        ? 'border-primary/50 bg-primary/15 text-primary'
+                                                        : 'border-border bg-card/50 text-text-dim hover:border-accent/40 hover:text-accent',
+                                                )}
+                                                title={`${view.name ?? view.id ?? 'View'} (${view.container})`}
+                                            >
+                                                {view.name ?? view.id ?? `View ${index + 1}`}
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    <span className="text-[10px] text-text-dim">Nenhuma view declarada, usando view principal.</span>
+                                )}
+                            </div>
 
-                                <div className="rounded-xl border border-border bg-bg/50 p-4">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Views e Configuracoes</p>
-                                    <div className="mt-2 space-y-3">
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Views</p>
-                                            {selectedCompatibilityManifest.views.length === 0 ? (
-                                                <p className="mt-1 text-xs text-text-dim">Nenhuma view declarada.</p>
-                                            ) : (
-                                                <div className="mt-1 space-y-1">
-                                                    {selectedCompatibilityManifest.views.slice(0, 8).map((view) => (
-                                                        <p key={`${view.container}:${view.id ?? view.name ?? 'view'}`} className="text-xs text-highlight">
-                                                            {view.name ?? view.id ?? 'View'} <span className="text-text-dim">({view.container})</span>
-                                                        </p>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Settings</p>
-                                            {selectedCompatibilityManifest.settings.length === 0 ? (
-                                                <p className="mt-1 text-xs text-text-dim">Nenhuma configuracao declarada.</p>
-                                            ) : (
-                                                <div className="mt-1 space-y-1">
-                                                    {selectedCompatibilityManifest.settings.slice(0, 10).map((setting) => (
-                                                        <p key={setting} className="text-xs text-highlight">{setting}</p>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                            <div className="mt-3 overflow-hidden rounded-lg border border-border/70 bg-bg/60">
+                                {selectedUiRuntimeLoading ? (
+                                    <div className="flex h-130 items-center justify-center text-xs text-text-dim">Detectando interface da extensao...</div>
+                                ) : selectedUiRuntime?.available && selectedUiRenderUrl ? (
+                                    <iframe
+                                        ref={uiFrameRef}
+                                        src={selectedUiRenderUrl}
+                                        title={`ui-${selectedExtension.id}`}
+                                        className="w-full bg-bg"
+                                        style={{ height: 520 }}
+                                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                                    />
+                                ) : (
+                                    <div className="flex h-130 items-center justify-center px-4 text-center text-xs text-rose-300">
+                                        {selectedUiRuntime?.reason ?? 'A interface desta extensao nao foi detectada na VSIX instalada.'}
                                     </div>
-                                </div>
-                            </>
-                        )}
+                                )}
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div className="rounded-xl border border-dashed border-border bg-bg/40 p-4 text-xs text-text-dim">
