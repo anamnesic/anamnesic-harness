@@ -266,7 +266,7 @@ function AppContent() {
             </aside>
 
             {/* Main Content */}
-            <div className={cn('flex h-screen flex-col overflow-hidden', terminalMaximized ? 'flex-1' : 'flex-[2]')}>
+            <div className={cn('flex h-screen flex-col overflow-hidden', terminalMaximized ? 'flex-1' : 'flex-2')}>
               <Header
                 title={config.title}
                 subtitle={config.subtitle}
