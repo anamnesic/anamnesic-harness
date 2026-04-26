@@ -66,6 +66,11 @@ export function ControlCenter() {
     const [runTasks, setRunTasks] = useState<any[]>([]);
     const [loadingTasks, setLoadingTasks] = useState(false);
 
+    // Logs drill-down state
+    const [selectedTaskForLogs, setSelectedTaskForLogs] = useState<string | null>(null);
+    const [taskLogs, setTaskLogs] = useState<any[]>([]);
+    const [loadingLogs, setLoadingLogs] = useState(false);
+
     useEventStream<{ runs: Run[] }>('runs.snapshot', snap => {
         setLiveRuns(Array.isArray(snap.runs) ? snap.runs : []);
     });
@@ -258,6 +263,26 @@ export function ControlCenter() {
             setRunTasks([]);
         } finally {
             setLoadingTasks(false);
+        }
+    }
+
+    async function fetchTaskLogs(taskId: string) {
+        if (selectedTaskForLogs === taskId) {
+            setSelectedTaskForLogs(null);
+            setTaskLogs([]);
+            return;
+        }
+
+        setSelectedTaskForLogs(taskId);
+        setLoadingLogs(true);
+        try {
+            const response = await apiFetch<{ data?: any[] }>(`/api/v1/tasks/${taskId}/logs`);
+            setTaskLogs(Array.isArray(response) ? response : (response.data || []));
+        } catch (e: any) {
+            toast('Failed to load logs for task', 'error');
+            setTaskLogs([]);
+        } finally {
+            setLoadingLogs(false);
         }
     }
 
@@ -1074,17 +1099,53 @@ export function ControlCenter() {
                                                                         <div key={task.id} className="p-2 bg-card border border-border rounded flex flex-col gap-1">
                                                                             <div className="flex items-center justify-between">
                                                                                 <span className="text-xs font-bold text-accent truncate">{task.description}</span>
-                                                                                <span className={cn(
-                                                                                    'text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded',
-                                                                                    task.status === 'completed' ? 'bg-green-500/10 text-green-400' :
-                                                                                    task.status === 'failed' ? 'bg-red-500/10 text-red-400' :
-                                                                                    task.status === 'running' ? 'bg-blue-500/10 text-blue-400' :
-                                                                                    'bg-zinc-500/10 text-zinc-400'
-                                                                                )}>
-                                                                                    {task.status}
-                                                                                </span>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <button
+                                                                                        onClick={() => fetchTaskLogs(task.id)}
+                                                                                        className="text-[9px] font-bold uppercase tracking-widest text-text-dim hover:text-accent transition-colors"
+                                                                                    >
+                                                                                        {selectedTaskForLogs === task.id ? 'Hide Logs' : 'View Logs'}
+                                                                                    </button>
+                                                                                    <span className={cn(
+                                                                                        'text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded',
+                                                                                        task.status === 'completed' ? 'bg-green-500/10 text-green-400' :
+                                                                                        task.status === 'failed' ? 'bg-red-500/10 text-red-400' :
+                                                                                        task.status === 'running' ? 'bg-blue-500/10 text-blue-400' :
+                                                                                        'bg-zinc-500/10 text-zinc-400'
+                                                                                    )}>
+                                                                                        {task.status}
+                                                                                    </span>
+                                                                                </div>
                                                                             </div>
                                                                             <span className="text-[10px] font-mono text-text-dim">Type: {task.type}</span>
+                                                                            
+                                                                            {selectedTaskForLogs === task.id && (
+                                                                                <div className="mt-2 p-2 bg-bg/50 rounded border border-border/40 space-y-1.5 max-h-40 overflow-y-auto">
+                                                                                    {loadingLogs ? (
+                                                                                        <Skeleton className="h-10 w-full" />
+                                                                                    ) : taskLogs.length > 0 ? (
+                                                                                        taskLogs.map((log, idx) => (
+                                                                                            <div key={idx} className="text-[9px] font-mono leading-relaxed border-b border-border/20 last:border-0 pb-1 last:pb-0">
+                                                                                                <div className="flex items-center gap-2 mb-0.5">
+                                                                                                    <span className="text-text-dim">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                                                                                                    <span className={cn(
+                                                                                                        'px-1 rounded-sm uppercase font-black',
+                                                                                                        log.level === 'error' ? 'bg-red-500/20 text-red-400' :
+                                                                                                        log.level === 'warn' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                                                        'bg-primary/10 text-primary'
+                                                                                                    )}>
+                                                                                                        {log.level}
+                                                                                                    </span>
+                                                                                                    <span className="text-accent/60 italic">{log.phase}</span>
+                                                                                                </div>
+                                                                                                <p className="text-highlight/80">{log.message}</p>
+                                                                                            </div>
+                                                                                        ))
+                                                                                    ) : (
+                                                                                        <p className="text-[9px] text-text-dim text-center py-1">No logs available for this task.</p>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     ))}
                                                                 </div>

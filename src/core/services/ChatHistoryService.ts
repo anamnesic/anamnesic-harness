@@ -175,7 +175,7 @@ export class ChatHistoryService {
     options: { limit: number; offset: number; search?: string; channel?: string; dateFilter?: string }
   ): Promise<{ items: ChatHistory[]; total: number }> {
     const repo = this.db.getRepository(ChatHistory);
-    
+
     // Build query conditions
     const queryBuilder = repo.createQueryBuilder('chat')
       .orderBy('chat.createdAt', 'DESC')

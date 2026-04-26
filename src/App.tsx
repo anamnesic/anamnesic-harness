@@ -38,12 +38,14 @@ import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
 import { ApiKeysHub } from './screens/ApiKeysHub';
+import { Breadcrumbs } from './components/Breadcrumbs';
 
-const Header = ({ title, subtitle, onBack, rightElement }: {
+const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
   rightElement?: React.ReactNode;
+  activeTab: string;
 }) => (
   <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
     <div className="flex items-center gap-4">
@@ -61,16 +63,29 @@ const Header = ({ title, subtitle, onBack, rightElement }: {
         </div>
       )}
       <div>
+        {activeTab !== 'dashboard' && (
+          <Breadcrumbs 
+            items={[
+              { label: 'Home', onClick: onBack },
+              { label: title, active: true }
+            ]} 
+            className="mb-1"
+          />
+        )}
         <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
-        {subtitle && (
+        {subtitle && activeTab === 'dashboard' && (
           <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mt-1.5">{subtitle}</p>
         )}
       </div>
     </div>
     <div className="flex items-center gap-3">
       {rightElement ?? (
-        <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors">
-          <Bell className="size-5 text-accent" />
+        <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
+          <Bell className="size-5 text-accent group-hover:scale-110 transition-transform" />
+          <span className="absolute right-3 top-3 flex size-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
+          </span>
         </button>
       )}
     </div>
@@ -208,6 +223,7 @@ export default function App() {
             subtitle={config.subtitle}
             onBack={config.onBack}
             rightElement={config.rightElement}
+            activeTab={activeTab}
           />
           <main className="flex-1 flex flex-col overflow-x-hidden">
             <AnimatePresence mode="wait">

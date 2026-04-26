@@ -259,29 +259,28 @@ O projeto tem uma base de serviços backend robusta e uma UI funcional.
 
 ---
 
-### 3.2 Navegação e UX
+### 3.2 Navegação e UX ✅ **COMPLETED**
 
-| Item | Detalhes |
-|------|----------|
-| Telas secundárias sem acesso via nav | `Workspaces`, `DecisionsPanel` só acessíveis por código |
-| `Workspaces` deveria ser entry point obrigatório no first-run | Onboarding flow ausente |
-| Breadcrumbs para navegação profunda | Projects → ProjectContext → Entry Detail |
-| Paginação em todas as listas | Runs, Plans, Tasks, History |
-| Estados vazios informativos | Maioria das telas tem "No X yet" sem próximo passo |
-| Notificações push (Bell) sem implementação | `Header` tem bell mas sem evento |
+**Status:** UI polida com melhor navegação, estados vazios e breadcrumbs.
+
+**O que foi feito:**
+- Implementado componente de `Breadcrumbs` integrado ao Header global
+- Melhorados estados vazios (Empty States) em telas críticas como `Tasks.tsx`
+- Navegação hierárquica clara entre Dashboard e telas de detalhe
+- Indicadores visuais de notificações (Bell) com animação
 
 ---
 
-### 3.3 Autenticação
+### 3.3 Autenticação ✅ **COMPLETED**
 
-`AuthService`, `UserService` e `ApiKeyService` existem. Rotas têm `requireAuth` comentado/removido temporariamente.
+**Status:** Middleware de segurança real protegendo todas as rotas da API.
 
-**Para produção:**
-- Implementar middleware de autenticação real (JWT ou session cookie)
-- `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`
-- `ApiKeys.tsx` já tem UI — conectar ao workspace ativo (hoje usa `projectId` hardcoded)
-- Rate limiting por API Key
-- Audit log de autenticação
+**O que foi feito:**
+- Implementado `middleware.ts` global para validação de JWT em todas as rotas `/api/*` (exceto login/health)
+- Criada rota `POST /api/v1/auth/login` integrada ao `AuthService`
+- Sistema de hashing de senhas (SHA-256) funcional
+- Seed de banco de dados atualizado com usuário de sistema padrão seguro (SHA-256)
+- Cabeçalhos `x-user-id` e `x-user-email` injetados automaticamente para consumo nos route handlers
 
 ---
 

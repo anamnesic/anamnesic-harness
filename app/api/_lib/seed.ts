@@ -13,9 +13,12 @@ export async function seedDefaultData(db: DataSource): Promise<void> {
   let systemUser = await userRepo.findOne({ where: { email: 'system@kairos.local' } });
   
   if (!systemUser) {
+    // SHA-256 for 'kairos2026'
+    const passwordHash = '4b1d624b7a19f20e40562e879a61761e3895e638b9903b41d063715c0e7d56e7';
+    
     systemUser = userRepo.create({
       email: 'system@kairos.local',
-      passwordHash: 'system-hash',
+      passwordHash,
       fullName: 'System',
       status: 'active',
     });

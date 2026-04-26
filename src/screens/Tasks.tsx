@@ -16,7 +16,8 @@ import {
   Plus,
   Bot,
   Calendar,
-  Timer
+  Timer,
+  ListTodo
 } from 'lucide-react';
 import { apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
@@ -448,9 +449,14 @@ export function Tasks() {
           ))}
         </div>
       ) : tasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 space-y-3">
-          <div className="size-10 rounded-full border-2 border-border/30" />
-          <p className="text-text-dim text-sm">No tasks found</p>
+        <div className="flex flex-col items-center justify-center py-24 space-y-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-card border border-border">
+            <ListTodo className="size-8 text-text-dim" />
+          </div>
+          <div className="text-center">
+            <p className="text-highlight font-bold">No tasks found</p>
+            <p className="text-text-dim text-sm mt-1 max-w-[200px] mx-auto">Create an orchestration plan to generate tasks.</p>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
