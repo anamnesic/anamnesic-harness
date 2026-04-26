@@ -20,6 +20,7 @@ import {
   FileText,
   GitBranch,
   BookOpen,
+  ServerCog,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -47,8 +48,7 @@ import { Signup } from './screens/Signup';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
 import { TerminalPanel } from './screens/TerminalPanel';
-import { ExtensionsRightSidebar } from './components/ExtensionsRightSidebar';
-import { useApi } from './lib/api';
+import { McpScreen } from './components/ExtensionsRightSidebar';
 import { InferenceHub } from './screens/InferenceHub';
 
 interface TerminalHeaderState {
@@ -130,6 +130,7 @@ const TABS = [
   { id: 'repo-decisions', label: 'Decisoes', icon: Lightbulb },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
+  { id: 'mcp', label: 'MCP', icon: ServerCog },
   { id: 'terminal', label: 'Terminal', icon: Terminal },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
@@ -241,6 +242,14 @@ function useScreenConfig(
       return { title: 'Snapshots', subtitle: 'Estado em um ponto no tempo', element: <Snapshots />, onBack: goHome, rightElement: undefined };
     case 'agents':
       return { title: 'Agentes', subtitle: 'Registro de agentes', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
+    case 'mcp':
+      return {
+        title: 'MCP',
+        subtitle: 'Conectores do Model Context Protocol',
+        element: <McpScreen />,
+        onBack: goHome,
+        rightElement: undefined,
+      };
     case 'terminal':
       return {
         title: 'Terminal',
@@ -344,24 +353,6 @@ function AppContent() {
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
-  const { data: openVsxInstalled } = useApi<{ data?: { extensions?: Array<string | { id?: string; identifier?: string }> } } | Array<string | { id?: string; identifier?: string }> | null>('/api/v1/extensions/open-vsx/installed');
-
-  const installedExtensionIds = useMemo(() => {
-    const payload = (openVsxInstalled as { data?: { extensions?: Array<string | { id?: string; identifier?: string }> } } | null)?.data
-      ? (openVsxInstalled as { data?: { extensions?: Array<string | { id?: string; identifier?: string }> } }).data?.extensions ?? []
-      : (Array.isArray(openVsxInstalled) ? openVsxInstalled : []);
-
-    const normalized = payload
-      .map((entry) => {
-        if (typeof entry === 'string') {
-          return entry.toLowerCase();
-        }
-        return (entry.id ?? entry.identifier ?? '').toLowerCase();
-      })
-      .filter((id) => id.length > 0);
-
-    return Array.from(new Set(normalized));
-  }, [openVsxInstalled]);
 
   const config = useScreenConfig(
     activeTab,
@@ -370,8 +361,6 @@ function AppContent() {
     terminalHeaderState,
     setTerminalHeaderState,
   );
-
-  const showExtensionsSidebar = activeTab !== 'repo-files';
 
   if (isLoading) {
     return (
@@ -410,12 +399,6 @@ function AppContent() {
           </main>
           <BottomNav active={activeTab} onChange={setActiveTab} />
         </div>
-        {showExtensionsSidebar ? (
-          <ExtensionsRightSidebar
-            installedExtensionIds={installedExtensionIds}
-            onNavigate={(tab) => setActiveTab(tab)}
-          />
-        ) : null}
       </div>
     </>
   );
