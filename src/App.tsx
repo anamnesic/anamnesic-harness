@@ -29,7 +29,6 @@ import { Agents } from './screens/Agents';
 import { Workflows } from './screens/Workflows';
 import { Security } from './screens/Security';
 import { Snapshots } from './screens/Snapshots';
-import { ChatPanel } from './screens/ChatPanel';
 import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
@@ -154,16 +153,6 @@ const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
   </aside>
 );
 
-const RightSidebar = () => (
-  <aside className="w-80 border-l border-border bg-bg/50 flex flex-col h-screen sticky top-0 overflow-hidden">
-    <div className="p-4 border-b border-border/50">
-      <h2 className="text-xs font-black uppercase tracking-widest text-text-dim">Assistente</h2>
-    </div>
-    <div className="flex-1 overflow-hidden">
-      <ChatPanel />
-    </div>
-  </aside>
-);
 
 function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabId) => void) {
   switch (active) {
@@ -210,7 +199,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'snapshots':
       return { title: 'Snapshots', subtitle: 'Estado em um ponto no tempo', element: <Snapshots />, onBack: goHome, rightElement: undefined };
     case 'chat':
-      return { title: 'Chat', subtitle: 'Assistente de IA', element: <ChatPanel />, onBack: goHome, rightElement: undefined };
+      return { title: 'Chat', subtitle: 'Assistente de IA', element: <div className="flex-1 flex items-center justify-center text-text-dim text-sm">Chat integrado no terminal lateral</div>, onBack: goHome, rightElement: undefined };
     case 'agents':
       return { title: 'Agentes', subtitle: 'Registro de agentes', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
     case 'tasks':
@@ -284,7 +273,7 @@ function AppContent() {
                 rightElement={config.rightElement}
                 activeTab={activeTab}
               />
-              <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto pb-8">
+              <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
@@ -299,13 +288,10 @@ function AppContent() {
                 </AnimatePresence>
               </main>
               <BottomNav active={activeTab} onChange={setActiveTab} />
-              <TerminalPanel />
             </div>
 
-            {/* Right Sidebar - Chat */}
-            <aside className="scrollbar-kairos h-screen w-80 shrink-0 border-l border-border bg-card/50 overflow-y-auto">
-              <ChatPanel />
-            </aside>
+            {/* Right Sidebar - Terminal */}
+            <TerminalPanel />
           </div>
         </ToastProvider>
       </RepositoryProvider>
