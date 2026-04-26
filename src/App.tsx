@@ -261,7 +261,12 @@ function AppContent() {
           <OnboardingModal />
           <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
             {/* Left Sidebar - Repositories */}
-            <aside className="scrollbar-kairos hidden h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto lg:flex lg:flex-col">
+            <aside
+              className={cn(
+                'scrollbar-kairos hidden h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto lg:flex lg:flex-col',
+                terminalMaximized && 'lg:hidden',
+              )}
+            >
               <Projects />
             </aside>
 
