@@ -26,6 +26,11 @@ interface SettingsData {
 }
 interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number; platform: string; nodeVersion: string }
 interface Project { id: string; name: string }
+interface AvailabilityData {
+    cli: Record<'copilot' | 'gemini' | 'claude-code' | 'codex', boolean>;
+    availableCli: string[];
+    models: Record<string, boolean>;
+}
 
 const CLI_MODEL_IDS = new Set(['gpt-5.2-codex', 'gpt-5.3-codex']);
 
@@ -37,6 +42,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const { data: settings, loading: settingsLoading } = useApi<SettingsData>('/api/v1/settings');
     const { data: metrics, loading: metricsLoading } = useApi<MetricsData>('/api/v1/metrics');
     const { data: projects } = useApi<Project[]>('/api/v1/projects');
+    const { data: availability, loading: availabilityLoading } = useApi<{ data?: AvailabilityData } | AvailabilityData>('/api/v1/system/ai-availability');
     const { toast } = useToast();
 
     const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
@@ -44,6 +50,12 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+    const availabilityPayload = (availability as { data?: AvailabilityData } | null)?.data
+        ? (availability as { data?: AvailabilityData }).data
+        : (availability as AvailabilityData | null);
+    const availableModels = AVAILABLE_MODELS.filter((model) => availabilityPayload?.models?.[model.id] ?? false);
+    const installedCli = availabilityPayload?.availableCli ?? [];
 
     useEffect(() => {
         if (!settings?.flags) {
@@ -53,14 +65,14 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         setLocalFlags(settings.flags);
 
         const nextModels: Record<string, boolean> = {};
-        for (const model of AVAILABLE_MODELS) {
+        for (const model of availableModels) {
             const settingKey = `models.${model.id}`;
             const raw = settings.aiSettings?.[settingKey];
             nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
         }
         setLocalModelStates(nextModels);
         setDirty(false);
-    }, [settings]);
+    }, [settings, availabilityPayload]);
 
     function toggleFlag(key: string) {
         setLocalFlags(prev => ({ ...prev, [key]: !prev[key] }));
@@ -100,7 +112,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     function handleDiscard() {
         if (settings?.flags) setLocalFlags(settings.flags);
         const nextModels: Record<string, boolean> = {};
-        for (const model of AVAILABLE_MODELS) {
+        for (const model of availableModels) {
             const settingKey = `models.${model.id}`;
             const raw = settings?.aiSettings?.[settingKey];
             nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
@@ -222,11 +234,26 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <span className="label-caps">Modelos de IA</span>
-                        <p className="text-xs text-text-dim mt-1">Ative ou desative os modelos disponíveis no projeto (inclui modelos de CLI).</p>
+                        <p className="text-xs text-text-dim mt-1">Ative ou desative modelos disponíveis para uso nesta máquina.</p>
                     </div>
                 </div>
+
+                {!availabilityLoading && installedCli.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {installedCli.map((cliName) => (
+                            <span key={cliName} className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary">
+                                {cliName}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
                 <div className="space-y-2 mt-4">
-                    {AVAILABLE_MODELS.map((model) => {
+                    {availabilityLoading ? (
+                        [0, 1, 2].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)
+                    ) : availableModels.length === 0 ? (
+                        <p className="text-xs text-text-dim py-2">Nenhum modelo disponível no momento. Instale um CLI compatível para habilitar.</p>
+                    ) : availableModels.map((model) => {
                         const enabled = localModelStates[model.id] ?? true;
                         const cli = isCliModel(model.id);
 
@@ -257,7 +284,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                                 </button>
                             </div>
                         );
-                    })}
+                    )}
                 </div>
             </div>
 
