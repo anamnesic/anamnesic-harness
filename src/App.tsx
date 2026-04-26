@@ -446,7 +446,7 @@ function AppContent() {
             {/* Right Sidebar - Terminal */}
             <TerminalPanel />
           </div>
-          <FloatingChat />
+          {activeTab === 'chat' && <FloatingChat />}
         </ToastProvider>
       </RepositoryProvider>
     </WorkspaceProvider>
