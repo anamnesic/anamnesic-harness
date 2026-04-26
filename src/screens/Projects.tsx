@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw } from 'lucide-react';
+import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2 } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -47,6 +47,9 @@ interface GitChange {
     path: string;
     status: string;
     staged: boolean;
+    unstaged: boolean;
+    indexStatus: string;
+    worktreeStatus: string;
 }
 
 interface RepositoryInsights {
@@ -405,7 +408,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         setShowBrowser(true);
     };
 
-    async function runGitAction(action: 'stage-all' | 'commit') {
+    async function runGitAction(action: 'stage-all' | 'commit' | 'stage-file' | 'unstage-file' | 'discard-file', path?: string) {
         if (!selectedProject) return;
         if (action === 'commit' && !commitMessage.trim()) {
             toast('Digite uma mensagem de commit', 'error');
@@ -416,12 +419,12 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         try {
             await apiFetch<ApiResponse<RepositoryInsights>>(`/api/v1/projects/${selectedProject.id}/repository-insights`, {
                 method: 'POST',
-                body: JSON.stringify({ action, message: commitMessage }),
+                body: JSON.stringify({ action, message: commitMessage, path }),
             });
             if (action === 'commit') {
                 setCommitMessage('');
                 toast('Commit realizado', 'success');
-            } else {
+            } else if (action === 'stage-all') {
                 toast('Mudanças staged com sucesso', 'success');
             }
             await refetchInsights();
@@ -737,13 +740,50 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                         <div className="max-h-56 space-y-1 overflow-y-auto pr-1 sm:max-h-72">
                                             {insights.changes.map((change, index) => (
                                                 <div key={`${change.path}-${index}`} className="flex items-center justify-between gap-2 rounded-md border border-border/50 px-2 py-1.5">
-                                                    <p className="truncate font-mono text-xs text-text-dim">{change.path}</p>
-                                                    <span className={cn(
-                                                        'shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold',
-                                                        change.staged ? 'bg-green-500/15 text-green-400' : 'bg-zinc-500/20 text-zinc-300',
-                                                    )}>
-                                                        {change.status}
-                                                    </span>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate font-mono text-xs text-text-dim">{change.path}</p>
+                                                        <p className="text-[10px] text-text-dim/70">
+                                                            index:{change.indexStatus} worktree:{change.worktreeStatus}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className={cn(
+                                                            'shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold',
+                                                            change.staged ? 'bg-green-500/15 text-green-400' : 'bg-zinc-500/20 text-zinc-300',
+                                                        )}>
+                                                            {change.status}
+                                                        </span>
+                                                        {change.unstaged && (
+                                                            <button
+                                                                title="Stage arquivo"
+                                                                onClick={() => void runGitAction('stage-file', change.path)}
+                                                                disabled={gitBusy || insightsLoading}
+                                                                className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                                            >
+                                                                <GitCommitHorizontal className="size-3" />
+                                                            </button>
+                                                        )}
+                                                        {change.staged && (
+                                                            <button
+                                                                title="Unstage arquivo"
+                                                                onClick={() => void runGitAction('unstage-file', change.path)}
+                                                                disabled={gitBusy || insightsLoading}
+                                                                className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                                            >
+                                                                <Minus className="size-3" />
+                                                            </button>
+                                                        )}
+                                                        {change.unstaged && (
+                                                            <button
+                                                                title="Descartar mudanças"
+                                                                onClick={() => void runGitAction('discard-file', change.path)}
+                                                                disabled={gitBusy || insightsLoading}
+                                                                className="rounded border border-border p-1 text-text-dim hover:text-red-400 transition-colors disabled:opacity-50"
+                                                            >
+                                                                <Undo2 className="size-3" />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

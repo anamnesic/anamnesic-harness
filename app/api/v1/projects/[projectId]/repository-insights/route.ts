@@ -14,6 +14,9 @@ type GitChange = {
     path: string;
     status: string;
     staged: boolean;
+    unstaged: boolean;
+    indexStatus: string;
+    worktreeStatus: string;
 };
 
 type RepositoryInsights = {
@@ -41,14 +44,19 @@ function parsePorcelain(output: string): GitChange[] {
         .map((line) => line.trimEnd())
         .filter(Boolean)
         .map((line) => {
-            const xy = line.slice(0, 2);
+            const indexStatus = line[0] ?? ' ';
+            const worktreeStatus = line[1] ?? ' ';
             const rawPath = line.slice(3).trim();
             const path = rawPath.includes(' -> ') ? rawPath.split(' -> ').pop() ?? rawPath : rawPath;
-            const staged = xy[0] !== ' ' && xy[0] !== '?';
+            const staged = indexStatus !== ' ' && indexStatus !== '?';
+            const unstaged = worktreeStatus !== ' ' || indexStatus === '?';
             return {
                 path,
-                status: xy,
+                status: `${indexStatus}${worktreeStatus}`,
                 staged,
+                unstaged,
+                indexStatus,
+                worktreeStatus,
             };
         });
 }
@@ -130,14 +138,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
         const body = await req.json().catch(() => ({}));
         const action = typeof body?.action === 'string' ? body.action : '';
         const message = typeof body?.message === 'string' ? body.message.trim() : '';
+        const path = typeof body?.path === 'string' ? body.path.trim() : '';
 
-        if (!['stage-all', 'commit'].includes(action)) {
+        if (!['stage-all', 'commit', 'stage-file', 'unstage-file', 'discard-file'].includes(action)) {
             return err('INVALID_ACTION', 'Unsupported git action', 400);
         }
 
         try {
             if (action === 'stage-all') {
                 await runGit(localPath, ['add', '-A']);
+            }
+
+            if (action === 'stage-file') {
+                if (!path) return err('PATH_REQUIRED', 'File path is required', 400);
+                await runGit(localPath, ['add', '--', path]);
+            }
+
+            if (action === 'unstage-file') {
+                if (!path) return err('PATH_REQUIRED', 'File path is required', 400);
+                await runGit(localPath, ['restore', '--staged', '--', path]);
+            }
+
+            if (action === 'discard-file') {
+                if (!path) return err('PATH_REQUIRED', 'File path is required', 400);
+                // Restores tracked files and quietly ignores non-tracked paths.
+                await runGit(localPath, ['restore', '--', path]).catch(() => '');
+                await runGit(localPath, ['clean', '-f', '--', path]).catch(() => '');
             }
 
             if (action === 'commit') {
