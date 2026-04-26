@@ -3,6 +3,7 @@ import { Retriever } from './retriever';
 import { rank, type RankedItem } from './ranking';
 import { SemanticRerankService } from './SemanticRerankService';
 import { Logger } from '../core/utils/Logger';
+import type { RetrievedItem } from './retriever';
 
 export interface ContextWindow {
     projectId: string;
@@ -21,6 +22,15 @@ export interface ContextWindow {
 
 interface RetrieverLike {
     retrieve(projectId: string, query: string, limit?: number): Promise<Array<{
+        id: string;
+        key: string;
+        value: string;
+        category: string;
+        priority: number;
+        projectId: string;
+        score: number;
+    }>>;
+    retrieveSemantic?(projectId: string, query: string, limit?: number): Promise<Array<{
         id: string;
         key: string;
         value: string;
@@ -54,9 +64,23 @@ export class ContextBuilder {
     }
 
     async build(projectId: string, query: string, tokenBudget = 2000): Promise<ContextWindow> {
-        // Keep fast lexical retrieval as stage 1 for low-cost recall.
-        const raw = await this.retriever.retrieve(projectId, query, 50);
-        const heuristicallyRanked = rank(raw, query);
+        // Stage 1: low-cost lexical retrieval.
+        const lexical = await this.retriever.retrieve(projectId, query, 50);
+
+        // Stage 2: vector-backed semantic retrieval (secondary to lexical for cost control).
+        let semantic: RetrievedItem[] = [];
+        if (typeof this.retriever.retrieveSemantic === 'function') {
+            try {
+                semantic = await this.retriever.retrieveSemantic(projectId, query, 50);
+            } catch (error) {
+                this.logger.warn(`Semantic retrieval failed; continuing with lexical only: ${String(error)}`);
+            }
+        }
+
+        const merged = this.mergeCandidates(lexical, semantic, 80);
+        const heuristicallyRanked = rank(merged, query);
+
+        // Stage 3: CLI semantic rerank keeps compact context quality high.
         const ranked = await this.semanticReranker.rerank(heuristicallyRanked, query, { topN: 12 });
 
         const items: ContextWindow['items'] = [];
@@ -86,5 +110,35 @@ export class ContextBuilder {
             tokenEstimate: Math.round(chars / AVG_CHARS_PER_TOKEN),
             builtAt: new Date(),
         };
+    }
+
+    private mergeCandidates(
+        lexical: RetrievedItem[],
+        semantic: RetrievedItem[],
+        limit: number,
+    ): RetrievedItem[] {
+        const byId = new Map<string, RetrievedItem>();
+
+        for (const item of lexical) {
+            byId.set(item.id, item);
+        }
+
+        for (const item of semantic) {
+            const existing = byId.get(item.id);
+            if (!existing) {
+                byId.set(item.id, item);
+                continue;
+            }
+
+            byId.set(item.id, {
+                ...existing,
+                score: Math.max(existing.score, item.score),
+                priority: Math.max(existing.priority, item.priority),
+            });
+        }
+
+        return Array.from(byId.values())
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit);
     }
 }

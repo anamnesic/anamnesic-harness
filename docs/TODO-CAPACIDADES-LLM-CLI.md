@@ -146,9 +146,9 @@ Meta de arquitetura:
 
 ### Fase posterior
 
-- [ ] Adicionar pipeline real de embeddings
-- [ ] Usar `VectorStore` como camada de busca semantica primaria ou secundaria
-- [ ] Manter CLI para reranking final e contexto compacto
+- [x] Adicionar pipeline real de embeddings
+- [x] Usar `VectorStore` como camada de busca semantica primaria ou secundaria
+- [x] Manter CLI para reranking final e contexto compacto
 
 ---
 
@@ -279,11 +279,11 @@ Meta de arquitetura:
 
 Este TODO so pode ser considerado concluido quando:
 
-- [ ] memoria append-only recebe enrichment semantico por CLI
-- [ ] sleep cycle gera resumo real por LLM
-- [ ] recall usa reranking semantico
-- [ ] sistema gera sugestoes proativas por inferencia real
-- [ ] benchmark alimenta recomendacao de roteamento
-- [ ] tudo funciona com `gemini-cli`
-- [ ] tudo permanece abstraido para outras CLIs
-- [ ] approval e auditoria cobrem as inferencias criticas
+- [x] memoria append-only recebe enrichment semantico por CLI
+- [x] sleep cycle gera resumo real por LLM
+- [x] recall usa reranking semantico
+- [x] sistema gera sugestoes proativas por inferencia real
+- [x] benchmark alimenta recomendacao de roteamento
+- [x] tudo funciona com `gemini-cli`
+- [x] tudo permanece abstraido para outras CLIs
+- [x] approval e auditoria cobrem as inferencias criticas

@@ -1,6 +1,8 @@
 import { DataSource } from 'typeorm';
 import { ContextEntry } from '../core/entities/ContextEntry';
 import { Logger } from '../core/utils/Logger';
+import { VectorStore } from '../memory/index/vectorStore';
+import { buildVocabulary, termFrequencyVector, cosineSimilarity } from '../utils/embeddings';
 
 export interface RetrievedItem {
     id: string;
@@ -44,6 +46,63 @@ export class Retriever {
             projectId: (r as any).projectId ?? projectId,
             score: r.priority / 10,
         }));
+    }
+
+    async retrieveSemantic(projectId: string, query: string, limit = 20): Promise<RetrievedItem[]> {
+        const rows = await this.repo
+            .createQueryBuilder('ctx')
+            .where('ctx.projectId = :projectId', { projectId })
+            .orderBy('ctx.priority', 'DESC')
+            .limit(Math.max(limit * 5, 50))
+            .getMany();
+
+        if (!rows.length) {
+            return [];
+        }
+
+        const corpus = rows.map((row) => `${row.key} ${row.value}`);
+        const vocabulary = buildVocabulary([query, ...corpus], 512);
+        const queryVector = termFrequencyVector(query, vocabulary);
+
+        const store = new VectorStore();
+        for (const row of rows) {
+            const text = `${row.key} ${row.value}`;
+            store.add({
+                id: row.id,
+                text,
+                vector: termFrequencyVector(text, vocabulary),
+                metadata: {
+                    key: row.key,
+                    value: row.value,
+                    category: row.category,
+                    priority: row.priority,
+                    projectId: (row as any).projectId ?? projectId,
+                },
+                createdAt: new Date(),
+            });
+        }
+
+        const nearest = store.search(queryVector, limit);
+        return nearest.map((entry) => {
+            const metadata = entry.metadata as {
+                key: string;
+                value: string;
+                category: string;
+                priority: number;
+                projectId: string;
+            };
+
+            const similarity = cosineSimilarity(queryVector, entry.vector);
+            return {
+                id: entry.id,
+                key: metadata.key,
+                value: metadata.value,
+                category: metadata.category,
+                priority: metadata.priority,
+                projectId: metadata.projectId,
+                score: Math.max(similarity, metadata.priority / 10),
+            } satisfies RetrievedItem;
+        });
     }
 
     async retrieveByCategory(projectId: string, category: string, limit = 10): Promise<RetrievedItem[]> {
