@@ -10,28 +10,31 @@ export async function GET(req: NextRequest) {
         const workspaceIdFromCtx = getWorkspaceId(req);
         const { searchParams } = new URL(req.url);
         const workspaceId = searchParams.get('workspaceId') || workspaceIdFromCtx;
-        const agentId = searchParams.get('agentId');
-        const status = searchParams.get('status');
-        const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+        const agentId = searchParams.get('agentId') || undefined;
+        const status = searchParams.get('status') || undefined;
+        
+        const parsedLimit = Number.parseInt(searchParams.get('limit') ?? '', 10);
+        const parsedOffset = Number.parseInt(searchParams.get('offset') ?? '', 10);
+        const limit = Math.min(
+            Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 50, 1),
+            200
+        );
+        const offset = Math.max(Number.isFinite(parsedOffset) ? parsedOffset : 0, 0);
 
         const db = await getDb();
         const { TaskService } = await import('@/src/core/services/TaskService');
         const taskService = new TaskService(db);
 
-        let tasks;
-        if (agentId) {
-            tasks = await taskService.listByAgent(agentId, status as any);
-        } else if (workspaceId) {
-            tasks = await taskService.listByWorkspace(workspaceId, status as any);
-        } else {
-            return err('BAD_REQUEST', 'Either workspaceId or agentId is required', 400);
-        }
-
-        // Apply limit
-        const limitedTasks = tasks.slice(0, limit);
+        const { items, total } = await taskService.listTasksPaginated({
+            workspaceId: workspaceId || undefined,
+            agentId,
+            status: status as any,
+            limit,
+            offset
+        });
 
         // Sanitize tasks for response
-        const sanitizedTasks = limitedTasks.map(task => ({
+        const sanitizedTasks = items.map(task => ({
             id: task.id,
             workspaceId: task.workspaceId,
             agentId: task.agentId,
@@ -49,7 +52,7 @@ export async function GET(req: NextRequest) {
             reasoning: task.reasoning,
         }));
 
-        return ok(sanitizedTasks);
+        return ok({ items: sanitizedTasks, total, limit, offset });
     } catch (error) {
         return err('INTERNAL_ERROR', 'Failed to list tasks', 500);
     }

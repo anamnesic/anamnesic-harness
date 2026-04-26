@@ -31,10 +31,12 @@ export interface CleanupResult {
 }
 
 export class RetentionPolicyService {
+  private static instance: RetentionPolicyService;
   private logger = Logger.getInstance();
   private bus = getEventBus('retention-policy');
   private cleanupSchedule: NodeJS.Timeout | null = null;
   private isRunning = false;
+  private settingsService: any = null;
 
   private readonly defaultPolicy: RetentionPolicy = {
     snapshotsRetentionDays: 30,
@@ -47,17 +49,60 @@ export class RetentionPolicyService {
 
   private policy: RetentionPolicy;
 
-  constructor(
+  private constructor(
     private chatHistoryService?: ChatHistoryService,
     private safetyNetService?: SafetyNetIntegrationService,
     customPolicy?: Partial<RetentionPolicy>
   ) {
     this.policy = { ...this.defaultPolicy, ...customPolicy };
+  }
 
-    this.logger.info('[RetentionPolicy] Service initialized', {
-      snapshotsRetentionDays: this.policy.snapshotsRetentionDays,
-      chatHistoryRetentionDays: this.policy.chatHistoryRetentionDays,
-    });
+  public static getInstance(
+    chatHistoryService?: ChatHistoryService,
+    safetyNetService?: SafetyNetIntegrationService
+  ): RetentionPolicyService {
+    if (!RetentionPolicyService.instance) {
+      RetentionPolicyService.instance = new RetentionPolicyService(
+        chatHistoryService,
+        safetyNetService
+      );
+    }
+    return RetentionPolicyService.instance;
+  }
+
+  async setSettingsService(settingsService: any) {
+    this.settingsService = settingsService;
+    await this.loadPersistedPolicy();
+  }
+
+  private async loadPersistedPolicy() {
+    if (!this.settingsService) return;
+    try {
+      const setting = await this.settingsService.getSetting('system', 'retention.policy');
+      if (setting && setting.value) {
+        const persistedPolicy = JSON.parse(setting.value);
+        this.policy = { ...this.defaultPolicy, ...persistedPolicy };
+        this.logger.info('[RetentionPolicy] Persisted policy loaded');
+      }
+    } catch (error) {
+      this.logger.error(`[RetentionPolicy] Failed to load persisted policy: ${error}`);
+    }
+  }
+
+  private async persistPolicy() {
+    if (!this.settingsService) return;
+    try {
+      await this.settingsService.setSetting(
+        'system',
+        'retention.policy',
+        JSON.stringify(this.policy),
+        'json',
+        'System-wide data retention policy',
+        true
+      );
+    } catch (error) {
+      this.logger.error(`[RetentionPolicy] Failed to persist policy: ${error}`);
+    }
   }
 
   /**
@@ -275,10 +320,11 @@ export class RetentionPolicyService {
   /**
    * Atualizar política de retenção
    */
-  updatePolicy(newPolicy: Partial<RetentionPolicy>): void {
+  async updatePolicy(newPolicy: Partial<RetentionPolicy>): Promise<void> {
     this.policy = { ...this.policy, ...newPolicy };
 
     this.logger.info('[RetentionPolicy] Policy updated', { policy: this.policy });
+    await this.persistPolicy();
 
     this.bus.emit('retention:policy:updated', {
       policy: this.policy,

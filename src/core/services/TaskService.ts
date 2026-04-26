@@ -50,6 +50,28 @@ export class TaskService {
     });
   }
 
+  async listTasksPaginated(options: {
+    workspaceId?: string;
+    agentId?: string;
+    status?: TaskStatus;
+    limit: number;
+    offset: number;
+  }): Promise<{ items: Task[]; total: number }> {
+    const where: Record<string, any> = {};
+    if (options.workspaceId) where.workspaceId = options.workspaceId;
+    if (options.agentId) where.agentId = options.agentId;
+    if (options.status) where.status = options.status;
+
+    const [items, total] = await this.repo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      take: options.limit,
+      skip: options.offset,
+    });
+
+    return { items, total };
+  }
+
   async listByWorkspace(workspaceId: string, status?: TaskStatus): Promise<Task[]> {
     return this.repo.find({
       where: status ? { workspaceId, status } : { workspaceId },

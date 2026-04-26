@@ -9,6 +9,7 @@ import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
 import { AuditTrailModal } from '@/src/components/AuditTrailModal';
 import { cn } from '@/src/lib/utils';
+import { Paginator } from '@/src/components/Paginator';
 
 interface Run {
     id: string;
@@ -28,8 +29,14 @@ interface Plan {
 }
 
 export function ControlCenter() {
-    const { data: runs, loading: runsLoading, refetch } = useApi<Run[] | { items?: Run[] }>('/api/v1/orchestrator/runs');
-    const { data: plans, loading: plansLoading } = useApi<Plan[] | { items?: Plan[] }>('/api/v1/orchestrator/plans');
+    const [offsetRuns, setOffsetRuns] = useState(0);
+    const limitRuns = 10;
+    const [offsetPlans, setOffsetPlans] = useState(0);
+    const limitPlans = 10;
+
+    const { data: runs, loading: runsLoading, refetch } = useApi<any>(`/api/v1/orchestrator/runs?limit=${limitRuns}&offset=${offsetRuns}`);
+    const { data: plans, loading: plansLoading } = useApi<any>(`/api/v1/orchestrator/plans?limit=${limitPlans}&offset=${offsetPlans}`);
+    
     const { toast } = useToast();
     const [auditPipelineId, setAuditPipelineId] = useState<string | null>(null);
     const [liveRuns, setLiveRuns] = useState<Run[] | null>(null);
@@ -458,7 +465,7 @@ export function ControlCenter() {
                         </div>
                     ) : recent.length > 0 ? (
                         <div className="space-y-3">
-                            {recent.map((run) => (
+                            {fetched.map((run) => (
                                 <div key={run.id} className="flex items-center justify-between p-3 bg-bg border border-border rounded-xl">
                                     <div className="flex items-center gap-3">
                                         <span className="text-[10px] font-mono text-text-dim shrink-0">
@@ -494,6 +501,14 @@ export function ControlCenter() {
                                     </div>
                                 </div>
                             ))}
+                            
+                            <Paginator
+                                total={runs?.total || 0}
+                                limit={limitRuns}
+                                offset={offsetRuns}
+                                onPageChange={setOffsetRuns}
+                                className="rounded-xl border border-border mt-2"
+                            />
                         </div>
                     ) : (
                         <p className="text-sm text-text-dim">No runs recorded yet.</p>
@@ -541,6 +556,14 @@ export function ControlCenter() {
                                 </span>
                             </div>
                         ))}
+                        
+                        <Paginator
+                            total={plans?.total || 0}
+                            limit={limitPlans}
+                            offset={offsetPlans}
+                            onPageChange={setOffsetPlans}
+                            className="rounded-xl border border-border mt-2"
+                        />
                     </div>
                 ) : (
                     <p className="text-sm text-text-dim">No plans yet.</p>

@@ -23,6 +23,7 @@ import { apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { useWorkspace } from '@/src/context/WorkspaceContext';
 import { cn } from '@/src/lib/utils';
+import { Paginator } from '@/src/components/Paginator';
 
 interface Task {
   id: string;
@@ -230,6 +231,11 @@ export function Tasks() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const limit = 20;
+
   const [filters, setFilters] = useState({
     status: '',
     agentId: '',
@@ -241,7 +247,7 @@ export function Tasks() {
       fetchTasks();
       fetchAgents();
     }
-  }, [workspace, filters]);
+  }, [workspace, filters, offset]);
 
   async function fetchTasks() {
     try {
@@ -250,22 +256,25 @@ export function Tasks() {
       
       const params = new URLSearchParams();
       params.set('workspaceId', workspace.id);
+      params.set('limit', limit.toString());
+      params.set('offset', offset.toString());
+      
       if (filters.status) params.set('status', filters.status);
       if (filters.agentId) params.set('agentId', filters.agentId);
+      if (filters.search) params.set('search', filters.search);
       
-      const res = await apiFetch<{ data: Task[] }>(`/api/v1/tasks?${params.toString()}`);
-      let filteredTasks = res.data || [];
-
-      // Apply client-side search if needed
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredTasks = filteredTasks.filter((task: Task) =>
-          task.description.toLowerCase().includes(searchLower) ||
-          task.type.toLowerCase().includes(searchLower)
-        );
+      const res = await apiFetch<any>(`/api/v1/tasks?${params.toString()}`);
+      
+      if (res && res.items) {
+          setTasks(res.items);
+          setTotal(res.total || 0);
+      } else if (Array.isArray(res)) {
+          setTasks(res);
+          setTotal(res.length);
+      } else {
+          setTasks([]);
+          setTotal(0);
       }
-
-      setTasks(filteredTasks);
     } catch (error: any) {
       toast(error?.message || 'Failed to load tasks', 'error');
     } finally {
@@ -410,14 +419,20 @@ export function Tasks() {
               type="text"
               placeholder="Search tasks..."
               value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              onChange={(e) => {
+                  setFilters({ ...filters, search: e.target.value });
+                  setOffset(0);
+              }}
               className="w-full pl-10 pr-4 py-2 bg-bg border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
             />
           </div>
           
           <select
             value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            onChange={(e) => {
+                setFilters({ ...filters, status: e.target.value });
+                setOffset(0);
+            }}
             className="px-4 py-2 bg-bg border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
           >
             <option value="">All Status</option>
@@ -428,7 +443,10 @@ export function Tasks() {
           
           <select
             value={filters.agentId}
-            onChange={(e) => setFilters({ ...filters, agentId: e.target.value })}
+            onChange={(e) => {
+                setFilters({ ...filters, agentId: e.target.value });
+                setOffset(0);
+            }}
             className="px-4 py-2 bg-bg border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
           >
             <option value="">All Agents</option>
@@ -469,6 +487,14 @@ export function Tasks() {
               onSelect={setSelectedTask}
             />
           ))}
+          
+          <Paginator
+            total={total}
+            limit={limit}
+            offset={offset}
+            onPageChange={setOffset}
+            className="mt-4 rounded-xl border border-border overflow-hidden"
+          />
         </div>
       )}
     </div>

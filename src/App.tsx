@@ -22,6 +22,7 @@ import {
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { WorkspaceSelector } from './components/WorkspaceSelector';
 import { Dashboard } from './screens/Dashboard';
 import { MemoryLedger } from './screens/MemoryLedger';
@@ -38,7 +39,9 @@ import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
 import { ApiKeysHub } from './screens/ApiKeysHub';
+import { Login } from './screens/Login';
 import { Breadcrumbs } from './components/Breadcrumbs';
+import { OnboardingModal } from './components/OnboardingModal';
 
 const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   title: string;
@@ -210,13 +213,27 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
   }
 }
 
-export default function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const { isAuthenticated, isLoading } = useAuth();
   const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'), setActiveTab);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <Activity className="size-12 text-primary animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
   return (
     <WorkspaceProvider>
       <ToastProvider>
+        <OnboardingModal />
         <div className="flex min-h-screen flex-col bg-bg font-sans text-highlight selection:bg-primary/20">
           <Header
             title={config.title}
@@ -243,5 +260,13 @@ export default function App() {
         </div>
       </ToastProvider>
     </WorkspaceProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

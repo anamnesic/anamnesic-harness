@@ -1,9 +1,7 @@
 import { DataSource } from 'typeorm';
-import { EventEmitter } from 'events';
 import { Logger } from '../utils/Logger';
-import fs from 'fs';
-import path from 'path';
 import chokidar from 'chokidar';
+import { getEventBus } from '../events';
 
 /**
  * Auto-Sync Service
@@ -34,8 +32,10 @@ export interface SyncEvent {
   data?: any;
 }
 
-export class AutoSyncService extends EventEmitter {
+export class AutoSyncService {
+  private static instance: AutoSyncService;
   private logger = Logger.getInstance();
+  private bus = getEventBus('auto-sync');
   private isRunning: boolean = false;
   private watcher: chokidar.FSWatcher | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
@@ -47,12 +47,10 @@ export class AutoSyncService extends EventEmitter {
   private lastSyncTime: number = 0;
   private syncInProgress: boolean = false;
 
-  constructor(
+  private constructor(
     private db?: DataSource,
     config?: Partial<AutoSyncConfig>
   ) {
-    super();
-
     this.config = {
       projectPath: config?.projectPath || process.cwd(),
       workspaceId: config?.workspaceId || 'default',
@@ -74,6 +72,16 @@ export class AutoSyncService extends EventEmitter {
       projectPath: this.config.projectPath,
       workspaceId: this.config.workspaceId,
     });
+  }
+
+  public static getInstance(
+    db?: DataSource,
+    config?: Partial<AutoSyncConfig>
+  ): AutoSyncService {
+    if (!AutoSyncService.instance) {
+      AutoSyncService.instance = new AutoSyncService(db, config);
+    }
+    return AutoSyncService.instance;
   }
 
   /**
@@ -99,12 +107,12 @@ export class AutoSyncService extends EventEmitter {
       this.startScheduledSync();
 
       // Emitir evento de inicialização
-      this.emit('started', {
+      await this.bus.emit('auto-sync:started', {
         type: 'sync-started',
         projectId: this.config.projectId,
         workspaceId: this.config.workspaceId,
         timestamp: new Date(),
-      } as SyncEvent);
+      });
 
       this.logger.info('[AutoSync] Service started successfully');
     } catch (error) {
@@ -135,7 +143,7 @@ export class AutoSyncService extends EventEmitter {
 
       // Parar scheduled sync
       if (this.syncSchedule) {
-        clearInterval(this.syncSchedule);
+        clearInterval(this.syncSchedule as any);
         this.syncSchedule = null;
       }
 
@@ -145,12 +153,12 @@ export class AutoSyncService extends EventEmitter {
         this.debounceTimer = null;
       }
 
-      this.emit('stopped', {
+      await this.bus.emit('auto-sync:stopped', {
         type: 'sync-completed',
         projectId: this.config.projectId,
         workspaceId: this.config.workspaceId,
         timestamp: new Date(),
-      } as SyncEvent);
+      });
 
       this.logger.info('[AutoSync] Service stopped');
     } catch (error) {
@@ -162,7 +170,7 @@ export class AutoSyncService extends EventEmitter {
   /**
    * Verificar se o serviço está rodando
    */
-  async isRunning(): Promise<boolean> {
+  isServiceRunning(): boolean {
     return this.isRunning;
   }
 
@@ -185,34 +193,34 @@ export class AutoSyncService extends EventEmitter {
 
       // Aqui seria chamado o serviço de sincronização real
       // Por enquanto, apenas emitir evento
-      this.emit('syncing', {
+      await this.bus.emit('auto-sync:syncing', {
         type: 'sync-started',
         projectId: this.config.projectId,
         workspaceId: this.config.workspaceId,
         timestamp: new Date(),
-      } as SyncEvent);
+      });
 
       // Simular delay de sincronização
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      this.emit('synced', {
+      await this.bus.emit('auto-sync:synced', {
         type: 'sync-completed',
         projectId: this.config.projectId,
         workspaceId: this.config.workspaceId,
         timestamp: new Date(),
-      } as SyncEvent);
+      });
 
       this.logger.info('[AutoSync] Sync completed successfully');
       return true;
     } catch (error) {
       this.logger.error('[AutoSync] Sync failed', { error });
-      this.emit('error', {
+      await this.bus.emit('auto-sync:error', {
         type: 'sync-error',
         projectId: this.config.projectId,
         workspaceId: this.config.workspaceId,
         timestamp: new Date(),
         data: { error: String(error) },
-      } as SyncEvent);
+      });
       return false;
     } finally {
       this.syncInProgress = false;
@@ -258,13 +266,15 @@ export class AutoSyncService extends EventEmitter {
     this.logger.debug('[AutoSync] File changed', { file, type });
 
     // Emitir evento de mudança
-    this.emit('file-changed', {
+    this.bus.emit('auto-sync:file-changed', {
       type: 'file-changed',
       projectId: this.config.projectId,
       workspaceId: this.config.workspaceId,
       timestamp: new Date(),
       data: { file, changeType: type },
-    } as SyncEvent);
+    }).catch(err => {
+      this.logger.error('[AutoSync] Failed to emit file change event', { error: err });
+    });
 
     // Debounce: aguardar antes de sincronizar
     if (this.debounceTimer) {

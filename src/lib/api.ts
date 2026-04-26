@@ -28,6 +28,12 @@ export async function apiFetch<T = unknown>(
         ...init?.headers as Record<string, string>,
     };
 
+    // Add auth token if available
+    const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     // Add workspace header if available and not already set
     if (workspaceId && !headers['X-Workspace-Id']) {
         headers['X-Workspace-Id'] = workspaceId;

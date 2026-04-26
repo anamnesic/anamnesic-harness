@@ -3,6 +3,8 @@ import type { DataSource } from 'typeorm';
 let db: DataSource | null = null;
 let observersInitialized = false;
 let workflowsInitialized = false;
+let retentionInitialized = false;
+let syncInitialized = false;
 
 export async function getDb(): Promise<DataSource> {
     if (db && db.isInitialized) return db;
@@ -23,8 +25,61 @@ export async function getDb(): Promise<DataSource> {
         await initializeWorkflowTriggers(db);
         workflowsInitialized = true;
     }
+
+    // Initialize retention policy on first DB connection
+    if (!retentionInitialized) {
+        await initializeRetentionPolicy(db);
+        retentionInitialized = true;
+    }
+
+    // Initialize auto-sync on first DB connection
+    if (!syncInitialized) {
+        await initializeSync(db);
+        syncInitialized = true;
+    }
     
     return db;
+}
+
+async function initializeSync(database: DataSource): Promise<void> {
+    try {
+        const { AutoSyncService } = await import('@/src/core/services/AutoSyncService');
+        const syncService = AutoSyncService.getInstance(database, {
+            projectPath: process.cwd(),
+            workspaceId: 'system',
+        });
+        await syncService.start();
+        console.log('Auto-Sync Service initialized and started');
+    } catch (error) {
+        console.error('Failed to initialize auto-sync:', error);
+    }
+}
+
+async function initializeRetentionPolicy(database: DataSource): Promise<void> {
+    try {
+        const { RetentionPolicyService } = await import('@/src/core/services/RetentionPolicyService');
+        const { ChatHistoryService } = await import('@/src/core/services/ChatHistoryService');
+        const { SettingsService } = await import('@/src/core/services/SettingsService');
+        const { AdvancedFeaturesFactory } = await import('@/src/core/services/AdvancedFeaturesFactory');
+        
+        const chatHistoryService = new ChatHistoryService(database);
+        const settingsService = new SettingsService(database);
+        
+        // Use factory for safety net
+        const factory = new AdvancedFeaturesFactory({
+            projectPath: process.cwd(),
+            db: database,
+        });
+        const safetyNet = factory.getSafetyNet();
+        
+        const retentionService = RetentionPolicyService.getInstance(chatHistoryService, safetyNet);
+        await retentionService.setSettingsService(settingsService);
+        await retentionService.start();
+        
+        console.log('Retention Policy Service initialized and started');
+    } catch (error) {
+        console.error('Failed to initialize retention policy:', error);
+    }
 }
 
 async function initializeObservers(database: DataSource): Promise<void> {

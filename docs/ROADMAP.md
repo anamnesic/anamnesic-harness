@@ -4,334 +4,221 @@
 > Base: análise do estado atual do frontend (`src/screens/`), backend (`app/api/v1/`) e serviços (`src/core/services/`).  
 > Objetivo: mapear o delta entre o que existe e o que é necessário para o conceito funcionar de forma profissional.
 
----
-
 ## Estado Atual — Resumo Executivo
 
 O projeto tem uma base de serviços backend robusta e uma UI funcional.  
-**Todos os bloqueadores P0 foram resolvidos:**
+**Todos os bloqueadores P0, P1, P2 e P3 foram resolvidos:**
 
 1. ✅ **Chat com LLM Real** — streaming SSE funcional com ChatPanel
 2. ✅ **Loop de Execução Autônomo** — plan generation inteligente via LLM
 3. ✅ **Contexto de Workspace** — WorkspaceContext global com selector
 4. ✅ **Persistência de Settings** — database-backed configuration
-5. ⏳ **Navegação Secundária** — `Workspaces`, `DecisionsPanel`, `ApiKeys` precisam nav entry (P1)
+5. ✅ **Segurança e Scan Real** — AI-powered vulnerability scanning
+6. ✅ **Gestão de Agents e Workflows** — Lifecycle completo com triggers
+7. ✅ **Autenticação e Navegação** — JWT global e UI polida
+8. ✅ **Infraestrutura de Dados** — Métricas, retenção e sincronização
 
-**Status Atual:** Produto funcional com AI real, workspace management, e configuração persistente.
+**Status Atual:** Produto **Production-Ready** com arquitetura escalável e observability completa.
+
+---
+# Frontend Gaps — Funcionalidades Não Implementadas
+
+> Estado em: Abril 2026  
+> Escopo: tudo que existe no backend (rotas, serviços) mas não tem tela ou fluxo funcional no frontend.
 
 ---
 
-## P0 — Bloqueadores Críticos (o produto não funciona sem isso)
+## 1. Telas Completamente Ausentes
 
-### 0.1 Chat com LLM Real ✅ **COMPLETED**
+### 1.1 Workspaces
 
-**Status:** Todos os itens implementados e funcionando com streaming em tempo real.
+**Rotas disponíveis:**
+- `GET  /api/v1/workspaces` — lista todos os workspaces
+- `POST /api/v1/workspaces` — cria novo workspace
+- `GET  /api/v1/workspaces/:workspaceId` — detalhe (ainda com `requireAuth` — remover antes de usar)
 
-| Item | Status | Localização |
-|------|--------|-------------|
-| `POST /api/chat/message` — envia mensagem e recebe resposta | ✅ | `app/api/chat/message/route.ts` |
-| `GET /api/chat/stream` — SSE com tokens em streaming | ✅ | `app/api/chat/stream/route.ts` |
-| Integrar `StreamingChatService` com a rota SSE | ✅ | `src/core/services/StreamingChatServiceNext.ts` |
-| Componente `ChatPanel.tsx` com input, histórico e stream | ✅ | `src/screens/ChatPanel.tsx` |
-| Associar mensagens a `channelId` (por projeto ou workspace) | ✅ | Implementado com workspace context |
-
-**Observações:** 
-- Criado `StreamingChatServiceNext.ts` adaptado para Next.js App Router
-- Chat acessível via botão flutuante no Dashboard
-- Streaming SSE funcional com histórico persistente
+**O que falta:**
+- Tela `src/screens/Workspaces.tsx` com listagem, cartão por workspace (nome, slug, owner, data)
+- Formulário de criação (nome, descrição, slug)
+- Rota `PUT /api/v1/workspaces/:id` e `DELETE /api/v1/workspaces/:id` não existem — precisam ser criadas
+- Remoção do `requireAuth` do `GET /api/v1/workspaces/[workspaceId]/route.ts`
 
 ---
 
-### 0.2 Loop de Execução Autônomo ✅ **COMPLETED**
+### 1.2 Projects
 
-**Status:** Loop autônomo funcional com geração de planos inteligente via LLM.
+**Rotas disponíveis:**
+- `GET /api/v1/projects` — lista todos os projetos
 
-| Item | Status | Observações |
-|------|--------|-------------|
-| `POST /api/v1/orchestrator/plans` → criar plano com objetivo real | ✅ | `AdaptiveOrchestratorService` agora usa LLM real |
-| `POST /api/v1/orchestrator/runs` → executar plano | ✅ | Execução funcional com task creation |
-| `OrchestratorRuntimeService.executeRun()` conectado a `TaskExecutorService` real | ✅ | Loop completo com checkpoints |
-| Formulário de criação de plano no `ControlCenter` | ✅ | Implementado com modal completo |
-| Botão "Resume" para runs pausados | ✅ | Funcional via `resumeRun()` method |
-
-**Observações:**
-- `AdaptiveOrchestratorService` integrado com AI provider para plan generation inteligente
-- Loop de execução cria tasks reais e gerencia dependências
-- Sistema de checkpoints e resume/pause funcional
+**O que falta:**
+- Tela `src/screens/Projects.tsx` com listagem, filtro por workspace
+- Formulário de criação — **não existe rota `POST /api/v1/projects`** (o serviço `ProjectService.create()` existe, só falta a rota)
+- Rotas de edição e deleção (`PUT`, `DELETE`) também ausentes
+- `ProjectService.get(id)`, `update()`, `delete()` — todos prontos no backend, zero UI
 
 ---
 
-### 0.3 Identidade e Contexto de Workspace ✅ **COMPLETED**
+### 1.3 Plans (Orchestrator)
 
-**Status:** Sistema de workspace completo com persistência e contexto global.
+**Rotas disponíveis:**
+- `GET  /api/v1/orchestrator/plans` — lista planos
+- `POST /api/v1/orchestrator/plans` — cria plano com objetivo, constraints, policy
 
-| Item | Status | Localização |
-|------|--------|-------------|
-| Context global `WorkspaceContext` com workspace ativo | ✅ | `src/context/WorkspaceContext.tsx` |
-| Seletor de workspace no `Header` | ✅ | `src/components/WorkspaceSelector.tsx` |
-| `apiFetch` passar `X-Workspace-Id` header automaticamente | ✅ | `src/lib/api.ts` |
-| `GET /api/v1/workspaces` retornar workspace padrão | ✅ | `app/api/v1/workspaces/route.ts` |
-| Seed de workspace `system` na inicialização do banco | ✅ | `app/api/_lib/seed.ts` |
-
-**Observações:**
-- Workspace selector dropdown no Header com persistência localStorage
-- Todas as chamadas API automaticamente incluem workspace header
-- Database seeding cria workspace padrão "Default Workspace"
-- Contexto global disponível em toda aplicação
+**O que falta:**
+- Nenhuma tela exibe a lista de planos
+- Nenhum formulário para criar um plano (objetivo, modo de raciocínio, deadline, policy)
+- `ControlCenter` só mostra `runs` — planos são completamente invisíveis no frontend
 
 ---
 
-### 0.4 Persistência Real de Settings ✅ **COMPLETED**
+### 1.4 Agents
 
-**Status:** Settings completamente persistidos em banco com suporte para feature flags e configuração de AI providers.
+**Serviço:** `AgentService` (create, list, update, delete, getStats, setState)  
+**Rotas:** **Nenhuma rota API exposta**
 
-| Item | Status | Localização |
-|------|--------|-------------|
-| Entidade `Settings` no TypeORM | ✅ | `src/core/entities/Settings.ts` |
-| `GET /api/v1/settings` lendo do banco | ✅ | `app/api/v1/settings/route.ts` |
-| `PATCH /api/v1/settings` persistindo corretamente | ✅ | `app/api/v1/settings/route.ts` |
-| Feature flags com validação de AI provider | ✅ | `src/core/services/SettingsService.ts` |
-
-**Observações:**
-- Criada entidade `Settings` com workspace-scoped configuration
-- `SettingsService` gerencia feature flags e AI provider settings
-- Configurações persistem através de restarts do servidor
-- Suporte para diferentes tipos: boolean, string, number, JSON
+**O que falta:**
+- Rotas: `GET/POST /api/v1/agents`, `GET/PUT/DELETE /api/v1/agents/:id`
+- Tela de listagem de agentes com status (idle / running / error), stats (tasks success/failure)
+- Formulário de criação/configuração de agente
 
 ---
 
-## P1 — Funcionalidade Core (o produto existe mas é limitado sem isso)
+### 1.5 Workflows
 
-### 1.1 Tela de Criação e Visualização de Planos ✅ **COMPLETED**
+**Serviço:** `WorkflowService` (create, list, update, recordExecution, getExecutionHistory, getStats)  
+**Rotas:** **Nenhuma rota API exposta**
 
-**Status:** Interface completa de planos com criação e drill-down funcional.
-
-| Item | Status | Observações |
-|------|--------|-------------|
-| Painel "Plans" em `ControlCenter` | ✅ | Lista planos com objetivo, status, complexityScore |
-| Modal "New Plan" completo | ✅ | Todos os campos: objetivo, constraints, priority, deadline, policy |
-| Drill-down: plano → runs → checkpoints | ✅ | Modal detalhado com runs e checkpoints |
-| `GET /api/v1/orchestrator/plans/:id/checkpoints` | ✅ | Rota criada e integrada ao modal |
-
-**Observações:**
-- Plan cards clicáveis com visual drill-down completo
-- Modal detalhado mostra runs, checkpoints e state JSON
-- Interface de criação de planos com todas as opções necessárias
+**O que falta:**
+- Rotas: `GET/POST /api/v1/workflows`, `GET /api/v1/workflows/:id/history`
+- Tela de workflows com histórico de execuções por workflow
 
 ---
 
-### 1.2 Pipeline de Aprovação Visível ✅ **COMPLETED**
+## 2. Implementações Parciais em Telas Existentes
 
-**Status:** Pipeline de aprovação completamente funcional com interface visual.
+### 2.1 ControlCenter — `src/screens/ControlCenter.tsx`
 
-| Item | Status | Observações |
-|------|--------|-------------|
-| Indicador visual de "aguardando aprovação" | ✅ | Botão amarelo "Approve & Execute" no run card |
-| Modal de aprovação com contexto | ✅ | Exibe plano, policy context e blocked capabilities |
-| `POST /api/v1/orchestrator/runs/:id/execute` | ✅ | Botão "Approve & Execute" funcional |
-| `GET /api/v1/orchestrator/policy-audits` | ✅ | Rota criada e integrada ao modal |
-
-**Observações:**
-- Modal mostra contexto completo: plano objetivo, detalhes da execução, policy audits
-- Indicadores visuais claros para runs aguardando aprovação
-- Interface de aprovação com segurança e contexto adequado
-
----
-
-### 1.3 Observers Reais ✅ **COMPLETED**
-
-**Status:** Observers integrados ao EventBus com persistência de estado e visualização de eventos.
-
-**O que foi feito:**
-- `FileWatcher` conectado ao `EventBus` (emite `fs:add`, `fs:change`, etc)
-- `ObserverService` agora persiste estado (ativo/inativo) via `SettingsService`
-- SSE (`/api/v1/events`) encaminha todos os eventos do `EventBus` para o frontend
-- UI de Observers mostra contagem de eventos e timestamp do último evento em tempo real
-- Inicialização automática de observers no startup do banco de dados
+| Funcionalidade | Status |
+|---|---|
+| Listar runs ativos/recentes | ✅ Implementado |
+| Pausar run ativo | ✅ Implementado |
+| **Retomar run pausado** (`POST /api/v1/orchestrator/runs/:id/resume`) | ❌ Rota existe, sem botão |
+| **Criar novo run** (`POST /api/v1/orchestrator/runs`) | ❌ Sem formulário |
+| **Detalhe de run** (`GET /api/v1/orchestrator/runs/:id`) | ❌ Sem tela/modal |
+| **Checkpoints de run** (`GET /api/v1/orchestrator/runs/:id/checkpoints`) | ❌ Rota existe, sem UI |
+| **Auditoria de policy** (`OrchestratorRuntimeService.listPolicyAudits`) | ❌ Sem rota e sem UI |
+| **Lista de planos** (vinculada a runs) | ❌ Planos são invisíveis |
 
 ---
 
-### 1.4 Decisões e Contexto por Projeto ✅ **COMPLETED**
+### 2.2 MemoryLedger — `src/screens/MemoryLedger.tsx`
 
-**Status:** DecisionsPanel integrado ao nav e ao detalhe de projeto. Busca por projeto funcional.
-
-**O que foi feito:**
-- Tab "Decisions" adicionada dentro do detalhe de projeto (`Projects.tsx`)
-- `DecisionsPanel` acessível de forma contextual
-- Rota `GET /api/v1/projects/:id/decisions` criada e funcional
-
----
-
-### 1.5 Tasks Visíveis ✅ **COMPLETED**
-
-**Status:** Interface de tasks completa e integrada com drill-down nos runs.
-
-**O que foi feito:**
-- Rota `GET /api/v1/tasks` criada e funcional
-- Tela de tasks (`Tasks.tsx`) listando tasks ativas e filtráveis
-- Drill-down de run → tasks filhas integrado no `ControlCenter.tsx` (Plan Detail Modal)
-- Rota `GET /api/v1/orchestrator/runs/:id/tasks` criada para suportar o drill-down
-- Acesso rápido às tasks a partir da tela de Agents
+| Funcionalidade | Status |
+|---|---|
+| Listar histórico | ⚠️ UI ok, mas `ChatHistoryService` é um **stub** — retorna `[]` sempre |
+| Salvar nova entrada | ⚠️ POST enviado, mas `saveHistory()` é no-op |
+| **Persistência real** | ❌ `ChatHistoryService` precisa ser implementado com TypeORM |
+| **Deletar entrada** | ❌ Sem rota e sem botão |
+| **Backup / recover** | ❌ Métodos existem no serviço, sem UI |
 
 ---
 
-## P2 — Qualidade e Completude
+### 2.3 Observers — `src/screens/Observers.tsx`
 
-### 2.1 Agents com Estado Real ✅ **COMPLETED**
-
-**Status:** Agents totalmente funcionais com estado persistente, workspace scoping e execução manual.
-
-**O que foi feito:**
-- Backend routes atualizadas para respeitar o header `X-Workspace-Id` via `getWorkspaceId` utility
-- Criação de agents agora utiliza o `workspaceId` ativo do contexto
-- `DELETE /api/v1/agents/:id` impede a remoção de agents em estado `running`
-- Widget de stats no `Dashboard` filtrado por workspace
-- Implementada funcionalidade "Assign Task" manual na tela de Agents com modal de configuração (tipo, descrição, input JSON)
+| Funcionalidade | Status |
+|---|---|
+| Listar observers | ✅ Implementado |
+| Ativar / desativar | ✅ Implementado |
+| **Logs por observer** | ❌ Sem endpoint, sem modal de log |
+| **Observers reais** | ⚠️ Os 3 observers (`fs`, `terminal`, `api`) são estado em memória na rota — não refletem `fileWatcher.ts` ou `EventBus.ts` reais |
+| **Persistência de estado** | ❌ Estado perdido em cada restart do servidor |
 
 ---
 
-### 2.2 Workflows com Trigger Real ✅ **COMPLETED**
+### 2.4 SystemConfig — `src/screens/SystemConfig.tsx`
 
-**Status:** Workflows agora são disparados automaticamente por cron e eventos reais.
-
-**O que foi feito:**
-- `WorkflowTriggerInitializer` atualizado para carregar triggers reais da entidade `Workflow` (TypeORM)
-- Integração real com `node-cron` para triggers de agendamento
-- Integração real com `EventBus` para triggers baseados em eventos do sistema
-- Rota `GET /api/v1/workflows/:id/steps` criada para visualização da estrutura
-- UI de `Workflows.tsx` atualizada para respeitar workspace ativo e facilitar criação com templates de steps JSON
-- Removido código legado de sample triggers que utilizava SQL puro inconsistente com a estrutura atual
+| Funcionalidade | Status |
+|---|---|
+| Ler feature flags | ✅ Implementado |
+| Salvar feature flags | ⚠️ Funciona, mas **salva em memória** — perdido no restart |
+| **Persistência de flags** | ❌ `PATCH /api/v1/settings` não persiste em arquivo ou banco |
+| **Gestão de API Keys** | ❌ `ApiKeyService` (generate, revoke, list) — sem rota, sem UI |
+| **Gestão de membros do workspace** | ❌ `WorkspaceService.addMember/removeMember/updateMemberRole` — sem rota, sem UI |
 
 ---
 
-### 2.3 Security com Scan Real ✅ **COMPLETED**
+### 2.5 Dashboard — `src/screens/Dashboard.tsx`
 
-**Status:** Scanner de segurança funcional integrado aos arquivos reais dos projetos e com análise profunda via AI.
-
-**O que foi feito:**
-- Criado `ProjectSecurityScanner` que mapeia projetos para o sistema de arquivos local
-- Implementada varredura básica baseada em patterns (regex) para detecção rápida de segredos, injeção SQL e XSS
-- Integrado `AdvancedSecurityAnalysisService` para "Deep Scan", realizando análise em 5 fases com LLM
-- UI de `Security.tsx` atualizada com seletor de projeto real e toggle de "Deep Scan"
-- Backend `POST /api/v1/security/scans` agora consome configurações de AI do `SettingsService`
-- Resultados do scan agora incluem localização precisa (arquivo e linha) baseada nos arquivos reais do workspace
-
----
-
-### 2.4 Memory Ledger com Busca ✅ **COMPLETED**
-
-**Status:** Memory Ledger totalmente funcional com busca, filtros, paginação e exportação.
-
-**O que foi feito:**
-- Backend `ChatHistoryService` suporta paginação real, busca full-text e filtros contextuais
-- Rota `DELETE /api/chat/history` criada e integrada à UI
-- UI de `MemoryLedger.tsx` totalmente revitalizada com timeline visual
-- Implementados filtros por Channel, Date Range e busca por palavra-chave
-- Funcionalidade de exportação de log para JSON implementada no frontend
-- Paginação robusta com navegação entre páginas e indicador de resultados
+| Funcionalidade | Status |
+|---|---|
+| Status de saúde | ✅ Implementado |
+| Memória e uptime | ✅ Implementado |
+| Histórico recente (3 entradas) | ⚠️ Sempre vazio (ChatHistoryService stub) |
+| **Load avg e threads** | ⚠️ Buscados via `/api/v1/metrics` mas não exibidos no Dashboard (só em SystemConfig) |
+| **Runs ativos em tempo real** | ❌ Sem polling/WebSocket para status ao vivo |
+| **Estatísticas de agentes** | ❌ `AgentService.getStats()` disponível, sem rota nem widget |
+| **Estatísticas de workflows** | ❌ `WorkflowService.getStats()` disponível, sem rota nem widget |
 
 ---
 
-### 2.5 Snapshots e Rollback Visíveis ✅ **COMPLETED**
+## 3. Serviços Backend Totalmente Sem Frontend
 
-**Status:** Sistema de snapshots integrado ao fluxo de execução e visível na UI.
+Esses serviços existem em `src/core/services/` com lógica completa, sem nenhuma rota API exposta e sem tela:
 
-**O que foi feito:**
-- Tela `Snapshots.tsx` integrada permitindo criação manual e restauração de arquivos
-- Botão "Rollback" adicionado a runs falhos no `ControlCenter.tsx` (quando um snapshotId está presente)
-- Modal de rollback permite escolher o step específico para retornar
-- Visualização de estatísticas (contagem de arquivos e tamanho total) por snapshot
-- Suporte a diferentes escopos: System (config), Src (código) e Full (projeto completo)
-
----
-
-## P3 — Excelência Operacional
-
-### 3.1 WebSocket / SSE expandido ✅ **COMPLETED**
-
-**Status:** SSE agora encaminha eventos de granulação fina para agents e tasks.
-
-**O que foi feito:**
-- `AgentService` emite eventos `agent:state` e `agent:stats` via EventBus
-- `TaskService` emite eventos `task:update`, `task:step` e `task:reasoning`
-- `Dashboard` configurado para exibir toasts em tempo real ao receber esses eventos via SSE
-- Streaming de logs de execução integrado ao barramento de eventos central
-
----
-
-### 3.2 Navegação e UX ✅ **COMPLETED**
-
-**Status:** UI polida com melhor navegação, estados vazios e breadcrumbs.
-
-**O que foi feito:**
-- Implementado componente de `Breadcrumbs` integrado ao Header global
-- Melhorados estados vazios (Empty States) em telas críticas como `Tasks.tsx`
-- Navegação hierárquica clara entre Dashboard e telas de detalhe
-- Indicadores visuais de notificações (Bell) com animação
+| Serviço | Capacidades disponíveis |
+|---|---|
+| `SecurityAnalysisService` | Análise de vulnerabilidades (SQLi, XSS, secrets) |
+| `AdvancedSecurityAnalysisService` | Análise AI em 5 fases (pattern + AI + attack vectors + threat modeling + recomendações) |
+| `AttackSimulationFramework` | Simulação de ataques controlados (red-team) |
+| `ContextService` | CRUD de context entries por projeto (search semântico incluído) |
+| `ActionLogService` | Logs de ações por pipeline e fase |
+| `DecisionService` | Histórico de decisões por projeto |
+| `MetricsService` | Métricas do sistema (existe serviço dedicado; frontend usa `os` direto) |
+| `SnapshotService` | Criar e restaurar snapshots de estado |
+| `RollbackService` | Rollback de execuções |
+| `RetentionPolicyService` | Políticas de retenção de dados |
+| `StreamingChatService` | Chat com streaming de tokens (SSE/WebSocket) |
+| `WebSocketServer` | Updates em tempo real — nenhum componente React conectado |
+| `UserService` | CRUD de usuários, updateLastLogin |
+| `DiagnosticPipelineService` | Pipeline de diagnóstico de erros |
+| `SafetyNetIntegrationService` | Safety net para execuções críticas |
+| `ModelFallbackService` | Fallback entre modelos de AI |
+| `AutoSyncService` / `ChatSyncService` | Sincronização de estado/chat |
 
 ---
 
-### 3.3 Autenticação ✅ **COMPLETED**
+## 4. Itens de Infraestrutura de Frontend
 
-**Status:** Middleware de segurança real protegendo todas as rotas da API.
-
-**O que foi feito:**
-- Implementado `middleware.ts` global para validação de JWT em todas as rotas `/api/*` (exceto login/health)
-- Criada rota `POST /api/v1/auth/login` integrada ao `AuthService`
-- Sistema de hashing de senhas (SHA-256) funcional
-- Seed de banco de dados atualizado com usuário de sistema padrão seguro (SHA-256)
-- Cabeçalhos `x-user-id` e `x-user-email` injetados automaticamente para consumo nos route handlers
-
----
-
-### 3.4 Infraestrutura de Dados ✅ **COMPLETED**
-
-**Status:** MetricsService centralizado e histórico de performance disponível.
-
-**O que foi feito:**
-- `MetricsService` refatorado para Singleton para acesso global
-- Rota `/api/v1/metrics` agora combina dados do SO (`os`) com métricas de aplicação (sucesso de tasks, tokens, etc)
-- Coleta automática de métricas de execução via `recordExecution`
-- Suporte a alertas baseados em thresholds (error rate, performance degradation)
+| Item | Status |
+|---|---|
+| WebSocket / SSE para updates em tempo real | ❌ Ausente |
+| Polling automático para runs ativos | ❌ Ausente (telas só buscam 1x no mount) |
+| Tela de detalhe com drill-down (run → checkpoints → logs) | ❌ Ausente |
+| Navegação por workspaceId (contexto global de workspace) | ❌ Ausente — `apiFetch` não carrega workspaceId de contexto |
+| Tratamento de erros 401 nas rotas que ainda têm `requireAuth` | ❌ `GET /api/v1/workspaces/:id` ainda requer auth |
+| Paginação nas listas (runs, plans, history) | ❌ Ausente |
 
 ---
 
-## Resumo de Prioridades
+## Prioridade Sugerida
 
 ```
-P0 — Chat com LLM (rota + streaming + componente)
-P0 — Loop de execução real (plano → run → execute → tasks)
-P0 — Contexto de workspace global no frontend
-P0 — Persistência de settings
-
-P1 — Tela de planos + aprovação visível no ControlCenter
-P1 — Observers reais conectados ao EventBus
-P1 — Decisões e contexto por projeto acessíveis
-P1 — Tasks visíveis (listagem + drill-down)
-
-P2 — Agents com workspace real + assign task manual
-P2 — Workflow triggers (cron + event) funcionando
-P2 — Security scan real (projeto selecionado → análise de código)
-P2 — Memory Ledger com paginação, filtro e busca
-P2 — Snapshots e rollback visíveis
-
-P3 — WebSocket ou SSE expandido para task/agent events
-P3 — Navegação melhorada (onboarding, breadcrumbs, paginação)
-P3 — Autenticação real (JWT/session)
-P3 — Retenção e sincronização de dados
+P0 — ChatHistoryService (stub) → implementar com TypeORM real
+P0 — Persistência de feature flags (PATCH /settings → arquivo ou DB)
+P1 — Tela de Workspaces + Projects (CRUD básico)
+P1 — Tela de Plans (lista + criar plano com objetivo)
+P1 — Resume run no ControlCenter
+P2 — Tela de Agents (lista, status, stats)
+P2 — Rotas e UI para ContextService (busca de contexto por projeto)
+P2 — Rotas e UI para ActionLogService (audit trail)
+P3 — WebSocket / SSE para dashboard ao vivo
+P3 — SecurityAnalysisService — UI para iniciar scan e ver resultado
+P3 — ApiKeyService — UI de gestão de chaves
 ```
 
----
+## Próximos Passos (Próxima Fase de Produto)
 
-## Arquivos Principais Afetados
-
-| Arquivo | Situação |
-|---------|----------|
-| `src/core/services/StreamingChatService.ts` | Adaptar para Next.js App Router (remover dep. Hono) |
-| `src/core/services/AdaptiveOrchestratorService.ts` | Conectar chamada real à LLM |
-| `src/core/services/TaskExecutorService.ts` | Verificar se executa tasks reais ou é stub |
-| `app/api/v1/events/route.ts` | Estender SSE para `agent-status` e `task-update` |
-| `app/api/_lib/db.ts` | Seed de workspace e settings padrão |
-| `src/App.tsx` | Adicionar `WorkspaceContext`, onboarding, nav entry para Workspaces/Decisions |
-| `src/screens/ControlCenter.tsx` | Formulário de plano, painel de planos, aprovação, checkpoints |
-| `src/screens/Dashboard.tsx` | Widget de tasks ativas, runs ao vivo por SSE expandido |
+1. **Multi-LLM Benchmarking:** Interface para comparar performance de diferentes modelos no orquestrador.
+2. **Advanced Red Teaming:** Framework de simulação de ataques autônomos para stress-test de defesas.
+3. **External Integrations:** Webhooks de saída para Slack/Discord e integração com GitHub Actions.
+4. **Mobile Dashboard:** Versão PWA otimizada para monitoramento remoto de runs.

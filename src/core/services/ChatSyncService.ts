@@ -25,15 +25,26 @@ export interface SyncStatus {
 }
 
 export class ChatSyncService {
+  private static instance: ChatSyncService;
   private logger = Logger.getInstance();
   private bus = getEventBus('chat-sync');
   private syncStatuses: Map<string, SyncStatus> = new Map();
   private activeSyncs: Map<string, Promise<void>> = new Map();
 
-  constructor(
+  private constructor(
     private chatService: ChatService,
     private chatHistoryService: ChatHistoryService
   ) { }
+
+  public static getInstance(
+    chatService: ChatService,
+    chatHistoryService: ChatHistoryService
+  ): ChatSyncService {
+    if (!ChatSyncService.instance) {
+      ChatSyncService.instance = new ChatSyncService(chatService, chatHistoryService);
+    }
+    return ChatSyncService.instance;
+  }
 
   /**
    * Sincronizar canal específico: JSONL → SQLite
