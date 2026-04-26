@@ -9,7 +9,7 @@ import { ok, err } from '@/app/api/_lib/response';
 import { AVAILABLE_MODELS } from '@/src/config/models';
 import { readProviderKeyStatuses } from '@/app/api/_lib/project-env-keys';
 
-type CliName = 'copilot' | 'gemini' | 'claude-code' | 'codex';
+type CliName = 'copilot' | 'gemini' | 'claude-code' | 'codex' | 'ollama';
 type ProviderName = 'claude' | 'chatgpt' | 'gemini';
 
 function findCommandInCommonPaths(command: string): string | null {
@@ -118,6 +118,23 @@ function ghCopilotWorks(): boolean {
     }
 }
 
+async function isOllamaRunning(): Promise<boolean> {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2000);
+
+        const response = await fetch('http://localhost:11434/api/tags', {
+            signal: controller.signal,
+            timeout: 2000,
+        });
+
+        clearTimeout(timeout);
+        return response.ok;
+    } catch {
+        return false;
+    }
+}
+
 function detectCliAvailability(): Record<CliName, boolean> {
     const hasCopilotBinary = commandExists('copilot') && commandWorks('copilot', ['--version']);
     const hasGemini = (commandExists('gemini') || commandExists('gemini-cli')) &&
@@ -134,6 +151,7 @@ function detectCliAvailability(): Record<CliName, boolean> {
         gemini: hasGemini,
         'claude-code': hasClaudeCode,
         codex: hasCodex,
+        ollama: false, // Will be set async
     };
 }
 
@@ -173,12 +191,18 @@ function isModelAvailable(
         return cli.copilot;
     }
 
+    // Ollama models
+    if (id.includes('ollama') || id.includes('mistral') || id.includes('llama') || id.includes('neural')) {
+        return cli.ollama;
+    }
+
     if (id === 'auto') {
         return (
             cli.copilot
             || (cli.codex && hasProviderKey('chatgpt', keys))
             || (cli.gemini && hasProviderKey('gemini', keys))
             || (cli['claude-code'] && hasProviderKey('claude', keys))
+            || cli.ollama
         );
     }
 
@@ -187,7 +211,12 @@ function isModelAvailable(
 
 export async function GET(req: NextRequest) {
     try {
-        const cli = detectCliAvailability();
+        let cli = detectCliAvailability();
+
+        // Check if Ollama is running
+        const ollamaRunning = await isOllamaRunning();
+        cli.ollama = ollamaRunning;
+
         const projectId = req.headers.get('x-project-id') || req.headers.get('X-Project-Id') || '';
         let providerKeys: Partial<Record<ProviderName, boolean>> = {};
 

@@ -37,6 +37,12 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     { id: 'gpt-5.4-mini', name: 'GPT-5.4 mini', description: 'OpenAI · Medium · 0.33x', provider: 'vscode', baseUrl: 'http://localhost:11434', group: 'other' },
     { id: 'grok-code-fast-1', name: 'Grok Code Fast 1', description: 'xAI codigo · 0.25x', provider: 'vscode', baseUrl: 'http://localhost:11434', group: 'other' },
     { id: 'raptor-mini-preview', name: 'Raptor mini (Preview)', description: 'Router de modelos · 0x', provider: 'vscode', baseUrl: 'http://localhost:11434', group: 'other' },
+
+    // ── Ollama Local Models ──────────────────────────────────────────────────
+    { id: 'ollama-mistral', name: 'Mistral (Ollama)', description: 'Modelo aberto · Rápido · 0.5x', provider: 'ollama', baseUrl: 'http://localhost:11434', group: 'other' },
+    { id: 'ollama-llama2', name: 'Llama 2 (Ollama)', description: 'Modelo aberto · Capaz · 1x', provider: 'ollama', baseUrl: 'http://localhost:11434', group: 'other' },
+    { id: 'ollama-neural-chat', name: 'Neural Chat (Ollama)', description: 'Especializado en chat · 0.75x', provider: 'ollama', baseUrl: 'http://localhost:11434', group: 'other' },
+    { id: 'ollama-dolphin', name: 'Dolphin (Ollama)', description: 'Modelo code-tuned · 1x', provider: 'ollama', baseUrl: 'http://localhost:11434', group: 'other' },
 ];
 
 /**
