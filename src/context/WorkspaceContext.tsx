@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
+import { useAuth } from './AuthContext';
 
 interface Workspace {
   id: string;
@@ -43,6 +44,14 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const refreshWorkspaces = async () => {
     try {
       setIsLoading(true);
+      
+      const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
+      if (!token) {
+        setWorkspaces([]);
+        setIsLoading(false);
+        return;
+      }
+
       const response = await apiFetch<{
         items: Workspace[];
         total: number;
@@ -53,33 +62,29 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       
       // If no workspace is selected and there are workspaces, select the default or first one
       if (!workspace && items.length > 0) {
-        const defaultWorkspace = items.find(w => w.isDefault) || items[0];
+        const savedWorkspaceId = localStorage.getItem('kairos-selected-workspace');
+        const savedWorkspace = savedWorkspaceId ? items.find(w => w.id === savedWorkspaceId) : null;
+        const defaultWorkspace = savedWorkspace || items.find(w => w.isDefault) || items[0];
+        
         setWorkspace(defaultWorkspace);
-        // Store in localStorage for persistence
         localStorage.setItem('kairos-selected-workspace', defaultWorkspace.id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load workspaces:', error);
+      if (error?.code !== 'UNAUTHORIZED') {
+        toast('Failed to load workspaces', 'error');
+      }
       setWorkspaces([]);
-      toast('Failed to load workspaces', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const { isAuthenticated } = useAuth();
+
   useEffect(() => {
-    // Try to load selected workspace from localStorage first
-    const savedWorkspaceId = localStorage.getItem('kairos-selected-workspace');
-    
-    refreshWorkspaces().then(() => {
-      if (savedWorkspaceId) {
-        const savedWorkspace = workspaces.find(w => w.id === savedWorkspaceId);
-        if (savedWorkspace) {
-          setWorkspace(savedWorkspace);
-        }
-      }
-    });
-  }, []);
+    refreshWorkspaces();
+  }, [isAuthenticated]);
 
   const handleSetWorkspace = (newWorkspace: Workspace) => {
     setWorkspace(newWorkspace);
