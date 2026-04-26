@@ -54,7 +54,7 @@ interface RecentRepository {
 const RECENT_REPOSITORIES_KEY = 'kairos-recent-repositories';
 
 export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: boolean; refreshToken?: number }) {
-    const { workspace } = useWorkspace();
+    const { workspace, setWorkspace, workspaces, refreshWorkspaces } = useWorkspace();
     const {
         repository,
         setRepositoryById,
@@ -73,12 +73,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [editForm, setEditForm] = useState({ name: '', description: '', status: 'active' });
     const [recentRepositories, setRecentRepositories] = useState<RecentRepository[]>([]);
-    const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
-        open: false,
-        folderPath: '',
-        folderName: '',
-        gitSubfolders: [],
-    });
 
     const projects = data?.data ?? [];
 
@@ -154,17 +148,86 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         return `${basePath.replace(/[\\/]$/, '')}${separator}${subfolder}`;
     }
 
+    function slugify(value: string): string {
+        return value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    }
+
+    function normalizeWorkspaceName(value: string) {
+        const trimmed = value.trim();
+        if (trimmed.length >= 2) {
+            return trimmed;
+        }
+
+        if (trimmed.length === 1) {
+            return `Workspace ${trimmed.toUpperCase()}`;
+        }
+
+        return 'Workspace';
+    }
+
+    function buildWorkspaceSlug(value: string) {
+        const asciiValue = value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+        const baseSlug = slugify(asciiValue);
+
+        if (baseSlug.length >= 2) {
+            return baseSlug;
+        }
+
+        return `workspace-${Date.now().toString(36)}`;
+    }
+
+    function buildFolderName(folderPath: string) {
+        return folderPath.split(/[\\/]/).filter(Boolean).pop() || 'workspace';
+    }
+
+    async function ensureTargetWorkspace(baseName: string) {
+        if (workspace?.id) {
+            return workspace;
+        }
+
+        const safeName = normalizeWorkspaceName(baseName);
+        const safeSlug = buildWorkspaceSlug(safeName);
+        const existingWorkspace = workspaces.find((item) => item.id && (item as any).slug === safeSlug || item.name === safeName);
+
+        if (existingWorkspace) {
+            setWorkspace(existingWorkspace);
+            return existingWorkspace;
+        }
+
+        const createdWorkspace = await apiFetch<{ data?: { id: string; name: string } & Record<string, unknown> }>('/api/v1/workspaces', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: safeName,
+                slug: safeSlug,
+                description: 'Workspace criado automaticamente para receber um repositório importado',
+            }),
+        });
+
+        const nextWorkspace = createdWorkspace.data as any;
+        if (!nextWorkspace?.id) {
+            throw new Error('Falha ao criar um workspace para o repositório');
+        }
+
+        setWorkspace(nextWorkspace);
+        await refreshWorkspaces();
+        return nextWorkspace;
+    }
+
     async function handleFolderSelected(folderPath: string) {
-        const base = folderPath.split(/[\\/]/).filter(Boolean).pop() || 'Project';
+        const folderName = buildFolderName(folderPath);
         setShowBrowser(false);
         setSubmitting(true);
         try {
+            const targetWorkspace = await ensureTargetWorkspace(folderName);
             await apiFetch('/api/v1/projects', {
                 method: 'POST',
-                body: JSON.stringify({ name: base, localPath: folderPath }),
+                headers: { 'X-Workspace-Id': targetWorkspace.id },
+                body: JSON.stringify({ name: folderName, localPath: folderPath }),
             });
-            toast(`Repositório "${base}" importado`, 'success');
-            await Promise.all([refetch(), refreshRepositories()]);
+            toast(`A pasta selecionada virou o repositório "${folderName}"`, 'success');
+            await Promise.all([refetch(), refreshRepositories(), refreshWorkspaces()]);
         } catch (e: any) {
             // Check if it's a NO_GIT_REPO error with git subfolders
             if (e?.code === 'NO_GIT_REPO') {
@@ -173,14 +236,16 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 if (gitSubfolders.length === 1) {
                     const singleRepoName = gitSubfolders[0];
                     const singleRepoPath = joinSubfolder(folderPath, singleRepoName);
+                    const targetWorkspace = await ensureTargetWorkspace(folderName);
 
                     await apiFetch('/api/v1/projects', {
                         method: 'POST',
+                        headers: { 'X-Workspace-Id': targetWorkspace.id },
                         body: JSON.stringify({ name: singleRepoName, localPath: singleRepoPath }),
                     });
 
                     toast(`A pasta tem 1 repositório Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
-                    await Promise.all([refetch(), refreshRepositories()]);
+                    await Promise.all([refetch(), refreshRepositories(), refreshWorkspaces()]);
                     return;
                 }
 
@@ -189,13 +254,23 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     return;
                 }
 
-                setNoGitDialog({
-                    open: true,
-                    folderPath,
-                    folderName: base,
-                    gitSubfolders,
+                const slug = slugify(folderName);
+                const createdWorkspace = await apiFetch<{ data?: { id: string; name: string } & Record<string, unknown> }>('/api/v1/workspaces', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: folderName,
+                        slug,
+                        description: 'Workspace criado a partir de uma pasta com múltiplos repositórios Git',
+                    }),
                 });
-                setSubmitting(false);
+
+                const created = createdWorkspace.data as any;
+                if (created?.id) {
+                    setWorkspace(created);
+                }
+
+                await Promise.all([refetch(), refreshRepositories(), refreshWorkspaces()]);
+                toast(`Workspace "${folderName}" criado a partir da pasta selecionada`, 'success');
                 return;
             }
             toast(e.message ?? 'Falha ao importar pasta', 'error');
@@ -250,28 +325,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         await handleFolderSelected(path);
     }
 
-    async function handleOpenAsWorkspace() {
-        const { folderPath, folderName } = noGitDialog;
-        setNoGitDialog({ open: false, folderPath: '', folderName: '', gitSubfolders: [] });
-        setSubmitting(true);
-        try {
-            await apiFetch('/api/v1/workspaces', {
-                method: 'POST',
-                body: JSON.stringify({
-                    name: folderName,
-                    slug: folderName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-                    description: `Workspace with git repositories`,
-                }),
-            });
-            toast(`Criado workspace "${folderName}"`, 'success');
-            // Note: In a real app, you might want to navigate to the workspace
-        } catch (e: any) {
-            toast(e.message ?? 'Falha ao criar workspace', 'error');
-        } finally {
-            setSubmitting(false);
-        }
-    }
-
     async function handleReopenRecent(item: RecentRepository) {
         if (!item.localPath) {
             toast('Este repositório recente não tem caminho salvo para reabrir.', 'error');
@@ -280,13 +333,16 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
 
         setSubmitting(true);
         try {
+            const folderName = buildFolderName(item.localPath);
+            const targetWorkspace = await ensureTargetWorkspace(folderName);
             await apiFetch('/api/v1/projects', {
                 method: 'POST',
+                headers: { 'X-Workspace-Id': targetWorkspace.id },
                 body: JSON.stringify({ name: item.name, localPath: item.localPath }),
             });
 
             toast(`Repositório "${item.name}" reaberto`, 'success');
-            await Promise.all([refetch(), refreshRepositories()]);
+            await Promise.all([refetch(), refreshRepositories(), refreshWorkspaces()]);
         } catch (e: any) {
             toast(e.message ?? 'Falha ao reabrir repositório', 'error');
         } finally {
@@ -550,64 +606,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     return (
         <div className={embedded ? 'w-full' : 'flex-1'}>
             {renderRepositoryStartScreen({ showWorkspaceHint: false })}
-
-            <AnimatePresence>
-                {noGitDialog.open && (
-                    <motion.div
-                        key="no-git-dialog-overlay"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 backdrop-blur-sm p-4"
-                        onClick={(e) => { if (e.target === e.currentTarget) setNoGitDialog({ ...noGitDialog, open: false }); }}
-                    >
-                        <motion.div
-                            key="no-git-dialog"
-                            initial={{ opacity: 0, y: 40 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 40 }}
-                            className="bento-card w-full max-w-md space-y-4"
-                        >
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold">Nenhum repositório Git encontrado</h3>
-                                <button
-                                    onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
-                                    className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
-                                >
-                                    <X className="size-4" />
-                                </button>
-                            </div>
-
-                            <div className="space-y-2 text-sm text-text-dim">
-                                <p>
-                                    <span className="font-semibold text-text">{noGitDialog.folderName}</span> doesn't have a git repository, but found {noGitDialog.gitSubfolders.length} git repositor{noGitDialog.gitSubfolders.length === 1 ? 'y' : 'ies'} in subfolders:
-                                </p>
-                                <ul className="list-disc list-inside space-y-1 text-xs font-mono">
-                                    {noGitDialog.gitSubfolders.map((folder, i) => (
-                                        <li key={i}>{folder}</li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
-                                    className="flex-1 rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dim hover:text-text transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleOpenAsWorkspace}
-                                    disabled={submitting}
-                                    className="flex-1 rounded-lg bg-accent/20 border border-accent/40 px-4 py-2 text-xs font-bold text-accent hover:bg-accent/30 transition-colors disabled:opacity-50"
-                                >
-                                    {submitting ? 'Creating…' : 'Open as Workspace'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             <AnimatePresence>
                 {editingProject && (
