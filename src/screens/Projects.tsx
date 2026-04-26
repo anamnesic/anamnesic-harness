@@ -54,7 +54,7 @@ interface RecentRepository {
 const RECENT_REPOSITORIES_KEY = 'kairos-recent-repositories';
 
 export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: boolean; refreshToken?: number }) {
-    const { workspace, setWorkspace, workspaces, refreshWorkspaces } = useWorkspace();
+    const { workspace } = useWorkspace();
     const {
         repository,
         setRepositoryById,
@@ -73,6 +73,12 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [editForm, setEditForm] = useState({ name: '', description: '', status: 'active' });
     const [recentRepositories, setRecentRepositories] = useState<RecentRepository[]>([]);
+    const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
+        open: false,
+        folderPath: '',
+        folderName: '',
+        gitSubfolders: [],
+    });
 
     const projects = data?.data ?? [];
 
@@ -148,86 +154,17 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         return `${basePath.replace(/[\\/]$/, '')}${separator}${subfolder}`;
     }
 
-    function slugify(value: string): string {
-        return value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    }
-
-    function normalizeWorkspaceName(value: string) {
-        const trimmed = value.trim();
-        if (trimmed.length >= 2) {
-            return trimmed;
-        }
-
-        if (trimmed.length === 1) {
-            return `Workspace ${trimmed.toUpperCase()}`;
-        }
-
-        return 'Workspace';
-    }
-
-    function buildWorkspaceSlug(value: string) {
-        const asciiValue = value
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
-        const baseSlug = slugify(asciiValue);
-
-        if (baseSlug.length >= 2) {
-            return baseSlug;
-        }
-
-        return `workspace-${Date.now().toString(36)}`;
-    }
-
-    function buildFolderName(folderPath: string) {
-        return folderPath.split(/[\\/]/).filter(Boolean).pop() || 'workspace';
-    }
-
-    async function ensureTargetWorkspace(baseName: string) {
-        if (workspace?.id) {
-            return workspace;
-        }
-
-        const safeName = normalizeWorkspaceName(baseName);
-        const safeSlug = buildWorkspaceSlug(safeName);
-        const existingWorkspace = workspaces.find((item) => item.id && (item as any).slug === safeSlug || item.name === safeName);
-
-        if (existingWorkspace) {
-            setWorkspace(existingWorkspace);
-            return existingWorkspace;
-        }
-
-        const createdWorkspace = await apiFetch<{ data?: { id: string; name: string } & Record<string, unknown> }>('/api/v1/workspaces', {
-            method: 'POST',
-            body: JSON.stringify({
-                name: safeName,
-                slug: safeSlug,
-                description: 'Workspace criado automaticamente para receber um repositório importado',
-            }),
-        });
-
-        const nextWorkspace = createdWorkspace.data as any;
-        if (!nextWorkspace?.id) {
-            throw new Error('Falha ao criar um workspace para o repositório');
-        }
-
-        setWorkspace(nextWorkspace);
-        await refreshWorkspaces();
-        return nextWorkspace;
-    }
-
     async function handleFolderSelected(folderPath: string) {
-        const folderName = buildFolderName(folderPath);
+        const base = folderPath.split(/[\\/]/).filter(Boolean).pop() || 'Project';
         setShowBrowser(false);
         setSubmitting(true);
         try {
-            const targetWorkspace = await ensureTargetWorkspace(folderName);
             await apiFetch('/api/v1/projects', {
                 method: 'POST',
-                headers: { 'X-Workspace-Id': targetWorkspace.id },
-                body: JSON.stringify({ name: folderName, localPath: folderPath }),
+                body: JSON.stringify({ name: base, localPath: folderPath }),
             });
-            toast(`A pasta selecionada virou o repositório "${folderName}"`, 'success');
-            await Promise.all([refetch(), refreshRepositories(), refreshWorkspaces()]);
+            toast(`Repositório "${base}" importado`, 'success');
+            await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
             // Check if it's a NO_GIT_REPO error with git subfolders
             if (e?.code === 'NO_GIT_REPO') {
@@ -236,16 +173,14 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 if (gitSubfolders.length === 1) {
                     const singleRepoName = gitSubfolders[0];
                     const singleRepoPath = joinSubfolder(folderPath, singleRepoName);
-                    const targetWorkspace = await ensureTargetWorkspace(folderName);
 
                     await apiFetch('/api/v1/projects', {
                         method: 'POST',
-                        headers: { 'X-Workspace-Id': targetWorkspace.id },
                         body: JSON.stringify({ name: singleRepoName, localPath: singleRepoPath }),
                     });
 
                     toast(`A pasta tem 1 repositório Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
-                    await Promise.all([refetch(), refreshRepositories(), refreshWorkspaces()]);
+                    await Promise.all([refetch(), refreshRepositories()]);
                     return;
                 }
 
@@ -254,23 +189,13 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     return;
                 }
 
-                const slug = slugify(folderName);
-                const createdWorkspace = await apiFetch<{ data?: { id: string; name: string } & Record<string, unknown> }>('/api/v1/workspaces', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        name: folderName,
-                        slug,
-                        description: 'Workspace criado a partir de uma pasta com múltiplos repositórios Git',
-                    }),
+                setNoGitDialog({
+                    open: true,
+                    folderPath,
+                    folderName: base,
+                    gitSubfolders,
                 });
-
-                const created = createdWorkspace.data as any;
-                if (created?.id) {
-                    setWorkspace(created);
-                }
-
-                await Promise.all([refetch(), refreshRepositories(), refreshWorkspaces()]);
-                toast(`Workspace "${folderName}" criado a partir da pasta selecionada`, 'success');
+                setSubmitting(false);
                 return;
             }
             toast(e.message ?? 'Falha ao importar pasta', 'error');
@@ -325,6 +250,28 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         await handleFolderSelected(path);
     }
 
+    async function handleOpenAsWorkspace() {
+        const { folderPath, folderName } = noGitDialog;
+        setNoGitDialog({ open: false, folderPath: '', folderName: '', gitSubfolders: [] });
+        setSubmitting(true);
+        try {
+            await apiFetch('/api/v1/workspaces', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: folderName,
+                    slug: folderName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+                    description: `Workspace with git repositories`,
+                }),
+            });
+            toast(`Criado workspace "${folderName}"`, 'success');
+            // Note: In a real app, you might want to navigate to the workspace
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao criar workspace', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
     async function handleReopenRecent(item: RecentRepository) {
         if (!item.localPath) {
             toast('Este repositório recente não tem caminho salvo para reabrir.', 'error');
@@ -333,16 +280,13 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
 
         setSubmitting(true);
         try {
-            const folderName = buildFolderName(item.localPath);
-            const targetWorkspace = await ensureTargetWorkspace(folderName);
             await apiFetch('/api/v1/projects', {
                 method: 'POST',
-                headers: { 'X-Workspace-Id': targetWorkspace.id },
                 body: JSON.stringify({ name: item.name, localPath: item.localPath }),
             });
 
             toast(`Repositório "${item.name}" reaberto`, 'success');
-            await Promise.all([refetch(), refreshRepositories(), refreshWorkspaces()]);
+            await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
             toast(e.message ?? 'Falha ao reabrir repositório', 'error');
         } finally {
@@ -472,140 +416,65 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         </motion.div>
     );
 
-    if (!workspace) {
-        return renderRepositoryStartScreen({ showWorkspaceHint: true });
-    }
+    const renderSharedModals = () => (
+        <>
+            <AnimatePresence>
+                {noGitDialog.open && (
+                    <motion.div
+                        key="no-git-dialog-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 backdrop-blur-sm p-4"
+                        onClick={(e) => { if (e.target === e.currentTarget) setNoGitDialog({ ...noGitDialog, open: false }); }}
+                    >
+                        <motion.div
+                            key="no-git-dialog"
+                            initial={{ opacity: 0, y: 40 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 40 }}
+                            className="bento-card w-full max-w-md space-y-4"
+                        >
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold">Nenhum repositório Git encontrado</h3>
+                                <button
+                                    onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
+                                    className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
+                                >
+                                    <X className="size-4" />
+                                </button>
+                            </div>
 
-    if (selectedProject) {
-        return (
-            <motion.div
-                key="project-detail"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
-            >
-                <div className="mb-6 flex items-center justify-between gap-3">
-                    <button
-                        onClick={() => {
-                            if (projects.length > 0) {
-                                setRepositoryById(projects[0].id);
-                            }
-                        }}
-                        className="flex items-center gap-2 text-sm text-text-dim hover:text-accent transition-colors"
-                    >
-                        <ArrowLeft className="size-4" />
-                        Voltar para Repositórios
-                    </button>
-                    <button
-                        onClick={openFolderBrowser}
-                        disabled={submitting}
-                        className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                    >
-                        <FolderOpen className="size-3.5" />
-                        {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
-                    </button>
-                </div>
-                {recentItems.length > 0 && (
-                    <div className="bento-card mb-4">
-                        <p className="label-caps mb-2">Recentes</p>
-                        <div className="flex flex-wrap gap-2">
-                            {recentItems.map((item) => (
-                                <div key={item.id} className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1">
-                                    <button
-                                        onClick={() => handleOpenRecent(item)}
-                                        className="text-xs font-bold text-accent hover:text-highlight transition-colors"
-                                    >
-                                        {item.name}
-                                    </button>
-                                    <button
-                                        onClick={() => handleReopenRecent(item)}
-                                        disabled={submitting || !item.localPath}
-                                        className="rounded-md p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
-                                        title="Abrir de novo"
-                                    >
-                                        <RotateCcw className="size-3" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                            <div className="space-y-2 text-sm text-text-dim">
+                                <p>
+                                    <span className="font-semibold text-text">{noGitDialog.folderName}</span> doesn't have a git repository, but found {noGitDialog.gitSubfolders.length} git repositor{noGitDialog.gitSubfolders.length === 1 ? 'y' : 'ies'} in subfolders:
+                                </p>
+                                <ul className="list-disc list-inside space-y-1 text-xs font-mono">
+                                    {noGitDialog.gitSubfolders.map((folder, i) => (
+                                        <li key={i}>{folder}</li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
+                                    className="flex-1 rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dim hover:text-text transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleOpenAsWorkspace}
+                                    disabled={submitting}
+                                    className="flex-1 rounded-lg bg-accent/20 border border-accent/40 px-4 py-2 text-xs font-bold text-accent hover:bg-accent/30 transition-colors disabled:opacity-50"
+                                >
+                                    {submitting ? 'Creating…' : 'Open as Workspace'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
                 )}
-                <div className="bento-card space-y-2 mb-2">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <span className="font-bold text-accent text-lg">{selectedProject.name}</span>
-                            <StatusBadge status={selectedProject.status} />
-                        </div>
-                    </div>
-                    {selectedProject.description && (
-                        <p className="text-sm text-text-dim leading-relaxed">{selectedProject.description}</p>
-                    )}
-                    {selectedProject.metadata?.localPath && (
-                        <div className="flex items-center gap-2 text-xs text-text-dim font-mono">
-                            <FolderGit2 className="size-3.5 text-primary shrink-0" />
-                            <span className="truncate">{selectedProject.metadata.localPath}</span>
-                        </div>
-                    )}
-                    {Array.isArray(selectedProject.metadata?.additionalPaths) && selectedProject.metadata.additionalPaths.length > 0 && (
-                        <div className="space-y-1">
-                            <p className="label-caps">Pastas adicionais</p>
-                            {selectedProject.metadata.additionalPaths.map((folderPath: string, index: number) => (
-                                <div key={`${folderPath}-${index}`} className="flex items-center gap-2 text-xs text-text-dim font-mono">
-                                    <FolderOpen className="size-3.5 text-primary shrink-0" />
-                                    <span className="truncate">{folderPath}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-4 border-b border-border mb-6">
-                    <button
-                        onClick={() => setActiveTab('context')}
-                        className={cn(
-                            'pb-3 text-sm font-bold transition-colors relative',
-                            activeTab === 'context' ? 'text-accent' : 'text-text-dim hover:text-highlight'
-                        )}
-                    >
-                        Context
-                        {activeTab === 'context' && (
-                            <motion.div
-                                layoutId="activeTab"
-                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                            />
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('decisions')}
-                        className={cn(
-                            'pb-3 text-sm font-bold transition-colors relative',
-                            activeTab === 'decisions' ? 'text-accent' : 'text-text-dim hover:text-highlight'
-                        )}
-                    >
-                        Decisões
-                        {activeTab === 'decisions' && (
-                            <motion.div
-                                layoutId="activeTab"
-                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                            />
-                        )}
-                    </button>
-                </div>
-
-                <div className="mt-4">
-                    {activeTab === 'context' ? (
-                        <ProjectContext projectId={selectedProject.id} />
-                    ) : (
-                        <DecisionsPanel projectId={selectedProject.id} />
-                    )}
-                </div>
-            </motion.div>
-        );
-    }
-
-    return (
-        <div className={embedded ? 'w-full' : 'flex-1'}>
-            {renderRepositoryStartScreen({ showWorkspaceHint: false })}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {editingProject && (
@@ -694,6 +563,152 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     />
                 )}
             </AnimatePresence>
+        </>
+    );
+
+    if (!workspace) {
+        return (
+            <>
+                {renderRepositoryStartScreen({ showWorkspaceHint: true })}
+                {renderSharedModals()}
+            </>
+        );
+    }
+
+    if (selectedProject) {
+        return (
+            <>
+                <motion.div
+                    key="project-detail"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
+                >
+                    <div className="mb-6 flex items-center justify-between gap-3">
+                        <button
+                            onClick={() => {
+                                if (projects.length > 0) {
+                                    setRepositoryById(projects[0].id);
+                                }
+                            }}
+                            className="flex items-center gap-2 text-sm text-text-dim hover:text-accent transition-colors"
+                        >
+                            <ArrowLeft className="size-4" />
+                            Voltar para Repositórios
+                        </button>
+                        <button
+                            onClick={openFolderBrowser}
+                            disabled={submitting}
+                            className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                        >
+                            <FolderOpen className="size-3.5" />
+                            {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
+                        </button>
+                    </div>
+                    {recentItems.length > 0 && (
+                        <div className="bento-card mb-4">
+                            <p className="label-caps mb-2">Recentes</p>
+                            <div className="flex flex-wrap gap-2">
+                                {recentItems.map((item) => (
+                                    <div key={item.id} className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1">
+                                        <button
+                                            onClick={() => handleOpenRecent(item)}
+                                            className="text-xs font-bold text-accent hover:text-highlight transition-colors"
+                                        >
+                                            {item.name}
+                                        </button>
+                                        <button
+                                            onClick={() => handleReopenRecent(item)}
+                                            disabled={submitting || !item.localPath}
+                                            className="rounded-md p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                            title="Abrir de novo"
+                                        >
+                                            <RotateCcw className="size-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <div className="bento-card space-y-2 mb-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <span className="font-bold text-accent text-lg">{selectedProject.name}</span>
+                                <StatusBadge status={selectedProject.status} />
+                            </div>
+                        </div>
+                        {selectedProject.description && (
+                            <p className="text-sm text-text-dim leading-relaxed">{selectedProject.description}</p>
+                        )}
+                        {selectedProject.metadata?.localPath && (
+                            <div className="flex items-center gap-2 text-xs text-text-dim font-mono">
+                                <FolderGit2 className="size-3.5 text-primary shrink-0" />
+                                <span className="truncate">{selectedProject.metadata.localPath}</span>
+                            </div>
+                        )}
+                        {Array.isArray(selectedProject.metadata?.additionalPaths) && selectedProject.metadata.additionalPaths.length > 0 && (
+                            <div className="space-y-1">
+                                <p className="label-caps">Pastas adicionais</p>
+                                {selectedProject.metadata.additionalPaths.map((folderPath: string, index: number) => (
+                                    <div key={`${folderPath}-${index}`} className="flex items-center gap-2 text-xs text-text-dim font-mono">
+                                        <FolderOpen className="size-3.5 text-primary shrink-0" />
+                                        <span className="truncate">{folderPath}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-4 border-b border-border mb-6">
+                        <button
+                            onClick={() => setActiveTab('context')}
+                            className={cn(
+                                'pb-3 text-sm font-bold transition-colors relative',
+                                activeTab === 'context' ? 'text-accent' : 'text-text-dim hover:text-highlight'
+                            )}
+                        >
+                            Context
+                            {activeTab === 'context' && (
+                                <motion.div
+                                    layoutId="activeTab"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                                />
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('decisions')}
+                            className={cn(
+                                'pb-3 text-sm font-bold transition-colors relative',
+                                activeTab === 'decisions' ? 'text-accent' : 'text-text-dim hover:text-highlight'
+                            )}
+                        >
+                            Decisões
+                            {activeTab === 'decisions' && (
+                                <motion.div
+                                    layoutId="activeTab"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                                />
+                            )}
+                        </button>
+                    </div>
+
+                    <div className="mt-4">
+                        {activeTab === 'context' ? (
+                            <ProjectContext projectId={selectedProject.id} />
+                        ) : (
+                            <DecisionsPanel projectId={selectedProject.id} />
+                        )}
+                    </div>
+                </motion.div>
+                {renderSharedModals()}
+            </>
+        );
+    }
+
+    return (
+        <div className={embedded ? 'w-full' : 'flex-1'}>
+            {renderRepositoryStartScreen({ showWorkspaceHint: false })}
+            {renderSharedModals()}
         </div>
     );
 }
