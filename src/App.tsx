@@ -261,12 +261,17 @@ function AppContent() {
           <OnboardingModal />
           <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
             {/* Left Sidebar - Repositories */}
-            <aside className="scrollbar-kairos h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto flex flex-col">
+            <aside className="scrollbar-kairos hidden h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto lg:flex lg:flex-col">
               <Projects />
             </aside>
 
             {/* Main Content */}
-            <div className={cn('flex h-screen flex-col overflow-hidden', terminalMaximized ? 'flex-1' : 'flex-2')}>
+            <div
+              className={cn(
+                'flex h-screen min-w-0 flex-1 flex-col overflow-hidden',
+                terminalMaximized ? 'lg:flex-[1_1_0%]' : 'lg:flex-[2_1_0%]',
+              )}
+            >
               <Header
                 title={config.title}
                 subtitle={config.subtitle}
@@ -292,7 +297,9 @@ function AppContent() {
             </div>
 
             {/* Right Sidebar - Terminal */}
-            <TerminalPanel onMaximizeChange={setTerminalMaximized} />
+            <div className="hidden lg:block">
+              <TerminalPanel onMaximizeChange={setTerminalMaximized} />
+            </div>
           </div>
         </ToastProvider>
       </RepositoryProvider>

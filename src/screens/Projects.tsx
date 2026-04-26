@@ -599,7 +599,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                         )}
                     </div>
 
-                    <div className="mb-4 overflow-x-auto border-b border-border sm:mb-6">
+                    <div className="mb-4 overflow-x-auto border-b border-border pb-1 sm:mb-6">
                         <div className="flex min-w-max items-center gap-4">
                             <button
                                 onClick={() => setActiveTab('repository')}
@@ -651,8 +651,8 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
 
                     <div className="mt-4">
                         {activeTab === 'repository' ? (
-                            <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                                <div className="bento-card min-h-64 sm:min-h-72">
+                            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3 sm:gap-4">
+                                <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
                                     <div className="mb-3 flex items-center gap-2">
                                         <FileText className="size-4 text-primary" />
                                         <p className="label-caps">Lista de arquivos</p>
@@ -674,7 +674,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     )}
                                 </div>
 
-                                <div className="bento-card min-h-64 sm:min-h-72">
+                                <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
                                     <div className="mb-3 flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
                                             <GitCommitHorizontal className="size-4 text-primary" />
@@ -712,7 +712,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     )}
                                 </div>
 
-                                <div className="bento-card min-h-64 sm:min-h-72 lg:col-span-2 xl:col-span-1">
+                                <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
                                     <div className="mb-3 flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
                                             <GitGraph className="size-4 text-primary" />
