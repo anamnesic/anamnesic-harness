@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
   Shield,
-  ShieldCheck,
   Eye,
   History,
   Settings2,
@@ -13,7 +12,6 @@ import {
   ArrowLeft,
   Activity,
   Bot,
-  Camera,
   Lightbulb,
   TrendingUp,
 } from 'lucide-react';
@@ -26,7 +24,6 @@ import { RepositorySelector } from './components/RepositorySelector';
 import { Dashboard } from './screens/Dashboard';
 import { MemoryLedger } from './screens/MemoryLedger';
 import { Observers } from './screens/Observers';
-import { ControlCenter } from './screens/ControlCenter';
 import { SystemConfig } from './screens/SystemConfig';
 import { Agents } from './screens/Agents';
 import { Workflows } from './screens/Workflows';
@@ -101,7 +98,6 @@ const TABS = [
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'decisions', label: 'Decisões', icon: Lightbulb },
-  { id: 'security', label: 'Auditoria', icon: ShieldCheck },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
 
@@ -142,7 +138,6 @@ const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
         { id: 'control', label: 'Segurança', icon: Shield },
         { id: 'agents', label: 'Agentes', icon: Bot },
         { id: 'decisions', label: 'Decisões', icon: Lightbulb },
-        { id: 'security', label: 'Auditoria', icon: ShieldCheck },
         { id: 'system', label: 'Núcleo', icon: Settings2 },
       ].map(item => (
         <button
@@ -206,19 +201,10 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'control':
       return {
         title: 'Segurança',
-        subtitle: 'Guardrails de segurança',
-        element: <ControlCenter />,
+        subtitle: 'Auditoria de vulnerabilidades',
+        element: <Security />,
         onBack: goHome,
-        rightElement: (
-          <button
-            onClick={() => setActive('snapshots')}
-            className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-accent hover:border-primary/60 transition-colors"
-            aria-label="Snapshots"
-          >
-            <Camera className="size-4" />
-            Snapshots
-          </button>
-        ),
+        rightElement: undefined,
       };
     case 'snapshots':
       return { title: 'Snapshots', subtitle: 'Estado em um ponto no tempo', element: <Snapshots />, onBack: goHome, rightElement: undefined };
@@ -234,8 +220,6 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
       return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: undefined, rightElement: undefined };
     case 'decisions':
       return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
-    case 'security':
-      return { title: 'Auditoria', subtitle: 'Auditoria de vulnerabilidades', element: <Security onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
     case 'integrations':
       return { title: 'Integrações', subtitle: 'Webhooks externos', element: <Integrations />, onBack: goHome, rightElement: undefined };
     case 'system':
