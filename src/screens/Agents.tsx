@@ -51,6 +51,33 @@ const ALL_CAPABILITIES: AgentCapability[] = [
     'learning',
 ];
 
+const CAPABILITY_INFO: Record<AgentCapability, { title: string; description: string }> = {
+    'code-generation': {
+        title: 'Code Generation',
+        description: 'Gera implementacoes de codigo com base em objetivo, contexto e restricoes.',
+    },
+    'code-analysis': {
+        title: 'Code Analysis',
+        description: 'Analisa base de codigo, identifica riscos, melhoria e inconsistencias.',
+    },
+    'security-analysis': {
+        title: 'Security Analysis',
+        description: 'Avalia vulnerabilidades, exposicoes e padroes inseguros.',
+    },
+    reasoning: {
+        title: 'Reasoning',
+        description: 'Quebra problemas em etapas e toma decisoes com justificativa estruturada.',
+    },
+    execution: {
+        title: 'Execution',
+        description: 'Executa acoes praticas, automacoes e tarefas orientadas a resultado.',
+    },
+    learning: {
+        title: 'Learning',
+        description: 'Adapta comportamento conforme contexto e historico de uso.',
+    },
+};
+
 const STATE_STYLES: Record<AgentState, string> = {
     idle: 'bg-green-500/15 text-green-400',
     running: 'bg-primary/15 text-primary',
@@ -169,33 +196,6 @@ export function Agents({ onNavigate }: AgentsProps) {
         (agent) => agent.name === 'Prompt Engineer' || agent.metadata?.role === 'prompt-engineer'
     );
 
-    const capabilityInfo: Record<AgentCapability, { title: string; description: string }> = {
-        'code-generation': {
-            title: 'Code Generation',
-            description: 'Gera implementacoes de codigo com base em objetivo, contexto e restricoes.',
-        },
-        'code-analysis': {
-            title: 'Code Analysis',
-            description: 'Analisa base de codigo, identifica riscos, melhoria e inconsistencias.',
-        },
-        'security-analysis': {
-            title: 'Security Analysis',
-            description: 'Avalia vulnerabilidades, exposicoes e padroes inseguros.',
-        },
-        'reasoning': {
-            title: 'Reasoning',
-            description: 'Quebra problemas em etapas e toma decisoes com justificativa estruturada.',
-        },
-        'execution': {
-            title: 'Execution',
-            description: 'Executa acoes praticas, automacoes e tarefas orientadas a resultado.',
-        },
-        'learning': {
-            title: 'Learning',
-            description: 'Adapta comportamento conforme contexto e historico de uso.',
-        },
-    };
-
     const promptCapabilities = useMemo<PromptCapabilityItem[]>(() => {
         const metadata = (promptEngineerAgent?.metadata as Record<string, any> | null) ?? null;
         const templates = (metadata?.promptTemplates as Record<string, string> | undefined) ?? {};
@@ -203,8 +203,8 @@ export function Agents({ onNavigate }: AgentsProps) {
 
         const base = ALL_CAPABILITIES.map((capability) => ({
             key: capability,
-            title: capabilityInfo[capability].title,
-            description: capabilityInfo[capability].description,
+            title: CAPABILITY_INFO[capability].title,
+            description: CAPABILITY_INFO[capability].description,
             prompt: templates[capability] ?? '',
             isCustom: false,
         }));
@@ -218,17 +218,19 @@ export function Agents({ onNavigate }: AgentsProps) {
         }));
 
         return [...base, ...custom];
-    }, [capabilityInfo, promptEngineerAgent]);
+    }, [promptEngineerAgent]);
 
     useEffect(() => {
         setPromptDrafts((prev) => {
             const next = { ...prev };
+            let changed = false;
             for (const capability of promptCapabilities) {
                 if (next[capability.key] === undefined) {
                     next[capability.key] = capability.prompt ?? '';
+                    changed = true;
                 }
             }
-            return next;
+            return changed ? next : prev;
         });
     }, [promptCapabilities]);
 
