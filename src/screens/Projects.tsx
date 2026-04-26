@@ -695,19 +695,6 @@ export function Projects({
                             {activeTab === 'repository' ? (
                                 <div className="flex min-h-128 flex-col gap-4 lg:flex-row">
                                     <aside className="bento-card flex h-screen min-h-0 flex-col lg:w-72 lg:shrink-0">
-                                        <div className="mb-3 flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <Folder className="size-4 text-primary" />
-                                                <p className="label-caps">Repo</p>
-                                            </div>
-                                            <button
-                                                onClick={() => void refetchInsights()}
-                                                className="rounded-md border border-border px-2 py-1 text-[10px] font-bold text-text-dim hover:text-accent transition-colors"
-                                            >
-                                                Refresh
-                                            </button>
-                                        </div>
-
                                         <input
                                             value={repoQuery}
                                             onChange={(e) => setRepoQuery(e.target.value)}
