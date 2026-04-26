@@ -19,6 +19,7 @@ export interface ExecutionMetric {
   taskId: string;
   pipelineId: string;
   agentRole: string;
+  model: string;
   status: 'success' | 'failure' | 'timeout';
   duration: number;
   tokensUsed: number;
@@ -37,9 +38,19 @@ export interface MetricsSnapshot {
   successRate: number;
   errorRate: number;
   byAgent: Record<string, AgentMetrics>;
+  byModel: Record<string, ModelMetrics>;
 }
 
 export interface AgentMetrics {
+  totalTasks: number;
+  successCount: number;
+  failureCount: number;
+  avgDuration: number;
+  successRate: number;
+  avgTokensPerTask: number;
+}
+
+export interface ModelMetrics {
   totalTasks: number;
   successCount: number;
   failureCount: number;
@@ -107,6 +118,7 @@ export class MetricsService {
 
     this.logger.debug('[Metrics] Execution recorded', {
       taskId: metric.taskId,
+      model: metric.model,
       status: metric.status,
       duration: metric.duration,
     });
@@ -148,6 +160,8 @@ export class MetricsService {
 
     // Métricas por agente
     const byAgent: Record<string, AgentMetrics> = {};
+    // Métricas por modelo
+    const byModel: Record<string, ModelMetrics> = {};
 
     for (const metric of recentMetrics) {
       if (!byAgent[metric.agentRole]) {
@@ -177,6 +191,35 @@ export class MetricsService {
         agent.totalTasks;
       agent.successRate =
         agent.totalTasks > 0 ? (agent.successCount / agent.totalTasks) * 100 : 0;
+
+      // Agregação por modelo
+      const modelId = metric.model || 'unknown';
+      if (!byModel[modelId]) {
+        byModel[modelId] = {
+          totalTasks: 0,
+          successCount: 0,
+          failureCount: 0,
+          avgDuration: 0,
+          successRate: 0,
+          avgTokensPerTask: 0,
+        };
+      }
+
+      const model = byModel[modelId];
+      model.totalTasks++;
+      if (metric.status === 'success') {
+        model.successCount++;
+      } else if (metric.status === 'failure') {
+        model.failureCount++;
+      }
+
+      model.avgDuration =
+        (model.avgDuration * (model.totalTasks - 1) + metric.duration) / model.totalTasks;
+      model.avgTokensPerTask =
+        (model.avgTokensPerTask * (model.totalTasks - 1) + metric.tokensUsed) /
+        model.totalTasks;
+      model.successRate =
+        model.totalTasks > 0 ? (model.successCount / model.totalTasks) * 100 : 0;
     }
 
     return {
@@ -190,6 +233,7 @@ export class MetricsService {
       successRate,
       errorRate,
       byAgent,
+      byModel,
     };
   }
 
@@ -223,6 +267,7 @@ export class MetricsService {
     const errorRate = totalTasks > 0 ? (failureCount / totalTasks) * 100 : 0;
 
     const byAgent: Record<string, AgentMetrics> = {};
+    const byModel: Record<string, ModelMetrics> = {};
 
     for (const metric of pipelineMetrics) {
       if (!byAgent[metric.agentRole]) {
@@ -248,6 +293,32 @@ export class MetricsService {
         agent.totalTasks;
       agent.successRate =
         agent.totalTasks > 0 ? (agent.successCount / agent.totalTasks) * 100 : 0;
+
+      // Agregação por modelo
+      const modelId = metric.model || 'unknown';
+      if (!byModel[modelId]) {
+        byModel[modelId] = {
+          totalTasks: 0,
+          successCount: 0,
+          failureCount: 0,
+          avgDuration: 0,
+          successRate: 0,
+          avgTokensPerTask: 0,
+        };
+      }
+
+      const model = byModel[modelId];
+      model.totalTasks++;
+      if (metric.status === 'success') model.successCount++;
+      if (metric.status === 'failure') model.failureCount++;
+
+      model.avgDuration =
+        (model.avgDuration * (model.totalTasks - 1) + metric.duration) / model.totalTasks;
+      model.avgTokensPerTask =
+        (model.avgTokensPerTask * (model.totalTasks - 1) + metric.tokensUsed) /
+        model.totalTasks;
+      model.successRate =
+        model.totalTasks > 0 ? (model.successCount / model.totalTasks) * 100 : 0;
     }
 
     return {
@@ -261,6 +332,7 @@ export class MetricsService {
       successRate,
       errorRate,
       byAgent,
+      byModel,
     };
   }
 

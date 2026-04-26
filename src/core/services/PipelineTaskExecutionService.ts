@@ -2,6 +2,7 @@ import { Logger } from '../utils/Logger';
 import { Pipeline, AgentTask, PipelinePhase } from '../pipeline';
 import { TaskExecutorService, ExecutionResult } from './TaskExecutorService';
 import { AIProvider } from '../providers/AIProvider';
+import { MetricsService } from './MetricsService';
 import { getEventBus } from '../events';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -41,6 +42,7 @@ export class PipelineTaskExecutionService {
   private taskExecutor: TaskExecutorService;
   private activeExecutions: Map<string, Promise<ExecutionResult>> = new Map();
   private bus = getEventBus('pipeline-executor');
+  private metrics = MetricsService.getInstance();
 
   constructor(private aiProvider: AIProvider) {
     this.taskExecutor = new TaskExecutorService(aiProvider);
@@ -82,6 +84,18 @@ export class PipelineTaskExecutionService {
 
       const duration = Date.now() - startTime;
 
+      // Registrar métricas
+      const modelId = process.env.Kairos_PIPELINE_MODEL || 'gpt-4o-mini';
+      await this.metrics.recordExecution({
+        taskId: task.taskId,
+        pipelineId: task.pipelineId,
+        agentRole: task.agentRole,
+        model: modelId,
+        status: 'success',
+        duration,
+        tokensUsed: result.metrics.tokensUsed,
+      });
+
       // Emitir evento de conclusão
       await this.bus.emit('pipeline:task:completed', {
         taskId: task.taskId,
@@ -104,6 +118,19 @@ export class PipelineTaskExecutionService {
     } catch (error) {
       const duration = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const modelId = process.env.Kairos_PIPELINE_MODEL || 'gpt-4o-mini';
+
+      // Registrar métricas de falha
+      await this.metrics.recordExecution({
+        taskId: task.taskId,
+        pipelineId: task.pipelineId,
+        agentRole: task.agentRole,
+        model: modelId,
+        status: 'failure',
+        duration,
+        tokensUsed: 0,
+        error: errorMessage,
+      });
 
       // Emitir evento de erro
       await this.bus.emit('pipeline:task:failed', {
