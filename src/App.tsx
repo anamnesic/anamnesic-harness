@@ -269,7 +269,7 @@ function AppContent() {
             <aside className="w-64 border-r border-border bg-card/50 overflow-y-auto flex flex-col">
               <Projects />
             </aside>
-            
+
             {/* Main Content */}
             <div className="flex-1 flex flex-col">
               <Header
@@ -293,9 +293,8 @@ function AppContent() {
                   </motion.div>
                 </AnimatePresence>
               </main>
-              <BottomNav active={activeTab} onChange={setActiveTab} />
             </div>
-            
+
             {/* Right Sidebar - Chat */}
             <aside className="w-80 border-l border-border bg-card/50 overflow-y-auto">
               <ChatPanel />
