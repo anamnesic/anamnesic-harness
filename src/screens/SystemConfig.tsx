@@ -284,7 +284,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                                 </button>
                             </div>
                         );
-                    )}
+                    })}
                 </div>
             </div>
 
