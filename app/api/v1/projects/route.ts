@@ -9,6 +9,10 @@ function isUuid(value: string) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function normalizePath(value: string) {
+    return value.replace(/\\/g, '/').replace(/\/+$|\/+$/g, '').toLowerCase();
+}
+
 export async function GET(req: NextRequest) {
     try {
         const db = await getDb();
@@ -99,6 +103,23 @@ export async function POST(req: NextRequest) {
         const db = await getDb();
         const { ProjectService } = await import('@/src/core/services/ProjectService');
         const service = new ProjectService(db);
+
+        if (localPath) {
+            const targetPath = normalizePath(localPath);
+            const candidates = normalizedWorkspaceId
+                ? await service.listByWorkspace(normalizedWorkspaceId)
+                : await service.list();
+
+            const duplicate = candidates.find((project) => {
+                const existingPath = project.metadata?.localPath;
+                return typeof existingPath === 'string' && normalizePath(existingPath) === targetPath;
+            });
+
+            if (duplicate) {
+                return ok(duplicate, 200);
+            }
+        }
+
         const project = await service.create({
             name: body.name,
             description: body.description ?? null,
