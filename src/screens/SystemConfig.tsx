@@ -9,6 +9,7 @@ import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { ApiKeys } from './ApiKeys';
 import { AVAILABLE_MODELS } from '@/src/config/models';
+import { useRepository } from '@/src/context/RepositoryContext';
 
 const FLAG_LABELS: Record<string, string> = {
     enableStreaming: 'Streaming',
@@ -39,10 +40,13 @@ function isCliModel(modelId: string) {
 }
 
 export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void }) {
+    const { repository } = useRepository();
     const { data: settings, loading: settingsLoading } = useApi<SettingsData>('/api/v1/settings');
     const { data: metrics, loading: metricsLoading } = useApi<MetricsData>('/api/v1/metrics');
     const { data: projects } = useApi<Project[]>('/api/v1/projects');
-    const { data: availability, loading: availabilityLoading } = useApi<{ data?: AvailabilityData } | AvailabilityData>('/api/v1/system/ai-availability');
+    // Include repository ID in the URL to trigger refetch when repository changes
+    const availabilityUrl = repository ? `/api/v1/system/ai-availability?projectId=${repository.id}` : '/api/v1/system/ai-availability';
+    const { data: availability, loading: availabilityLoading, refetch: refetchAvailability } = useApi<{ data?: AvailabilityData } | AvailabilityData>(availabilityUrl);
     const { toast } = useToast();
 
     const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
@@ -50,6 +54,13 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+    // Auto-select the current repository if available
+    useEffect(() => {
+        if (repository?.id && !selectedProjectId) {
+            setSelectedProjectId(repository.id);
+        }
+    }, [repository?.id, selectedProjectId]);
 
     const availabilityPayload = (availability as { data?: AvailabilityData } | null)?.data
         ? (availability as { data?: AvailabilityData }).data
