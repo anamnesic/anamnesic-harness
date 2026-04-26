@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-04-26T17:01:29.895Z",
+  "provider": "gemini",
+  "command": "gemini",
+  "exitCode": 0,
+  "metricsSnapshot": {
+    "timestamp": "2026-04-26T16:59:41.301Z",
+    "period": "day",
+    "totalTasks": 0,
+    "successCount": 0,
+    "failureCount": 0,
+    "avgDuration": 0,
+    "avgTokensUsed": 0,
+    "successRate": 0,
+    "errorRate": 0,
+    "byAgent": {},
+    "byModel": {}
+  },
+  "benchmarkReport": {
+    "timestamp": "2026-04-26T16:59:41.301Z",
+    "summary": "No data available for benchmarking.",
+    "bestModel": {
+      "bySuccessRate": "N/A",
+      "byLatency": "N/A",
+      "byCostEfficiency": "N/A"
+    },
+    "models": []
+  },
+  "plan": {
+    "configImprovements": [
+      {
+        "title": "Adaptive Polling Frequency",
+        "settingKey": "selfOptimization.intervalMs",
+        "proposedValue": "600000",
+        "rationale": "Slightly decreasing the interval to capture more granular system metrics during high-activity periods.",
+        "expectedImpact": "Improves responsiveness to workload spikes and gathers finer data points."
+      }
+    ],
+    "policyChanges": [
+      {
+        "title": "Stricter Retry Policy for Rate Limits",
+        "policyArea": "execution",
+        "change": "Increase exponential backoff multiplier from 1.5 to 2.0",
+        "rationale": "Prevents aggressive retries when LLM providers throw 429 Too Many Requests errors.",
+        "riskLevel": "low"
+      }
+    ],
+    "routingChanges": [
+      {
+        "taskType": "code-generation",
+        "recommendedProvider": "gemini",
+        "rationale": "Gemini exhibits strong reasoning capabilities and aligns well with context-heavy coding tasks.",
+        "confidence": 0.95
+      }
+    ]
+  },
+  "suggestions": [
+    {
+      "id": "cfg-selfoptimization-intervalms-1",
+      "category": "config",
+      "title": "Adaptive Polling Frequency",
+      "summary": "selfOptimization.intervalMs -> 600000. Improves responsiveness to workload spikes and gathers finer data points.",
+      "status": "pending",
+      "createdAt": "2026-04-26T17:01:29.895Z"
+    },
+    {
+      "id": "pol-execution-2",
+      "category": "policy",
+      "title": "Stricter Retry Policy for Rate Limits",
+      "summary": "Increase exponential backoff multiplier from 1.5 to 2.0 (low). Prevents aggressive retries when LLM providers throw 429 Too Many Requests errors.",
+      "status": "pending",
+      "createdAt": "2026-04-26T17:01:29.895Z"
+    },
+    {
+      "id": "rt-code-generation-3",
+      "category": "routing",
+      "title": "Routing for code-generation",
+      "summary": "Prefer gemini (confidence 95%). Gemini exhibits strong reasoning capabilities and aligns well with context-heavy coding tasks.",
+      "status": "pending",
+      "createdAt": "2026-04-26T17:01:29.895Z"
+    }
+  ]
+}

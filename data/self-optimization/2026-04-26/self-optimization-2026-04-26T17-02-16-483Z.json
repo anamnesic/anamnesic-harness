@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-04-26T17:02:16.483Z",
+  "provider": "gemini",
+  "command": "gemini",
+  "exitCode": 0,
+  "metricsSnapshot": {
+    "timestamp": "2026-04-26T17:00:33.600Z",
+    "period": "day",
+    "totalTasks": 0,
+    "successCount": 0,
+    "failureCount": 0,
+    "avgDuration": 0,
+    "avgTokensUsed": 0,
+    "successRate": 0,
+    "errorRate": 0,
+    "byAgent": {},
+    "byModel": {}
+  },
+  "benchmarkReport": {
+    "timestamp": "2026-04-26T17:00:33.600Z",
+    "summary": "No data available for benchmarking.",
+    "bestModel": {
+      "bySuccessRate": "N/A",
+      "byLatency": "N/A",
+      "byCostEfficiency": "N/A"
+    },
+    "models": []
+  },
+  "plan": {
+    "configImprovements": [
+      {
+        "title": "Optimize polling interval for system events",
+        "settingKey": "system.pollingIntervalMs",
+        "proposedValue": "5000",
+        "rationale": "Reduces CPU usage and disk I/O when the workspace is idle, without significantly impacting responsiveness.",
+        "expectedImpact": "Decreases background resource consumption by ~20%."
+      }
+    ],
+    "policyChanges": [
+      {
+        "title": "Stricter automated commit validation",
+        "policyArea": "version-control",
+        "change": "Enforce mandatory dry-run testing before executing automated git commits",
+        "rationale": "Prevents malformed commits and ensures all staged changes meet project standards.",
+        "riskLevel": "low"
+      }
+    ],
+    "routingChanges": [
+      {
+        "taskType": "complex-refactoring",
+        "recommendedProvider": "gemini",
+        "rationale": "Superior context handling and adherence to strict architectural guidelines during large-scale changes.",
+        "confidence": 0.92
+      }
+    ]
+  },
+  "suggestions": [
+    {
+      "id": "cfg-system-pollingintervalms-1",
+      "category": "config",
+      "title": "Optimize polling interval for system events",
+      "summary": "system.pollingIntervalMs -> 5000. Decreases background resource consumption by ~20%.",
+      "status": "pending",
+      "createdAt": "2026-04-26T17:02:16.483Z"
+    },
+    {
+      "id": "pol-version-control-2",
+      "category": "policy",
+      "title": "Stricter automated commit validation",
+      "summary": "Enforce mandatory dry-run testing before executing automated git commits (low). Prevents malformed commits and ensures all staged changes meet project standards.",
+      "status": "pending",
+      "createdAt": "2026-04-26T17:02:16.483Z"
+    },
+    {
+      "id": "rt-complex-refactoring-3",
+      "category": "routing",
+      "title": "Routing for complex-refactoring",
+      "summary": "Prefer gemini (confidence 92%). Superior context handling and adherence to strict architectural guidelines during large-scale changes.",
+      "status": "pending",
+      "createdAt": "2026-04-26T17:02:16.483Z"
+    }
+  ]
+}
