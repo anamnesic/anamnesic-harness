@@ -8,6 +8,7 @@ import { sessions, broadcast, type Session } from '../_sessions';
 
 type CliType = 'claude' | 'gemini' | 'copilot' | 'codex';
 type CliCommand = { cmd: string; args: string[] };
+type SpawnCommand = { file: string; args: string[] };
 
 const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex']);
 
@@ -19,6 +20,25 @@ function getCliCommand(cli: CliType): CliCommand {
         case 'copilot': return { cmd: 'copilot', args: [] };
         case 'codex': return { cmd: 'codex', args: [] };
     }
+}
+
+function quoteForCmd(value: string): string {
+    if (!/[\s"]/u.test(value)) return value;
+    return `"${value.replace(/"/g, '""')}"`;
+}
+
+function getSpawnCommand(cli: CliType): SpawnCommand {
+    const { cmd, args } = getCliCommand(cli);
+    if (process.platform !== 'win32') {
+        return { file: cmd, args };
+    }
+
+    const comspec = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe';
+    const commandLine = [cmd, ...args].map(quoteForCmd).join(' ');
+    return {
+        file: comspec,
+        args: ['/d', '/c', commandLine],
+    };
 }
 
 export async function POST(req: NextRequest) {
@@ -35,12 +55,12 @@ export async function POST(req: NextRequest) {
             ? cwd.trim()
             : process.cwd();
 
-    const { cmd, args } = getCliCommand(cli as CliType);
+    const { file, args } = getSpawnCommand(cli as CliType);
     const sessionId = randomUUID();
 
     let proc: ReturnType<typeof spawn>;
     try {
-        proc = spawn(cmd, args, {
+        proc = spawn(file, args, {
             name: process.platform === 'win32' ? 'xterm-color' : 'xterm-256color',
             cwd: resolvedCwd,
             cols: 120,
@@ -53,7 +73,7 @@ export async function POST(req: NextRequest) {
         });
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        return new Response(JSON.stringify({ error: `Failed to spawn ${cmd}: ${msg}` }), {
+        return new Response(JSON.stringify({ error: `Failed to spawn ${file}: ${msg}` }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });
