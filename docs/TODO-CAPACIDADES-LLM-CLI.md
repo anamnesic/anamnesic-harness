@@ -125,8 +125,8 @@ Meta de arquitetura:
 
 ### Guardrails
 
-- [ ] Impedir promocao automatica de fatos sem score minimo
-- [ ] Exigir aprovacao para overwrite de fatos sensiveis
+- [x] Impedir promocao automatica de fatos sem score minimo
+- [x] Exigir aprovacao para overwrite de fatos sensiveis
 
 ---
 

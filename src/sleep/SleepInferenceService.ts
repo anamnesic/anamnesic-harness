@@ -4,10 +4,13 @@ import { z } from 'zod';
 import { CliInferenceService, type LlmCliProvider } from '../core/llm-cli';
 import { Logger } from '../core/utils/Logger';
 import { memoryManager } from '../memory/memoryManager';
+import { ApprovalFlow } from '../policies/approvalFlow';
 import { Consolidator } from './consolidator';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const DAILY_DIR = path.join(DATA_DIR, 'summaries', 'daily');
+const FACTS_DIR = path.join(DATA_DIR, 'summaries', 'facts');
+const CURRENT_FACTS_FILE = path.join(FACTS_DIR, 'current-facts.json');
 
 const contradictionSchema = z.object({
     existingFact: z.string().min(1),
@@ -42,11 +45,17 @@ export interface SleepInferenceRunResult {
     date: string;
     output: SleepInferenceOutput;
     promotedFacts: Array<{ fact: string; score: number; rationale: string }>;
+    pendingApprovals: Array<{
+        requestId: string;
+        fact: string;
+        reason: string;
+    }>;
     files: {
         summaryMarkdown: string;
         summaryJson: string;
         promotedFactsJson: string;
         contradictionsJson: string;
+        currentFactsJson: string;
     };
 }
 
@@ -54,6 +63,10 @@ export interface SleepInferenceServiceOptions {
     preferredProvider?: LlmCliProvider;
     fallbackProviders?: LlmCliProvider[];
     minFactScore?: number;
+    requireApprovalForSensitiveOverwrite?: boolean;
+    approvalRequester?: string;
+    approvalFlow?: ApprovalFlow;
+    sensitiveFactKeywords?: string[];
 }
 
 export class SleepInferenceService {
@@ -61,6 +74,10 @@ export class SleepInferenceService {
     private readonly preferredProvider: LlmCliProvider;
     private readonly fallbackProviders: LlmCliProvider[];
     private readonly minFactScore: number;
+    private readonly requireApprovalForSensitiveOverwrite: boolean;
+    private readonly approvalRequester: string;
+    private readonly approvalFlow?: ApprovalFlow;
+    private readonly sensitiveFactKeywords: string[];
 
     constructor(
         private readonly inference = new CliInferenceService(),
@@ -69,6 +86,21 @@ export class SleepInferenceService {
         this.preferredProvider = options.preferredProvider ?? 'gemini';
         this.fallbackProviders = options.fallbackProviders ?? ['claude', 'copilot', 'codex'];
         this.minFactScore = options.minFactScore ?? 0.65;
+        this.requireApprovalForSensitiveOverwrite = options.requireApprovalForSensitiveOverwrite ?? true;
+        this.approvalRequester = options.approvalRequester ?? 'sleep-inference';
+        this.approvalFlow = options.approvalFlow;
+        this.sensitiveFactKeywords = options.sensitiveFactKeywords ?? [
+            'password',
+            'secret',
+            'token',
+            'credential',
+            'api key',
+            'private key',
+            'auth',
+            'security',
+            'permission',
+            'access',
+        ];
     }
 
     async run(date?: string): Promise<SleepInferenceRunResult> {
@@ -84,7 +116,10 @@ export class SleepInferenceService {
         });
 
         const parsed = this.parseResult(result.rawText || result.stdout || '', targetDate, consolidation.totalEntries);
-        const promotedFacts = parsed.permanentFacts.filter((f) => f.score >= this.minFactScore);
+        const candidates = parsed.permanentFacts.filter((f) => f.score >= this.minFactScore);
+        const currentFacts = await this.loadCurrentFacts();
+        const { promotedFacts, pendingApprovals } = this.applyPromotionGuardrails(candidates, currentFacts, parsed.contradictions);
+        const nextCurrentFacts = this.mergeCurrentFacts(currentFacts, promotedFacts);
 
         const baseDir = path.join(DAILY_DIR, targetDate);
         await fs.mkdir(baseDir, { recursive: true });
@@ -93,6 +128,8 @@ export class SleepInferenceService {
         const summaryJson = path.join(baseDir, 'daily-summary.json');
         const promotedFactsJson = path.join(baseDir, 'promoted-facts.json');
         const contradictionsJson = path.join(baseDir, 'contradictions.json');
+        await fs.mkdir(FACTS_DIR, { recursive: true });
+        const currentFactsJson = CURRENT_FACTS_FILE;
 
         const markdown = this.toMarkdown(targetDate, parsed, promotedFacts);
         await fs.writeFile(summaryMarkdown, markdown, 'utf8');
@@ -101,10 +138,14 @@ export class SleepInferenceService {
             provider: result.provider,
             command: result.command,
             exitCode: result.exitCode,
+            minFactScore: this.minFactScore,
+            requireApprovalForSensitiveOverwrite: this.requireApprovalForSensitiveOverwrite,
+            pendingApprovals,
             output: parsed,
         }, null, 2), 'utf8');
         await fs.writeFile(promotedFactsJson, JSON.stringify(promotedFacts, null, 2), 'utf8');
         await fs.writeFile(contradictionsJson, JSON.stringify(parsed.contradictions, null, 2), 'utf8');
+        await fs.writeFile(currentFactsJson, JSON.stringify(nextCurrentFacts, null, 2), 'utf8');
 
         this.logger.info(`Sleep inference artifacts generated for ${targetDate}`);
 
@@ -112,13 +153,95 @@ export class SleepInferenceService {
             date: targetDate,
             output: parsed,
             promotedFacts,
+            pendingApprovals,
             files: {
                 summaryMarkdown,
                 summaryJson,
                 promotedFactsJson,
                 contradictionsJson,
+                currentFactsJson,
             },
         };
+    }
+
+    private applyPromotionGuardrails(
+        promotedCandidates: Array<{ fact: string; score: number; rationale: string }>,
+        currentFacts: Array<{ fact: string; score: number; rationale: string }>,
+        contradictions: SleepInferenceOutput['contradictions'],
+    ): {
+        promotedFacts: Array<{ fact: string; score: number; rationale: string }>;
+        pendingApprovals: Array<{ requestId: string; fact: string; reason: string }>;
+    } {
+        const approved: Array<{ fact: string; score: number; rationale: string }> = [];
+        const pendingApprovals: Array<{ requestId: string; fact: string; reason: string }> = [];
+
+        for (const candidate of promotedCandidates) {
+            const conflict = contradictions.find((c) => this.normalizeFact(c.newFact) === this.normalizeFact(candidate.fact));
+            const hasExistingConflict = conflict
+                ? currentFacts.some((f) => this.normalizeFact(f.fact) === this.normalizeFact(conflict.existingFact))
+                : false;
+            const sensitive = this.isSensitiveFact(candidate.fact);
+
+            if (this.requireApprovalForSensitiveOverwrite && sensitive && hasExistingConflict) {
+                const reason = `Sensitive fact overwrite blocked until approval: ${candidate.fact}`;
+                const requestId = `sleep-fact-${Date.now()}-${this.normalizeFact(candidate.fact).slice(0, 24)}`;
+
+                if (this.approvalFlow) {
+                    const req = this.approvalFlow.request({
+                        id: requestId,
+                        actionType: 'sleep-fact-overwrite',
+                        description: reason,
+                        requestedBy: this.approvalRequester,
+                    });
+                    if (req.status !== 'approved') {
+                        pendingApprovals.push({ requestId, fact: candidate.fact, reason });
+                        continue;
+                    }
+                } else {
+                    pendingApprovals.push({ requestId, fact: candidate.fact, reason });
+                    continue;
+                }
+            }
+
+            approved.push(candidate);
+        }
+
+        return { promotedFacts: approved, pendingApprovals };
+    }
+
+    private async loadCurrentFacts(): Promise<Array<{ fact: string; score: number; rationale: string }>> {
+        try {
+            const raw = await fs.readFile(CURRENT_FACTS_FILE, 'utf8');
+            const parsed = JSON.parse(raw) as Array<{ fact: string; score: number; rationale: string }>;
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private mergeCurrentFacts(
+        currentFacts: Array<{ fact: string; score: number; rationale: string }>,
+        promotedFacts: Array<{ fact: string; score: number; rationale: string }>,
+    ): Array<{ fact: string; score: number; rationale: string }> {
+        const merged = [...currentFacts];
+        for (const fact of promotedFacts) {
+            const index = merged.findIndex((item) => this.normalizeFact(item.fact) === this.normalizeFact(fact.fact));
+            if (index >= 0) {
+                merged[index] = fact;
+            } else {
+                merged.push(fact);
+            }
+        }
+        return merged;
+    }
+
+    private isSensitiveFact(fact: string): boolean {
+        const normalized = fact.toLowerCase();
+        return this.sensitiveFactKeywords.some((keyword) => normalized.includes(keyword));
+    }
+
+    private normalizeFact(fact: string): string {
+        return fact.toLowerCase().replace(/\s+/g, ' ').trim();
     }
 
     private buildPrompt(date: string, entries: Array<{ id: string; content: string; source: string; projectId?: string; timestamp: Date }>, consolidation: { totalEntries: number; bySource: Record<string, number>; byProject: Record<string, number> }): string {
