@@ -26,7 +26,7 @@ function StatusBadge({ status }: { status?: string }) {
     const s = status ?? 'active';
     const colors: Record<string, string> = {
         active: 'bg-green-500/15 text-green-400',
-        archived: 'bg-orange-500/15 text-orange-400',
+        archived: 'bg-stone-50/10 text-stone-200',
         inactive: 'bg-zinc-500/15 text-zinc-400',
     };
     return (
@@ -169,7 +169,7 @@ export function Projects({
             if (createdProject?.id && typeof window !== 'undefined') {
                 localStorage.setItem('kairos-selected-repository', createdProject.id);
             }
-            toast(`Repositório "${base}" importado`, 'success');
+            toast(`Reposit├│rio "${base}" importado`, 'success');
             await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
             // Check if it's a NO_GIT_REPO error with git subfolders
@@ -189,13 +189,13 @@ export function Projects({
                         localStorage.setItem('kairos-selected-repository', createdProject.id);
                     }
 
-                    toast(`A pasta tem 1 repositório Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
+                    toast(`A pasta tem 1 reposit├│rio Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
                     await Promise.all([refetch(), refreshRepositories()]);
                     return;
                 }
 
                 if (gitSubfolders.length === 0) {
-                    toast('Esta pasta não tem repositório Git e não pode ser selecionada.', 'error');
+                    toast('Esta pasta n├úo tem reposit├│rio Git e n├úo pode ser selecionada.', 'error');
                     return;
                 }
 
@@ -217,7 +217,7 @@ export function Projects({
     async function handleAttachFolderToProject(projectId: string, folderPath: string) {
         const project = projects.find((item) => item.id === projectId);
         if (!project) {
-            toast('Repositório não encontrado', 'error');
+            toast('Reposit├│rio n├úo encontrado', 'error');
             return;
         }
 
@@ -239,10 +239,10 @@ export function Projects({
                 body: JSON.stringify({ metadata: nextMetadata }),
             });
 
-            toast('Pasta adicionada ao repositório', 'success');
+            toast('Pasta adicionada ao reposit├│rio', 'success');
             await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
-            toast(e.message ?? 'Falha ao adicionar pasta ao repositório', 'error');
+            toast(e.message ?? 'Falha ao adicionar pasta ao reposit├│rio', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -428,7 +428,7 @@ export function Projects({
             return <FileCode2 className="size-3.5 shrink-0 text-sky-400" />;
         }
         if (['json', 'jsonc'].includes(ext)) {
-            return <FileJson className="size-3.5 shrink-0 text-amber-400" />;
+            return <FileJson className="size-3.5 shrink-0 text-stone-200" />;
         }
         if (['md', 'mdx'].includes(ext)) {
             return <FileText className="size-3.5 shrink-0 text-blue-300" />;
@@ -526,9 +526,9 @@ export function Projects({
                                 <ChevronDown className="size-3 shrink-0 text-text-dim" />
                             )}
                             {isCollapsed ? (
-                                <Folder className="size-3.5 shrink-0 text-amber-300" />
+                                <Folder className="size-3.5 shrink-0 text-stone-300" />
                             ) : (
-                                <FolderOpen className="size-3.5 shrink-0 text-amber-300" />
+                                <FolderOpen className="size-3.5 shrink-0 text-stone-300" />
                             )}
                             <span className="truncate text-xs text-highlight">{node.name}</span>
                         </button>
@@ -562,10 +562,10 @@ export function Projects({
         label: string;
         icon: typeof FileText;
     }> = [
-            { id: 'repository', label: 'Repositório', icon: FileText },
+            { id: 'repository', label: 'Reposit├│rio', icon: FileText },
             { id: 'git', label: 'Git', icon: GitBranch },
             { id: 'context', label: 'Docs', icon: BookOpen },
-            { id: 'decisions', label: 'Decisões', icon: Lightbulb },
+            { id: 'decisions', label: 'Decis├Áes', icon: Lightbulb },
         ];
 
     async function runGitAction(action: 'stage-all' | 'commit' | 'stage-file' | 'unstage-file' | 'discard-file', path?: string) {
@@ -585,11 +585,11 @@ export function Projects({
                 setCommitMessage('');
                 toast('Commit realizado', 'success');
             } else if (action === 'stage-all') {
-                toast('Mudanças staged com sucesso', 'success');
+                toast('Mudan├ºas staged com sucesso', 'success');
             }
             await refetchInsights();
         } catch (e: any) {
-            toast(e.message ?? 'Falha na ação de Git', 'error');
+            toast(e.message ?? 'Falha na a├º├úo de Git', 'error');
         } finally {
             setGitBusy(false);
         }
@@ -604,11 +604,11 @@ export function Projects({
         >
             <div className="bento-card py-8 text-center space-y-3">
                 <Building2 className="size-8 text-border mx-auto" />
-                <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Nenhum repositório selecionado</h2>
+                <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Nenhum reposit├│rio selecionado</h2>
                 {showWorkspaceHint ? (
-                    <p className="text-sm text-text-dim">Nenhum workspace ativo. Use o seletor de repositórios no appbar para importar uma pasta.</p>
+                    <p className="text-sm text-text-dim">Nenhum workspace ativo. Use o seletor de reposit├│rios no appbar para importar uma pasta.</p>
                 ) : (
-                    <p className="text-sm text-text-dim">Selecione um repositório real no seletor do appbar para carregar arquivos, Git e docs.</p>
+                    <p className="text-sm text-text-dim">Selecione um reposit├│rio real no seletor do appbar para carregar arquivos, Git e docs.</p>
                 )}
             </div>
         </motion.div>
@@ -634,7 +634,7 @@ export function Projects({
                             className="bento-card w-full max-w-md space-y-4"
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold">Nenhum repositório Git encontrado</h3>
+                                <h3 className="text-lg font-bold">Nenhum reposit├│rio Git encontrado</h3>
                                 <button
                                     onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
                                     className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
@@ -666,7 +666,7 @@ export function Projects({
                                     disabled={submitting}
                                     className="flex-1 rounded-lg bg-accent/20 border border-accent/40 px-4 py-2 text-xs font-bold text-accent hover:bg-accent/30 transition-colors disabled:opacity-50"
                                 >
-                                    {submitting ? 'Creating…' : 'Open as Workspace'}
+                                    {submitting ? 'CreatingÔÇª' : 'Open as Workspace'}
                                 </button>
                             </div>
                         </motion.div>
@@ -730,110 +730,107 @@ export function Projects({
 
                         <section className="min-w-0">
                             {activeTab === 'repository' ? (
-                                <div className="space-y-3">
-                                    <div className="sticky top-20 z-20 overflow-x-auto rounded-lg border border-border/60 bg-bg/90 backdrop-blur">
-                                        <div className="flex items-stretch">
-                                            {openRepoTabs.length ? openRepoTabs.map((filePath) => {
-                                                const isActive = selectedRepoFile === filePath;
-                                                const isDirty = repoDirtyFiles[filePath] ?? false;
-                                                const fileName = filePath.split('/').pop() || filePath;
-
-                                                return (
-                                                    <button
-                                                        key={filePath}
-                                                        onClick={() => setSelectedRepoFile(filePath)}
-                                                        className={cn(
-                                                            'group flex max-w-56 shrink-0 items-center gap-2 border-r border-border/60 px-3 py-2 text-xs transition-colors',
-                                                            isActive
-                                                                ? 'bg-card text-highlight'
-                                                                : 'text-text-dim hover:bg-card/40 hover:text-highlight',
-                                                        )}
-                                                        title={filePath}
-                                                    >
-                                                        {getFileIcon(filePath)}
-                                                        <span className="truncate font-mono">{fileName}</span>
-                                                        {isDirty && <span className="text-primary">●</span>}
-                                                        <span
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                closeRepoTab(filePath);
-                                                            }}
-                                                            className="rounded p-0.5 text-text-dim opacity-70 transition hover:bg-card hover:opacity-100"
-                                                        >
-                                                            <X className="size-3" />
-                                                        </span>
-                                                    </button>
-                                                );
-                                            }) : (
-                                                <div className="px-3 py-2 text-xs text-text-dim">Nenhum arquivo aberto</div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
-                                        <aside className="bento-card min-h-0">
-                                            <div className="mb-3 flex items-center justify-between gap-2">
-                                                <div className="flex items-center gap-2">
-                                                    <Folder className="size-4 text-primary" />
-                                                    <p className="label-caps">Repo</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => void refetchInsights()}
-                                                    className="rounded-md border border-border px-2 py-1 text-[10px] font-bold text-text-dim hover:text-accent transition-colors"
-                                                >
-                                                    Refresh
-                                                </button>
+                                <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
+                                    <aside className="bento-card min-h-0">
+                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <Folder className="size-4 text-primary" />
+                                                <p className="label-caps">Repo</p>
                                             </div>
+                                            <button
+                                                onClick={() => void refetchInsights()}
+                                                className="rounded-md border border-border px-2 py-1 text-[10px] font-bold text-text-dim hover:text-accent transition-colors"
+                                            >
+                                                Refresh
+                                            </button>
+                                        </div>
 
-                                            <input
-                                                value={repoQuery}
-                                                onChange={(e) => setRepoQuery(e.target.value)}
-                                                placeholder="Filtrar arquivos"
-                                                className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
-                                            />
+                                        <input
+                                            value={repoQuery}
+                                            onChange={(e) => setRepoQuery(e.target.value)}
+                                            placeholder="Filtrar arquivos"
+                                            className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
+                                        />
 
-                                            {insightsLoading ? (
-                                                <p className="text-sm text-text-dim">Carregando arquivos...</p>
-                                            ) : !insights?.isGitRepo ? (
-                                                <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
-                                            ) : !repositoryFiles.length ? (
-                                                <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
-                                            ) : (
-                                                <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
-                                                    {repositoryTree.length
-                                                        ? renderRepositoryTree(repositoryTree)
-                                                        : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
+                                        {insightsLoading ? (
+                                            <p className="text-sm text-text-dim">Carregando arquivos...</p>
+                                        ) : !insights?.isGitRepo ? (
+                                            <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
+                                        ) : !repositoryFiles.length ? (
+                                            <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
+                                        ) : (
+                                            <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
+                                                {repositoryTree.length
+                                                    ? renderRepositoryTree(repositoryTree)
+                                                    : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
+                                            </div>
+                                        )}
+                                    </aside>
+
+                                    <section className="min-h-0 overflow-hidden">
+                                        {insightsLoading ? (
+                                            <p className="text-sm text-text-dim">Carregando editor...</p>
+                                        ) : !insights?.isGitRepo ? (
+                                            <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
+                                        ) : !selectedRepoFile ? (
+                                            <p className="text-sm text-text-dim">Selecione um arquivo na lateral.</p>
+                                        ) : repositoryFileLoading ? (
+                                            <p className="text-sm text-text-dim">Carregando conte├║do...</p>
+                                        ) : (
+                                            <div className="h-[64vh] overflow-hidden border border-border/60 bg-bg/80">
+                                                <div className="flex h-full">
+                                                    <div
+                                                        ref={repoLineGutterRef}
+                                                        className="w-14 shrink-0 overflow-hidden border-r border-border/60 bg-card/40 px-2 py-3 text-right font-mono text-[11px] leading-relaxed text-text-dim"
+                                                    >
+                                                        {repoLineNumbers.map((lineNumber) => (
+                                                            <div key={lineNumber}>{lineNumber}</div>
+                                                        ))}
+                                                    </div>
+                                                    <textarea
+                                                        ref={repoTextareaRef}
+                                                        value={currentRepoDraft}
+                                                        onChange={(e) => {
+                                                            if (!selectedRepoFile) return;
+                                                            const nextDraft = e.target.value;
+                                                            const baseContent = repositoryFile?.content ?? '';
+                                                            setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
+                                                            setRepoDirtyFiles((prev) => ({
+                                                                ...prev,
+                                                                [selectedRepoFile]: nextDraft !== baseContent,
+                                                            }));
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                                                                e.preventDefault();
+                                                                if (!savingRepoFile) {
+                                                                    void saveRepositoryFile();
+                                                                }
+                                                            }
+                                                        }}
+                                                        onScroll={(e) => {
+                                                            if (repoLineGutterRef.current) {
+                                                                repoLineGutterRef.current.scrollTop = e.currentTarget.scrollTop;
+                                                            }
+                                                        }}
+                                                        spellCheck={false}
+                                                        className="h-full flex-1 resize-none bg-transparent px-3 py-3 font-mono text-xs leading-relaxed text-highlight outline-none"
+                                                    />
                                                 </div>
-                                            )}
-                                        </aside>
-
-                                        <section className="min-h-0 overflow-hidden">
-
-                                            {insightsLoading ? (
-                                                <p className="text-sm text-text-dim">Carregando editor...</p>
-                                            ) : !insights?.isGitRepo ? (
-                                                <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
-                                            ) : !selectedRepoFile ? (
-                                                <p className="text-sm text-text-dim">Selecione um arquivo na lateral.</p>
-                                            ) : repositoryFileLoading ? (
-                                                <p className="text-sm text-text-dim">Carregando conteúdo...</p>
-                                            ) : (
-                                                <div className="h-[calc(100vh-19rem)] min-h-88 overflow-hidden border border-border/60 bg-bg/80">
-                                                    <div className="flex h-full">
-                                                        <div
-                                                            ref={repoLineGutterRef}
-                                                            className="w-14 shrink-0 overflow-hidden border-r border-border/60 bg-card/40 px-2 py-3 text-right font-mono text-[11px] leading-relaxed text-text-dim"
-                                                        >
-                                                            {repoLineNumbers.map((lineNumber) => (
-                                                                <div key={lineNumber}>{lineNumber}</div>
-                                                            ))}
-                                                        </div>
-                                                        <textarea
-                                                            ref={repoTextareaRef}
-                                                            value={currentRepoDraft}
-                                                            onChange={(e) => {
-                                                                if (!selectedRepoFile) return;
-                                                                const nextDraft = e.target.value;
+                                            </div>
+                                        )}
+                                    </section>
+                                </div>
+                            ) : activeTab === 'git' ? (
+                                <div className="bento-card">
+                                    <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
+                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <GitBranch className="size-4 text-primary" />
+                                                <p className="label-caps">Source control</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {insights?.branch && (
                                                     <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold text-text-dim">
                                                         {insights.branch}
                                                     </span>
@@ -888,9 +885,9 @@ export function Projects({
                                                 </span>
                                             </div>
                                             {insightsLoading ? (
-                                                <p className="text-sm text-text-dim">Carregando mudanças...</p>
+                                                <p className="text-sm text-text-dim">Carregando mudan├ºas...</p>
                                             ) : !insights?.isGitRepo ? (
-                                                <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                                <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
                                             ) : insights?.changes?.length ? (
                                                 <div className="max-h-56 space-y-1 overflow-y-auto pr-1 sm:max-h-72">
                                                     {insights.changes.map((change, index) => (
@@ -930,7 +927,7 @@ export function Projects({
                                                                 )}
                                                                 {change.unstaged && (
                                                                     <button
-                                                                        title="Descartar mudanças"
+                                                                        title="Descartar mudan├ºas"
                                                                         onClick={() => void runGitAction('discard-file', change.path)}
                                                                         disabled={gitBusy || insightsLoading}
                                                                         className="rounded border border-border p-1 text-text-dim hover:text-red-400 transition-colors disabled:opacity-50"
@@ -943,7 +940,7 @@ export function Projects({
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-text-dim">Sem mudanças pendentes.</p>
+                                                <p className="text-sm text-text-dim">Sem mudan├ºas pendentes.</p>
                                             )}
                                         </div>
 
@@ -953,15 +950,15 @@ export function Projects({
                                                 <p className="label-caps">Graph</p>
                                             </div>
                                             {insightsLoading ? (
-                                                <p className="text-sm text-text-dim">Carregando histórico...</p>
+                                                <p className="text-sm text-text-dim">Carregando hist├│rico...</p>
                                             ) : !insights?.isGitRepo ? (
-                                                <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                                <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
                                             ) : insights?.graphLines?.length ? (
                                                 <pre className="max-h-56 overflow-y-auto whitespace-pre font-mono text-[10px] text-text-dim sm:max-h-72 sm:text-[11px]">
                                                     {insights.graphLines.join('\n')}
                                                 </pre>
                                             ) : (
-                                                <p className="text-sm text-text-dim">Sem histórico disponível.</p>
+                                                <p className="text-sm text-text-dim">Sem hist├│rico dispon├¡vel.</p>
                                             )}
                                         </div>
                                     </div>
