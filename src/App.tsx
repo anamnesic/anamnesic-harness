@@ -40,6 +40,7 @@ import { Integrations } from './screens/Integrations';
 import { Login } from './screens/Login';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
+import { TerminalPanel } from './screens/TerminalPanel';
 
 const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   title: string;
@@ -283,7 +284,7 @@ function AppContent() {
                 rightElement={config.rightElement}
                 activeTab={activeTab}
               />
-              <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
+              <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto pb-8">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
@@ -298,6 +299,7 @@ function AppContent() {
                 </AnimatePresence>
               </main>
               <BottomNav active={activeTab} onChange={setActiveTab} />
+              <TerminalPanel />
             </div>
 
             {/* Right Sidebar - Chat */}

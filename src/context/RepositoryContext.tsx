@@ -9,6 +9,7 @@ interface Repository {
   name: string;
   description?: string | null;
   workspaceId?: string | null;
+  metadata?: { localPath?: string;[k: string]: unknown } | null;
 }
 
 interface RepositoryContextValue {
