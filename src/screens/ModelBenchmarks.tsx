@@ -52,7 +52,7 @@ export function ModelBenchmarks() {
             <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                 <BarChart3 className="size-16 text-border" />
                 <div className="text-center">
-                    <h3 className="text-xl font-bold uppercase tracking-tighter">No Benchmark Data</h3>
+                    <h3 className="text-xl font-bold uppercase tracking-tighter">Sem dados de benchmark</h3>
                     <p className="text-text-dim text-sm mt-1">Run some orchestrator tasks to generate model performance metrics.</p>
                 </div>
             </div>
@@ -89,7 +89,7 @@ export function ModelBenchmarks() {
                         <span className="label-caps">Most Reliable</span>
                     </div>
                     <h4 className="text-xl font-bold truncate">{report.bestModel.bySuccessRate}</h4>
-                    <p className="text-xs text-text-dim mt-1">Highest success rate in tasks</p>
+                    <p className="text-xs text-text-dim mt-1">Altaest success rate in tasks</p>
                 </div>
 
                 <div className="bento-card border-blue-500/20">
@@ -100,7 +100,7 @@ export function ModelBenchmarks() {
                         <span className="label-caps">Fastest</span>
                     </div>
                     <h4 className="text-xl font-bold truncate">{report.bestModel.byLatency}</h4>
-                    <p className="text-xs text-text-dim mt-1">Lowest average response time</p>
+                    <p className="text-xs text-text-dim mt-1">Baixaest average response time</p>
                 </div>
 
                 <div className="bento-card border-yellow-500/20">
@@ -155,7 +155,7 @@ export function ModelBenchmarks() {
                                 {/* Metrics Grid */}
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4 shrink-0">
                                     <div className="flex flex-col">
-                                        <span className="label-caps !mb-1">Success Rate</span>
+                                        <span className="label-caps !mb-1">Taxa de sucesso</span>
                                         <span className={cn(
                                             "text-sm font-bold",
                                             model.metrics.successRate > 90 ? "text-green-400" : 

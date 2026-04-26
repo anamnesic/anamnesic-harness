@@ -77,7 +77,7 @@ export function Snapshots() {
 
     async function handleCreate() {
         if (!name.trim()) {
-            toast('Name is required', 'error');
+            toast('Nome é obrigatório', 'error');
             return;
         }
         setSubmitting(true);
@@ -94,7 +94,7 @@ export function Snapshots() {
             refetch();
             closeModal();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to create snapshot', 'error');
+            toast(e.message ?? 'Falha ao criar snapshot', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -148,7 +148,7 @@ export function Snapshots() {
                     className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
                 >
                     <Plus className="size-3.5" />
-                    Create Snapshot
+                    Criar snapshot
                 </button>
             </div>
 
@@ -159,7 +159,7 @@ export function Snapshots() {
             ) : list.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 space-y-3">
                     <Camera className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">No snapshots yet.</p>
+                    <p className="text-text-dim text-sm">Ainda não há snapshots.</p>
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2">
@@ -273,7 +273,7 @@ export function Snapshots() {
                                         type="text"
                                         value={name}
                                         onChange={e => setName(e.target.value)}
-                                        placeholder="e.g. before-migration"
+                                        placeholder="ex.: antes-da-migracao"
                                         className="w-full rounded-lg bg-bg border border-border px-3 py-2 text-sm focus:outline-none focus:border-primary/60"
                                     />
                                 </div>
@@ -283,7 +283,7 @@ export function Snapshots() {
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
                                         rows={3}
-                                        placeholder="Optional notes about this snapshot"
+                                        placeholder="Observações opcionais sobre este snapshot"
                                         className="w-full rounded-lg bg-bg border border-border px-3 py-2 text-sm focus:outline-none focus:border-primary/60 resize-none"
                                     />
                                 </div>
@@ -295,7 +295,7 @@ export function Snapshots() {
                                         className="w-full rounded-lg bg-bg border border-border px-3 py-2 text-sm focus:outline-none focus:border-primary/60"
                                     >
                                         <option value="system">System (All Config Files)</option>
-                                        <option value="src">Source Code Only</option>
+                                        <option value="src">Source Código Only</option>
                                         <option value="full">Full Project</option>
                                     </select>
                                     <p className="text-[10px] text-text-dim mt-1">

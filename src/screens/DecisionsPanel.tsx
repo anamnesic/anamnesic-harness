@@ -340,7 +340,7 @@ export function DecisionsPanel({ projectId }: { projectId: string }) {
             const res = await apiFetch<ApiResponse<Decision[]>>(`/api/v1/projects/${projectId}/decisions`);
             setDecisions(res.data ?? []);
         } catch (e: any) {
-            toast(e?.message ?? 'Failed to load decisions', 'error');
+            toast(e?.message ?? 'Falha ao carregar decisões', 'error');
         } finally {
             setLoadingDecisions(false);
         }
@@ -373,30 +373,30 @@ export function DecisionsPanel({ projectId }: { projectId: string }) {
                     method: 'PATCH',
                     body: JSON.stringify(payload),
                 });
-                toast('Decision updated', 'success');
+                toast('Decisão atualizada', 'success');
             } else {
                 await apiFetch(`/api/v1/projects/${projectId}/decisions`, {
                     method: 'POST',
                     body: JSON.stringify(payload),
                 });
-                toast('Decision created', 'success');
+                toast('Decisão criada', 'success');
             }
             setShowDecisionModal(false);
             setEditingDecision(null);
             await fetchDecisions();
         } catch (e: any) {
-            toast(e?.message ?? 'Failed to save decision', 'error');
+            toast(e?.message ?? 'Falha ao salvar decisão', 'error');
         }
     }
 
     async function handleDelete(d: Decision) {
-        if (!window.confirm(`Delete decision "${d.title}"?`)) return;
+        if (!window.confirm(`Excluir decisão "${d.title}"?`)) return;
         try {
             await apiFetch(`/api/v1/projects/${projectId}/decisions/${d.id}`, { method: 'DELETE' });
-            toast('Decision deleted', 'success');
+            toast('Decisão excluída', 'success');
             await fetchDecisions();
         } catch (e: any) {
-            toast(e?.message ?? 'Failed to delete decision', 'error');
+            toast(e?.message ?? 'Falha ao excluir decisão', 'error');
         }
     }
 
@@ -405,21 +405,21 @@ export function DecisionsPanel({ projectId }: { projectId: string }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Lightbulb className="size-4 text-primary" />
-                    <h3 className="font-bold text-accent">Decisions</h3>
+                    <h3 className="font-bold text-accent">Decisões</h3>
                 </div>
                 <button
                     onClick={openCreate}
                     className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
                 >
                     <Plus className="size-3.5" />
-                    Add Decision
+                    Adicionar decisão
                 </button>
             </div>
 
             {loadingDecisions ? (
-                <p className="text-sm text-text-dim">Loading decisions…</p>
+                <p className="text-sm text-text-dim">Carregando decisões…</p>
             ) : decisions.length === 0 ? (
-                <p className="text-sm text-text-dim italic">No decisions recorded for this project yet.</p>
+                <p className="text-sm text-text-dim italic">Nenhuma decisão registrada para este projeto ainda.</p>
             ) : (
                 <div className="space-y-3">
                     {decisions.map(d => (

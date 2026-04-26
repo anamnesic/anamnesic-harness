@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Code2, CircleCheck, Share2 } from 'lucide-react';
+import { Código2, CircleCheck, Share2 } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
@@ -85,7 +85,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                         ].map(env => (
                             <div key={env.label} className="bg-bg border border-border p-4 rounded-xl flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <Code2 className="size-5 text-text-dim" />
+                                    <Código2 className="size-5 text-text-dim" />
                                     <div>
                                         <p className="text-[8px] font-black text-text-dim uppercase">{env.label}</p>
                                         <p className="text-sm font-bold font-mono">{env.val}</p>
@@ -177,11 +177,11 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
             {/* API Keys */}
             <div className="bento-card space-y-4">
                 <div>
-                    <span className="label-caps">Manage API Keys</span>
+                    <span className="label-caps">Gerenciar chaves de API</span>
                     <p className="text-xs text-text-dim mt-1">Select a project to manage its API keys</p>
                 </div>
                 <div>
-                    <label className="label-caps mb-1.5 block">Select Project</label>
+                    <label className="label-caps mb-1.5 block">Selecionar projeto</label>
                     <select
                         value={selectedProjectId ?? ''}
                         onChange={e => setSelectedProjectId(e.target.value || null)}

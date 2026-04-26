@@ -53,8 +53,8 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
       
       setMessages(formattedMessages);
     } catch (error) {
-      console.error('Failed to load chat history:', error);
-      toast('Failed to load chat history', 'error');
+      console.error('Falha ao carregar histórico do chat:', error);
+      toast('Falha ao carregar histórico do chat', 'error');
     }
   }, [channelId, toast]);
 
@@ -146,7 +146,7 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
       }
     } catch (error) {
       console.error('Stream error:', error);
-      toast(error instanceof Error ? error.message : 'Stream failed', 'error');
+      toast(error instanceof Error ? error.message : 'Falha no streaming', 'error');
       setIsStreaming(false);
       setStreamContent('');
     }
@@ -164,8 +164,8 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
       // Save user message and get streaming response
       await handleStreamResponse(messageContent);
     } catch (error) {
-      console.error('Failed to send message:', error);
-      toast('Failed to send message', 'error');
+      console.error('Falha ao enviar mensagem:', error);
+      toast('Falha ao enviar mensagem', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -188,10 +188,10 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
       });
       
       setMessages([]);
-      toast('Chat cleared', 'success');
+      toast('Chat limpo', 'success');
     } catch (error) {
-      console.error('Failed to clear chat:', error);
-      toast('Failed to clear chat', 'error');
+      console.error('Falha ao limpar chat:', error);
+      toast('Falha ao limpar chat', 'error');
     }
   }, [channelId, toast]);
 
@@ -288,7 +288,7 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
+            placeholder="Digite sua mensagem..."
             disabled={isLoading || isStreaming}
             className="flex-1 px-4 py-3 bg-bg border border-border rounded-xl resize-none focus:outline-none focus:border-primary/50 transition-colors text-sm text-highlight placeholder-text-dim"
             rows={1}

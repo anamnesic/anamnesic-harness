@@ -22,7 +22,7 @@ interface SimulationResult {
     confidenceScore: number;
     impact: {
         dataAccess: boolean;
-        codeExecution: boolean;
+        codeExecução: boolean;
         systemCompromise: boolean;
         escalation: boolean;
     };
@@ -31,7 +31,7 @@ interface SimulationResult {
 interface AttackSimulation {
     simulationId: string;
     vulnerabilityId: string;
-    attackType: string;
+    attackTipo: string;
     status: 'pending' | 'running' | 'succeeded' | 'failed' | 'blocked';
     startTime: number;
     endTime?: number;
@@ -91,7 +91,7 @@ export function RedTeaming() {
                     {(!simulations || simulations.length === 0) ? (
                         <div className="bento-card text-center py-12">
                             <Shield className="size-8 text-border mx-auto mb-3" />
-                            <p className="text-xs text-text-dim">No simulations yet. Start one from the Security Audit screen.</p>
+                            <p className="text-xs text-text-dim">Ainda não há simulações. Inicie uma na tela de Auditoria de Segurança.</p>
                         </div>
                     ) : (
                         simulations.map(sim => (
@@ -215,7 +215,7 @@ export function RedTeaming() {
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center bento-card py-24 text-center border-dashed">
                             <Target className="size-12 text-border mb-4" />
-                            <h3 className="text-lg font-bold uppercase tracking-tighter">No Simulation Selected</h3>
+                            <h3 className="text-lg font-bold uppercase tracking-tighter">Nenhuma simulação selecionada</h3>
                             <p className="text-sm text-text-dim max-w-xs mt-2">
                                 Select a simulation from the list to view detailed attack reports and impact analysis.
                             </p>

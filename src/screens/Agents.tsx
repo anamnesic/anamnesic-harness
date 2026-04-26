@@ -21,7 +21,7 @@ interface Agent {
     version: string;
     capabilities: AgentCapability[];
     state: AgentState;
-    isActive: boolean;
+    isAtivo: boolean;
     tasksCompleted: number;
     tasksFailed: number;
     lastActivityAt: string | null;
@@ -123,7 +123,7 @@ export function Agents({ onNavigate }: AgentsProps) {
     const [showModal, setShowModal] = useState(false);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [capabilities, setCapabilities] = useState<AgentCapability[]>([]);
+    const [capabilities, setCapacidades] = useState<AgentCapability[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -144,7 +144,7 @@ export function Agents({ onNavigate }: AgentsProps) {
         setShowModal(false);
         setName('');
         setDescription('');
-        setCapabilities(['reasoning']);
+        setCapacidades(['reasoning']);
     }
 
     function closeTaskModal() {
@@ -154,15 +154,15 @@ export function Agents({ onNavigate }: AgentsProps) {
     }
 
     function toggleCapability(cap: AgentCapability) {
-        setCapabilities(prev =>
+        setCapacidades(prev =>
             prev.includes(cap) ? prev.filter(c => c !== cap) : [...prev, cap]
         );
     }
 
     async function handleSubmit() {
-        if (!name.trim()) { toast('Name is required', 'error'); return; }
-        if (capabilities.length === 0) { toast('Select at least one capability', 'error'); return; }
-        if (!workspace) { toast('No active workspace', 'error'); return; }
+        if (!name.trim()) { toast('Nome é obrigatório', 'error'); return; }
+        if (capabilities.length === 0) { toast('Selecione ao menos uma capacidade', 'error'); return; }
+        if (!workspace) { toast('Nenhum workspace ativo', 'error'); return; }
         
         setSubmitting(true);
         try {
@@ -175,19 +175,19 @@ export function Agents({ onNavigate }: AgentsProps) {
                     capabilities,
                 }),
             });
-            toast('Agent created', 'success');
+            toast('Agente criado', 'success');
             refetch();
             closeModal();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to create agent', 'error');
+            toast(e.message ?? 'Falha ao criar agente', 'error');
         } finally {
             setSubmitting(false);
         }
     }
 
     async function handleAssignTask() {
-        if (!taskAgent || !taskDescription.trim()) { toast('Description is required', 'error'); return; }
-        if (!workspace) { toast('No active workspace', 'error'); return; }
+        if (!taskAgent || !taskDescription.trim()) { toast('Descrição é obrigatória', 'error'); return; }
+        if (!workspace) { toast('Nenhum workspace ativo', 'error'); return; }
 
         setSubmitting(true);
         try {
@@ -195,7 +195,7 @@ export function Agents({ onNavigate }: AgentsProps) {
             try {
                 input = JSON.parse(taskInput);
             } catch (e) {
-                toast('Invalid JSON input', 'error');
+                toast('JSON de entrada inválido', 'error');
                 setSubmitting(false);
                 return;
             }
@@ -210,11 +210,11 @@ export function Agents({ onNavigate }: AgentsProps) {
                     input,
                 }),
             });
-            toast('Task assigned to agent', 'success');
+            toast('Tarefa atribuída ao agente', 'success');
             closeTaskModal();
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to assign task', 'error');
+            toast(e.message ?? 'Falha ao atribuir tarefa', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -226,7 +226,7 @@ export function Agents({ onNavigate }: AgentsProps) {
             toast(`Agent "${agentName}" deleted`, 'success');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to delete agent', 'error');
+            toast(e.message ?? 'Falha ao excluir agente', 'error');
         }
     }
 
@@ -239,7 +239,7 @@ export function Agents({ onNavigate }: AgentsProps) {
             toast(`State set to ${state}`, 'success');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to update state', 'error');
+            toast(e.message ?? 'Falha ao atualizar estado', 'error');
         }
     }
 
@@ -266,7 +266,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                     className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
                 >
                     <Plus className="size-3.5" />
-                    New Agent
+                    Novo agente
                 </button>
             </div>
 
@@ -274,7 +274,7 @@ export function Agents({ onNavigate }: AgentsProps) {
             <div className="mb-6 grid grid-cols-4 gap-3">
                 {[
                     { label: 'Total', value: totalAgents },
-                    { label: 'Active', value: activeAgents },
+                    { label: 'Ativo', value: activeAgents },
                     { label: 'Completed', value: totalCompleted },
                     { label: 'Failed', value: totalFailed },
                 ].map(stat => (
@@ -293,7 +293,7 @@ export function Agents({ onNavigate }: AgentsProps) {
             ) : agents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 space-y-3">
                     <Bot className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">No agents configured</p>
+                    <p className="text-text-dim text-sm">Nenhum agente configurado</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -326,7 +326,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                                 <p className="text-sm text-text-dim leading-relaxed">{agent.description}</p>
                             )}
 
-                            {/* Capabilities */}
+                            {/* Capacidades */}
                             {agent.capabilities?.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5">
                                     {agent.capabilities.map(cap => (
@@ -353,7 +353,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                                     className="ml-auto flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20 transition-colors"
                                 >
                                     <Play className="size-2.5" />
-                                    Assign Task
+                                    Atribuir tarefa
                                 </button>
                                 <span className="label-caps !mb-0">{agent.workspaceId.slice(0, 8)}</span>
                             </div>
@@ -381,7 +381,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col">
-                                    <h3 className="font-bold text-base">Assign Task</h3>
+                                    <h3 className="font-bold text-base">Atribuir tarefa</h3>
                                     <p className="text-[10px] text-text-dim uppercase tracking-widest font-bold">To: {taskAgent.name}</p>
                                 </div>
                                 <button onClick={closeTaskModal} className="rounded-lg p-1 text-text-dim hover:text-accent transition-colors">
@@ -397,10 +397,10 @@ export function Agents({ onNavigate }: AgentsProps) {
                                         value={taskType}
                                         onChange={e => setTaskType(e.target.value)}
                                     >
-                                        <option value="research">Research</option>
-                                        <option value="code">Code</option>
-                                        <option value="analysis">Analysis</option>
-                                        <option value="execution">Execution</option>
+                                        <option value="research">Pesquisa</option>
+                                        <option value="code">Código</option>
+                                        <option value="analysis">Análise</option>
+                                        <option value="execution">Execução</option>
                                     </select>
                                 </div>
 
@@ -410,12 +410,12 @@ export function Agents({ onNavigate }: AgentsProps) {
                                         className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
                                         value={taskDescription}
                                         onChange={e => setTaskDescription(e.target.value)}
-                                        placeholder="What should the agent do?"
+                                        placeholder="O que o agente deve fazer?"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="label-caps block mb-1">Input JSON</label>
+                                    <label className="label-caps block mb-1">JSON de entrada</label>
                                     <textarea
                                         className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm font-mono outline-none focus:border-primary/60 transition-colors resize-none"
                                         rows={4}
@@ -437,7 +437,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                                     disabled={submitting}
                                     className="rounded-xl bg-primary/90 hover:bg-primary px-4 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
                                 >
-                                    {submitting ? 'Assigning...' : 'Assign Task'}
+                                    {submitting ? 'Assigning...' : 'Atribuir tarefa'}
                                 </button>
                             </div>
                         </motion.div>
@@ -445,7 +445,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                 )}
             </AnimatePresence>
 
-            {/* New Agent Modal */}
+            {/* Novo agente Modal */}
             <AnimatePresence>
                 {showModal && (
                     <motion.div
@@ -463,7 +463,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                             className="bento-card w-full max-w-md space-y-4"
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="font-bold text-base">New Agent</h3>
+                                <h3 className="font-bold text-base">Novo agente</h3>
                                 <button onClick={closeModal} className="rounded-lg p-1 text-text-dim hover:text-accent transition-colors">
                                     <X className="size-4" />
                                 </button>
@@ -476,7 +476,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                                         className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
                                         value={name}
                                         onChange={e => setName(e.target.value)}
-                                        placeholder="Agent name"
+                                        placeholder="Nome do agente"
                                     />
                                 </div>
 
@@ -487,13 +487,13 @@ export function Agents({ onNavigate }: AgentsProps) {
                                         rows={2}
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
-                                        placeholder="Optional description"
+                                        placeholder="Descrição opcional"
                                     />
                                 </div>
 
                                 
                                 <div>
-                                    <label className="label-caps block mb-2">Capabilities</label>
+                                    <label className="label-caps block mb-2">Capacidades</label>
                                     <div className="grid grid-cols-2 gap-1.5">
                                         {ALL_CAPABILITIES.map(cap => (
                                             <label key={cap} className="flex items-center gap-2 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white/5 transition-colors">
@@ -522,7 +522,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                                     disabled={submitting}
                                     className="rounded-xl bg-primary/90 hover:bg-primary px-4 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
                                 >
-                                    {submitting ? 'Creating...' : 'Create Agent'}
+                                    {submitting ? 'Criando...' : 'Criar agente'}
                                 </button>
                             </div>
                         </motion.div>

@@ -43,7 +43,7 @@ export function ApiKeysHub() {
             <div className="flex-1 flex items-center justify-center p-6">
                 <div className="bento-card max-w-md w-full text-center space-y-3">
                     <KeyRound className="size-8 text-primary mx-auto" />
-                    <h3 className="font-bold text-accent">No Workspace Selected</h3>
+                    <h3 className="font-bold text-accent">Nenhum workspace selecionado</h3>
                     <p className="text-sm text-text-dim">
                         Select a workspace to manage project API keys.
                     </p>
@@ -56,14 +56,14 @@ export function ApiKeysHub() {
         <div className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full space-y-4">
             <div className="bento-card space-y-4">
                 <div>
-                    <span className="label-caps">Manage API Keys</span>
+                    <span className="label-caps">Gerenciar chaves de API</span>
                     <p className="text-xs text-text-dim mt-1">
                         Workspace: {workspace.name}
                     </p>
                 </div>
 
                 <div>
-                    <label className="label-caps mb-1.5 block">Select Project</label>
+                    <label className="label-caps mb-1.5 block">Selecionar projeto</label>
                     <select
                         value={selectedProjectId}
                         onChange={(e) => setSelectedProjectId(e.target.value)}
@@ -71,7 +71,7 @@ export function ApiKeysHub() {
                         className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary transition-colors disabled:opacity-60"
                     >
                         {projects.length === 0 ? (
-                            <option value="">No projects available</option>
+                            <option value="">Nenhum projeto disponível</option>
                         ) : (
                             projects.map((project) => (
                                 <option key={project.id} value={project.id}>
@@ -85,7 +85,7 @@ export function ApiKeysHub() {
                 {selectedProjectId ? (
                     <ApiKeys projectId={selectedProjectId} />
                 ) : (
-                    <p className="text-xs text-text-dim py-2">Choose a project to view keys.</p>
+                    <p className="text-xs text-text-dim py-2">Escolha um projeto para ver as chaves.</p>
                 )}
             </div>
         </div>

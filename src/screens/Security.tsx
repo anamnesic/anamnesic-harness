@@ -125,7 +125,7 @@ function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void 
                         <div>
                             <h4 className="label-caps text-text-dim mb-2">Vulnerabilities</h4>
                             {scan.vulnerabilities.length === 0 ? (
-                                <p className="text-sm text-text-dim">No vulnerabilities found.</p>
+                                <p className="text-sm text-text-dim">Nenhuma vulnerabilidade encontrada.</p>
                             ) : (
                                 <div className="space-y-3">
                                     {scan.vulnerabilities.map(v => (
@@ -168,7 +168,7 @@ function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void 
                         <div>
                             <h4 className="label-caps text-text-dim mb-2">Recommendations</h4>
                             {scan.recommendations.length === 0 ? (
-                                <p className="text-sm text-text-dim">No recommendations.</p>
+                                <p className="text-sm text-text-dim">Sem recomendações.</p>
                             ) : (
                                 <div className="space-y-3">
                                     {scan.recommendations.map((r, i) => (
@@ -261,7 +261,7 @@ export function Security() {
             refetch();
             closeModal();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to create scan', 'error');
+            toast(e.message ?? 'Falha ao criar varredura', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -278,7 +278,7 @@ export function Security() {
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                         <ShieldCheck className="size-5" />
                     </div>
-                    <h2 className="text-2xl font-bold tracking-tight">Security Analysis</h2>
+                    <h2 className="text-2xl font-bold tracking-tight">Security Análise</h2>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
@@ -292,8 +292,8 @@ export function Security() {
             <div className="mb-6 grid grid-cols-3 gap-3">
                 {[
                     { label: 'Total Scans', value: stats.total },
-                    { label: 'Critical', value: stats.critical },
-                    { label: 'High', value: stats.high },
+                    { label: 'Crítica', value: stats.critical },
+                    { label: 'Alta', value: stats.high },
                 ].map(stat => (
                     <div key={stat.label} className="bento-card text-center">
                         <p className="text-2xl font-bold">{stat.value}</p>
@@ -309,7 +309,7 @@ export function Security() {
             ) : list.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 space-y-3">
                     <ShieldCheck className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">No scans yet — run your first scan</p>
+                    <p className="text-text-dim text-sm">Ainda não há varreduras — execute a primeira</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -374,7 +374,7 @@ export function Security() {
                                         className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
                                         value={targetName}
                                         onChange={e => setTargetName(e.target.value)}
-                                        placeholder="e.g. main-api"
+                                        placeholder="ex.: main-api"
                                     />
                                 </div>
                                 <div>
@@ -396,7 +396,7 @@ export function Security() {
                                         value={selectedProjectId}
                                         onChange={e => setSelectedProjectId(e.target.value)}
                                     >
-                                        <option value="">No specific project</option>
+                                        <option value="">Nenhum projeto específico</option>
                                         {projects.map(p => (
                                             <option key={p.id} value={p.id}>{p.name}</option>
                                         ))}
@@ -448,7 +448,7 @@ export function Security() {
                                     className="flex items-center gap-2 rounded-xl bg-primary/15 border border-primary/40 px-4 py-2 text-xs font-bold text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
                                 >
                                     <Plus className="size-3.5" />
-                                    {submitting ? 'Running…' : 'Run Scan'}
+                                    {submitting ? 'Executando…' : 'Run Scan'}
                                 </button>
                             </div>
                         </motion.div>

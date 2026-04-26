@@ -32,11 +32,11 @@ interface Plan {
 export function ControlCenter() {
     const [offsetRuns, setOffsetRuns] = useState(0);
     const limitRuns = 10;
-    const [offsetPlans, setOffsetPlans] = useState(0);
-    const limitPlans = 10;
+    const [offsetPlanos, setOffsetPlanos] = useState(0);
+    const limitPlanos = 10;
 
     const { data: runs, loading: runsLoading, refetch } = usePolling<any>(`/api/v1/orchestrator/runs?limit=${limitRuns}&offset=${offsetRuns}`, 15000);
-    const { data: plans, loading: plansLoading } = useApi<any>(`/api/v1/orchestrator/plans?limit=${limitPlans}&offset=${offsetPlans}`);
+    const { data: plans, loading: plansLoading } = useApi<any>(`/api/v1/orchestrator/plans?limit=${limitPlanos}&offset=${offsetPlanos}`);
     
     const { toast } = useToast();
     const [auditPipelineId, setAuditPipelineId] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function ControlCenter() {
         priority: 'normal' as 'low' | 'normal' | 'high' | 'critical',
         deadlineMinutes: 0,
         reasoningMode: 'standard' as 'standard' | 'extended',
-        allowCodeExecution: false,
+        allowCódigoExecução: false,
         requireApproval: true,
     });
     const [isCreatingPlan, setIsCreatingPlan] = useState(false);
@@ -87,37 +87,37 @@ export function ControlCenter() {
         ? runs
         : (runs && Array.isArray((runs as { items?: Run[] }).items) ? (runs as { items: Run[] }).items : []);
     const allRuns = liveRuns ?? fetched;
-    const allPlans: Plan[] = Array.isArray(plans)
+    const allPlanos: Plan[] = Array.isArray(plans)
         ? plans
         : (plans && Array.isArray((plans as { items?: Plan[] }).items) ? (plans as { items: Plan[] }).items : []);
 
     async function executeRun(runId: string) {
         try {
             await apiFetch(`/api/v1/orchestrator/runs/${runId}/execute`, { method: 'POST' });
-            toast('Run authorized', 'success');
+            toast('Execução autorizada', 'success');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Execute failed', 'error');
+            toast(e.message ?? 'Falha ao executar', 'error');
         }
     }
 
     async function pauseRun(runId: string) {
         try {
             await apiFetch(`/api/v1/orchestrator/runs/${runId}/pause`, { method: 'POST' });
-            toast('Run paused', 'info');
+            toast('Execução pausada', 'info');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Pause failed', 'error');
+            toast(e.message ?? 'Falha ao pausar', 'error');
         }
     }
 
     async function resumeRun(runId: string) {
         try {
             await apiFetch(`/api/v1/orchestrator/runs/${runId}/resume`, { method: 'POST' });
-            toast('Run resumed', 'success');
+            toast('Execução retomada', 'success');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Resume failed', 'error');
+            toast(e.message ?? 'Falha ao retomar', 'error');
         }
     }
 
@@ -128,7 +128,7 @@ export function ControlCenter() {
 
     async function createPlan() {
         if (!planForm.objective.trim()) {
-            toast('Objective is required', 'error');
+            toast('Objetivo é obrigatório', 'error');
             return;
         }
         
@@ -142,13 +142,13 @@ export function ControlCenter() {
                     priority: planForm.priority,
                     deadlineMinutes: planForm.deadlineMinutes || undefined,
                     policy: {
-                        allowCodeExecution: planForm.allowCodeExecution,
+                        allowCódigoExecução: planForm.allowCódigoExecução,
                         requireHumanApprovalForSensitiveOps: planForm.requireApproval,
                     },
                 }),
             });
             
-            toast('Plan created successfully', 'success');
+            toast('Plano criado com sucesso', 'success');
             setShowPlanForm(false);
             setPlanForm({
                 objective: '',
@@ -156,12 +156,12 @@ export function ControlCenter() {
                 priority: 'normal',
                 deadlineMinutes: 0,
                 reasoningMode: 'standard',
-                allowCodeExecution: false,
+                allowCódigoExecução: false,
                 requireApproval: true,
             });
             refetch();
         } catch (e: any) {
-            toast(e.message || 'Failed to create plan', 'error');
+            toast(e.message || 'Falha ao criar plano', 'error');
         } finally {
             setIsCreatingPlan(false);
         }
@@ -176,11 +176,11 @@ export function ControlCenter() {
             setApprovalContext({
                 run: runDetails,
                 audits: auditsResponse.audits,
-                plan: allPlans.find(p => p.id === runDetails.planId)
+                plan: allPlanos.find(p => p.id === runDetails.planId)
             });
             setApprovalRunId(runId);
         } catch (e: any) {
-            toast('Failed to load approval context', 'error');
+            toast('Falha ao carregar contexto de aprovação', 'error');
         }
     }
 
@@ -190,12 +190,12 @@ export function ControlCenter() {
         setIsApproving(true);
         try {
             await apiFetch(`/api/v1/orchestrator/runs/${approvalRunId}/execute`, { method: 'POST' });
-            toast('Run approved and executed', 'success');
+            toast('Execução aprovada e iniciada', 'success');
             setApprovalRunId(null);
             setApprovalContext(null);
             refetch();
         } catch (e: any) {
-            toast(e.message || 'Failed to approve run', 'error');
+            toast(e.message || 'Falha ao aprovar execução', 'error');
         } finally {
             setIsApproving(false);
         }
@@ -222,7 +222,7 @@ export function ControlCenter() {
                 setPlanCheckpoints([]);
             }
         } catch (e: any) {
-            toast('Failed to load plan details', 'error');
+            toast('Falha ao carregar detalhes do plano', 'error');
             setPlanRuns([]);
             setPlanCheckpoints([]);
         } finally {
@@ -234,7 +234,7 @@ export function ControlCenter() {
         if (!rollbackRunId) return;
         const step = Number(rollbackStep);
         if (!Number.isInteger(step) || step < 0) {
-            toast('Step must be a non-negative integer', 'error');
+            toast('Etapa deve ser um número inteiro não negativo', 'error');
             return;
         }
         setRollbackSubmitting(true);
@@ -248,7 +248,7 @@ export function ControlCenter() {
             setRollbackStep('0');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Rollback failed', 'error');
+            toast(e.message ?? 'Falha no rollback', 'error');
         } finally {
             setRollbackSubmitting(false);
         }
@@ -267,7 +267,7 @@ export function ControlCenter() {
             const response = await apiFetch<{ data?: any[] }>(`/api/v1/orchestrator/runs/${runId}/tasks`);
             setRunTasks(Array.isArray(response) ? response : (response.data || []));
         } catch (e: any) {
-            toast('Failed to load tasks for run', 'error');
+            toast('Falha ao carregar tarefas da execução', 'error');
             setRunTasks([]);
         } finally {
             setLoadingTasks(false);
@@ -287,7 +287,7 @@ export function ControlCenter() {
             const response = await apiFetch<{ data?: any[] }>(`/api/v1/tasks/${taskId}/logs`);
             setTaskLogs(Array.isArray(response) ? response : (response.data || []));
         } catch (e: any) {
-            toast('Failed to load logs for task', 'error');
+            toast('Falha ao carregar logs da tarefa', 'error');
             setTaskLogs([]);
         } finally {
             setLoadingLogs(false);
@@ -311,7 +311,7 @@ export function ControlCenter() {
                 ) : (
                     [
                         { label: 'Total Runs', value: allRuns.length.toString(), status: 'ALL TIME' },
-                        { label: 'Running', value: running.length.toString(), status: 'ACTIVE' },
+                        { label: 'Executando', value: running.length.toString(), status: 'ACTIVE' },
                         { label: 'Violations', value: '0', status: 'TODAY' },
                     ].map((stat, index) => (
                         <div key={`stat-${stat.label}`} className="bento-card">
@@ -329,24 +329,24 @@ export function ControlCenter() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Plans Section */}
+                {/* Planos Section */}
                 <div className="bento-card">
                     <div className="flex items-center justify-between mb-4">
-                        <span className="label-caps">Plans</span>
+                        <span className="label-caps">Planos</span>
                         <button
                             onClick={() => setShowPlanForm(true)}
                             className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                         >
                             <Plus className="size-4" />
-                            Create Plan
+                            Criar plano
                         </button>
                     </div>
                     
                     {plansLoading ? (
                         <SkeletonCard rows={3} />
-                    ) : allPlans.length > 0 ? (
+                    ) : allPlanos.length > 0 ? (
                         <div className="space-y-2">
-                            {allPlans.slice(0, 3).map((plan) => (
+                            {allPlanos.slice(0, 3).map((plan) => (
                                 <button
                                     key={plan.id}
                                     onClick={() => showPlanDetails(plan)}
@@ -380,28 +380,28 @@ export function ControlCenter() {
                                     </div>
                                 </button>
                             ))}
-                            {allPlans.length > 3 && (
+                            {allPlanos.length > 3 && (
                                 <div className="text-xs text-text-dim text-center py-2">
-                                    +{allPlans.length - 3} more plans
+                                    +{allPlanos.length - 3} more plans
                                 </div>
                             )}
                         </div>
                     ) : (
                         <div className="text-center py-8">
                             <Target className="size-8 text-text-dim mx-auto mb-2" />
-                            <p className="text-sm text-text-dim">No plans yet</p>
-                            <p className="text-xs text-text-dim mt-1">Create your first plan to get started</p>
+                            <p className="text-sm text-text-dim">Ainda não há planos</p>
+                            <p className="text-xs text-text-dim mt-1">Crie seu primeiro plano para começar</p>
                         </div>
                     )}
                 </div>
 
-                {/* Active run / action request */}
+                {/* Ativo run / action request */}
                 {runsLoading ? (
                     <SkeletonCard rows={4} />
                 ) : activeRuns.length > 0 ? (
                     <div className="bento-card border-2 border-primary/20">
                         <div className="mb-4">
-                            <span className="label-caps !text-primary">Active Run</span>
+                            <span className="label-caps !text-primary">Execução ativa</span>
                             <h4 className="text-xl font-bold tracking-tight truncate">{activeRuns[0].id.slice(0, 8)}…</h4>
                             <p className="text-xs text-text-dim mt-2">Plan: {activeRuns[0].planId.slice(0, 16)}…</p>
                         </div>
@@ -442,16 +442,16 @@ export function ControlCenter() {
                             <div className="absolute inset-0 bg-gradient-to-t from-bg to-transparent" />
                         </div>
                         <div className="p-6">
-                            <span className="label-caps">No Active Runs</span>
-                            <p className="text-xs text-text-dim mt-2">No orchestrator runs are currently active.</p>
+                            <span className="label-caps">Sem execuções ativas</span>
+                            <p className="text-xs text-text-dim mt-2">Não há execuções do orquestrador ativas no momento.</p>
                         </div>
                     </div>
                 )}
 
-                {/* Run History */}
+                {/* Histórico de execuções */}
                 <div className="bento-card">
                     <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold">Run History</h3>
+                        <h3 className="text-lg font-bold">Histórico de execuções</h3>
                         <Download className="size-4 text-text-dim" />
                     </div>
                     {runsLoading ? (
@@ -512,15 +512,15 @@ export function ControlCenter() {
                             />
                         </div>
                     ) : (
-                        <p className="text-sm text-text-dim">No runs recorded yet.</p>
+                        <p className="text-sm text-text-dim">Ainda não há execuções registradas.</p>
                     )}
                 </div>
             </div>
 
-            {/* Plans section */}
+            {/* Planos section */}
             <div className="bento-card mt-4">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold">Orchestration Plans</h3>
+                    <h3 className="text-lg font-bold">Orchestration Planos</h3>
                 </div>
                 {plansLoading ? (
                     <div className="space-y-3">
@@ -533,9 +533,9 @@ export function ControlCenter() {
                             </div>
                         ))}
                     </div>
-                ) : allPlans.length > 0 ? (
+                ) : allPlanos.length > 0 ? (
                     <div className="space-y-3">
-                        {allPlans.map((plan) => (
+                        {allPlanos.map((plan) => (
                             <div key={plan.id} className="flex items-center justify-between gap-4 p-3 bg-bg border border-border rounded-xl">
                                 <span className="text-xs font-bold tracking-tight truncate flex-1 min-w-0">
                                     {plan.objective}
@@ -560,14 +560,14 @@ export function ControlCenter() {
                         
                         <Paginator
                             total={plans?.total || 0}
-                            limit={limitPlans}
-                            offset={offsetPlans}
-                            onPageChange={setOffsetPlans}
+                            limit={limitPlanos}
+                            offset={offsetPlanos}
+                            onPageChange={setOffsetPlanos}
                             className="rounded-xl border border-border mt-2"
                         />
                     </div>
                 ) : (
-                    <p className="text-sm text-text-dim">No plans yet.</p>
+                    <p className="text-sm text-text-dim">Ainda não há planos.</p>
                 )}
             </div>
 
@@ -597,7 +597,7 @@ export function ControlCenter() {
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold uppercase tracking-widest">Rollback Run</h3>
+                                <h3 className="text-sm font-bold uppercase tracking-widest">Rollback da execução</h3>
                                 <button
                                     onClick={() => setRollbackRunId(null)}
                                     disabled={rollbackSubmitting}
@@ -609,7 +609,7 @@ export function ControlCenter() {
                             </div>
                             <p className="text-[10px] font-mono text-text-dim truncate">{rollbackRunId}</p>
                             <div>
-                                <label className="label-caps text-text-dim block mb-1">Rollback to step #</label>
+                                <label className="label-caps text-text-dim block mb-1">Fazer rollback para etapa #</label>
                                 <input
                                     type="number"
                                     min={0}
@@ -659,7 +659,7 @@ export function ControlCenter() {
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold uppercase tracking-widest">Create Plan</h3>
+                                <h3 className="text-sm font-bold uppercase tracking-widest">Criar plano</h3>
                                 <button
                                     onClick={() => !isCreatingPlan && setShowPlanForm(false)}
                                     className="p-1 rounded-lg hover:bg-bg transition-colors"
@@ -670,15 +670,15 @@ export function ControlCenter() {
                             </div>
 
                             <div className="space-y-4">
-                                {/* Objective */}
+                                {/* Objetivo */}
                                 <div>
                                     <label className="block text-xs font-medium text-accent mb-2">
-                                        Objective <span className="text-red-400">*</span>
+                                        Objetivo <span className="text-red-400">*</span>
                                     </label>
                                     <textarea
                                         value={planForm.objective}
                                         onChange={(e) => setPlanForm(prev => ({ ...prev, objective: e.target.value }))}
-                                        placeholder="What do you want KAIROS to accomplish?"
+                                        placeholder="O que você quer que o KAIROS realize?"
                                         className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-highlight placeholder-text-dim focus:outline-none focus:border-primary/50 transition-colors resize-none"
                                         rows={3}
                                         disabled={isCreatingPlan}
@@ -701,7 +701,7 @@ export function ControlCenter() {
                                                         newConstraints[index] = e.target.value;
                                                         setPlanForm(prev => ({ ...prev, constraints: newConstraints }));
                                                     }}
-                                                    placeholder="Add a constraint..."
+                                                    placeholder="Adicionar uma restrição..."
                                                     className="flex-1 px-3 py-2 bg-bg border border-border rounded-lg text-sm text-highlight placeholder-text-dim focus:outline-none focus:border-primary/50 transition-colors"
                                                     disabled={isCreatingPlan}
                                                 />
@@ -722,7 +722,7 @@ export function ControlCenter() {
                                             className="w-full px-3 py-2 border border-dashed border-border rounded-lg text-sm text-text-dim hover:border-accent hover:text-accent transition-colors"
                                             disabled={isCreatingPlan}
                                         >
-                                            + Add Constraint
+                                            + Adicionar restrição
                                         </button>
                                     </div>
                                 </div>
@@ -739,10 +739,10 @@ export function ControlCenter() {
                                             className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-highlight focus:outline-none focus:border-primary/50 transition-colors"
                                             disabled={isCreatingPlan}
                                         >
-                                            <option value="low">Low</option>
+                                            <option value="low">Baixa</option>
                                             <option value="normal">Normal</option>
-                                            <option value="high">High</option>
-                                            <option value="critical">Critical</option>
+                                            <option value="high">Alta</option>
+                                            <option value="critical">Crítica</option>
                                         </select>
                                     </div>
                                     <div>
@@ -755,8 +755,8 @@ export function ControlCenter() {
                                             className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-highlight focus:outline-none focus:border-primary/50 transition-colors"
                                             disabled={isCreatingPlan}
                                         >
-                                            <option value="standard">Standard</option>
-                                            <option value="extended">Extended</option>
+                                            <option value="standard">Padrão</option>
+                                            <option value="extended">Estendido</option>
                                         </select>
                                     </div>
                                 </div>
@@ -771,7 +771,7 @@ export function ControlCenter() {
                                         type="number"
                                         value={planForm.deadlineMinutes || ''}
                                         onChange={(e) => setPlanForm(prev => ({ ...prev, deadlineMinutes: parseInt(e.target.value) || 0 }))}
-                                        placeholder="No deadline"
+                                        placeholder="Sem prazo"
                                         min="0"
                                         className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm text-highlight placeholder-text-dim focus:outline-none focus:border-primary/50 transition-colors"
                                         disabled={isCreatingPlan}
@@ -788,12 +788,12 @@ export function ControlCenter() {
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                checked={planForm.allowCodeExecution}
-                                                onChange={(e) => setPlanForm(prev => ({ ...prev, allowCodeExecution: e.target.checked }))}
+                                                checked={planForm.allowCódigoExecução}
+                                                onChange={(e) => setPlanForm(prev => ({ ...prev, allowCódigoExecução: e.target.checked }))}
                                                 className="rounded border-border bg-bg text-primary focus:ring-primary/50"
                                                 disabled={isCreatingPlan}
                                             />
-                                            <span className="text-sm text-highlight">Allow code execution</span>
+                                            <span className="text-sm text-highlight">Permitir execução de código</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
@@ -803,7 +803,7 @@ export function ControlCenter() {
                                                 className="rounded border-border bg-bg text-primary focus:ring-primary/50"
                                                 disabled={isCreatingPlan}
                                             />
-                                            <span className="text-sm text-highlight">Require approval for sensitive operations</span>
+                                            <span className="text-sm text-highlight">Exigir aprovação para operações sensíveis</span>
                                         </label>
                                     </div>
                                 </div>
@@ -822,7 +822,7 @@ export function ControlCenter() {
                                         disabled={isCreatingPlan || !planForm.objective.trim()}
                                         className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {isCreatingPlan ? 'Creating...' : 'Create Plan'}
+                                        {isCreatingPlan ? 'Criando...' : 'Criar plano'}
                                     </button>
                                 </div>
                             </div>
@@ -865,9 +865,9 @@ export function ControlCenter() {
                             </div>
 
                             <div className="space-y-4">
-                                {/* Plan Objective */}
+                                {/* Objetivo do plano */}
                                 <div>
-                                    <h4 className="text-xs font-medium text-accent mb-2">Plan Objective</h4>
+                                    <h4 className="text-xs font-medium text-accent mb-2">Objetivo do plano</h4>
                                     <div className="p-3 bg-bg border border-border rounded-lg">
                                         <p className="text-sm text-highlight">
                                             {approvalContext.plan?.objective || 'Unknown objective'}
@@ -877,11 +877,11 @@ export function ControlCenter() {
 
                                 {/* What the agent wants to do */}
                                 <div>
-                                    <h4 className="text-xs font-medium text-accent mb-2">Execution Details</h4>
+                                    <h4 className="text-xs font-medium text-accent mb-2">Execução Details</h4>
                                     <div className="p-3 bg-bg border border-border rounded-lg">
                                         <div className="space-y-2 text-sm text-text-dim">
                                             <div className="flex justify-between">
-                                                <span>Run ID:</span>
+                                                <span>ID da execução:</span>
                                                 <span className="font-mono text-accent">{approvalRunId.slice(0, 8)}…</span>
                                             </div>
                                             <div className="flex justify-between">
@@ -891,7 +891,7 @@ export function ControlCenter() {
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span>Created:</span>
+                                                <span>Criado:</span>
                                                 <span>{new Date(approvalContext.run.createdAt).toLocaleString()}</span>
                                             </div>
                                         </div>
@@ -924,11 +924,11 @@ export function ControlCenter() {
                                                     {audit.reason && (
                                                         <p className="text-xs text-text-dim">{audit.reason}</p>
                                                     )}
-                                                    {audit.blockedCapabilities && audit.blockedCapabilities.length > 0 && (
+                                                    {audit.blockedCapacidades && audit.blockedCapacidades.length > 0 && (
                                                         <div className="mt-2">
-                                                            <p className="text-xs text-text-dim mb-1">Blocked capabilities:</p>
+                                                            <p className="text-xs text-text-dim mb-1">Capacidades bloqueadas:</p>
                                                             <div className="flex flex-wrap gap-1">
-                                                                {audit.blockedCapabilities.map((cap: string, i: number) => (
+                                                                {audit.blockedCapacidades.map((cap: string, i: number) => (
                                                                     <span key={`cap-${i}-${cap}`} className="text-xs px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded">
                                                                         {cap}
                                                                     </span>
@@ -947,8 +947,8 @@ export function ControlCenter() {
                                     <div className="flex items-start gap-2">
                                         <AlertTriangle className="size-4 text-yellow-400 shrink-0 mt-0.5" />
                                         <div className="text-xs text-yellow-400">
-                                            <p className="font-medium mb-1">Safety Notice</p>
-                                            <p>This run requires manual approval before execution. Review the plan and policy context above before proceeding.</p>
+                                            <p className="font-medium mb-1">Aviso de segurança</p>
+                                            <p>Esta execução requer aprovação manual antes de iniciar. Revise o plano e o contexto de política acima antes de prosseguir.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1006,7 +1006,7 @@ export function ControlCenter() {
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between p-4 border-b border-border">
-                                <h3 className="text-sm font-bold uppercase tracking-widest">Plan Details</h3>
+                                <h3 className="text-sm font-bold uppercase tracking-widest">Detalhes do plano</h3>
                                 <button
                                     onClick={() => setSelectedPlan(null)}
                                     className="p-1 rounded-lg hover:bg-bg transition-colors"
@@ -1019,12 +1019,12 @@ export function ControlCenter() {
                                 {/* Plan Header */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <h4 className="text-xs font-medium text-accent mb-2">Objective</h4>
+                                        <h4 className="text-xs font-medium text-accent mb-2">Objetivo</h4>
                                         <p className="text-sm text-highlight">{selectedPlan.objective}</p>
                                     </div>
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-text-dim">Complexity:</span>
+                                            <span className="text-text-dim">Complexidade:</span>
                                             <span className={cn(
                                                 'px-2 py-0.5 rounded-full text-xs',
                                                 selectedPlan.complexityScore > 70 ? 'bg-red-500/20 text-red-400' :
@@ -1035,7 +1035,7 @@ export function ControlCenter() {
                                             </span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-text-dim">Reasoning Mode:</span>
+                                            <span className="text-text-dim">Modo de raciocínio:</span>
                                             <span className="text-accent">{selectedPlan.reasoningMode}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
@@ -1050,7 +1050,7 @@ export function ControlCenter() {
                                             </span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-text-dim">Created:</span>
+                                            <span className="text-text-dim">Criado:</span>
                                             <span className="text-accent">{new Date(selectedPlan.createdAt).toLocaleString()}</span>
                                         </div>
                                     </div>
@@ -1141,7 +1141,7 @@ export function ControlCenter() {
                                                                                     </span>
                                                                                 </div>
                                                                             </div>
-                                                                            <span className="text-[10px] font-mono text-text-dim">Type: {task.type}</span>
+                                                                            <span className="text-[10px] font-mono text-text-dim">Tipo: {task.type}</span>
                                                                             
                                                                             {selectedTaskForLogs === task.id && (
                                                                                 <div className="mt-2 p-2 bg-bg/50 rounded border border-border/40 space-y-1.5 max-h-40 overflow-y-auto">
@@ -1166,7 +1166,7 @@ export function ControlCenter() {
                                                                                             </div>
                                                                                         ))
                                                                                     ) : (
-                                                                                        <p className="text-[9px] text-text-dim text-center py-1">No logs available for this task.</p>
+                                                                                        <p className="text-[9px] text-text-dim text-center py-1">Não há logs disponíveis para esta tarefa.</p>
                                                                                     )}
                                                                                 </div>
                                                                             )}
@@ -1174,7 +1174,7 @@ export function ControlCenter() {
                                                                     ))}
                                                                 </div>
                                                             ) : (
-                                                                <p className="text-xs text-text-dim text-center py-2">No tasks found for this run.</p>
+                                                                <p className="text-xs text-text-dim text-center py-2">Nenhuma tarefa encontrada para esta execução.</p>
                                                             )}
                                                         </div>
                                                     )}
@@ -1183,7 +1183,7 @@ export function ControlCenter() {
                                         </div>
                                     ) : (
                                         <div className="text-center py-8 bg-bg border border-border rounded-lg">
-                                            <p className="text-sm text-text-dim">No runs yet for this plan</p>
+                                            <p className="text-sm text-text-dim">Ainda não há execuções para este plano</p>
                                         </div>
                                     )}
                                 </div>
@@ -1204,7 +1204,7 @@ export function ControlCenter() {
                                                     <p className="text-xs text-text-dim mb-2">{checkpoint.note}</p>
                                                     {checkpoint.state && (
                                                         <details className="text-xs">
-                                                            <summary className="cursor-pointer text-accent hover:text-highlight">View State</summary>
+                                                            <summary className="cursor-pointer text-accent hover:text-highlight">Ver estado</summary>
                                                             <pre className="mt-2 p-2 bg-card border border-border rounded text-text-dim overflow-x-auto">
                                                                 {JSON.stringify(checkpoint.state, null, 2)}
                                                             </pre>

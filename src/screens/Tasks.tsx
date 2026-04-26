@@ -52,10 +52,10 @@ interface Agent {
 
 const STATUS_CONFIG = {
   pending: { icon: Clock, color: 'bg-zinc-500/15 text-zinc-400', label: 'Pending' },
-  running: { icon: Play, color: 'bg-blue-500/15 text-blue-400', label: 'Running' },
+  running: { icon: Play, color: 'bg-blue-500/15 text-blue-400', label: 'Executando' },
   completed: { icon: CheckCircle, color: 'bg-green-500/15 text-green-400', label: 'Completed' },
   failed: { icon: AlertCircle, color: 'bg-red-500/15 text-red-400', label: 'Failed' },
-  paused: { icon: Pause, color: 'bg-orange-500/15 text-orange-400', label: 'Paused' },
+  paused: { icon: Pause, color: 'bg-orange-500/15 text-orange-400', label: 'Pausado' },
   cancelled: { icon: Square, color: 'bg-gray-500/15 text-gray-400', label: 'Cancelled' },
 };
 
@@ -276,7 +276,7 @@ export function Tasks() {
           setTotal(0);
       }
     } catch (error: any) {
-      toast(error?.message || 'Failed to load tasks', 'error');
+      toast(error?.message || 'Falha ao carregar tarefas', 'error');
     } finally {
       setLoading(false);
     }
@@ -363,11 +363,11 @@ export function Tasks() {
               <span className="ml-2 font-mono">{getAgentById(selectedTask.agentId)?.name || 'Unknown'}</span>
             </div>
             <div>
-              <span className="text-text-dim">Type:</span>
+              <span className="text-text-dim">Tipo:</span>
               <span className="ml-2 font-mono">{selectedTask.type}</span>
             </div>
             <div>
-              <span className="text-text-dim">Created:</span>
+              <span className="text-text-dim">Criado:</span>
               <span className="ml-2">{new Date(selectedTask.createdAt).toLocaleString()}</span>
             </div>
             {selectedTask.durationMs && (
@@ -417,7 +417,7 @@ export function Tasks() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-dim" />
             <input
               type="text"
-              placeholder="Search tasks..."
+              placeholder="Buscar tarefas..."
               value={filters.search}
               onChange={(e) => {
                   setFilters({ ...filters, search: e.target.value });
@@ -472,8 +472,8 @@ export function Tasks() {
             <ListTodo className="size-8 text-text-dim" />
           </div>
           <div className="text-center">
-            <p className="text-highlight font-bold">No tasks found</p>
-            <p className="text-text-dim text-sm mt-1 max-w-[200px] mx-auto">Create an orchestration plan to generate tasks.</p>
+            <p className="text-highlight font-bold">Nenhuma tarefa encontrada</p>
+            <p className="text-text-dim text-sm mt-1 max-w-[200px] mx-auto">Crie um plano de orquestração para gerar tarefas.</p>
           </div>
         </div>
       ) : (

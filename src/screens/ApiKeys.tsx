@@ -12,7 +12,7 @@ interface ApiKey {
     id: string;
     name: string;
     lastUsed: string | null;
-    isActive: boolean;
+    isAtivo: boolean;
     project: { id: string; name: string };
     createdAt: string;
     revokedAt: string | null;
@@ -44,7 +44,7 @@ export function ApiKeys({ projectId }: { projectId: string }) {
             setGeneratedKey(result.key);
             refetch?.();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to generate key', 'error');
+            toast(e.message ?? 'Falha ao gerar chave', 'error');
             closeModal();
         } finally {
             setGenerating(false);
@@ -55,10 +55,10 @@ export function ApiKeys({ projectId }: { projectId: string }) {
         setRevokingId(keyId);
         try {
             await apiFetch(`/api/v1/projects/${projectId}/api-keys/${keyId}`, { method: 'DELETE' });
-            toast('Key revoked', 'success');
+            toast('Chave revogada', 'success');
             refetch?.();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to revoke key', 'error');
+            toast(e.message ?? 'Falha ao revogar chave', 'error');
         } finally {
             setRevokingId(null);
         }
@@ -102,7 +102,7 @@ export function ApiKeys({ projectId }: { projectId: string }) {
                     {[0, 1, 2].map(i => <Skeleton key={i} className="h-12 rounded-xl" />)}
                 </div>
             ) : !keys || keys.length === 0 ? (
-                <p className="text-xs text-text-dim py-4 text-center">No API keys for this project</p>
+                <p className="text-xs text-text-dim py-4 text-center">Sem chaves de API para este projeto</p>
             ) : (
                 <div className="space-y-2">
                     {keys.map(k => (
@@ -123,29 +123,29 @@ export function ApiKeys({ projectId }: { projectId: string }) {
                             </div>
                             <div className="flex items-center gap-6 shrink-0 text-[10px] text-text-dim">
                                 <div className="hidden sm:block">
-                                    <p className="font-black uppercase" style={{ fontSize: '8px' }}>Last Used</p>
+                                    <p className="font-black uppercase" style={{ fontSize: '8px' }}>Último uso</p>
                                     <p>{k.lastUsed ? new Date(k.lastUsed).toLocaleDateString() : 'Never'}</p>
                                 </div>
                                 <div className="hidden sm:block">
-                                    <p className="font-black uppercase" style={{ fontSize: '8px' }}>Created</p>
+                                    <p className="font-black uppercase" style={{ fontSize: '8px' }}>Criado</p>
                                     <p>{new Date(k.createdAt).toLocaleDateString()}</p>
                                 </div>
                                 <span
                                     className={cn(
                                         'px-2 py-0.5 rounded-full text-[9px] font-black uppercase',
-                                        k.isActive
+                                        k.isAtivo
                                             ? 'bg-green-500/20 text-green-400'
                                             : 'bg-border text-text-dim',
                                     )}
                                 >
-                                    {k.isActive ? 'Active' : 'Revoked'}
+                                    {k.isAtivo ? 'Ativo' : 'Revoked'}
                                 </span>
                                 <button
                                     onClick={() => handleRevoke(k.id)}
-                                    disabled={!k.isActive || revokingId === k.id}
+                                    disabled={!k.isAtivo || revokingId === k.id}
                                     className={cn(
                                         'p-1 rounded-lg hover:bg-border transition-colors',
-                                        (!k.isActive || revokingId === k.id) && 'opacity-30 cursor-not-allowed',
+                                        (!k.isAtivo || revokingId === k.id) && 'opacity-30 cursor-not-allowed',
                                     )}
                                     title="Revoke key"
                                 >
@@ -165,7 +165,7 @@ export function ApiKeys({ projectId }: { projectId: string }) {
                         className="bento-card w-full max-w-md mx-4 space-y-4"
                     >
                         <div className="flex items-center justify-between">
-                            <span className="label-caps">Generate API Key</span>
+                            <span className="label-caps">Gerar chave de API</span>
                             <button onClick={closeModal} className="p-1 hover:bg-border rounded-lg transition-colors">
                                 <X className="size-4" />
                             </button>
@@ -189,7 +189,7 @@ export function ApiKeys({ projectId }: { projectId: string }) {
                                     </button>
                                 </div>
                                 {copied && (
-                                    <p className="text-[10px] text-green-400 font-black uppercase tracking-wide">Copied!</p>
+                                    <p className="text-[10px] text-green-400 font-black uppercase tracking-wide">Copiado!</p>
                                 )}
                                 <button
                                     onClick={closeModal}
@@ -201,13 +201,13 @@ export function ApiKeys({ projectId }: { projectId: string }) {
                         ) : (
                             <div className="space-y-3">
                                 <div>
-                                    <label className="label-caps mb-1.5 block">Key Name</label>
+                                    <label className="label-caps mb-1.5 block">Nome da chave</label>
                                     <input
                                         type="text"
                                         value={keyName}
                                         onChange={e => setKeyName(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && !generating && handleGenerate()}
-                                        placeholder="e.g. Production CI"
+                                        placeholder="ex.: CI de produção"
                                         className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary transition-colors"
                                     />
                                 </div>

@@ -26,7 +26,7 @@ const CATEGORIES: { value: Category; label: string }[] = [
     { value: 'architecture', label: 'Architecture' },
     { value: 'requirements', label: 'Requirements' },
     { value: 'dependencies', label: 'Dependencies' },
-    { value: 'standards', label: 'Standards' },
+    { value: 'standards', label: 'Padrãos' },
     { value: 'general', label: 'General' },
 ];
 
@@ -96,7 +96,7 @@ function EntryModal({ open, onClose, onSave, initial, saving }: EntryModalProps)
                         className="bento-card w-full max-w-md space-y-4"
                     >
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-bold">{initial?.id ? 'Edit Entry' : 'Add Entry'}</h3>
+                            <h3 className="text-lg font-bold">{initial?.id ? 'Editar entrada' : 'Adicionar entrada'}</h3>
                             <button onClick={onClose} className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors">
                                 <X className="size-4" />
                             </button>
@@ -106,7 +106,7 @@ function EntryModal({ open, onClose, onSave, initial, saving }: EntryModalProps)
                                 <label className="label-caps block mb-1">Key</label>
                                 <input
                                     className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-mono text-accent placeholder-text-dim focus:outline-none focus:border-primary"
-                                    placeholder="e.g. TECH_STACK"
+                                    placeholder="ex.: TECH_STACK"
                                     value={key}
                                     onChange={e => setKey(e.target.value)}
                                 />
@@ -116,7 +116,7 @@ function EntryModal({ open, onClose, onSave, initial, saving }: EntryModalProps)
                                 <textarea
                                     rows={4}
                                     className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm text-accent placeholder-text-dim focus:outline-none focus:border-primary resize-none"
-                                    placeholder="Context value…"
+                                    placeholder="Valor do contexto…"
                                     value={value}
                                     onChange={e => setValue(e.target.value)}
                                 />
@@ -132,7 +132,7 @@ function EntryModal({ open, onClose, onSave, initial, saving }: EntryModalProps)
                                         <option value="architecture">Architecture</option>
                                         <option value="requirements">Requirements</option>
                                         <option value="dependencies">Dependencies</option>
-                                        <option value="standards">Standards</option>
+                                        <option value="standards">Padrãos</option>
                                         <option value="general">General</option>
                                     </select>
                                 </div>
@@ -143,10 +143,10 @@ function EntryModal({ open, onClose, onSave, initial, saving }: EntryModalProps)
                                         value={priority}
                                         onChange={e => setPriority(Number(e.target.value))}
                                     >
-                                        <option value={1}>1 - Low</option>
+                                        <option value={1}>1 - Baixa</option>
                                         <option value={2}>2 - Normal</option>
-                                        <option value={3}>3 - High</option>
-                                        <option value={4}>4 - Critical</option>
+                                        <option value={3}>3 - Alta</option>
+                                        <option value={4}>4 - Crítica</option>
                                     </select>
                                 </div>
                             </div>
@@ -243,7 +243,7 @@ export function ProjectContext({ projectId }: { projectId: string }) {
             refetch();
             closeModal();
         } catch (e: unknown) {
-            toast(e instanceof Error ? e.message : 'Failed to save entry', 'error');
+            toast(e instanceof Error ? e.message : 'Falha ao salvar entrada', 'error');
         } finally {
             setSaving(false);
         }
@@ -256,7 +256,7 @@ export function ProjectContext({ projectId }: { projectId: string }) {
             toast('Entry deleted', 'success');
             refetch();
         } catch (e: unknown) {
-            toast(e instanceof Error ? e.message : 'Failed to delete entry', 'error');
+            toast(e instanceof Error ? e.message : 'Falha ao excluir entrada', 'error');
         } finally {
             setDeleting(null);
         }
@@ -271,7 +271,7 @@ export function ProjectContext({ projectId }: { projectId: string }) {
                     className="flex items-center gap-1.5 rounded-xl bg-card border border-border px-3 py-1.5 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
                 >
                     <Plus className="size-3" />
-                    Add Entry
+                    Adicionar entrada
                 </button>
             </div>
 
@@ -279,7 +279,7 @@ export function ProjectContext({ projectId }: { projectId: string }) {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-dim pointer-events-none" />
                 <input
                     className="w-full rounded-xl bg-bg border border-border pl-9 pr-4 py-2.5 text-sm text-accent placeholder-text-dim focus:outline-none focus:border-primary"
-                    placeholder="Search context…"
+                    placeholder="Buscar contexto…"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                 />
@@ -313,7 +313,7 @@ export function ProjectContext({ projectId }: { projectId: string }) {
                     ))}
                 </div>
             ) : entries.length === 0 ? (
-                <p className="text-sm text-text-dim py-8 text-center">No context entries</p>
+                <p className="text-sm text-text-dim py-8 text-center">Nenhuma entrada de contexto</p>
             ) : (
                 <div className="space-y-3">
                     {entries.map(entry => (

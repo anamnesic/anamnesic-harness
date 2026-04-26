@@ -17,7 +17,7 @@ interface WorkflowStep {
     name: string;
     description?: string;
     agentId: string;
-    taskType: string;
+    taskTipo: string;
     input: Record<string, any>;
     dependsOn?: string[];
     timeout?: number;
@@ -28,7 +28,7 @@ interface WorkflowTrigger {
     config: Record<string, any>;
 }
 
-interface WorkflowExecution {
+interface WorkflowExecução {
     id: string;
     startedAt: string;
     completedAt?: string;
@@ -47,9 +47,9 @@ interface Workflow {
     triggers: WorkflowTrigger[];
     schedule: string | null;
     status: WorkflowStatus;
-    totalExecutions: number;
-    successfulExecutions: number;
-    failedExecutions: number;
+    totalExecuçãos: number;
+    successfulExecuçãos: number;
+    failedExecuçãos: number;
     lastExecutedAt: string | null;
     createdAt: string;
 }
@@ -66,7 +66,7 @@ const STATUS_DOT: Record<WorkflowStatus, string> = {
     archived: 'bg-zinc-400',
 };
 
-const EXEC_STATUS_STYLES: Record<WorkflowExecution['status'], string> = {
+const EXEC_STATUS_STYLES: Record<WorkflowExecução['status'], string> = {
     running: 'bg-primary/15 text-primary',
     completed: 'bg-green-500/15 text-green-400',
     failed: 'bg-red-500/15 text-red-400',
@@ -92,7 +92,7 @@ function formatDuration(start: string, end?: string) {
 
 function HistoryPanel({ workflowId, workflowName, onBack }: { workflowId: string; workflowName: string; onBack: () => void }) {
     const { data, loading } = useApi<any>(`/api/v1/workflows/${workflowId}/history?limit=50`);
-    const history: WorkflowExecution[] = (data as any)?.data ?? data ?? [];
+    const history: WorkflowExecução[] = (data as any)?.data ?? data ?? [];
     const sorted = Array.isArray(history) ? [...history].reverse() : [];
 
     return (
@@ -112,7 +112,7 @@ function HistoryPanel({ workflowId, workflowName, onBack }: { workflowId: string
                     <ChevronLeft className="size-4" />
                 </button>
                 <div className="min-w-0">
-                    <p className="label-caps text-text-dim">Execution History</p>
+                    <p className="label-caps text-text-dim">Execução History</p>
                     <h3 className="font-bold text-base truncate">{workflowName}</h3>
                 </div>
             </div>
@@ -124,7 +124,7 @@ function HistoryPanel({ workflowId, workflowName, onBack }: { workflowId: string
             ) : sorted.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
                     <Clock className="size-8 text-border" />
-                    <p className="text-text-dim text-sm">No executions yet</p>
+                    <p className="text-text-dim text-sm">Ainda não há execuções</p>
                 </div>
             ) : (
                 <div className="space-y-2">
@@ -179,7 +179,7 @@ export function Workflows() {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [schedule, setSchedule] = useState('');
-    const [stepsJson, setStepsJson] = useState('[\n  {\n    "id": "s1",\n    "name": "Initial Analysis",\n    "agentId": "agent-uuid",\n    "taskType": "research",\n    "input": { "query": "Analyze project structure" }\n  }\n]');
+    const [stepsJson, setStepsJson] = useState('[\n  {\n    "id": "s1",\n    "name": "Initial Análise",\n    "agentId": "agent-uuid",\n    "taskType": "research",\n    "input": { "query": "Analyze project structure" }\n  }\n]');
     const [triggerType, setTriggerType] = useState<TriggerType>('manual');
 
     const workflows: Workflow[] = (data as any)?.data ?? data ?? [];
@@ -187,9 +187,9 @@ export function Workflows() {
 
     const totalWorkflows = list.length;
     const activeWorkflows = list.filter(w => w.status === 'active').length;
-    const totalExecutions = list.reduce((sum, w) => sum + (w.totalExecutions ?? 0), 0);
-    const totalSuccess = list.reduce((sum, w) => sum + (w.successfulExecutions ?? 0), 0);
-    const successRate = totalExecutions > 0 ? Math.round((totalSuccess / totalExecutions) * 100) : 0;
+    const totalExecuçãos = list.reduce((sum, w) => sum + (w.totalExecuçãos ?? 0), 0);
+    const totalSuccess = list.reduce((sum, w) => sum + (w.successfulExecuçãos ?? 0), 0);
+    const successRate = totalExecuçãos > 0 ? Math.round((totalSuccess / totalExecuçãos) * 100) : 0;
 
     const selected = selectedId ? list.find(w => w.id === selectedId) : null;
 
@@ -198,13 +198,13 @@ export function Workflows() {
         setName('');
         setDescription('');
         setSchedule('');
-        setStepsJson('[\n  {\n    "id": "s1",\n    "name": "Initial Analysis",\n    "agentId": "agent-uuid",\n    "taskType": "research",\n    "input": { "query": "Analyze project structure" }\n  }\n]');
+        setStepsJson('[\n  {\n    "id": "s1",\n    "name": "Initial Análise",\n    "agentId": "agent-uuid",\n    "taskType": "research",\n    "input": { "query": "Analyze project structure" }\n  }\n]');
         setTriggerType('manual');
     }
 
     async function handleSubmit() {
-        if (!name.trim()) { toast('Name is required', 'error'); return; }
-        if (!workspace) { toast('No active workspace', 'error'); return; }
+        if (!name.trim()) { toast('Nome é obrigatório', 'error'); return; }
+        if (!workspace) { toast('Nenhum workspace ativo', 'error'); return; }
 
         let parsedSteps: WorkflowStep[] = [];
         if (stepsJson.trim()) {
@@ -234,7 +234,7 @@ export function Workflows() {
             refetch();
             closeModal();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to create workflow', 'error');
+            toast(e.message ?? 'Falha ao criar workflow', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -247,7 +247,7 @@ export function Workflows() {
             if (selectedId === id) setSelectedId(null);
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to delete workflow', 'error');
+            toast(e.message ?? 'Falha ao excluir workflow', 'error');
         }
     }
 
@@ -261,7 +261,7 @@ export function Workflows() {
             toast(`Workflow ${next}`, 'success');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to update status', 'error');
+            toast(e.message ?? 'Falha ao atualizar status', 'error');
         }
     }
 
@@ -302,9 +302,9 @@ export function Workflows() {
                         <div className="mb-6 grid grid-cols-4 gap-3">
                             {[
                                 { label: 'Total', value: totalWorkflows },
-                                { label: 'Active', value: activeWorkflows },
-                                { label: 'Executions', value: totalExecutions },
-                                { label: 'Success Rate', value: `${successRate}%` },
+                                { label: 'Ativo', value: activeWorkflows },
+                                { label: 'Execuçãos', value: totalExecuçãos },
+                                { label: 'Taxa de sucesso', value: `${successRate}%` },
                             ].map(stat => (
                                 <div key={stat.label} className="bento-card text-center">
                                     <p className="text-2xl font-bold">{stat.value}</p>
@@ -321,7 +321,7 @@ export function Workflows() {
                         ) : list.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-24 space-y-3">
                                 <WorkflowIcon className="size-10 text-border" />
-                                <p className="text-text-dim text-sm">No workflows configured</p>
+                                <p className="text-text-dim text-sm">Nenhum workflow configurado</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -394,10 +394,10 @@ export function Workflows() {
                                                 </span>
                                             )}
                                             <span>
-                                                <span className="text-green-400 font-semibold">{wf.successfulExecutions ?? 0}</span> ok
+                                                <span className="text-green-400 font-semibold">{wf.successfulExecuçãos ?? 0}</span> ok
                                             </span>
                                             <span>
-                                                <span className="text-red-400 font-semibold">{wf.failedExecutions ?? 0}</span> failed
+                                                <span className="text-red-400 font-semibold">{wf.failedExecuçãos ?? 0}</span> failed
                                             </span>
                                             <span className="ml-auto label-caps">
                                                 {wf.lastExecutedAt ? formatDate(wf.lastExecutedAt) : 'never run'}
@@ -444,7 +444,7 @@ export function Workflows() {
                                         className="w-full rounded-xl border border-border bg-white/5 px-3 py-2 text-sm outline-none focus:border-primary/60 transition-colors"
                                         value={name}
                                         onChange={e => setName(e.target.value)}
-                                        placeholder="Workflow name"
+                                        placeholder="Nome do workflow"
                                     />
                                 </div>
 
@@ -455,7 +455,7 @@ export function Workflows() {
                                         rows={2}
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
-                                        placeholder="Optional description"
+                                        placeholder="Descrição opcional"
                                     />
                                 </div>
 
@@ -506,7 +506,7 @@ export function Workflows() {
                                     disabled={submitting}
                                     className="rounded-xl bg-primary/90 hover:bg-primary px-4 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
                                 >
-                                    {submitting ? 'Creating...' : 'Create Workflow'}
+                                    {submitting ? 'Criando...' : 'Criar workflow'}
                                 </button>
                             </div>
                         </motion.div>

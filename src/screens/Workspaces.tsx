@@ -117,7 +117,7 @@ export function Workspaces() {
             refetch();
             closeAll();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to create workspace', 'error');
+            toast(e.message ?? 'Falha ao criar workspace', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -136,7 +136,7 @@ export function Workspaces() {
             refetch();
             closeAll();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to update workspace', 'error');
+            toast(e.message ?? 'Falha ao atualizar workspace', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -149,11 +149,13 @@ export function Workspaces() {
             toast('Workspace deleted', 'success');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to delete workspace', 'error');
+            toast(e.message ?? 'Falha ao excluir workspace', 'error');
         }
     }
 
-    const workspaces = (data?.data ?? []).filter(ws => ws.status !== 'deleted');
+    const rawData = data?.data;
+    const workspacesList = Array.isArray(rawData) ? rawData : (rawData?.items || []);
+    const workspaces = workspacesList.filter(ws => ws.status !== 'deleted');
 
     return (
         <motion.div
@@ -179,7 +181,7 @@ export function Workspaces() {
             ) : workspaces.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 space-y-3">
                     <Building2 className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">No workspaces yet</p>
+                    <p className="text-text-dim text-sm">Ainda não há workspaces</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -287,7 +289,7 @@ function FormModal({
                         <label className="label-caps block mb-1">Name</label>
                         <input
                             className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary"
-                            placeholder="My Workspace"
+                            placeholder="Meu workspace"
                             value={name}
                             onChange={e => onName(e.target.value)}
                         />
@@ -306,7 +308,7 @@ function FormModal({
                         <textarea
                             rows={3}
                             className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary resize-none"
-                            placeholder="Optional description"
+                            placeholder="Descrição opcional"
                             value={description}
                             onChange={e => onDescription(e.target.value)}
                         />
@@ -347,7 +349,7 @@ function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: ()
             const res = await apiFetch<ApiResponse<Member[]>>(`/api/v1/workspaces/${workspace.id}/members`);
             setMembers(res.data ?? []);
         } catch (e: any) {
-            toast(e.message ?? 'Failed to load members', 'error');
+            toast(e.message ?? 'Falha ao carregar membros', 'error');
         } finally {
             setLoadingMembers(false);
         }
@@ -364,7 +366,7 @@ function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: ()
             toast('Role updated', 'success');
             load();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to update role', 'error');
+            toast(e.message ?? 'Falha ao atualizar função', 'error');
         }
     }
 
@@ -375,7 +377,7 @@ function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: ()
             toast('Member removed', 'success');
             load();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to remove member', 'error');
+            toast(e.message ?? 'Falha ao remover membro', 'error');
         }
     }
 
@@ -393,7 +395,7 @@ function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: ()
             setShowAdd(false);
             load();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to add member', 'error');
+            toast(e.message ?? 'Falha ao adicionar membro', 'error');
         } finally {
             setAdding(false);
         }
@@ -425,7 +427,7 @@ function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: ()
                         <StatusBadge status={workspace.status} />
                     </div>
                     <div className="space-y-1">
-                        <div className="label-caps">Created</div>
+                        <div className="label-caps">Criado</div>
                         <div className="text-accent">{workspace.createdAt ? new Date(workspace.createdAt).toLocaleString() : '-'}</div>
                     </div>
                     <div className="space-y-1 col-span-2">
@@ -449,7 +451,7 @@ function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: ()
                             className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors"
                         >
                             <UserPlus className="size-3" />
-                            Add member
+                            Adicionar membro
                         </button>
                     </div>
 
@@ -457,7 +459,7 @@ function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: ()
                         <div className="rounded-xl border border-border bg-bg/40 p-3 space-y-2">
                             <input
                                 className="w-full rounded-lg bg-bg border border-border px-3 py-2 text-xs font-mono text-accent placeholder-text-dim focus:outline-none focus:border-primary"
-                                placeholder="Paste user UUID"
+                                placeholder="Cole o UUID do usuário"
                                 value={newUserId}
                                 onChange={e => setNewUserId(e.target.value)}
                             />
@@ -481,9 +483,9 @@ function DetailModal({ workspace, onClose }: { workspace: Workspace; onClose: ()
                     )}
 
                     {loadingMembers ? (
-                        <p className="text-xs text-text-dim">Loading members</p>
+                        <p className="text-xs text-text-dim">Carregando membros</p>
                     ) : members.length === 0 ? (
-                        <p className="text-xs text-text-dim">No members yet</p>
+                        <p className="text-xs text-text-dim">Ainda não há membros</p>
                     ) : (
                         <ul className="space-y-2">
                             {members.map(m => {

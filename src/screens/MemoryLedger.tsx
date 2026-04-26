@@ -70,7 +70,7 @@ export function MemoryLedger() {
             const uniqueChannels = [...new Set(items.map((entry: any) => entry.channelId).filter(Boolean))];
             setChannels(uniqueChannels);
         } catch (error) {
-            toast('Failed to load memory entries', 'error');
+            toast('Falha ao carregar entradas de memória', 'error');
         } finally {
             setLoading(false);
         }
@@ -122,7 +122,7 @@ export function MemoryLedger() {
 
     function exportLog() {
         if (entries.length === 0) {
-            toast('No entries to export', 'info');
+            toast('Nenhuma entrada para exportar', 'info');
             return;
         }
 
@@ -176,7 +176,7 @@ export function MemoryLedger() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-dim" />
                     <input
                         type="text"
-                        placeholder="Search memory entries..."
+                        placeholder="Buscar entradas de memória..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 bg-bg border border-border rounded-xl text-sm text-accent placeholder-text-dim focus:outline-none focus:border-primary"
@@ -298,11 +298,11 @@ export function MemoryLedger() {
             ) : (
                 <div className="text-center py-20 space-y-3">
                     <Activity className="size-10 text-border mx-auto" />
-                    <p className="text-text-dim text-sm">No memory entries found.</p>
+                    <p className="text-text-dim text-sm">Nenhuma entrada de memória encontrada.</p>
                     <p className="text-text-dim text-xs">
                         {searchQuery || selectedChannel !== 'all' || dateFilter !== 'all' 
                             ? 'Try adjusting your filters or search query.' 
-                            : 'Tap the button below to add the first entry.'}
+                            : 'Toque no botão abaixo para adicionar a primeira entrada.'}
                     </p>
                 </div>
             )}
@@ -400,7 +400,7 @@ export function MemoryLedger() {
                                 <label className="label-caps !mb-1 block">Channel ID</label>
                                 <input
                                     className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary"
-                                    placeholder="e.g. kairos-main"
+                                    placeholder="ex.: kairos-main"
                                     value={channelId}
                                     onChange={e => setChannelId(e.target.value)}
                                 />
@@ -410,7 +410,7 @@ export function MemoryLedger() {
                                 <textarea
                                     rows={3}
                                     className="w-full rounded-xl bg-bg border border-border px-4 py-3 text-sm font-medium text-accent placeholder-text-dim focus:outline-none focus:border-primary resize-none"
-                                    placeholder="Describe the observation…"
+                                    placeholder="Descreva a observação…"
                                     value={message}
                                     onChange={e => setMessage(e.target.value)}
                                 />

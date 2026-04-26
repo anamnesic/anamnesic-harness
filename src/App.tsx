@@ -73,7 +73,7 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
         {activeTab !== 'dashboard' && (
           <Breadcrumbs 
             items={[
-              { label: 'Home', onClick: onBack },
+              { label: 'Início', onClick: onBack },
               { label: title, active: true }
             ]} 
             className="mb-1"
@@ -101,14 +101,14 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
 
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
-  { id: 'workspaces', label: 'Workspaces', icon: Boxes },
-  { id: 'control', label: 'Safety', icon: Shield },
-  { id: 'agents', label: 'Agents', icon: Bot },
-  { id: 'projects', label: 'Projects', icon: FolderKanban },
-  { id: 'decisions', label: 'Decisions', icon: Lightbulb },
-  { id: 'apikeys', label: 'API Keys', icon: Key },
-  { id: 'security', label: 'Audit', icon: ShieldCheck },
-  { id: 'system', label: 'Core', icon: Settings2 },
+  { id: 'workspaces', label: 'Espaços', icon: Boxes },
+  { id: 'control', label: 'Segurança', icon: Shield },
+  { id: 'agents', label: 'Agentes', icon: Bot },
+  { id: 'projects', label: 'Projetos', icon: FolderKanban },
+  { id: 'decisions', label: 'Decisões', icon: Lightbulb },
+  { id: 'apikeys', label: 'Chaves API', icon: Key },
+  { id: 'security', label: 'Auditoria', icon: ShieldCheck },
+  { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
@@ -142,7 +142,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'dashboard':
       return {
         title: 'KAIROS',
-        subtitle: 'Agent Dashboard',
+        subtitle: 'Painel de Agentes',
         element: <Dashboard onNavigate={setActive} />,
         onBack: undefined,
         rightElement: (
@@ -162,19 +162,19 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
         ),
       };
     case 'benchmarks':
-      return { title: 'Benchmarks', subtitle: 'LLM Performance comparison', element: <ModelBenchmarks />, onBack: goHome, rightElement: undefined };
+      return { title: 'Benchmarks', subtitle: 'Comparação de desempenho de LLM', element: <ModelBenchmarks />, onBack: goHome, rightElement: undefined };
     case 'redteaming':
-      return { title: 'Red Teaming', subtitle: 'Attack Simulation', element: <RedTeaming />, onBack: goHome, rightElement: undefined };
+      return { title: 'Red Teaming', subtitle: 'Simulação de ataques', element: <RedTeaming />, onBack: goHome, rightElement: undefined };
     case 'workspaces':
-      return { title: 'Workspaces', subtitle: 'Workspace Management', element: <Workspaces />, onBack: goHome, rightElement: undefined };
+      return { title: 'Espaços', subtitle: 'Gerenciamento de workspaces', element: <Workspaces />, onBack: goHome, rightElement: undefined };
     case 'ledger':
-      return { title: 'Ledger', subtitle: 'Historical Retrieval', element: <MemoryLedger />, onBack: goHome, rightElement: undefined };
+      return { title: 'Memória', subtitle: 'Recuperação histórica', element: <MemoryLedger />, onBack: goHome, rightElement: undefined };
     case 'observers':
-      return { title: 'Monitoring', subtitle: 'Stateful Observers', element: <Observers />, onBack: goHome, rightElement: undefined };
+      return { title: 'Monitoramento', subtitle: 'Observadores com estado', element: <Observers />, onBack: goHome, rightElement: undefined };
     case 'control':
       return {
-        title: 'Security',
-        subtitle: 'Safety Guardrails',
+        title: 'Segurança',
+        subtitle: 'Guardrails de segurança',
         element: <ControlCenter />,
         onBack: goHome,
         rightElement: (
@@ -189,43 +189,43 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
         ),
       };
     case 'snapshots':
-      return { title: 'Snapshots', subtitle: 'Point-in-time State', element: <Snapshots />, onBack: goHome, rightElement: undefined };
+      return { title: 'Snapshots', subtitle: 'Estado em um ponto no tempo', element: <Snapshots />, onBack: goHome, rightElement: undefined };
     case 'chat':
-      return { title: 'Chat', subtitle: 'AI Assistant', element: <ChatPanel />, onBack: goHome, rightElement: undefined };
+      return { title: 'Chat', subtitle: 'Assistente de IA', element: <ChatPanel />, onBack: goHome, rightElement: undefined };
     case 'agents':
-      return { title: 'Agents', subtitle: 'Agent Registry', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
+      return { title: 'Agentes', subtitle: 'Registro de agentes', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
     case 'tasks':
-      return { title: 'Tasks', subtitle: 'Task Management', element: <Tasks />, onBack: goHome, rightElement: undefined };
+      return { title: 'Tarefas', subtitle: 'Gerenciamento de tarefas', element: <Tasks />, onBack: goHome, rightElement: undefined };
     case 'workflows':
-      return { title: 'Workflows', subtitle: 'Automation Pipelines', element: <Workflows />, onBack: goHome, rightElement: undefined };
+      return { title: 'Workflows', subtitle: 'Pipelines de automação', element: <Workflows />, onBack: goHome, rightElement: undefined };
     case 'projects':
-      return { title: 'Projects', subtitle: 'Manage Projects', element: <Projects />, onBack: goHome, rightElement: undefined };
+      return { title: 'Projetos', subtitle: 'Gerenciar projetos', element: <Projects />, onBack: goHome, rightElement: undefined };
     case 'decisions':
-      return { title: 'Decisions', subtitle: 'Project Decision Log', element: <Decisions />, onBack: goHome, rightElement: undefined };
+      return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
     case 'apikeys':
-      return { title: 'API Keys', subtitle: 'Workspace Project Credentials', element: <ApiKeysHub />, onBack: goHome, rightElement: undefined };
+      return { title: 'Chaves de API', subtitle: 'Credenciais de projeto do workspace', element: <ApiKeysHub />, onBack: goHome, rightElement: undefined };
     case 'security':
-      return { title: 'Security', subtitle: 'Vulnerability Audit', element: <Security onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
+      return { title: 'Auditoria', subtitle: 'Auditoria de vulnerabilidades', element: <Security onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
     case 'integrations':
-      return { title: 'Integrations', subtitle: 'External Webhooks', element: <Integrations />, onBack: goHome, rightElement: undefined };
+      return { title: 'Integrações', subtitle: 'Webhooks externos', element: <Integrations />, onBack: goHome, rightElement: undefined };
     case 'system':
       return {
-        title: 'Engine',
-        subtitle: 'System Configuration',
+        title: 'Motor',
+        subtitle: 'Configuração do sistema',
         element: <SystemConfig onNavigate={setActive} />,
         onBack: goHome,
         rightElement: (
           <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
             <div className="size-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-green-500 text-[10px] font-bold uppercase tracking-wider">Live</span>
+            <span className="text-green-500 text-[10px] font-bold uppercase tracking-wider">Ao vivo</span>
           </div>
         ),
       };
     default:
       return {
-        title: 'Unknown',
-        subtitle: 'Page not found',
-        element: <div className="flex-1 flex items-center justify-center text-text-dim">Page not found</div>,
+        title: 'Desconhecido',
+        subtitle: 'Página não encontrada',
+        element: <div className="flex-1 flex items-center justify-center text-text-dim">Página não encontrada</div>,
         onBack: goHome,
         rightElement: undefined,
       };

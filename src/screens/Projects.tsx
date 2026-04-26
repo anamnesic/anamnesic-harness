@@ -82,7 +82,7 @@ export function Projects() {
                 setSubmitting(false);
                 return;
             }
-            toast(e.message ?? 'Failed to import folder', 'error');
+            toast(e.message ?? 'Falha ao importar pasta', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -97,14 +97,14 @@ export function Projects() {
                 method: 'POST',
                 body: JSON.stringify({
                     name: folderName,
-                    slug: folderName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+                    slug: folderName.toBaixaerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
                     description: `Workspace with git repositories`,
                 }),
             });
-            toast(`Created workspace "${folderName}"`, 'success');
+            toast(`Criado workspace "${folderName}"`, 'success');
             // Note: In a real app, you might want to navigate to the workspace
         } catch (e: any) {
-            toast(e.message ?? 'Failed to create workspace', 'error');
+            toast(e.message ?? 'Falha ao criar workspace', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -122,7 +122,7 @@ export function Projects() {
             setEditingProject(null);
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to update project', 'error');
+            toast(e.message ?? 'Falha ao atualizar projeto', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -135,7 +135,7 @@ export function Projects() {
             toast('Project deleted', 'success');
             refetch();
         } catch (e: any) {
-            toast(e.message ?? 'Failed to delete project', 'error');
+            toast(e.message ?? 'Falha ao excluir projeto', 'error');
         } finally {
             setDeleting(null);
         }
@@ -198,7 +198,7 @@ export function Projects() {
                             activeTab === 'decisions' ? 'text-accent' : 'text-text-dim hover:text-highlight'
                         )}
                     >
-                        Decisions
+                        Decisões
                         {activeTab === 'decisions' && (
                             <motion.div
                                 layoutId="activeTab"
@@ -245,7 +245,7 @@ export function Projects() {
             ) : projects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 space-y-3">
                     <FolderOpen className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">No projects yet</p>
+                    <p className="text-text-dim text-sm">Ainda não há projetos</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -322,7 +322,7 @@ export function Projects() {
                             className="bento-card w-full max-w-md space-y-4"
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold">No Git Repository Found</h3>
+                                <h3 className="text-lg font-bold">Nenhum repositório Git encontrado</h3>
                                 <button
                                     onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
                                     className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
@@ -414,7 +414,7 @@ export function Projects() {
                                         onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                                         className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors"
                                     >
-                                        <option value="active">Active</option>
+                                        <option value="active">Ativo</option>
                                         <option value="archived">Archived</option>
                                         <option value="inactive">Inactive</option>
                                     </select>

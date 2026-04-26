@@ -20,15 +20,15 @@ export function Login() {
   const { login } = useAuth();
   const { toast } = useToast();
   const quickEmail = 'system@kairos.local';
-  const quickPassword = 'kairos2026';
+  const quickSenha = 'kairos2026';
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [password, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const authenticate = async (loginEmail: string, loginPassword: string) => {
+  const authenticate = async (loginEmail: string, loginSenha: string) => {
     const res = await apiFetch<LoginResponse>('/api/v1/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      body: JSON.stringify({ email: loginEmail, password: loginSenha }),
     });
 
     const payload = res?.data ?? res;
@@ -37,7 +37,7 @@ export function Login() {
 
     if (user && token) {
       login(user, token);
-      toast('Logged in successfully', 'success');
+      toast('Login realizado com sucesso', 'success');
       return;
     }
 
@@ -47,7 +47,7 @@ export function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast('Please fill in all fields', 'error');
+      toast('Preencha todos os campos', 'error');
       return;
     }
 
@@ -55,7 +55,7 @@ export function Login() {
     try {
       await authenticate(email, password);
     } catch (error: any) {
-      toast(error?.message || 'Login failed', 'error');
+      toast(error?.message || 'Falha no login', 'error');
     } finally {
       setLoading(false);
     }
@@ -82,14 +82,14 @@ export function Login() {
             Kairos
           </h1>
           <p className="text-text-dim text-xs font-bold uppercase tracking-[0.3em] mt-2">
-            Proactive AI Orchestration
+            Orquestração de IA Proativa
           </p>
         </div>
 
         <form id="kairos-login-form" onSubmit={handleSubmit} className="bento-card space-y-6">
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="label-caps px-1">Email Address</label>
+              <label className="label-caps px-1">E-mail</label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-text-dim group-focus-within:text-primary transition-colors" />
                 <input
@@ -104,13 +104,13 @@ export function Login() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="label-caps px-1">Password</label>
+              <label className="label-caps px-1">Senha</label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-text-dim group-focus-within:text-primary transition-colors" />
                 <input
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => setSenha(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary/60 transition-all placeholder:text-text-dim/50"
                   placeholder="••••••••"
                   required
@@ -128,7 +128,7 @@ export function Login() {
               <Loader2 className="size-5 animate-spin" />
             ) : (
               <>
-                Sign In
+                Entrar
                 <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
               </>
             )}
@@ -140,19 +140,19 @@ export function Login() {
               disabled={loading}
               onClick={async () => {
                 setEmail(quickEmail);
-                setPassword(quickPassword);
+                setSenha(quickSenha);
                 setLoading(true);
                 try {
-                  await authenticate(quickEmail, quickPassword);
+                  await authenticate(quickEmail, quickSenha);
                 } catch (error: any) {
-                  toast(error?.message || 'Login failed', 'error');
+                  toast(error?.message || 'Falha no login', 'error');
                 } finally {
                   setLoading(false);
                 }
               }}
               className="text-[10px] text-text-dim uppercase tracking-widest font-bold hover:text-primary transition-colors cursor-pointer"
             >
-              Quick Login <span className="text-accent">{quickEmail}</span>
+              Login rápido <span className="text-accent">{quickEmail}</span>
             </button>
           </div>
         </form>

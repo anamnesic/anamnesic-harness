@@ -38,7 +38,7 @@ export function Decisions() {
         setSelectedProject(res.items[0].id);
       }
     } catch (error: any) {
-      toast(error?.message || 'Failed to load projects', 'error');
+      toast(error?.message || 'Falha ao carregar projetos', 'error');
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export function Decisions() {
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="size-8 rounded-full border-2 border-primary/30 border-t-primary/60 animate-spin mx-auto" />
-          <p className="text-sm text-text-dim">Loading projects...</p>
+          <p className="text-sm text-text-dim">Carregando projetos...</p>
         </div>
       </div>
     );
@@ -61,9 +61,9 @@ export function Decisions() {
         <div className="text-center space-y-4 max-w-md">
           <Lightbulb className="size-12 text-primary/40 mx-auto" />
           <div>
-            <h3 className="font-bold text-text mb-2">No Projects Found</h3>
+            <h3 className="font-bold text-text mb-2">Nenhum projeto encontrado</h3>
             <p className="text-sm text-text-dim">
-              Create a project first to start recording decisions.
+              Crie um projeto primeiro para começar a registrar decisões.
             </p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export function Decisions() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Lightbulb className="size-4 text-primary" />
-            <h3 className="font-bold text-accent">Project Decisions</h3>
+            <h3 className="font-bold text-accent">Decisões do projeto</h3>
           </div>
           
           <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export function Decisions() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-dim" />
               <input
                 type="text"
-                placeholder="Search context..."
+                placeholder="Buscar contexto..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-3 py-1.5 bg-bg/60 border border-border rounded-lg text-sm focus:outline-none focus:border-primary/60 w-32"

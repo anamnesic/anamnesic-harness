@@ -103,12 +103,12 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 <div className="bento-card col-span-4 md:col-span-2 md:row-span-2 overflow-hidden">
                     <span className="label-caps">Status</span>
                     <h2 className="text-3xl font-bold tracking-tighter mt-2 mb-4">
-                        {isOnline ? 'Agent Active & Observing' : health ? 'Agent Degraded' : 'Connecting…'}
+                        {isOnline ? 'Agent Ativo & Observing' : health ? 'Agent Degraded' : 'Connecting…'}
                     </h2>
                     <div className="mt-auto space-y-4">
                         <div>
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs text-text-dim font-medium">System Health</span>
+                                <span className="text-xs text-text-dim font-medium">Saúde do sistema</span>
                                 <span className={`text-xs font-bold ${isOnline ? 'text-green-500' : 'text-text-dim'}`}>
                                     {isOnline ? 'OPTIMAL' : 'UNKNOWN'}
                                 </span>
@@ -146,8 +146,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
                 {/* Suggestion Card */}
                 <div className="bento-card col-span-4 md:col-span-2">
-                    <span className="label-caps">Proactive Suggestion</span>
-                    <h3 className="text-lg font-bold tracking-tight">Refactor Auth Middleware</h3>
+                    <span className="label-caps">Sugestão proativa</span>
+                    <h3 className="text-lg font-bold tracking-tight">Refatorar middleware de autenticação</h3>
                     <p className="text-xs text-text-dim mt-2 line-clamp-2">
                         Repetitive patterns detected in routing logic. Abstracting into a shared utility could reduce bundle size by ~4KB.
                     </p>
@@ -156,13 +156,13 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     </button>
                 </div>
 
-                {/* Security Operations Card */}
+                {/* Operações de segurança Card */}
                 <div className="bento-card col-span-4 md:col-span-2">
                     <div className="flex items-center justify-between mb-4">
-                        <span className="label-caps">Security Operations</span>
+                        <span className="label-caps">Operações de segurança</span>
                         <ShieldAlert className="size-4 text-red-500" />
                     </div>
-                    <p className="text-xs text-text-dim mb-6">Advanced stress-testing and LLM performance benchmarking tools.</p>
+                    <p className="text-xs text-text-dim mb-6">Ferramentas avançadas de teste de estresse e benchmark de LLMs.</p>
                     <div className="flex gap-2">
                         <button
                             onClick={() => onNavigate('benchmarks')}
@@ -183,18 +183,18 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
                 {/* Stat: Threads */}
                 <div className="bento-card col-span-2 md:col-span-1">
-                    <span className="label-caps">CPU Threads</span>
+                    <span className="label-caps">Threads de CPU</span>
                     <div className="mt-auto pt-4">
                         {metricsLoading
                             ? <Skeleton className="h-9 w-16" />
                             : <p className="text-3xl font-bold tracking-tighter">{metrics?.threads ?? '—'}</p>}
-                        <p className="text-[10px] text-text-dim mt-1">Available</p>
+                        <p className="text-[10px] text-text-dim mt-1">Disponível</p>
                     </div>
                 </div>
 
                 {/* Stat: Load */}
                 <div className="bento-card col-span-2 md:col-span-1">
-                    <span className="label-caps">Load Avg</span>
+                    <span className="label-caps">Carga média</span>
                     <div className="mt-auto pt-4">
                         {metricsLoading
                             ? <Skeleton className="h-9 w-16" />
@@ -216,15 +216,15 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                         </div>
                         <div>
                             <p className="text-3xl font-bold tracking-tighter text-green-500">{agentStats?.activeAgents ?? '—'}</p>
-                            <p className="text-[10px] text-text-dim mt-1">Active</p>
+                            <p className="text-[10px] text-text-dim mt-1">Ativo</p>
                         </div>
                         <div>
                             <p className="text-lg font-bold font-mono">{agentStats?.totalTasksCompleted ?? '—'}</p>
-                            <p className="text-[10px] text-text-dim mt-1">Tasks Completed</p>
+                            <p className="text-[10px] text-text-dim mt-1">Tarefas concluídas</p>
                         </div>
                         <div>
                             <p className="text-lg font-bold font-mono text-red-500">{agentStats?.totalTasksFailed ?? '—'}</p>
-                            <p className="text-[10px] text-text-dim mt-1">Tasks Failed</p>
+                            <p className="text-[10px] text-text-dim mt-1">Tarefas com falha</p>
                         </div>
                     </div>
                 </div>
@@ -242,40 +242,40 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                         </div>
                         <div>
                             <p className="text-3xl font-bold tracking-tighter text-green-500">{workflowStats?.active ?? '—'}</p>
-                            <p className="text-[10px] text-text-dim mt-1">Active</p>
+                            <p className="text-[10px] text-text-dim mt-1">Ativo</p>
                         </div>
                         <div>
-                            <p className="text-lg font-bold font-mono">{workflowStats?.totalExecutions ?? '—'}</p>
-                            <p className="text-[10px] text-text-dim mt-1">Executions</p>
+                            <p className="text-lg font-bold font-mono">{workflowStats?.totalExecuçãos ?? '—'}</p>
+                            <p className="text-[10px] text-text-dim mt-1">Execuçãos</p>
                         </div>
                         <div>
                             <p className="text-lg font-bold font-mono text-highlight">{workflowStats?.successRate ?? 0}%</p>
-                            <p className="text-[10px] text-text-dim mt-1">Success Rate</p>
+                            <p className="text-[10px] text-text-dim mt-1">Taxa de sucesso</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Stat: Live Runs */}
+                {/* Stat: Execuções ao vivo */}
                 <div className="bento-card col-span-4 md:col-span-2">
                     <div className="flex items-center justify-between">
-                        <span className="label-caps">Live Runs</span>
+                        <span className="label-caps">Execuções ao vivo</span>
                         <Activity className="size-4 text-text-dim" />
                     </div>
                     <div className="mt-auto pt-4 grid grid-cols-2 gap-3">
                         <div>
                             <p className="text-3xl font-bold tracking-tighter text-green-500">{runningCount}</p>
-                            <p className="text-[10px] text-text-dim mt-1">Running</p>
+                            <p className="text-[10px] text-text-dim mt-1">Executando</p>
                         </div>
                         <div>
                             <p className="text-3xl font-bold tracking-tighter text-yellow-500">{pausedCount}</p>
-                            <p className="text-[10px] text-text-dim mt-1">Paused</p>
+                            <p className="text-[10px] text-text-dim mt-1">Pausado</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Recent Actions */}
+                {/* Ações recentes */}
                 <div className="bento-card col-span-4 lg:col-span-2">
-                    <span className="label-caps">Recent Actions</span>
+                    <span className="label-caps">Ações recentes</span>
                     {histLoading ? (
                         <div className="space-y-1 mt-2">
                             <SkeletonRow />
@@ -306,20 +306,20 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                             })}
                         </div>
                     ) : (
-                        <p className="text-sm text-text-dim mt-4">No recent actions recorded.</p>
+                        <p className="text-sm text-text-dim mt-4">Nenhuma ação recente registrada.</p>
                     )}
                 </div>
 
-                {/* Infrastructure Card */}
+                {/* Infraestrutura Card */}
                 <div
                     className="bento-card col-span-4 lg:col-span-2 bg-no-repeat bg-cover bg-center overflow-hidden min-h-40"
                     style={{ backgroundImage: "url('https://images.unsplash.com/photo-1558494949-ef010cbdcc48?q=80&w=2000&auto=format&fit=crop')" }}
                 >
                     <div className="absolute inset-0 bg-bg/60 backdrop-blur-[2px]" />
                     <div className="relative z-10 mt-auto">
-                        <span className="label-caps text-white/80!">Infrastructure</span>
-                        <h4 className="text-white font-bold text-lg">Snapshot Monitor</h4>
-                        <p className="text-white/60 text-xs mt-1">All regions operational.</p>
+                        <span className="label-caps text-white/80!">Infraestrutura</span>
+                        <h4 className="text-white font-bold text-lg">Monitor de snapshots</h4>
+                        <p className="text-white/60 text-xs mt-1">Todas as regiões operacionais.</p>
                     </div>
                 </div>
             </div>

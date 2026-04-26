@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { FolderOpen, Terminal, Code2, Shield, ChevronRight } from 'lucide-react';
+import { FolderOpen, Terminal, Código2, Shield, ChevronRight } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -22,7 +22,7 @@ interface ObserversData { observers: Observer[] }
 const OBSERVER_ICONS: Record<string, any> = {
     fs: FolderOpen,
     terminal: Terminal,
-    api: Code2,
+    api: Código2,
 };
 
 export function Observers() {
@@ -55,7 +55,7 @@ export function Observers() {
             className="flex-1 p-6 pb-32 max-w-4xl mx-auto w-full"
         >
             <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold tracking-tight">Active Nodes</h2>
+                <h2 className="text-2xl font-bold tracking-tight">Ativo Nodes</h2>
                 {!loading && (
                     <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
                         <span className="text-[10px] font-bold text-primary tracking-widest uppercase">
@@ -70,7 +70,7 @@ export function Observers() {
                     [0, 1, 2].map(i => <SkeletonCard key={i} />)
                 ) : (
                     observers.map(obs => {
-                        const Icon = OBSERVER_ICONS[obs.id] ?? Code2;
+                        const Icon = OBSERVER_ICONS[obs.id] ?? Código2;
                         const isToggling = toggling === obs.id;
                         return (
                             <div key={obs.id} className={cn('bento-card', !obs.active && 'opacity-50 grayscale')}>

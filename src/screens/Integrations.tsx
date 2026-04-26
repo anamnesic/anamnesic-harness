@@ -29,7 +29,7 @@ export function Integrations() {
 
     async function handleSubmit() {
         if (!name || !url) {
-            toast('Name and URL are required', 'error');
+            toast('Nome e URL são obrigatórios', 'error');
             return;
         }
 
@@ -39,13 +39,13 @@ export function Integrations() {
                 method: 'POST',
                 body: JSON.stringify({ name, url, type, events: ['*'], enabled: true }),
             });
-            toast('Integration added', 'success');
+            toast('Integração adicionada', 'success');
             refetch();
             setShowModal(false);
             setName('');
             setUrl('');
         } catch (e: any) {
-            toast(e.message || 'Failed to add integration', 'error');
+            toast(e.message || 'Falha ao adicionar integração', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -54,10 +54,10 @@ export function Integrations() {
     async function handleDelete(id: string) {
         try {
             await apiFetch(`/api/v1/integrations/${id}`, { method: 'DELETE' });
-            toast('Integration removed', 'success');
+            toast('Integração removida', 'success');
             refetch();
         } catch (e: any) {
-            toast(e.message || 'Failed to remove integration', 'error');
+            toast(e.message || 'Falha ao remover integração', 'error');
         }
     }
 
@@ -71,8 +71,8 @@ export function Integrations() {
                         <Share2 className="size-5" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold tracking-tight">External Integrations</h2>
-                        <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest">Connect Kairos to your favorite tools</p>
+                        <h2 className="text-2xl font-bold tracking-tight">Integrações externas</h2>
+                        <p className="text-[10px] font-bold text-text-dim uppercase tracking-widest">Conecte o Kairos às suas ferramentas favoritas</p>
                     </div>
                 </div>
                 <button
@@ -80,7 +80,7 @@ export function Integrations() {
                     className="flex items-center gap-2 rounded-xl bg-primary text-white px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                 >
                     <Plus className="size-3.5" />
-                    Add Webhook
+                    Adicionar webhook
                 </button>
             </div>
 
@@ -88,9 +88,9 @@ export function Integrations() {
                 {(!webhooks || webhooks.length === 0) ? (
                     <div className="col-span-full bento-card text-center py-24 border-dashed">
                         <Globe className="size-12 text-border mx-auto mb-4" />
-                        <h3 className="text-lg font-bold uppercase tracking-tighter">No integrations configured</h3>
+                        <h3 className="text-lg font-bold uppercase tracking-tighter">Nenhuma integração configurada</h3>
                         <p className="text-sm text-text-dim max-w-xs mx-auto mt-2">
-                            Add an outgoing webhook to receive real-time notifications in Slack, Discord, or any custom endpoint.
+                            Adicione um webhook de saída para receber notificações em tempo real no Slack, Discord ou qualquer endpoint personalizado.
                         </p>
                     </div>
                 ) : (
@@ -118,7 +118,7 @@ export function Integrations() {
                                             "text-[9px] font-black uppercase px-2 py-0.5 rounded-full border",
                                             webhook.enabled ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-red-500/10 border-red-500/20 text-red-500"
                                         )}>
-                                            {webhook.enabled ? 'Active' : 'Disabled'}
+                                            {webhook.enabled ? 'Ativo' : 'Disabled'}
                                         </span>
                                     </div>
                                 </div>
@@ -137,7 +137,7 @@ export function Integrations() {
             {/* GitHub Integration Placeholder */}
             <div className="bento-card bg-zinc-900/50 border-dashed border-zinc-700!">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="label-caps">Advanced Connectors</h3>
+                    <h3 className="label-caps">Conectores avançados</h3>
                 </div>
                 <div className="flex items-center gap-6 opacity-40 grayscale pointer-events-none">
                     <div className="flex items-center gap-2">
@@ -150,10 +150,10 @@ export function Integrations() {
                     </div>
                     <div className="flex items-center gap-2">
                         <CheckCircle2 className="size-4" />
-                        <span className="text-sm font-bold">Linear Integration</span>
+                        <span className="text-sm font-bold">Integração com Linear</span>
                     </div>
                 </div>
-                <p className="text-[10px] text-text-dim mt-6 uppercase font-bold tracking-widest">More integrations coming soon in Phase 9</p>
+                <p className="text-[10px] text-text-dim mt-6 uppercase font-bold tracking-widest">Mais integrações em breve na Fase 9</p>
             </div>
 
             <AnimatePresence>
@@ -166,7 +166,7 @@ export function Integrations() {
                             className="bento-card w-full max-w-lg space-y-6"
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="text-xl font-black uppercase tracking-tighter">Add New Webhook</h3>
+                                <h3 className="text-xl font-black uppercase tracking-tighter">Adicionar novo webhook</h3>
                                 <button onClick={() => setShowModal(false)} className="p-2 rounded-full hover:bg-white/5 text-text-dim transition-colors">
                                     <X className="size-5" />
                                 </button>
@@ -174,18 +174,18 @@ export function Integrations() {
 
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="label-caps px-1">Integration Name</label>
+                                    <label className="label-caps px-1">Nome da integração</label>
                                     <input
                                         type="text"
                                         value={name}
                                         onChange={e => setName(e.target.value)}
                                         className="w-full px-4 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary/60 transition-all"
-                                        placeholder="e.g. Engineering Slack"
+                                        placeholder="ex.: Slack de Engenharia"
                                     />
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="label-caps px-1">Webhook URL</label>
+                                    <label className="label-caps px-1">URL do webhook</label>
                                     <input
                                         type="url"
                                         value={url}
@@ -196,7 +196,7 @@ export function Integrations() {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="label-caps px-1">Platform Type</label>
+                                    <label className="label-caps px-1">Tipo de plataforma</label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {(['generic', 'slack', 'discord'] as const).map(t => (
                                             <button
