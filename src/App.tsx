@@ -378,8 +378,9 @@ function AppContent() {
   );
 
   const repoTabsInAppbar = activeTab === 'repo-files' && repoEditorHeaderState ? (
-    <div className="overflow-x-auto rounded-lg border border-border/60 bg-bg/90 lg:ml-72 lg:w-[calc(100%-18rem)]">
-      <div className="flex items-stretch">
+    <div className="lg:pl-72">
+      <div className="overflow-x-auto rounded-lg border border-border/60 bg-bg/90">
+        <div className="flex items-stretch">
         {repoEditorHeaderState.openTabs.length ? repoEditorHeaderState.openTabs.map((filePath) => {
           const isActive = repoEditorHeaderState.activeFile === filePath;
           const isDirty = repoEditorHeaderState.dirtyFiles[filePath] ?? false;
@@ -414,6 +415,7 @@ function AppContent() {
         }) : (
           <div className="px-3 py-2 text-xs text-text-dim">Nenhum arquivo aberto</div>
         )}
+        </div>
       </div>
     </div>
   ) : undefined;
