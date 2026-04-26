@@ -10,9 +10,23 @@ import { useToast } from '@/src/components/Toast';
 export function Login() {
   const { login } = useAuth();
   const { toast } = useToast();
+  const quickEmail = 'system@kairos.local';
+  const quickPassword = 'kairos2026';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const authenticate = async (loginEmail: string, loginPassword: string) => {
+    const res = await apiFetch<any>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+    });
+
+    if (res && res.user && res.token) {
+      login(res.user, res.token);
+      toast('Logged in successfully', 'success');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,15 +37,7 @@ export function Login() {
 
     setLoading(true);
     try {
-      const res = await apiFetch<any>('/api/v1/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (res && res.user && res.token) {
-        login(res.user, res.token);
-        toast('Logged in successfully', 'success');
-      }
+      await authenticate(email, password);
     } catch (error: any) {
       toast(error?.message || 'Login failed', 'error');
     } finally {
@@ -115,16 +121,22 @@ export function Login() {
           <div className="text-center pt-2">
             <button
               type="button"
-              onClick={() => {
-                setEmail('system@kairos.local');
-                setPassword('kairos2026');
-                setTimeout(() => {
-                  document.getElementById('kairos-login-form')?.requestSubmit();
-                }, 50);
+              disabled={loading}
+              onClick={async () => {
+                setEmail(quickEmail);
+                setPassword(quickPassword);
+                setLoading(true);
+                try {
+                  await authenticate(quickEmail, quickPassword);
+                } catch (error: any) {
+                  toast(error?.message || 'Login failed', 'error');
+                } finally {
+                  setLoading(false);
+                }
               }}
               className="text-[10px] text-text-dim uppercase tracking-widest font-bold hover:text-primary transition-colors cursor-pointer"
             >
-              Quick Login <span className="text-accent">system@kairos.local</span>
+              Quick Login <span className="text-accent">{quickEmail}</span>
             </button>
           </div>
         </form>
