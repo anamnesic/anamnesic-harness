@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
-import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { useWorkspace } from '@/src/context/WorkspaceContext';
 import { useRepository } from '@/src/context/RepositoryContext';
@@ -60,14 +59,6 @@ interface RepositoryInsights {
     isGitRepo: boolean;
 }
 
-interface RecentRepository {
-    id: string;
-    name: string;
-    localPath?: string;
-    workspaceId?: string | null;
-    lastOpenedAt: string;
-}
-
 interface RepositoryTreeNode {
     name: string;
     path: string;
@@ -84,8 +75,6 @@ interface ProjectsProps {
     onTabChange?: (tab: ProjectTabId) => void;
     hideTabBar?: boolean;
 }
-
-const RECENT_REPOSITORIES_KEY = 'kairos-recent-repositories';
 
 export function Projects({
     embedded = false,
@@ -106,7 +95,7 @@ export function Projects({
     }
     projectsQuery.set('refresh', String(refreshToken));
     const projectsPath = `/api/v1/projects?${projectsQuery.toString()}`;
-    const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
+    const { data, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
 
     const [internalActiveTab, setInternalActiveTab] = useState<ProjectTabId>('repository');
@@ -114,12 +103,8 @@ export function Projects({
     const [browserMode, setBrowserMode] = useState<'import-repository' | 'attach-folder'>('import-repository');
     const [attachTargetProjectId, setAttachTargetProjectId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [deleting, setDeleting] = useState<string | null>(null);
     const [gitBusy, setGitBusy] = useState(false);
     const [commitMessage, setCommitMessage] = useState('');
-    const [editingProject, setEditingProject] = useState<Project | null>(null);
-    const [editForm, setEditForm] = useState({ name: '', description: '', status: 'active' });
-    const [recentRepositories, setRecentRepositories] = useState<RecentRepository[]>([]);
     const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
     const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
         open: false,
@@ -147,63 +132,6 @@ export function Projects({
             setRepositoryById(projects[0].id);
         }
     }, [projects, repository, setRepositoryById]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return;
-        }
-
-        try {
-            const raw = localStorage.getItem(RECENT_REPOSITORIES_KEY);
-            if (!raw) {
-                setRecentRepositories([]);
-                return;
-            }
-
-            const parsed = JSON.parse(raw);
-            if (!Array.isArray(parsed)) {
-                setRecentRepositories([]);
-                return;
-            }
-
-            setRecentRepositories(parsed.slice(0, 8));
-        } catch {
-            setRecentRepositories([]);
-        }
-    }, []);
-
-    function persistRecentRepositories(nextItems: RecentRepository[]) {
-        setRecentRepositories(nextItems);
-        if (typeof window === 'undefined') {
-            return;
-        }
-
-        localStorage.setItem(RECENT_REPOSITORIES_KEY, JSON.stringify(nextItems));
-    }
-
-    function pushRecentRepository(project: Project) {
-        const nextItem: RecentRepository = {
-            id: project.id,
-            name: project.name,
-            localPath: project.metadata?.localPath,
-            workspaceId: project.workspaceId ?? workspace?.id ?? null,
-            lastOpenedAt: new Date().toISOString(),
-        };
-
-        const nextItems = [nextItem, ...recentRepositories.filter((item) => item.id !== project.id)].slice(0, 8);
-        persistRecentRepositories(nextItems);
-    }
-
-    useEffect(() => {
-        if (!repository) {
-            return;
-        }
-
-        const currentProject = projects.find((project) => project.id === repository.id);
-        if (currentProject) {
-            pushRecentRepository(currentProject);
-        }
-    }, [repository?.id, projects]);
 
     function joinSubfolder(basePath: string, subfolder: string) {
         const separator = basePath.includes('\\') ? '\\' : '/';
@@ -333,80 +261,6 @@ export function Projects({
             toast(e.message ?? 'Falha ao criar workspace', 'error');
         } finally {
             setSubmitting(false);
-        }
-    }
-
-    async function handleReopenRecent(item: RecentRepository) {
-        if (!item.localPath) {
-            toast('Este repositório recente não tem caminho salvo para reabrir.', 'error');
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            const created = await apiFetch<ApiResponse<Project>>('/api/v1/projects', {
-                method: 'POST',
-                body: JSON.stringify({ name: item.name, localPath: item.localPath }),
-            });
-            const createdProject = created?.data;
-            if (createdProject?.id && typeof window !== 'undefined') {
-                localStorage.setItem('kairos-selected-repository', createdProject.id);
-            }
-
-            toast(`Repositório "${item.name}" reaberto`, 'success');
-            await Promise.all([refetch(), refreshRepositories()]);
-        } catch (e: any) {
-            toast(e.message ?? 'Falha ao reabrir repositório', 'error');
-        } finally {
-            setSubmitting(false);
-        }
-    }
-
-    function handleOpenRecent(item: RecentRepository) {
-        const target = projects.find((project) => project.id === item.id);
-        if (!target) {
-            toast('Esse repositório não está carregado no workspace atual.', 'error');
-            return;
-        }
-
-        setRepositoryById(target.id);
-        pushRecentRepository(target);
-    }
-
-    async function handleEdit() {
-        if (!editingProject) return;
-        setSubmitting(true);
-        try {
-            await apiFetch(`/api/v1/projects/${editingProject.id}`, {
-                method: 'PUT',
-                body: JSON.stringify(editForm),
-            });
-            toast('Repositório atualizado', 'success');
-            setEditingProject(null);
-            await Promise.all([refetch(), refreshRepositories()]);
-        } catch (e: any) {
-            toast(e.message ?? 'Falha ao atualizar projeto', 'error');
-        } finally {
-            setSubmitting(false);
-        }
-    }
-
-    async function handleDelete(id: string) {
-        setDeleting(id);
-        try {
-            await apiFetch(`/api/v1/projects/${id}`, { method: 'DELETE' });
-            toast('Repositório excluído', 'success');
-            if (repository?.id === id) {
-                const fallback = projects.find((item) => item.id !== id);
-                if (fallback) {
-                    setRepositoryById(fallback.id);
-                }
-            }
-            await Promise.all([refetch(), refreshRepositories()]);
-        } catch (e: any) {
-            toast(e.message ?? 'Falha ao excluir projeto', 'error');
-        } finally {
-            setDeleting(null);
         }
     }
 
@@ -561,14 +415,6 @@ export function Projects({
             { id: 'decisions', label: 'Decisões', icon: Lightbulb },
         ];
 
-    const recentItems = recentRepositories.slice(0, 6);
-
-    const openFolderBrowser = () => {
-        setAttachTargetProjectId(null);
-        setBrowserMode('import-repository');
-        setShowBrowser(true);
-    };
-
     async function runGitAction(action: 'stage-all' | 'commit' | 'stage-file' | 'unstage-file' | 'discard-file', path?: string) {
         if (!selectedProject) return;
         if (action === 'commit' && !commitMessage.trim()) {
@@ -603,16 +449,15 @@ export function Projects({
             animate={{ opacity: 1 }}
             className={embedded ? 'w-full' : 'flex-1 w-full max-w-3xl mx-auto p-3 pb-32 sm:p-6'}
         >
-            <div className="mb-6 flex items-center justify-between sm:mb-8">
-                <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Start</h2>
-            </div>
-
-            {showWorkspaceHint && (
-                <div className="bento-card py-8 text-center space-y-2">
-                    <Building2 className="size-8 text-border mx-auto" />
+            <div className="bento-card py-8 text-center space-y-3">
+                <Building2 className="size-8 text-border mx-auto" />
+                <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Nenhum repositório selecionado</h2>
+                {showWorkspaceHint ? (
                     <p className="text-sm text-text-dim">Nenhum workspace ativo. Use o seletor de repositórios no appbar para importar uma pasta.</p>
-                </div>
-            )}
+                ) : (
+                    <p className="text-sm text-text-dim">Selecione um repositório real no seletor do appbar para carregar arquivos, Git e contexto.</p>
+                )}
+            </div>
         </motion.div>
     );
 
@@ -669,85 +514,6 @@ export function Projects({
                                     className="flex-1 rounded-lg bg-accent/20 border border-accent/40 px-4 py-2 text-xs font-bold text-accent hover:bg-accent/30 transition-colors disabled:opacity-50"
                                 >
                                     {submitting ? 'Creating…' : 'Open as Workspace'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {editingProject && (
-                    <motion.div
-                        key="edit-project-modal-overlay"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 backdrop-blur-sm p-4"
-                        onClick={(e) => { if (e.target === e.currentTarget) setEditingProject(null); }}
-                    >
-                        <motion.div
-                            key="edit-project-modal"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bento-card w-full max-w-md space-y-4"
-                        >
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold">Editar Repositório</h3>
-                                <button
-                                    onClick={() => setEditingProject(null)}
-                                    className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
-                                >
-                                    <X className="size-4" />
-                                </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="label-caps block mb-1">Nome</label>
-                                    <input
-                                        type="text"
-                                        value={editForm.name}
-                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label-caps block mb-1">Descrição</label>
-                                    <textarea
-                                        value={editForm.description}
-                                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors min-h-20"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="label-caps block mb-1">Status</label>
-                                    <select
-                                        value={editForm.status}
-                                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors"
-                                    >
-                                        <option value="active">Ativo</option>
-                                        <option value="archived">Arquivado</option>
-                                        <option value="inactive">Inativo</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 pt-2">
-                                <button
-                                    onClick={() => setEditingProject(null)}
-                                    className="flex-1 rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dim hover:text-text transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={handleEdit}
-                                    disabled={submitting}
-                                    className="flex-1 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
-                                >
-                                    {submitting ? 'Salvando…' : 'Salvar alterações'}
                                 </button>
                             </div>
                         </motion.div>
