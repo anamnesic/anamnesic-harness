@@ -85,7 +85,7 @@ interface OpenVsxExtensionResponse {
 function toNormalizedEntry(raw: any): OpenVsxSearchEntry {
     const namespace = String(raw?.namespace ?? '').trim();
     const name = String(raw?.name ?? '').trim();
-    const displayName = String(raw?.displayName ?? name || '').trim();
+    const displayName = String((raw?.displayName ?? name) || '').trim();
 
     return {
         id: `${namespace}.${name}`.toLowerCase(),
@@ -113,7 +113,7 @@ function toNormalizedEntry(raw: any): OpenVsxSearchEntry {
 function toNormalizedDetail(raw: OpenVsxExtensionResponse): OpenVsxExtensionDetail {
     const namespace = String(raw?.namespace ?? '').trim();
     const name = String(raw?.name ?? '').trim();
-    const displayName = String(raw?.displayName ?? name || '').trim();
+    const displayName = String((raw?.displayName ?? name) || '').trim();
 
     return {
         id: `${namespace}.${name}`.toLowerCase(),
