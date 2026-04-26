@@ -60,7 +60,12 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         setRepositoryById,
         refreshRepositories,
     } = useRepository();
-    const projectsPath = workspace?.id ? `/api/v1/projects?workspaceId=${workspace.id}&refresh=${refreshToken}` : null;
+    const projectsQuery = new URLSearchParams();
+    if (workspace?.id) {
+        projectsQuery.set('workspaceId', workspace.id);
+    }
+    projectsQuery.set('refresh', String(refreshToken));
+    const projectsPath = `/api/v1/projects?${projectsQuery.toString()}`;
     const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
 
@@ -588,15 +593,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         </>
     );
 
-    if (!workspace) {
-        return (
-            <>
-                {renderRepositoryStartScreen({ showWorkspaceHint: true })}
-                {renderSharedModals()}
-            </>
-        );
-    }
-
     if (selectedProject) {
         return (
             <>
@@ -729,7 +725,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
 
     return (
         <div className={embedded ? 'w-full' : 'flex-1'}>
-            {renderRepositoryStartScreen({ showWorkspaceHint: false })}
+            {renderRepositoryStartScreen({ showWorkspaceHint: !workspace })}
             {renderSharedModals()}
         </div>
     );

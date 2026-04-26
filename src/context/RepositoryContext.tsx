@@ -56,18 +56,14 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshRepositories = async () => {
-    if (!workspace?.id) {
-      setRepositories([]);
-      setRepository(null);
-      setSavedRepositoryId(null);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       setIsLoading(true);
+      const endpoint = workspace?.id
+        ? `/api/v1/projects?workspaceId=${workspace.id}`
+        : '/api/v1/projects';
+
       const response = await apiFetch<{ items?: Repository[]; data?: Repository[] }>(
-        `/api/v1/projects?workspaceId=${workspace.id}`,
+        endpoint,
       );
 
       const items = Array.isArray(response as unknown as Repository[])
