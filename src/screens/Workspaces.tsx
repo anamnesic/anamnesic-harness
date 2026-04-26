@@ -74,7 +74,7 @@ interface ApiResponse<T> {
 export function Workspaces() {
     const { data, loading, refetch } = useApi<ApiResponse<Workspace[]>>('/api/v1/workspaces');
     const { toast } = useToast();
-    const { refreshWorkspaces, setWorkspace } = useWorkspace();
+    const { workspace, refreshWorkspaces, setWorkspace } = useWorkspace();
 
     const [showCreate, setShowCreate] = useState(false);
     const [editing, setEditing] = useState<Workspace | null>(null);
@@ -167,13 +167,40 @@ export function Workspaces() {
         return folderPath.split(/[\\/]/).filter(Boolean).pop() || 'workspace';
     }
 
+    async function ensureTargetWorkspace(baseName: string): Promise<Workspace> {
+        if (workspace?.id) {
+            return workspace;
+        }
+
+        const createdWorkspace = await apiFetch<ApiResponse<Workspace>>('/api/v1/workspaces', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: baseName,
+                slug: slugify(baseName),
+                description: 'Workspace criado automaticamente para receber um repositório importado',
+            }),
+        });
+
+        const nextWorkspace = createdWorkspace.data;
+        if (!nextWorkspace) {
+            throw new Error('Falha ao criar um workspace para o repositório');
+        }
+
+        setWorkspace(nextWorkspace);
+        await Promise.all([refetch(), refreshWorkspaces()]);
+        return nextWorkspace;
+    }
+
     async function handleWorkspaceFolderSelected(folderPath: string) {
         const folderName = buildFolderName(folderPath);
         setShowFolderBrowser(false);
         setSubmitting(true);
         try {
+            const targetWorkspace = await ensureTargetWorkspace(folderName);
+
             await apiFetch('/api/v1/projects', {
                 method: 'POST',
+                headers: { 'X-Workspace-Id': targetWorkspace.id },
                 body: JSON.stringify({ name: folderName, localPath: folderPath }),
             });
             toast(`A pasta selecionada virou o repositório "${folderName}"`, 'success');
@@ -192,9 +219,11 @@ export function Workspaces() {
                     const singleRepoName = gitSubfolders[0];
                     const separator = folderPath.includes('\\') ? '\\' : '/';
                     const singleRepoPath = `${folderPath.replace(/[\\/]$/, '')}${separator}${singleRepoName}`;
+                    const targetWorkspace = await ensureTargetWorkspace(folderName);
 
                     await apiFetch('/api/v1/projects', {
                         method: 'POST',
+                        headers: { 'X-Workspace-Id': targetWorkspace.id },
                         body: JSON.stringify({ name: singleRepoName, localPath: singleRepoPath }),
                     });
 

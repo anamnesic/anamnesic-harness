@@ -5,6 +5,10 @@ import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
 import { getWorkspaceId } from '@/app/api/_lib/workspace';
 
+function isUuid(value: string) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 export async function GET(req: NextRequest) {
     try {
         const db = await getDb();
@@ -60,6 +64,7 @@ async function findGitSubfolders(dirPath: string): Promise<string[]> {
 export async function POST(req: NextRequest) {
     try {
         const workspaceId = getWorkspaceId(req);
+        const normalizedWorkspaceId = isUuid(workspaceId) ? workspaceId : null;
         const body = await req.json();
         if (!body.name) return err('VALIDATION_ERROR', 'name is required', 400);
 
@@ -104,7 +109,7 @@ export async function POST(req: NextRequest) {
         const repo = db.getRepository(Project);
         const existing = await repo.findOne({ where: { id: project.id } });
         if (existing) {
-            existing.workspaceId = workspaceId;
+            existing.workspaceId = normalizedWorkspaceId;
 
             if (localPath) {
                 existing.metadata = { ...(existing.metadata || {}), localPath };
