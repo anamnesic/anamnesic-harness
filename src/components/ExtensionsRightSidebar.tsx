@@ -71,6 +71,13 @@ interface ExtensionCompatibilityManifest {
     settings: string[];
 }
 
+interface ExtensionUiRuntime {
+    extensionId: string;
+    available: boolean;
+    reason?: string | null;
+    renderUrl?: string;
+}
+
 interface McpExtension {
     id: string;
     title: string;
@@ -240,6 +247,23 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
     const selectedCompatibilityManifest = useMemo(
         () => selectedCompatibilityData?.data?.compatibility?.manifest ?? null,
         [selectedCompatibilityData],
+    );
+
+    const selectedUiRuntimeUrl = useMemo(() => {
+        if (!selectedExtension) {
+            return null;
+        }
+        return `/api/v1/extensions/open-vsx/${selectedExtension.namespace}/${selectedExtension.name}/ui`;
+    }, [selectedExtension]);
+
+    const {
+        data: selectedUiRuntimeData,
+        loading: selectedUiRuntimeLoading,
+    } = useApi<{ data?: ExtensionUiRuntime } | null>(selectedUiRuntimeUrl);
+
+    const selectedUiRuntime = useMemo(
+        () => selectedUiRuntimeData?.data ?? null,
+        [selectedUiRuntimeData],
     );
 
     const selectedReadmeUrl = useMemo(() => {
@@ -693,7 +717,25 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                         <div className="rounded-xl border border-border bg-bg/50 p-4">
                             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Tela real da extensao instalada</p>
                             <h4 className="mt-2 text-sm font-black text-highlight">{selectedExtension.displayName}</h4>
-                            <p className="mt-2 text-xs text-text-dim">Esta visualizacao e gerada pelo manifesto real da VSIX instalada no Kairos.</p>
+                            <p className="mt-2 text-xs text-text-dim">O Kairos tenta carregar a interface original da VSIX instalada, no mesmo estilo de uso da extensao no VS Code.</p>
+
+                            <div className="mt-3 rounded-lg border border-border/70 bg-card/60 p-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Runtime da interface</p>
+                                {selectedUiRuntimeLoading ? (
+                                    <p className="mt-1 text-xs text-text-dim">Detectando UI da extensao instalada...</p>
+                                ) : selectedUiRuntime?.available && selectedUiRuntime.renderUrl ? (
+                                    <div className="mt-2 overflow-hidden rounded-lg border border-border/70 bg-bg/50">
+                                        <iframe
+                                            src={selectedUiRuntime.renderUrl}
+                                            title={`ui-${selectedExtension.id}`}
+                                            className="h-105 w-full bg-bg"
+                                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                                        />
+                                    </div>
+                                ) : (
+                                    <p className="mt-1 text-xs text-rose-300">{selectedUiRuntime?.reason ?? 'A interface nativa desta extensao nao foi detectada na VSIX instalada.'}</p>
+                                )}
+                            </div>
 
                             <div className="mt-3 rounded-lg border border-border/70 bg-card/60 p-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Compatibilidade Kairos</p>
