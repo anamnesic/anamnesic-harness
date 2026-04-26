@@ -337,18 +337,24 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
-  const { data: availability } = useApi<{ data?: { availableCli?: string[] } } | { availableCli?: string[] }>('/api/v1/system/ai-availability');
+  const { data: openVsxInstalled } = useApi<{ data?: { extensions?: Array<string | { id?: string; identifier?: string }> } } | Array<string | { id?: string; identifier?: string }> | null>('/api/v1/extensions/open-vsx/installed');
 
   const installedExtensionIds = useMemo(() => {
-    const payload = (availability as { data?: { availableCli?: string[] } } | null)?.data
-      ? (availability as { data?: { availableCli?: string[] } }).data
-      : (availability as { availableCli?: string[] } | null);
+    const payload = (openVsxInstalled as { data?: { extensions?: Array<string | { id?: string; identifier?: string }> } } | null)?.data
+      ? (openVsxInstalled as { data?: { extensions?: Array<string | { id?: string; identifier?: string }> } }).data?.extensions ?? []
+      : (Array.isArray(openVsxInstalled) ? openVsxInstalled : []);
 
-    const availableCli = payload?.availableCli ?? [];
-    const normalized = availableCli.map((name) => (name === 'claude-code' ? 'claude-code' : name.toLowerCase()));
+    const normalized = payload
+      .map((entry) => {
+        if (typeof entry === 'string') {
+          return entry.toLowerCase();
+        }
+        return (entry.id ?? entry.identifier ?? '').toLowerCase();
+      })
+      .filter((id) => id.length > 0);
 
-    return Array.from(new Set([...normalized, 'webhooks']));
-  }, [availability]);
+    return Array.from(new Set(normalized));
+  }, [openVsxInstalled]);
 
   const config = useScreenConfig(
     activeTab,

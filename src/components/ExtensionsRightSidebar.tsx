@@ -13,11 +13,15 @@ interface MarketplaceExtension {
     publisher: string;
     description: string;
     recommended?: boolean;
-    hasTab: boolean;
-    hostTab: HostTabId;
     openVsxUrl: string;
-    commandHint: string;
-    accentClass: string;
+}
+
+interface OpenVsxTabExtension {
+    id: string;
+    title: string;
+    description: string;
+    hostTab: HostTabId;
+    icon: LucideIcon;
 }
 
 interface McpExtension {
@@ -29,63 +33,61 @@ interface McpExtension {
 
 const MARKET_EXTENSIONS: MarketplaceExtension[] = [
     {
-        id: 'claude-code',
-        title: 'Claude Code',
-        publisher: 'Anthropic',
-        description: 'Integra o runtime Claude CLI para tarefas assistidas por terminal.',
+        id: 'eclipse-cdt.cdt-gdb-vscode',
+        title: 'C/C++ GDB Debug',
+        publisher: 'Eclipse CDT',
+        description: 'Depuração para projetos C/C++ com integração GDB em ambientes compatíveis.',
         recommended: true,
-        hasTab: true,
-        hostTab: 'terminal',
-        openVsxUrl: 'https://open-vsx.org/?search=claude',
-        commandHint: 'claude',
-        accentClass: 'text-orange-400 border-orange-400/30 bg-orange-400/10',
+        openVsxUrl: 'https://open-vsx.org/extension/eclipse-cdt/cdt-gdb-vscode',
     },
     {
-        id: 'gemini',
-        title: 'Gemini CLI',
-        publisher: 'Google',
-        description: 'Permite execução de prompts e automações via Gemini no painel de terminal.',
+        id: 'redhat.vscode-yaml',
+        title: 'YAML',
+        publisher: 'Red Hat',
+        description: 'Validação e autocomplete YAML com suporte a schemas.',
         recommended: true,
-        hasTab: true,
-        hostTab: 'terminal',
-        openVsxUrl: 'https://open-vsx.org/?search=gemini',
-        commandHint: 'gemini',
-        accentClass: 'text-sky-400 border-sky-400/30 bg-sky-400/10',
+        openVsxUrl: 'https://open-vsx.org/extension/redhat/vscode-yaml',
     },
     {
-        id: 'copilot',
-        title: 'Copilot CLI',
-        publisher: 'GitHub',
-        description: 'Conecta automação orientada por comandos com backend do Copilot CLI.',
+        id: 'ms-python.python',
+        title: 'Python',
+        publisher: 'Microsoft',
+        description: 'Suporte completo para Python com linting, debugging e ambientes virtuais.',
         recommended: true,
-        hasTab: true,
-        hostTab: 'terminal',
-        openVsxUrl: 'https://open-vsx.org/?search=copilot',
-        commandHint: 'copilot',
-        accentClass: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
+        openVsxUrl: 'https://open-vsx.org/extension/ms-python/python',
     },
     {
-        id: 'codex',
-        title: 'Codex CLI',
-        publisher: 'OpenAI',
-        description: 'Canal de execução para tarefas de engenharia com o adaptador Codex.',
+        id: 'esbenp.prettier-vscode',
+        title: 'Prettier',
+        publisher: 'Prettier',
+        description: 'Formatação opinativa para JS/TS/JSON/Markdown e outros formatos.',
         recommended: true,
-        hasTab: true,
-        hostTab: 'terminal',
-        openVsxUrl: 'https://open-vsx.org/?search=codex',
-        commandHint: 'codex',
-        accentClass: 'text-fuchsia-400 border-fuchsia-400/30 bg-fuchsia-400/10',
+        openVsxUrl: 'https://open-vsx.org/extension/esbenp/prettier-vscode',
     },
     {
-        id: 'webhooks',
-        title: 'Webhooks',
-        publisher: 'Kairos',
-        description: 'Extensão de integração para saída em Slack, Discord e endpoints customizados.',
-        hasTab: true,
+        id: 'dbaeumer.vscode-eslint',
+        title: 'ESLint',
+        publisher: 'Dirk Baeumer',
+        description: 'Análise estática JavaScript/TypeScript com correções rápidas.',
+        recommended: true,
+        openVsxUrl: 'https://open-vsx.org/extension/dbaeumer/vscode-eslint',
+    },
+];
+
+const OPEN_VSX_TAB_EXTENSIONS: OpenVsxTabExtension[] = [
+    {
+        id: 'kairos.integrations',
+        title: 'Kairos Integrations',
+        description: 'Integração Open VSX para configurar e operar conectores do Kairos.',
         hostTab: 'integrations',
-        openVsxUrl: 'https://open-vsx.org/?search=webhook',
-        commandHint: 'configure /api/v1/integrations',
-        accentClass: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
+        icon: PlugZap,
+    },
+    {
+        id: 'kairos.terminal-tools',
+        title: 'Kairos Terminal Tools',
+        description: 'Extensão Open VSX do Kairos para fluxo de terminal integrado.',
+        hostTab: 'terminal',
+        icon: Bot,
     },
 ];
 
@@ -140,7 +142,7 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
     });
 
     const installedWithTab = useMemo(
-        () => MARKET_EXTENSIONS.filter((extension) => extension.hasTab && installedSet.has(extension.id)),
+        () => OPEN_VSX_TAB_EXTENSIONS.filter((extension) => installedSet.has(extension.id)),
         [installedSet],
     );
 
@@ -148,7 +150,7 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         const extensionTabs: SidebarTab[] = installedWithTab.map((extension) => ({
             id: `ext:${extension.id}`,
             label: extension.title,
-            icon: extension.hostTab === 'terminal' ? Bot : PlugZap,
+            icon: extension.icon,
             extensionId: extension.id,
         }));
         return [{ id: 'market', label: 'Market', icon: Store }, ...extensionTabs];
@@ -167,7 +169,7 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
             return null;
         }
         const extensionId = activeTab.replace('ext:', '');
-        return MARKET_EXTENSIONS.find((extension) => extension.id === extensionId) ?? null;
+        return OPEN_VSX_TAB_EXTENSIONS.find((extension) => extension.id === extensionId) ?? null;
     }, [activeTab]);
 
     const openVsxSearchUrl = useMemo(() => {
@@ -279,22 +281,21 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                                     <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
                                                     <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.publisher}</p>
                                                 </div>
-                                                <span className={cn('rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider', extension.accentClass)}>
+                                                    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
                                                     Instalada
                                                 </span>
                                             </div>
                                             <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
                                             <div className="mt-3 flex items-center justify-between gap-2">
-                                                <button
-                                                    onClick={() => onNavigate(extension.hostTab)}
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
-                                                >
-                                                    {extension.hostTab === 'terminal' ? <TerminalSquare className="size-3.5" /> : <PlugZap className="size-3.5" />}
-                                                    Abrir aba
-                                                </button>
-                                                <span className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-dim">
-                                                    {extension.commandHint}
-                                                </span>
+                                                    <a
+                                                        href={extension.openVsxUrl}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                                    >
+                                                        Ver no Open VSX
+                                                        <ExternalLink className="size-3" />
+                                                    </a>
                                             </div>
                                         </article>
                                     ))}
