@@ -171,7 +171,7 @@ export function Agents({ onNavigate }: AgentsProps) {
     const [newCapabilityPrompt, setNewCapabilityPrompt] = useState('');
 
     const [showTaskModal, setShowTaskModal] = useState(false);
-    const [activeView, setActiveView] = useState<'agents' | 'prompt-engineer' | 'skills'>('agents');
+    const [activeView, setActiveView] = useState<'agents' | 'skills'>('agents');
     const [taskAgent, setTaskAgent] = useState<Agent | null>(null);
     const [taskDescription, setTaskDescription] = useState('');
     const [taskInput, setTaskInput] = useState('{\n  "query": ""\n}');
@@ -509,17 +509,6 @@ export function Agents({ onNavigate }: AgentsProps) {
                     Agentes
                 </button>
                 <button
-                    onClick={() => setActiveView('prompt-engineer')}
-                    className={cn(
-                        'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
-                        activeView === 'prompt-engineer'
-                            ? 'bg-bg text-highlight border border-border'
-                            : 'text-text-dim hover:text-accent'
-                    )}
-                >
-                    Prompt Enginer
-                </button>
-                <button
                     onClick={() => setActiveView('skills')}
                     className={cn(
                         'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
@@ -659,12 +648,12 @@ export function Agents({ onNavigate }: AgentsProps) {
                         </div>
                     )}
                 </>
-            ) : activeView === 'prompt-engineer' ? (
+            ) : (
                 <div className="space-y-4">
                     <div className="bento-card space-y-3">
                         <div className="flex items-center justify-between gap-2">
                             <h3 className="text-base font-bold text-accent">Nova capacidade</h3>
-                            <span className="label-caps !mb-0">Prompt Enginer</span>
+                            <span className="label-caps !mb-0">Skills</span>
                         </div>
 
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -739,25 +728,6 @@ export function Agents({ onNavigate }: AgentsProps) {
                             </div>
                         ))}
                     </div>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {sortedAgents.map((agent) => (
-                        <div key={`${agent.id}-skills`} className="bento-card space-y-3">
-                            <h3 className="text-base font-bold text-accent">{agent.name}</h3>
-                            <p className="text-xs text-text-dim">Skills configuradas para este agente:</p>
-                            <div className="flex flex-wrap gap-1.5">
-                                {(agent.capabilities?.length ? agent.capabilities : ['reasoning']).map((skill) => (
-                                    <span
-                                        key={`${agent.id}-${skill}`}
-                                        className="rounded-md bg-white/5 border border-border px-2 py-0.5 text-[10px] font-semibold text-text-dim uppercase tracking-wider"
-                                    >
-                                        {skill}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
                 </div>
             )}
 
