@@ -378,7 +378,7 @@ export class WorkflowExecutionEngine {
     }
 
     // Topological sort with levels (for parallel execution)
-    const queue: string[] = [];
+    let queue: string[] = [];
     const levels: string[][] = [];
     const currentLevel: string[] = [];
 

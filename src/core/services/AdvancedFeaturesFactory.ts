@@ -336,8 +336,7 @@ export class AdvancedFeaturesFactory {
 }
 
 // Export all service types and interfaces
-export {
-  TaskExecutorService,
+export type {
   SandboxConfig,
   ExecutionContext,
   ExecutionMetrics,
@@ -345,8 +344,9 @@ export {
   SandboxedCode,
 } from './TaskExecutorService';
 
-export {
-  WebSocketServer,
+export { TaskExecutorService } from './TaskExecutorService';
+
+export type {
   WebSocketMessage,
   TaskUpdateMessage,
   AgentStatusMessage,
@@ -354,70 +354,78 @@ export {
   ClientSubscription,
 } from './WebSocketServer';
 
-export {
-  WorkflowExecutionEngine,
-  WorkflowStep,
+export { WebSocketServer } from './WebSocketServer';
+
+export type {
   WorkflowDefinition,
-  StepExecution,
-  WorkflowExecution,
+  StepExecution as WorkflowStepExecution,
   StepResult,
 } from './WorkflowExecutionEngine';
 
-export {
-  AdvancedSecurityAnalysisService,
+export { WorkflowExecutionEngine } from './WorkflowExecutionEngine';
+
+export type {
   Vulnerability,
   AttackVector,
-  SecurityAnalysisResult,
-  SecurityRecommendation,
-  ThreatModel,
 } from './AdvancedSecurityAnalysisService';
 
-export {
-  AttackSimulationFramework,
-  AttackSimulation,
-  AttackPayload,
-  SimulationResult,
-  DetectionEvent,
-  SimulationMetrics,
+export { AdvancedSecurityAnalysisService } from './AdvancedSecurityAnalysisService';
+
+export type {
 } from './AttackSimulationFramework';
 
-// Phase 8 Exports
-export {
+export { AttackSimulationFramework } from './AttackSimulationFramework';
+
+export type {
   PipelineTaskExecutionService,
   TaskDefinition,
   TaskExecutionConfig,
 } from './PipelineTaskExecutionService';
 
-export {
-  StreamingChatService,
-  createStreamingEndpoints,
+export type {
   StreamConfig,
   StreamMessage,
 } from './StreamingChatService';
 
 export {
-  PersistentEventStore,
+  StreamingChatService,
+  createStreamingEndpoints,
+} from './StreamingChatService';
+
+export type {
   EventEntity,
 } from './PersistentEventStore';
 
 export {
-  ChatSyncService,
+  PersistentEventStore,
+} from './PersistentEventStore';
+
+export type {
   SyncStatus,
 } from './ChatSyncService';
 
 export {
-  SafetyNetIntegrationService,
+  ChatSyncService,
+} from './ChatSyncService';
+
+export type {
   PhaseSnapshot,
 } from './SafetyNetIntegrationService';
 
 export {
-  ModelFallbackService,
+  SafetyNetIntegrationService,
+} from './SafetyNetIntegrationService';
+
+export type {
   FallbackStrategy,
   ModelExecutionResult,
 } from './ModelFallbackService';
 
 export {
-  MetricsService,
+  ModelFallbackService,
+} from './ModelFallbackService';
+
+export type {
   ExecutionMetric,
   MetricsSnapshot,
   AgentMetrics,
@@ -425,19 +433,28 @@ export {
 } from './MetricsService';
 
 export {
-  RetentionPolicyService,
+  MetricsService,
+} from './MetricsService';
+
+export type {
   RetentionPolicy,
   CleanupResult,
 } from './RetentionPolicyService';
 
 export {
-  DiagnosticPipelineService,
+  RetentionPolicyService,
+} from './RetentionPolicyService';
+
+export type {
   DiagnosticReason,
   DiagnosticPipeline,
 } from './DiagnosticPipelineService';
 
 export {
-  ParallelWorkflowExecutor,
+  DiagnosticPipelineService,
+} from './DiagnosticPipelineService';
+
+export type {
   WorkflowStep,
   StepStatus,
   StepExecution,
@@ -445,8 +462,10 @@ export {
 } from './ParallelWorkflowExecutor';
 
 export {
-  WorkflowTriggerService,
-  WorkflowTrigger,
+  ParallelWorkflowExecutor,
+} from './ParallelWorkflowExecutor';
+
+export type {
   TriggerType,
   TriggerConfig,
   TriggerExecution,
@@ -454,6 +473,10 @@ export {
   FileTriggerConfig,
   ScheduleTriggerConfig,
   WebhookTriggerConfig,
+} from './WorkflowTriggerService';
+
+export {
+  WorkflowTriggerService,
 } from './WorkflowTriggerService';
 
 export default AdvancedFeaturesFactory;
