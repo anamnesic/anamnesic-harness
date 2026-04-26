@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
@@ -15,7 +15,6 @@ import {
   Lightbulb,
   TrendingUp,
 } from 'lucide-react';
-import { MessageSquare, X, Send, Loader2 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
 import { WorkspaceProvider } from './context/WorkspaceContext';
@@ -41,158 +40,7 @@ import { Login } from './screens/Login';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
 import { TerminalPanel } from './screens/TerminalPanel';
-
-// ── Floating Chat ────────────────────────────────────────────────────────────
-interface ChatMsg { id: string; role: 'user' | 'assistant'; text: string }
-
-function FloatingChat() {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [input, setInput] = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const [streamText, setStreamText] = useState('');
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const scrollBottom = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-
-  const send = useCallback(async () => {
-    if (!input.trim() || streaming) return;
-    const text = input.trim();
-    setInput('');
-    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', text }]);
-    setStreaming(true);
-    setStreamText('');
-    scrollBottom();
-
-    try {
-      const res = await fetch('/api/chat/stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('kairos-token')}`,
-        },
-        body: JSON.stringify({ message: text, channelId: 'float', userId: 'current-user', modelIds: [], interactionMode: 'ask' }),
-      });
-      if (!res.ok || !res.body) throw new Error(`${res.status}`);
-
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let acc = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const lines = dec.decode(value).split('\n');
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const d = JSON.parse(line.slice(6));
-            if (d.type === 'chunk') { acc += d.content ?? ''; setStreamText(acc); scrollBottom(); }
-            if (d.type === 'end') {
-              setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', text: acc }]);
-              setStreamText('');
-            }
-          } catch { /* ignore */ }
-        }
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erro';
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', text: `⚠ ${msg}` }]);
-    } finally {
-      setStreaming(false);
-      scrollBottom();
-    }
-  }, [input, streaming]);
-
-  return (
-    <>
-      {/* FAB */}
-      <button
-        onClick={() => { setOpen(o => !o); setTimeout(() => inputRef.current?.focus(), 100); }}
-        className="fixed bottom-24 right-4 z-200 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110 active:scale-95"
-        title="Chat IA"
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          {open
-            ? <motion.span key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}><X className="size-5" /></motion.span>
-            : <motion.span key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}><MessageSquare className="size-5" /></motion.span>
-          }
-        </AnimatePresence>
-      </button>
-
-      {/* Panel */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.96 }}
-            transition={{ duration: 0.2 }}
-            className="fixed bottom-40 right-4 z-199 flex w-80 flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
-            style={{ maxHeight: '28rem' }}
-          >
-            {/* Header */}
-            <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-              <MessageSquare className="size-4 text-primary" />
-              <span className="text-xs font-black uppercase tracking-widest text-text-dim">Chat IA</span>
-              <button onClick={() => setOpen(false)} className="ml-auto text-text-dim hover:text-accent transition-colors">
-                <X className="size-3.5" />
-              </button>
-            </div>
-
-            {/* Messages */}
-            <div className="scrollbar-kairos flex-1 overflow-y-auto p-3 space-y-3 min-h-0" style={{ minHeight: '12rem' }}>
-              {messages.length === 0 && !streaming && (
-                <p className="text-center text-xs italic text-text-dim pt-4">Como posso ajudar?</p>
-              )}
-              {messages.map(m => (
-                <div key={m.id} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
-                  <div className={cn('max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap wrap-break-word',
-                    m.role === 'user' ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-bg border border-border text-highlight rounded-bl-sm')}>
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-              {streaming && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-border bg-bg px-3 py-2 text-xs text-highlight">
-                    {streamText
-                      ? <span className="whitespace-pre-wrap wrap-break-word">{streamText}</span>
-                      : <Loader2 className="size-3 animate-spin text-accent" />}
-                  </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-
-            {/* Input */}
-            <div className="border-t border-border px-3 py-2">
-              <div className="flex items-end gap-2">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                  disabled={streaming}
-                  rows={2}
-                  placeholder="Digite uma mensagem…"
-                  className="scrollbar-kairos flex-1 resize-none rounded bg-transparent text-xs text-highlight placeholder:text-text-dim/50 focus:outline-none disabled:opacity-50"
-                />
-                <button
-                  onClick={send}
-                  disabled={!input.trim() || streaming}
-                  className="mb-0.5 shrink-0 text-primary transition-colors hover:text-accent disabled:opacity-30"
-                >
-                  {streaming ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  );
-}
+import { TerminalPanel as ChatPanel } from './screens/ChatPanel';
 
 const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   title: string;
@@ -352,7 +200,17 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'snapshots':
       return { title: 'Snapshots', subtitle: 'Estado em um ponto no tempo', element: <Snapshots />, onBack: goHome, rightElement: undefined };
     case 'chat':
-      return { title: 'Chat', subtitle: 'Assistente de IA', element: <div className="flex-1 flex items-center justify-center text-text-dim text-sm">Chat integrado no terminal lateral</div>, onBack: goHome, rightElement: undefined };
+      return {
+        title: 'Chat',
+        subtitle: 'Assistente de IA',
+        element: (
+          <div className="flex-1 p-4">
+            <ChatPanel />
+          </div>
+        ),
+        onBack: goHome,
+        rightElement: undefined,
+      };
     case 'agents':
       return { title: 'Agentes', subtitle: 'Registro de agentes', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
     case 'tasks':
@@ -446,7 +304,6 @@ function AppContent() {
             {/* Right Sidebar - Terminal */}
             <TerminalPanel />
           </div>
-          {activeTab === 'chat' && <FloatingChat />}
         </ToastProvider>
       </RepositoryProvider>
     </WorkspaceProvider>
