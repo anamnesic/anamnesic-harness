@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { Blocks, ExternalLink, Search, ServerCog, ChevronDown } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { useApi } from '../lib/api';
+import { apiFetch, useApi } from '../lib/api';
+import { useToast } from './Toast';
 
 interface OpenVsxExtension {
     id: string;
@@ -17,6 +18,19 @@ interface OpenVsxExtension {
     files?: {
         icon?: string;
     };
+}
+
+interface InstalledOpenVsxExtension {
+    id: string;
+    namespace: string;
+    name: string;
+    version: string;
+    displayName: string;
+    description: string;
+    installedAt: string;
+    verified: boolean;
+    downloadUrl?: string;
+    iconUrl?: string;
 }
 
 interface McpSeed {
@@ -55,9 +69,12 @@ function matchesSearchTerm(text: string, query: string): boolean {
 }
 
 export function McpScreen() {
+    const { toast } = useToast();
     const [query, setQuery] = useState('');
+    const [busyId, setBusyId] = useState<string | null>(null);
     const [openSections, setOpenSections] = useState({
         catalog: true,
+        installed: true,
         recommended: true,
     });
 
@@ -70,6 +87,12 @@ export function McpScreen() {
     }, [query]);
 
     const { data: mcpData, loading: mcpLoading } = useApi<{ data?: { extensions?: OpenVsxExtension[] } } | null>(mcpSearchUrl);
+
+    const {
+        data: installedData,
+        loading: installedLoading,
+        refetch: refetchInstalled,
+    } = useApi<{ data?: { extensions?: InstalledOpenVsxExtension[] } } | null>('/api/v1/extensions/open-vsx/installed');
 
     const discovered = useMemo(
         () => (mcpData?.data?.extensions ?? []).filter((ext) => !ext.deprecated),
@@ -86,13 +109,58 @@ export function McpScreen() {
         [discovered, query],
     );
 
+    const installedMcp = useMemo(() => {
+        const installed = installedData?.data?.extensions ?? [];
+        return installed.filter((item) => {
+            const haystack = `${item.id} ${item.displayName} ${item.description}`.toLowerCase();
+            return haystack.includes('mcp') || haystack.includes('model context protocol');
+        });
+    }, [installedData]);
+
+    const installedSet = useMemo(
+        () => new Set(installedMcp.map((item) => item.id.toLowerCase())),
+        [installedMcp],
+    );
+
     const openVsxQueryUrl = useMemo(() => {
         const encoded = encodeURIComponent(`mcp ${query}`.trim());
         return `https://open-vsx.org/?search=${encoded}`;
     }, [query]);
 
-    function toggleSection(section: 'catalog' | 'recommended') {
+    function toggleSection(section: 'catalog' | 'installed' | 'recommended') {
         setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+    }
+
+    async function handleInstall(namespace: string, name: string, id: string) {
+        setBusyId(id);
+        try {
+            await apiFetch('/api/v1/extensions/open-vsx/install', {
+                method: 'POST',
+                body: JSON.stringify({ namespace, name }),
+            });
+            await refetchInstalled();
+            toast('Conector MCP instalado', 'success');
+        } catch (e: any) {
+            toast(e?.message ?? 'Falha ao instalar conector MCP', 'error');
+        } finally {
+            setBusyId(null);
+        }
+    }
+
+    async function handleUninstall(id: string) {
+        setBusyId(id);
+        try {
+            await apiFetch('/api/v1/extensions/open-vsx/uninstall', {
+                method: 'POST',
+                body: JSON.stringify({ id }),
+            });
+            await refetchInstalled();
+            toast('Conector MCP removido', 'success');
+        } catch (e: any) {
+            toast(e?.message ?? 'Falha ao remover conector MCP', 'error');
+        } finally {
+            setBusyId(null);
+        }
     }
 
     return (
@@ -162,6 +230,51 @@ export function McpScreen() {
             <div className="rounded-xl border border-border bg-card/30">
                 <button
                     type="button"
+                    onClick={() => toggleSection('installed')}
+                    className="flex w-full items-center justify-between px-4 py-3 text-[10px] font-black uppercase tracking-widest text-highlight"
+                >
+                    <span>Instalados no Kairos ({installedMcp.length})</span>
+                    <ChevronDown className={cn('size-4 transition-transform', openSections.installed && 'rotate-180')} />
+                </button>
+                {openSections.installed && (
+                    <div className="grid gap-3 border-t border-border/60 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {installedLoading ? (
+                            <p className="text-xs text-text-dim">Carregando conectores MCP instalados...</p>
+                        ) : installedMcp.length === 0 ? (
+                            <p className="text-xs text-text-dim">Nenhum conector MCP instalado.</p>
+                        ) : installedMcp.map((item) => (
+                            <article key={item.id} className="rounded-lg border border-border bg-bg/50 p-3">
+                                <div className="flex items-center gap-2">
+                                    {item.iconUrl ? (
+                                        <img src={item.iconUrl} alt={item.displayName} className="size-4 rounded-sm object-cover" />
+                                    ) : (
+                                        <ServerCog className="size-4 text-primary" />
+                                    )}
+                                    <h3 className="text-sm font-bold text-highlight">{item.displayName}</h3>
+                                </div>
+                                <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-text-dim">{item.namespace}</p>
+                                <p className="mt-2 text-xs text-text-dim">{item.description}</p>
+                                <div className="mt-3 flex items-center gap-2">
+                                    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                                        Instalado
+                                    </span>
+                                    <button
+                                        onClick={() => void handleUninstall(item.id)}
+                                        disabled={busyId === item.id}
+                                        className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
+                                    >
+                                        {busyId === item.id ? 'Removendo...' : 'Remover'}
+                                    </button>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="rounded-xl border border-border bg-card/30">
+                <button
+                    type="button"
                     onClick={() => toggleSection('recommended')}
                     className="flex w-full items-center justify-between px-4 py-3 text-[10px] font-black uppercase tracking-widest text-highlight"
                 >
@@ -186,15 +299,34 @@ export function McpScreen() {
                                 </div>
                                 <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-text-dim">{item.namespace}</p>
                                 <p className="mt-2 text-xs text-text-dim">{item.description}</p>
-                                <a
-                                    href={`https://open-vsx.org/extension/${item.namespace}/${item.name}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                >
-                                    Abrir no Open VSX
-                                    <ExternalLink className="size-3" />
-                                </a>
+                                <div className="mt-3 flex items-center gap-2">
+                                    <a
+                                        href={`https://open-vsx.org/extension/${item.namespace}/${item.name}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                    >
+                                        Open VSX
+                                        <ExternalLink className="size-3" />
+                                    </a>
+                                    {installedSet.has(item.id.toLowerCase()) ? (
+                                        <button
+                                            onClick={() => void handleUninstall(item.id)}
+                                            disabled={busyId === item.id}
+                                            className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
+                                        >
+                                            {busyId === item.id ? 'Removendo...' : 'Remover'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => void handleInstall(item.namespace, item.name, item.id)}
+                                            disabled={busyId === item.id}
+                                            className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60 disabled:opacity-60"
+                                        >
+                                            {busyId === item.id ? 'Instalando...' : 'Instalar'}
+                                        </button>
+                                    )}
+                                </div>
                             </article>
                         ))}
                     </div>
