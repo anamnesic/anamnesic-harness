@@ -62,6 +62,11 @@ export function Projects() {
         gitSubfolders: [],
     });
 
+    function joinSubfolder(basePath: string, subfolder: string) {
+        const separator = basePath.includes('\\') ? '\\' : '/';
+        return `${basePath.replace(/[\\/]$/, '')}${separator}${subfolder}`;
+    }
+
     async function handleFolderSelected(folderPath: string) {
         const base = folderPath.split(/[\\/]/).filter(Boolean).pop() || 'Project';
         setShowBrowser(false);
@@ -75,12 +80,33 @@ export function Projects() {
             refetch();
         } catch (e: any) {
             // Check if it's a NO_GIT_REPO error with git subfolders
-            if (e?.code === 'NO_GIT_REPO' && e?.details?.gitSubfolders?.length > 0) {
+            if (e?.code === 'NO_GIT_REPO') {
+                const gitSubfolders: string[] = e?.details?.gitSubfolders ?? [];
+
+                if (gitSubfolders.length === 1) {
+                    const singleRepoName = gitSubfolders[0];
+                    const singleRepoPath = joinSubfolder(folderPath, singleRepoName);
+
+                    await apiFetch('/api/v1/projects', {
+                        method: 'POST',
+                        body: JSON.stringify({ name: singleRepoName, localPath: singleRepoPath }),
+                    });
+
+                    toast(`A pasta tem 1 repositório Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
+                    refetch();
+                    return;
+                }
+
+                if (gitSubfolders.length === 0) {
+                    toast('Esta pasta não tem repositório Git e não pode ser selecionada.', 'error');
+                    return;
+                }
+
                 setNoGitDialog({
                     open: true,
                     folderPath,
                     folderName: base,
-                    gitSubfolders: e.details.gitSubfolders,
+                    gitSubfolders,
                 });
                 setSubmitting(false);
                 return;
@@ -426,7 +452,7 @@ export function Projects() {
                                     <textarea
                                         value={editForm.description}
                                         onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors min-h-[80px]"
+                                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors min-h-20"
                                     />
                                 </div>
                                 <div>
