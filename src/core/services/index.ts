@@ -83,6 +83,14 @@ export {
 	type OptimizationSuggestion,
 	type OptimizationDecision,
 } from './SelfOptimizationService';
+export {
+	BenchmarkInterpretationService,
+	type BenchmarkInterpretationServiceOptions,
+	type BenchmarkInterpretationResult,
+	type BenchmarkInterpretation,
+	type RoutingRule,
+	type BenchmarkRoutingTaskType,
+} from './BenchmarkInterpretationService';
 
 export { PersistentEventBus } from '../events/PersistentEventBus';
 export { ChatSyncService } from './ChatSyncService';

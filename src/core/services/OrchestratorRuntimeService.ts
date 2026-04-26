@@ -16,6 +16,7 @@ import { ExecutionLogService } from './ExecutionLogService';
 import type { TaskType } from '../entities/Task';
 import type { AgentCapability } from '../types/agents';
 import { aiProviderRegistry } from '../providers/AIProvider';
+import { BenchmarkInterpretationService, type RoutingRule } from './BenchmarkInterpretationService';
 
 export interface CreateOrchestratorPlanInput {
   workspaceId: string;
@@ -48,6 +49,7 @@ export class OrchestratorRuntimeService {
   private workflows: WorkflowService;
   private agents: AgentService;
   private logs: ExecutionLogService;
+  private benchmarkInterpretation: BenchmarkInterpretationService;
 
   constructor(private db: DataSource) {
     this.planRepo = db.getRepository(OrchestratorPlanRecord);
@@ -62,9 +64,11 @@ export class OrchestratorRuntimeService {
     this.workflows = new WorkflowService(db);
     this.agents = new AgentService(db);
     this.logs = new ExecutionLogService(db);
+    this.benchmarkInterpretation = BenchmarkInterpretationService.getInstance();
   }
 
   async createPlan(input: CreateOrchestratorPlanInput): Promise<{ plan: OrchestratorPlanRecord; warnings: string[] }> {
+    const routingRecommendation = await this.getRoutingRecommendation(input.request.objective);
     const built = await this.orchestrator.buildPlan(input.request);
     const scopedPolicy: Partial<OrchestratorPolicy> = {
       ...(input.policy || {}),
@@ -95,12 +99,19 @@ export class OrchestratorRuntimeService {
       warnings.push(...evaluated.warnings);
     }
 
+    if (routingRecommendation) {
+      warnings.push(`Routing recommendation: taskType=${routingRecommendation.taskType}, preferredProvider=${routingRecommendation.preferredProvider} (${(routingRecommendation.confidence * 100).toFixed(0)}% confidence).`);
+    }
+
     const persisted = this.planRepo.create({
       workspaceId: input.workspaceId,
       projectId: input.projectId || null,
       createdByUserId: input.createdByUserId || null,
       objective: input.request.objective,
-      requestPayload: input.request as unknown as Record<string, any>,
+      requestPayload: {
+        ...(input.request as unknown as Record<string, any>),
+        routingRecommendation,
+      },
       planPayload: evaluated.plan as unknown as Record<string, any>,
       complexityScore: evaluated.plan.complexityScore,
       reasoningMode: evaluated.plan.reasoningMode,
@@ -128,6 +139,14 @@ export class OrchestratorRuntimeService {
     }));
 
     return { plan: saved, warnings: resolvedWarnings };
+  }
+
+  private async getRoutingRecommendation(objective: string): Promise<RoutingRule | null> {
+    try {
+      return await this.benchmarkInterpretation.recommendForObjective(objective);
+    } catch {
+      return null;
+    }
   }
 
   async getPlan(planId: string): Promise<OrchestratorPlanRecord | null> {

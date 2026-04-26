@@ -202,12 +202,12 @@ Meta de arquitetura:
 
 ### Evolucao desejada
 
-- [ ] Manter benchmark quantitativo atual
-- [ ] Criar `BenchmarkInterpretationService` por CLI
-- [ ] Gerar explicacao de quando usar cada modelo
-- [ ] Gerar politica de roteamento recomendada
-- [ ] Relacionar tipo de tarefa com provider preferencial
-- [ ] Alimentar auto-selection do orchestrator
+- [x] Manter benchmark quantitativo atual
+- [x] Criar `BenchmarkInterpretationService` por CLI
+- [x] Gerar explicacao de quando usar cada modelo
+- [x] Gerar politica de roteamento recomendada
+- [x] Relacionar tipo de tarefa com provider preferencial
+- [x] Alimentar auto-selection do orchestrator
 
 ---
 
