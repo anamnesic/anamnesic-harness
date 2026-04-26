@@ -17,7 +17,8 @@ function isPublicDashboardReadRoute(request: NextRequest, pathname: string): boo
         pathname === '/api/v1/metrics' ||
         pathname === '/api/v1/agents/stats' ||
         pathname === '/api/v1/workflows/stats' ||
-        pathname === '/api/v1/orchestrator/runs'
+        pathname === '/api/v1/orchestrator/runs' ||
+        pathname === '/api/v1/decisions/feed'
     );
 }
 
