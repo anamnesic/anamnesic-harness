@@ -17,7 +17,6 @@ import {
   RotateCw,
   Maximize2,
   Minimize2,
-  Folder,
   FileText,
   GitBranch,
   BookOpen,
@@ -119,57 +118,22 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
 
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
-  { id: 'projects', label: 'Repos', icon: Folder },
+  { id: 'repo-files', label: 'Repo', icon: FileText },
+  { id: 'repo-git', label: 'Git', icon: GitBranch },
+  { id: 'repo-context', label: 'Contexto', icon: BookOpen },
+  { id: 'repo-decisions', label: 'Decisoes', icon: Lightbulb },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'terminal', label: 'Terminal', icon: Terminal },
-  { id: 'decisions', label: 'Decisões', icon: Lightbulb },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
-
-const PROJECT_TABS: Array<{ id: ProjectTabId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-  { id: 'repository', label: 'Repo', icon: FileText },
-  { id: 'git', label: 'Git', icon: GitBranch },
-  { id: 'context', label: 'Contexto', icon: BookOpen },
-  { id: 'decisions', label: 'Decisões', icon: Lightbulb },
-];
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
 type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
-const BottomNav = ({
-  active,
-  onChange,
-  projectTab,
-  onProjectTabChange,
-}: {
-  active: TabId;
-  onChange: (id: TabId) => void;
-  projectTab: ProjectTabId;
-  onProjectTabChange: (id: ProjectTabId) => void;
-}) => (
-  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex w-[calc(100%-3rem)] max-w-xl flex-col gap-2">
-    {active === 'projects' && (
-      <div className="flex w-full gap-1 p-1 bg-card/90 border border-border rounded-2xl backdrop-blur-xl shadow-2xl">
-        {PROJECT_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onProjectTabChange(tab.id)}
-            className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 py-2 rounded-xl transition-all duration-300 text-[10px] font-bold uppercase tracking-wider',
-              projectTab === tab.id
-                ? 'bg-bg text-highlight shadow-sm border border-border'
-                : 'text-text-dim hover:text-accent',
-            )}
-          >
-            <tab.icon className={cn('size-3.5', projectTab === tab.id && 'text-primary')} />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-    )}
-
+const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex w-[calc(100%-3rem)] max-w-xl">
     <div className="flex w-full gap-1 p-1 bg-card/90 border border-border rounded-2xl backdrop-blur-xl shadow-2xl">
       {TABS.map(tab => (
         <button
@@ -223,8 +187,6 @@ function useScreenConfig(
   setActive: (id: TabId) => void,
   terminalHeaderState: TerminalHeaderState | null,
   setTerminalHeaderState: (state: TerminalHeaderState | null) => void,
-  projectTab: ProjectTabId,
-  setProjectTab: (tab: ProjectTabId) => void,
 ) {
   switch (active) {
     case 'dashboard':
@@ -309,12 +271,36 @@ function useScreenConfig(
       return { title: 'Tarefas', subtitle: 'Gerenciamento de tarefas', element: <Tasks />, onBack: goHome, rightElement: undefined };
     case 'workflows':
       return { title: 'Workflows', subtitle: 'Pipelines de automação', element: <Workflows />, onBack: goHome, rightElement: undefined };
-    case 'projects':
+    case 'repo-files':
       return {
-        title: 'Repositórios',
-        subtitle: 'Explorer, Git, Contexto e Decisões',
-        element: <Projects embedded activeTab={projectTab} onTabChange={setProjectTab} hideTabBar />,
-        onBack: goHome,
+        title: 'Repositório',
+        subtitle: 'Explorer de arquivos',
+        element: <Projects embedded activeTab="repository" hideTabBar />,
+        onBack: undefined,
+        rightElement: undefined,
+      };
+    case 'repo-git':
+      return {
+        title: 'Git',
+        subtitle: 'Source control do repositório',
+        element: <Projects embedded activeTab="git" hideTabBar />,
+        onBack: undefined,
+        rightElement: undefined,
+      };
+    case 'repo-context':
+      return {
+        title: 'Contexto',
+        subtitle: 'Documentação do projeto',
+        element: <Projects embedded activeTab="context" hideTabBar />,
+        onBack: undefined,
+        rightElement: undefined,
+      };
+    case 'repo-decisions':
+      return {
+        title: 'Decisões',
+        subtitle: 'Registro de decisões do repositório',
+        element: <Projects embedded activeTab="decisions" hideTabBar />,
+        onBack: undefined,
         rightElement: undefined,
       };
     case 'decisions':
@@ -347,7 +333,6 @@ function useScreenConfig(
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-  const [projectTab, setProjectTab] = useState<ProjectTabId>('repository');
   const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
   const config = useScreenConfig(
@@ -356,8 +341,6 @@ function AppContent() {
     setActiveTab,
     terminalHeaderState,
     setTerminalHeaderState,
-    projectTab,
-    setProjectTab,
   );
 
   if (isLoading) {
@@ -401,12 +384,7 @@ function AppContent() {
                   </motion.div>
                 </AnimatePresence>
               </main>
-              <BottomNav
-                active={activeTab}
-                onChange={setActiveTab}
-                projectTab={projectTab}
-                onProjectTabChange={setProjectTab}
-              />
+              <BottomNav active={activeTab} onChange={setActiveTab} />
             </div>
           </div>
         </ToastProvider>
