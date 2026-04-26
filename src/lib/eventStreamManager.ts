@@ -60,7 +60,7 @@ class EventStreamManager {
         this.shouldReconnect = true;
 
         try {
-            this.source = new EventSource(this.url);
+            this.source = new EventSource(this.buildUrl());
 
             this.source.onopen = () => {
                 this.isConnected = true;
@@ -89,6 +89,24 @@ class EventStreamManager {
             console.error('[SSE] Connection error:', err);
             this.scheduleReconnect();
         }
+    }
+
+    private buildUrl(): string {
+        if (typeof window === 'undefined') {
+            return this.url;
+        }
+
+        const token = localStorage.getItem('kairos-token');
+        const workspaceId = localStorage.getItem('kairos-selected-workspace');
+        const projectId = localStorage.getItem('kairos-selected-repository');
+
+        const params = new URLSearchParams();
+        if (token) params.set('token', token);
+        if (workspaceId) params.set('workspaceId', workspaceId);
+        if (projectId) params.set('projectId', projectId);
+
+        const qs = params.toString();
+        return qs ? `${this.url}?${qs}` : this.url;
     }
 
     private handleEvent(eventName: string, ev: MessageEvent) {

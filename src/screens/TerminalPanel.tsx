@@ -5,6 +5,20 @@ import { Terminal, Trash2, Send, Square, RotateCw, Circle } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 
+function getAuthHeaders(extra?: Record<string, string>): Record<string, string> {
+    const headers: Record<string, string> = { ...(extra ?? {}) };
+    if (typeof window === 'undefined') return headers;
+
+    const token = localStorage.getItem('kairos-token');
+    const workspaceId = localStorage.getItem('kairos-selected-workspace');
+    const projectId = localStorage.getItem('kairos-selected-repository');
+
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (workspaceId) headers['X-Workspace-Id'] = workspaceId;
+    if (projectId) headers['X-Project-Id'] = projectId;
+    return headers;
+}
+
 type CliTab = 'claude' | 'gemini' | 'copilot' | 'codex';
 
 const CLI_TABS: { id: CliTab; label: string; colorClass: string }[] = [
@@ -84,6 +98,7 @@ export function TerminalPanel() {
         (async () => {
             try {
                 const resp = await fetch(`/api/terminal/sessions/${sessionId}`, {
+                    headers: getAuthHeaders(),
                     signal: abort.signal,
                 });
                 if (!resp.ok || !resp.body) {
@@ -124,7 +139,7 @@ export function TerminalPanel() {
         try {
             const resp = await fetch('/api/terminal/sessions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ cli: tab, cwd: repoPath }),
             });
             if (!resp.ok) {
@@ -156,7 +171,7 @@ export function TerminalPanel() {
         sseAborts.current[tab]?.abort();
         if (sid) {
             try {
-                await fetch(`/api/terminal/sessions/${sid}`, { method: 'DELETE' });
+                await fetch(`/api/terminal/sessions/${sid}`, { method: 'DELETE', headers: getAuthHeaders() });
             } catch { /* ignore */ }
         }
         setTabState(prev => ({ ...prev, [tab]: initialTabState() }));
@@ -172,7 +187,7 @@ export function TerminalPanel() {
         try {
             await fetch(`/api/terminal/sessions/${sid}/input`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ data: line + '\n' }),
             });
         } catch (e: unknown) {
@@ -193,7 +208,7 @@ export function TerminalPanel() {
             if (sid) {
                 fetch(`/api/terminal/sessions/${sid}/input`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ data: '\x03' }),
                 }).catch(() => { /* ignore */ });
             }
