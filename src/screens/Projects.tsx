@@ -397,10 +397,10 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
             key={showWorkspaceHint ? 'projects-start-no-workspace' : 'projects-start-no-open'}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
+            className={embedded ? 'w-full' : 'flex-1 w-full max-w-3xl mx-auto p-3 pb-32 sm:p-6'}
         >
-            <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">Start</h2>
+            <div className="mb-6 flex items-center justify-between sm:mb-8">
+                <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Start</h2>
             </div>
 
             {showWorkspaceHint && (
@@ -569,7 +569,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     key="project-detail"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-6xl mx-auto w-full'}
+                    className={embedded ? 'w-full' : 'flex-1 w-full max-w-6xl mx-auto p-3 pb-32 sm:p-6'}
                 >
                     <div className="bento-card space-y-2 mb-2">
                         <div className="flex items-center justify-between gap-3">
@@ -599,7 +599,8 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                         )}
                     </div>
 
-                    <div className="flex items-center gap-4 border-b border-border mb-6">
+                    <div className="mb-4 overflow-x-auto border-b border-border sm:mb-6">
+                        <div className="flex min-w-max items-center gap-4">
                         <button
                             onClick={() => setActiveTab('repository')}
                             className={cn(
@@ -645,12 +646,13 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                 />
                             )}
                         </button>
+                        </div>
                     </div>
 
                     <div className="mt-4">
                         {activeTab === 'repository' ? (
-                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                                <div className="bento-card min-h-72">
+                            <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                                <div className="bento-card min-h-64 sm:min-h-72">
                                     <div className="mb-3 flex items-center gap-2">
                                         <FileText className="size-4 text-primary" />
                                         <p className="label-caps">Lista de arquivos</p>
@@ -660,7 +662,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     ) : !insights?.isGitRepo ? (
                                         <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
                                     ) : insights?.files?.length ? (
-                                        <div className="max-h-80 overflow-y-auto space-y-1 pr-1">
+                                        <div className="max-h-64 overflow-y-auto space-y-1 pr-1 sm:max-h-80">
                                             {insights.files.map((filePath, index) => (
                                                 <p key={`${filePath}-${index}`} className="truncate font-mono text-xs text-text-dim">
                                                     {filePath}
@@ -672,7 +674,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     )}
                                 </div>
 
-                                <div className="bento-card min-h-72">
+                                <div className="bento-card min-h-64 sm:min-h-72">
                                     <div className="mb-3 flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
                                             <GitCommitHorizontal className="size-4 text-primary" />
@@ -687,7 +689,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     ) : !insights?.isGitRepo ? (
                                         <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
                                     ) : insights?.changes?.length ? (
-                                        <div className="max-h-80 overflow-y-auto space-y-3 pr-1">
+                                        <div className="max-h-64 overflow-y-auto space-y-3 pr-1 sm:max-h-80">
                                             <div>
                                                 <p className="label-caps mb-1">Staged</p>
                                                 {stagedChanges.length ? stagedChanges.map((change, index) => (
@@ -710,7 +712,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     )}
                                 </div>
 
-                                <div className="bento-card min-h-72">
+                                <div className="bento-card min-h-64 sm:min-h-72 lg:col-span-2 xl:col-span-1">
                                     <div className="mb-3 flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
                                             <GitGraph className="size-4 text-primary" />
@@ -727,7 +729,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     ) : !insights?.isGitRepo ? (
                                         <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
                                     ) : insights?.graphLines?.length ? (
-                                        <pre className="max-h-80 overflow-y-auto whitespace-pre font-mono text-[11px] text-text-dim">
+                                        <pre className="max-h-64 overflow-y-auto whitespace-pre font-mono text-[10px] text-text-dim sm:max-h-80 sm:text-[11px]">
                                             {insights.graphLines.join('\n')}
                                         </pre>
                                     ) : (

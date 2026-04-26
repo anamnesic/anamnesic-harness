@@ -19,7 +19,6 @@ import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
 import { WorkspaceProvider } from './context/WorkspaceContext';
 import { RepositoryProvider } from './context/RepositoryContext';
-import { useRepository } from './context/RepositoryContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RepositorySelector } from './components/RepositorySelector';
 import { Dashboard } from './screens/Dashboard';
@@ -49,11 +48,8 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   rightElement?: React.ReactNode;
   activeTab: string;
 }) => {
-  const { repository } = useRepository();
-  const repoPath = repository?.metadata?.localPath;
-
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
+    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-3 py-3 backdrop-blur-xl text-highlight sm:px-6 sm:py-5">
       <div className="flex min-w-0 items-center gap-4">
         {onBack ? (
           <button
@@ -80,11 +76,6 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
           <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
           {subtitle && activeTab === 'dashboard' && (
             <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mt-1.5">{subtitle}</p>
-          )}
-          {repoPath && (
-            <p className="mt-1.5 max-w-[44vw] truncate font-mono text-[10px] text-text-dim" title={repoPath}>
-              {repoPath}
-            </p>
           )}
         </div>
       </div>
