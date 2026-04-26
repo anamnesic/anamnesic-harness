@@ -12,6 +12,7 @@ import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { useWorkspace } from '@/src/context/WorkspaceContext';
 import { useRepository } from '@/src/context/RepositoryContext';
+import { RepositorySelector } from '@/src/components/RepositorySelector';
 
 interface Project {
     id: string;
@@ -281,6 +282,9 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     <ArrowLeft className="size-4" />
                     Voltar para Repositórios
                 </button>
+                <div className="mb-4">
+                    <RepositorySelector />
+                </div>
                 <div className="bento-card space-y-2 mb-2">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -374,7 +378,10 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
             className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
         >
             <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
+                <div className="space-y-3">
+                    <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
+                    <RepositorySelector />
+                </div>
                 <button
                     onClick={() => {
                         setAttachTargetProjectId(null);
