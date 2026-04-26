@@ -3,13 +3,20 @@ export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
+import { getWorkspaceId } from '@/app/api/_lib/workspace';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         const db = await getDb();
         const { ProjectService } = await import('@/src/core/services/ProjectService');
         const projectService = new ProjectService(db);
-        const projects = await projectService.list();
+        const workspaceIdFromHeader = req.headers.get('x-workspace-id');
+        const workspaceIdFromQuery = new URL(req.url).searchParams.get('workspaceId');
+        const workspaceId = workspaceIdFromHeader || workspaceIdFromQuery;
+
+        const projects = workspaceId
+            ? await projectService.listByWorkspace(workspaceId)
+            : await projectService.list();
         return ok(projects);
     } catch {
         return err('INTERNAL_ERROR', 'Failed to list projects', 500);
@@ -52,6 +59,7 @@ async function findGitSubfolders(dirPath: string): Promise<string[]> {
 
 export async function POST(req: NextRequest) {
     try {
+        const workspaceId = getWorkspaceId(req);
         const body = await req.json();
         if (!body.name) return err('VALIDATION_ERROR', 'name is required', 400);
 
@@ -86,17 +94,24 @@ export async function POST(req: NextRequest) {
         const db = await getDb();
         const { ProjectService } = await import('@/src/core/services/ProjectService');
         const service = new ProjectService(db);
-        const project = await service.create({ name: body.name, description: body.description ?? null });
+        const project = await service.create({
+            name: body.name,
+            description: body.description ?? null,
+        });
 
-        if (localPath) {
-            const { Project } = await import('@/src/core/entities/Project');
-            const repo = db.getRepository(Project);
-            const existing = await repo.findOne({ where: { id: project.id } });
-            if (existing) {
+        // Keep project bound to the currently selected workspace.
+        const { Project } = await import('@/src/core/entities/Project');
+        const repo = db.getRepository(Project);
+        const existing = await repo.findOne({ where: { id: project.id } });
+        if (existing) {
+            existing.workspaceId = workspaceId;
+
+            if (localPath) {
                 existing.metadata = { ...(existing.metadata || {}), localPath };
-                await repo.save(existing);
-                return ok(existing, 201);
             }
+
+            await repo.save(existing);
+            return ok(existing, 201);
         }
 
         return ok(project, 201);

@@ -8,11 +8,11 @@ import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 
-interface Observer { 
-    id: string; 
-    title: string; 
-    status: string; 
-    subtitle: string; 
+interface Observer {
+    id: string;
+    title: string;
+    status: string;
+    subtitle: string;
     active: boolean;
     eventCount?: number;
     lastEvent?: string;
@@ -87,7 +87,7 @@ export function Observers() {
                                 </div>
                                 <h4 className="font-bold text-highlight">{obs.title}</h4>
                                 <p className="text-xs text-text-dim mt-1 truncate">{obs.subtitle}</p>
-                                
+
                                 {obs.active && (
                                     <div className="mt-4 p-2 bg-bg rounded-lg border border-border/50">
                                         <div className="flex items-center justify-between text-[10px]">

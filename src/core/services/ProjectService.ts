@@ -16,6 +16,14 @@ export class ProjectService {
     });
   }
 
+  async listByWorkspace(workspaceId: string) {
+    return this.repo.find({
+      where: { workspaceId },
+      relations: ['contextEntries', 'decisions'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async get(id: string) {
     return this.repo.findOne({
       where: { id },

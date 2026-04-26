@@ -12,7 +12,11 @@ interface Project {
 }
 
 interface ProjectsResponse {
-    items?: Project[];
+    success: boolean;
+    data?: {
+        items?: Project[];
+    };
+    timestamp: string;
 }
 
 export function ApiKeysHub() {
@@ -20,7 +24,7 @@ export function ApiKeysHub() {
     const projectsPath = workspace?.id ? `/api/v1/workspaces/${workspace.id}/projects` : null;
     const { data, loading } = useApi<ProjectsResponse>(projectsPath);
 
-    const projects = data?.items ?? [];
+    const projects = data?.data?.items ?? [];
     const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
     useEffect(() => {

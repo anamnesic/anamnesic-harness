@@ -71,11 +71,11 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
       )}
       <div>
         {activeTab !== 'dashboard' && (
-          <Breadcrumbs 
+          <Breadcrumbs
             items={[
               { label: 'Início', onClick: onBack },
               { label: title, active: true }
-            ]} 
+            ]}
             className="mb-1"
           />
         )}
@@ -104,7 +104,7 @@ const TABS = [
   { id: 'workspaces', label: 'Espaços', icon: Boxes },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
-  { id: 'projects', label: 'Projetos', icon: FolderKanban },
+  { id: 'projects', label: 'Repositório', icon: FolderKanban },
   { id: 'decisions', label: 'Decisões', icon: Lightbulb },
   { id: 'apikeys', label: 'Chaves API', icon: Key },
   { id: 'security', label: 'Auditoria', icon: ShieldCheck },
@@ -199,7 +199,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'workflows':
       return { title: 'Workflows', subtitle: 'Pipelines de automação', element: <Workflows />, onBack: goHome, rightElement: undefined };
     case 'projects':
-      return { title: 'Projetos', subtitle: 'Gerenciar projetos', element: <Projects />, onBack: goHome, rightElement: undefined };
+      return { title: 'Repositório', subtitle: 'Repositórios do workspace ativo', element: <Projects />, onBack: goHome, rightElement: undefined };
     case 'decisions':
       return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
     case 'apikeys':

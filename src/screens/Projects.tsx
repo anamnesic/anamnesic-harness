@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X, Pencil } from 'lucide-react';
+import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X, Pencil, Building2 } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -10,6 +10,7 @@ import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
+import { useWorkspace } from '@/src/context/WorkspaceContext';
 
 interface Project {
     id: string;
@@ -42,7 +43,9 @@ interface ApiResponse<T> {
 }
 
 export function Projects() {
-    const { data, loading, refetch } = useApi<ApiResponse<Project[]>>('/api/v1/projects');
+    const { workspace } = useWorkspace();
+    const projectsPath = workspace?.id ? `/api/v1/projects?workspaceId=${workspace.id}` : null;
+    const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
 
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -68,7 +71,7 @@ export function Projects() {
                 method: 'POST',
                 body: JSON.stringify({ name: base, localPath: folderPath }),
             });
-            toast(`Imported "${base}"`, 'success');
+            toast(`Repositório "${base}" importado`, 'success');
             refetch();
         } catch (e: any) {
             // Check if it's a NO_GIT_REPO error with git subfolders
@@ -118,7 +121,7 @@ export function Projects() {
                 method: 'PUT',
                 body: JSON.stringify(editForm),
             });
-            toast('Project updated', 'success');
+            toast('Repositório atualizado', 'success');
             setEditingProject(null);
             refetch();
         } catch (e: any) {
@@ -132,7 +135,7 @@ export function Projects() {
         setDeleting(id);
         try {
             await apiFetch(`/api/v1/projects/${id}`, { method: 'DELETE' });
-            toast('Project deleted', 'success');
+            toast('Repositório excluído', 'success');
             refetch();
         } catch (e: any) {
             toast(e.message ?? 'Falha ao excluir projeto', 'error');
@@ -143,6 +146,23 @@ export function Projects() {
 
     const projects = data?.data ?? [];
     const selectedProject = projects.find(p => p.id === selectedProjectId);
+
+    if (!workspace) {
+        return (
+            <motion.div
+                key="projects-no-workspace"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full"
+            >
+                <div className="bento-card py-16 text-center space-y-3">
+                    <Building2 className="size-10 text-border mx-auto" />
+                    <h3 className="font-bold text-accent">Selecione um workspace</h3>
+                    <p className="text-sm text-text-dim">Escolha um workspace para visualizar seus repositórios.</p>
+                </div>
+            </motion.div>
+        );
+    }
 
     if (selectedProject) {
         return (
@@ -157,7 +177,7 @@ export function Projects() {
                     className="flex items-center gap-2 text-sm text-text-dim hover:text-accent transition-colors mb-6"
                 >
                     <ArrowLeft className="size-4" />
-                    Back to Projects
+                    Voltar para Repositórios
                 </button>
                 <div className="bento-card space-y-2 mb-2">
                     <div className="flex items-center gap-3">
@@ -174,7 +194,7 @@ export function Projects() {
                         </div>
                     )}
                 </div>
-                
+
                 <div className="flex items-center gap-4 border-b border-border mb-6">
                     <button
                         onClick={() => setActiveTab('context')}
@@ -227,16 +247,18 @@ export function Projects() {
             className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full"
         >
             <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">Projects</h2>
+                <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
                 <button
                     onClick={() => setShowBrowser(true)}
                     disabled={submitting}
                     className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
                 >
                     <FolderOpen className="size-3.5" />
-                    {submitting ? 'Importing…' : 'Select Folder'}
+                    {submitting ? 'Importando…' : 'Importar Repositório'}
                 </button>
             </div>
+
+            <p className="text-xs text-text-dim -mt-5 mb-6">Workspace ativo: {workspace.name}</p>
 
             {loading ? (
                 <div className="space-y-4">
@@ -245,7 +267,7 @@ export function Projects() {
             ) : projects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 space-y-3">
                     <FolderOpen className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">Ainda não há projetos</p>
+                    <p className="text-text-dim text-sm">Ainda não há repositórios neste workspace</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -270,7 +292,7 @@ export function Projects() {
                                             });
                                         }}
                                         className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
-                                        aria-label="Edit project"
+                                        aria-label="Editar repositório"
                                     >
                                         <Pencil className="size-3.5" />
                                     </button>
@@ -278,7 +300,7 @@ export function Projects() {
                                         onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
                                         disabled={deleting === project.id}
                                         className="rounded-lg p-1.5 text-text-dim hover:text-red-400 transition-colors disabled:opacity-40"
-                                        aria-label="Delete project"
+                                        aria-label="Excluir repositório"
                                     >
                                         <Trash2 className="size-3.5" />
                                     </button>
@@ -380,7 +402,7 @@ export function Projects() {
                             className="bento-card w-full max-w-md space-y-4"
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold">Edit Project</h3>
+                                <h3 className="text-lg font-bold">Editar Repositório</h3>
                                 <button
                                     onClick={() => setEditingProject(null)}
                                     className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
@@ -391,7 +413,7 @@ export function Projects() {
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="label-caps block mb-1">Name</label>
+                                    <label className="label-caps block mb-1">Nome</label>
                                     <input
                                         type="text"
                                         value={editForm.name}
@@ -400,7 +422,7 @@ export function Projects() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="label-caps block mb-1">Description</label>
+                                    <label className="label-caps block mb-1">Descrição</label>
                                     <textarea
                                         value={editForm.description}
                                         onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
@@ -415,8 +437,8 @@ export function Projects() {
                                         className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors"
                                     >
                                         <option value="active">Ativo</option>
-                                        <option value="archived">Archived</option>
-                                        <option value="inactive">Inactive</option>
+                                        <option value="archived">Arquivado</option>
+                                        <option value="inactive">Inativo</option>
                                     </select>
                                 </div>
                             </div>
@@ -426,14 +448,14 @@ export function Projects() {
                                     onClick={() => setEditingProject(null)}
                                     className="flex-1 rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dim hover:text-text transition-colors"
                                 >
-                                    Cancel
+                                    Cancelar
                                 </button>
                                 <button
                                     onClick={handleEdit}
                                     disabled={submitting}
                                     className="flex-1 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
                                 >
-                                    {submitting ? 'Saving…' : 'Save Changes'}
+                                    {submitting ? 'Salvando…' : 'Salvar alterações'}
                                 </button>
                             </div>
                         </motion.div>

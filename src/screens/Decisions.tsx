@@ -15,6 +15,12 @@ interface Project {
   description?: string;
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  timestamp: string;
+}
+
 export function Decisions() {
   const { workspace } = useWorkspace();
   const { toast } = useToast();
@@ -32,10 +38,11 @@ export function Decisions() {
   async function fetchProjects() {
     try {
       setLoading(true);
-      const res = await apiFetch<{ items: Project[] }>(`/api/v1/workspaces/${workspace?.id}/projects`);
-      setProjects(res.items || []);
-      if (res.items && res.items.length > 0) {
-        setSelectedProject(res.items[0].id);
+      const res = await apiFetch<ApiResponse<{ items: Project[] }>>(`/api/v1/workspaces/${workspace?.id}/projects`);
+      const items = res.data?.items || [];
+      setProjects(items);
+      if (items.length > 0) {
+        setSelectedProject(items[0].id);
       }
     } catch (error: any) {
       toast(error?.message || 'Falha ao carregar projetos', 'error');
@@ -79,7 +86,7 @@ export function Decisions() {
             <Lightbulb className="size-4 text-primary" />
             <h3 className="font-bold text-accent">Decisões do projeto</h3>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-dim" />
@@ -91,7 +98,7 @@ export function Decisions() {
                 className="pl-9 pr-3 py-1.5 bg-bg/60 border border-border rounded-lg text-sm focus:outline-none focus:border-primary/60 w-32"
               />
             </div>
-            
+
             <select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
