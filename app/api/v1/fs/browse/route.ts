@@ -14,7 +14,20 @@ export async function GET(req: NextRequest) {
         const showHidden = url.searchParams.get('showHidden') === 'true';
 
         const home = os.homedir();
-        const targetPath = requested && requested.trim() ? path.resolve(requested) : home;
+        const documentsPath = path.join(home, 'Documents');
+        const githubPath = path.join(documentsPath, 'GitHub');
+
+        let defaultPath = documentsPath;
+        try {
+            const githubStat = await fs.stat(githubPath);
+            if (githubStat.isDirectory()) {
+                defaultPath = githubPath;
+            }
+        } catch {
+            defaultPath = documentsPath;
+        }
+
+        const targetPath = requested && requested.trim() ? path.resolve(requested) : defaultPath;
 
         let stat;
         try {
