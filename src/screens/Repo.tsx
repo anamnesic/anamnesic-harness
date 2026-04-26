@@ -284,7 +284,10 @@ export function Projects({
     const insightsPath = selectedProject ? `/api/v1/projects/${selectedProject.id}/repository-insights` : null;
     const { data: insightsResponse, loading: insightsLoading, refetch: refetchInsights } = useApi<ApiResponse<RepositoryInsights>>(insightsPath);
     const insights = insightsResponse?.data;
-    const repositoryFiles = insights?.files ?? [];
+    const repositoryFiles = useMemo(
+        () => insights?.files ?? [],
+        [insights?.files],
+    );
     const filteredRepositoryFiles = repositoryFiles.filter((file) => file.toLowerCase().includes(repoQuery.toLowerCase()));
 
     const repositoryFilePath = selectedProject && selectedRepoFile
@@ -328,18 +331,18 @@ export function Projects({
 
     useEffect(() => {
         if (!selectedProject) {
-            setSelectedRepoFile(null);
-            setOpenRepoTabs([]);
-            setRepoDraftByFile({});
-            setRepoDirtyFiles({});
+            setSelectedRepoFile((prev) => (prev === null ? prev : null));
+            setOpenRepoTabs((prev) => (prev.length === 0 ? prev : []));
+            setRepoDraftByFile((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+            setRepoDirtyFiles((prev) => (Object.keys(prev).length === 0 ? prev : {}));
             return;
         }
 
         if (!repositoryFiles.length) {
-            setSelectedRepoFile(null);
-            setOpenRepoTabs([]);
-            setRepoDraftByFile({});
-            setRepoDirtyFiles({});
+            setSelectedRepoFile((prev) => (prev === null ? prev : null));
+            setOpenRepoTabs((prev) => (prev.length === 0 ? prev : []));
+            setRepoDraftByFile((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+            setRepoDirtyFiles((prev) => (Object.keys(prev).length === 0 ? prev : {}));
             return;
         }
 
