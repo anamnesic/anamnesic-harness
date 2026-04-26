@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, FolderOpen, FolderGit2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph } from 'lucide-react';
+import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -571,34 +571,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     animate={{ opacity: 1, x: 0 }}
                     className={embedded ? 'w-full' : 'flex-1 w-full max-w-6xl mx-auto p-3 pb-32 sm:p-6'}
                 >
-                    <div className="bento-card space-y-2 mb-2">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                                <span className="font-bold text-accent text-lg">{selectedProject.name}</span>
-                            </div>
-                        </div>
-                        {selectedProject.description && (
-                            <p className="text-sm text-text-dim leading-relaxed">{selectedProject.description}</p>
-                        )}
-                        {selectedProject.metadata?.localPath && (
-                            <div className="flex items-center gap-2 text-xs text-text-dim font-mono">
-                                <FolderGit2 className="size-3.5 text-primary shrink-0" />
-                                <span className="truncate">{selectedProject.metadata.localPath}</span>
-                            </div>
-                        )}
-                        {Array.isArray(selectedProject.metadata?.additionalPaths) && selectedProject.metadata.additionalPaths.length > 0 && (
-                            <div className="space-y-1">
-                                <p className="label-caps">Pastas adicionais</p>
-                                {selectedProject.metadata.additionalPaths.map((folderPath: string, index: number) => (
-                                    <div key={`${folderPath}-${index}`} className="flex items-center gap-2 text-xs text-text-dim font-mono">
-                                        <FolderOpen className="size-3.5 text-primary shrink-0" />
-                                        <span className="truncate">{folderPath}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
                     <div className="mb-4 overflow-x-auto border-b border-border pb-1 sm:mb-6">
                         <div className="flex min-w-max items-center gap-4">
                             <button
