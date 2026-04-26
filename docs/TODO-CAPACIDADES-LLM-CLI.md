@@ -108,20 +108,20 @@ Meta de arquitetura:
 
 ### Implementacao
 
-- [ ] Criar `SleepInferenceService`
-- [ ] Alimentar `gemini-cli` com logs consolidados do dia
-- [ ] Gerar resumo narrativo diario
-- [ ] Gerar fatos permanentes candidatos
-- [ ] Detectar contradicoes entre fatos antigos e novos
-- [ ] Sugerir memorias para pruning semantico
-- [ ] Produzir artefato markdown e artefato JSON estruturado
+- [x] Criar `SleepInferenceService`
+- [x] Alimentar `gemini-cli` com logs consolidados do dia
+- [x] Gerar resumo narrativo diario
+- [x] Gerar fatos permanentes candidatos
+- [x] Detectar contradicoes entre fatos antigos e novos
+- [x] Sugerir memorias para pruning semantico
+- [x] Produzir artefato markdown e artefato JSON estruturado
 
 ### Persistencia
 
-- [ ] Salvar `daily-summary.md`
-- [ ] Salvar `daily-summary.json`
-- [ ] Salvar `promoted-facts.json`
-- [ ] Salvar `contradictions.json`
+- [x] Salvar `daily-summary.md`
+- [x] Salvar `daily-summary.json`
+- [x] Salvar `promoted-facts.json`
+- [x] Salvar `contradictions.json`
 
 ### Guardrails
 
