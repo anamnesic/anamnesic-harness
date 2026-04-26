@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { Retriever } from './retriever';
-import { rank } from './ranking';
+import { rank, type RankedItem } from './ranking';
+import { SemanticRerankService } from './SemanticRerankService';
 import { Logger } from '../core/utils/Logger';
 
 export interface ContextWindow {
@@ -12,9 +13,26 @@ export interface ContextWindow {
         value: string;
         category: string;
         score: number;
+        reason?: string;
     }>;
     tokenEstimate: number;
     builtAt: Date;
+}
+
+interface RetrieverLike {
+    retrieve(projectId: string, query: string, limit?: number): Promise<Array<{
+        id: string;
+        key: string;
+        value: string;
+        category: string;
+        priority: number;
+        projectId: string;
+        score: number;
+    }>>;
+}
+
+interface RerankerLike {
+    rerank(items: RankedItem[], query: string, options?: { topN?: number }): Promise<RankedItem[]>;
 }
 
 const AVG_CHARS_PER_TOKEN = 4;
@@ -26,16 +44,20 @@ const AVG_CHARS_PER_TOKEN = 4;
  * trimmed to a token budget.
  */
 export class ContextBuilder {
-    private retriever: Retriever;
+    private retriever: RetrieverLike;
+    private semanticReranker: RerankerLike;
     private logger = Logger.getInstance('ContextBuilder');
 
-    constructor(private db: DataSource) {
-        this.retriever = new Retriever(db);
+    constructor(private db: DataSource, deps?: { retriever?: RetrieverLike; semanticReranker?: RerankerLike }) {
+        this.retriever = deps?.retriever ?? new Retriever(db);
+        this.semanticReranker = deps?.semanticReranker ?? new SemanticRerankService();
     }
 
     async build(projectId: string, query: string, tokenBudget = 2000): Promise<ContextWindow> {
+        // Keep fast lexical retrieval as stage 1 for low-cost recall.
         const raw = await this.retriever.retrieve(projectId, query, 50);
-        const ranked = rank(raw, query);
+        const heuristicallyRanked = rank(raw, query);
+        const ranked = await this.semanticReranker.rerank(heuristicallyRanked, query, { topN: 12 });
 
         const items: ContextWindow['items'] = [];
         let chars = 0;
@@ -50,6 +72,7 @@ export class ContextBuilder {
                 value: item.value,
                 category: item.category,
                 score: item.finalScore,
+                reason: item.reason,
             });
             chars += entryChars;
         }

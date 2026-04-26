@@ -138,11 +138,11 @@ Meta de arquitetura:
 
 ### Implementacao incremental
 
-- [ ] Manter busca inicial heuristica atual para custo baixo
-- [ ] Criar `SemanticRerankService` usando CLI
-- [ ] Enviar top-N itens recuperados para reranking por Gemini
-- [ ] Retornar contexto reranqueado por relevancia semantica
-- [ ] Adicionar justificativa curta por item selecionado
+- [x] Manter busca inicial heuristica atual para custo baixo
+- [x] Criar `SemanticRerankService` usando CLI
+- [x] Enviar top-N itens recuperados para reranking por Gemini
+- [x] Retornar contexto reranqueado por relevancia semantica
+- [x] Adicionar justificativa curta por item selecionado
 
 ### Fase posterior
 

@@ -3,6 +3,7 @@ import type { RetrievedItem } from './retriever';
 export interface RankedItem extends RetrievedItem {
     rank: number;
     finalScore: number;
+    reason?: string;
 }
 
 /**
