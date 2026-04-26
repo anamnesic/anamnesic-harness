@@ -348,7 +348,7 @@ export function Projects({
 
     const repositoryTree = useMemo<RepositoryTreeNode[]>(() => {
         const root = new Map<string, any>();
-        const files = insights?.files ?? [];
+        const files = filteredRepositoryFiles;
 
         for (const filePath of files) {
             const normalized = filePath.replace(/\\/g, '/');
@@ -415,7 +415,7 @@ export function Projects({
         };
 
         return toNodes(root);
-    }, [insights?.files]);
+    }, [filteredRepositoryFiles]);
 
     function renderRepositoryTree(nodes: RepositoryTreeNode[], depth = 0): React.ReactNode {
         return nodes.map((node) => {
@@ -448,15 +448,21 @@ export function Projects({
             }
 
             return (
-                <div
+                <button
                     key={node.path}
-                    className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-card/40"
+                    onClick={() => setSelectedRepoFile(node.path)}
+                    className={cn(
+                        'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-card/40',
+                        selectedRepoFile === node.path
+                            ? 'bg-card text-accent border border-border'
+                            : 'text-text-dim hover:text-highlight',
+                    )}
                     style={{ paddingLeft: `${26 + depth * 14}px` }}
                     title={node.path}
                 >
                     {getFileIcon(node.path)}
-                    <span className="truncate text-xs text-highlight">{node.name}</span>
-                </div>
+                    <span className="truncate font-mono text-xs">{node.name}</span>
+                </button>
             );
         });
     }
@@ -664,21 +670,9 @@ export function Projects({
                                             <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
                                         ) : (
                                             <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
-                                                {filteredRepositoryFiles.map((file) => (
-                                                    <button
-                                                        key={file}
-                                                        onClick={() => setSelectedRepoFile(file)}
-                                                        className={cn(
-                                                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
-                                                            selectedRepoFile === file
-                                                                ? 'bg-card text-accent border border-border'
-                                                                : 'text-text-dim hover:bg-card/40 hover:text-highlight',
-                                                        )}
-                                                    >
-                                                        {getFileIcon(file)}
-                                                        <span className="truncate font-mono">{file}</span>
-                                                    </button>
-                                                ))}
+                                                {repositoryTree.length
+                                                    ? renderRepositoryTree(repositoryTree)
+                                                    : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
                                             </div>
                                         )}
                                     </aside>
