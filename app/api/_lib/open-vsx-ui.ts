@@ -155,18 +155,97 @@ export async function getUiRenderHtml(namespace: string, name: string): Promise<
     const htmlDirRel = descriptor.htmlRelPath.split('/').slice(0, -1).join('/');
     const baseHref = `/api/v1/extensions/open-vsx/${namespace}/${name}/ui/file/${htmlDirRel ? `${htmlDirRel}/` : ''}`;
 
-    const bridge = `<script>
+        const bridge = `<script>
 (function(){
-  const state = {};
-  window.acquireVsCodeApi = function(){
-    return {
-      postMessage: function(message){
-        try { window.parent && window.parent.postMessage({ source: 'kairos-open-vsx-ui', extensionId: '${descriptor.extensionId}', message: message }, '*'); } catch (_) {}
-      },
-      setState: function(value){ state.value = value; },
-      getState: function(){ return state.value; }
+    const state = {};
+    const extensionId = ${JSON.stringify(descriptor.extensionId)};
+
+    function getKairosToken(){
+        try { return localStorage.getItem('kairos-token') || ''; } catch (_) { return ''; }
+    }
+
+    function withAuthHeaders(input){
+        try {
+            const token = getKairosToken();
+            const headers = new Headers((input && input.headers) || {});
+            if (token && !headers.has('Authorization')) {
+                headers.set('Authorization', 'Bearer ' + token);
+            }
+            if (!headers.has('X-Kairos-Extension-Id')) {
+                headers.set('X-Kairos-Extension-Id', extensionId);
+            }
+            return Object.assign({}, input || {}, { headers, credentials: (input && input.credentials) || 'same-origin' });
+        } catch (_) {
+            return input || {};
+        }
+    }
+
+    const nativeFetch = window.fetch ? window.fetch.bind(window) : null;
+    if (nativeFetch) {
+        window.fetch = function(input, init){
+            try {
+                return nativeFetch(input, withAuthHeaders(init));
+            } catch (_) {
+                return nativeFetch(input, init);
+            }
+        };
+    }
+
+    const NativeXHR = window.XMLHttpRequest;
+    if (NativeXHR) {
+        function WrappedXHR(){
+            const xhr = new NativeXHR();
+            const originalOpen = xhr.open;
+            const originalSend = xhr.send;
+            xhr.open = function(){
+                return originalOpen.apply(xhr, arguments);
+            };
+            xhr.send = function(body){
+                try {
+                    const token = getKairosToken();
+                    if (token) {
+                        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    }
+                    xhr.setRequestHeader('X-Kairos-Extension-Id', extensionId);
+                } catch (_) {}
+                return originalSend.call(xhr, body);
+            };
+            return xhr;
+        }
+        WrappedXHR.prototype = NativeXHR.prototype;
+        window.XMLHttpRequest = WrappedXHR;
+    }
+
+    const vscodeApi = {
+        postMessage: function(message){
+            try {
+                window.parent && window.parent.postMessage({
+                    source: 'kairos-open-vsx-ui',
+                    extensionId: extensionId,
+                    message: message
+                }, '*');
+            } catch (_) {}
+        },
+        setState: function(value){ state.value = value; },
+        getState: function(){ return state.value; }
     };
-  };
+
+    window.acquireVsCodeApi = function(){ return vscodeApi; };
+    if (!window.vscode) {
+        window.vscode = { postMessage: vscodeApi.postMessage };
+    }
+
+    window.addEventListener('message', function(event){
+        const payload = event && event.data;
+        if (!payload || payload.source !== 'kairos-host') {
+            return;
+        }
+        if (payload.type === 'kairos:set-view') {
+            try {
+                window.dispatchEvent(new CustomEvent('kairos:set-view', { detail: payload.viewKey }));
+            } catch (_) {}
+        }
+    });
 })();
 </script>`;
 
