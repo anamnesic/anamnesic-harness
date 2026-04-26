@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
             return err('HOST_INSTALLER_UNAVAILABLE', status.reason ?? 'Host installer unavailable', 503);
         }
 
-        const uninstallExecution = installer.uninstallExtension(resolvedId);
+        const uninstallExecution = await installer.uninstallExtension(resolvedId);
 
         const removed = await removeInstalledOpenVsxExtension(resolvedId);
         return ok({

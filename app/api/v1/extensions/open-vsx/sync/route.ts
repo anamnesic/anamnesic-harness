@@ -18,7 +18,7 @@ export async function POST(_req: NextRequest) {
             return err('HOST_INSTALLER_UNAVAILABLE', status.reason ?? 'Host installer unavailable', 503);
         }
 
-        const hostInstalled = installer.listInstalledExtensions();
+        const hostInstalled = await installer.listInstalledExtensions();
         const localInstalled = await listInstalledOpenVsxExtensions();
 
         const hostSet = new Set(hostInstalled.map((entry) => entry.id));
@@ -39,7 +39,8 @@ export async function POST(_req: NextRequest) {
         const openVsx = OpenVsxService.getInstance();
 
         for (const hostEntry of hostInstalled) {
-            const [namespace, name] = hostEntry.id.split('.');
+            const [namespace, ...rest] = hostEntry.id.split('.');
+            const name = rest.join('.');
             if (!namespace || !name) {
                 continue;
             }

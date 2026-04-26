@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         }
 
         const vsixPath = await installer.downloadVsix(downloadUrl, `${detail.namespace}.${detail.name}-${detail.version}`);
-        const installExecution = installer.installVsix(vsixPath);
+        const installExecution = await installer.installVsix(vsixPath, detail.id, detail.version);
 
         const record = {
             id: detail.id,

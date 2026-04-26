@@ -137,6 +137,7 @@ describe.sequential('Open VSX routes integration', () => {
 
         const installRoute = await import('../install/route');
         const installedRoute = await import('../installed/route');
+        const runtimeRoute = await import('../runtime/route');
         const uninstallRoute = await import('../uninstall/route');
 
         const installResponse = await installRoute.POST(new Request('http://localhost/api/v1/extensions/open-vsx/install', {
@@ -153,6 +154,15 @@ describe.sequential('Open VSX routes integration', () => {
         const afterInstallPayload = await afterInstall.json();
         expect(afterInstallPayload.data.extensions).toHaveLength(1);
         expect(afterInstallPayload.data.extensions[0].id).toBe('ms-python.python');
+
+        const runtimeCompatibility = await runtimeRoute.GET(new NextRequest('http://localhost/api/v1/extensions/open-vsx/runtime'));
+        const runtimePayload = await runtimeCompatibility.json();
+        expect(runtimeCompatibility.status).toBe(200);
+        expect(runtimePayload.success).toBe(true);
+        expect(runtimePayload.data.runtime).toBe('kairos');
+        expect(runtimePayload.data.extensions).toHaveLength(1);
+        expect(runtimePayload.data.extensions[0].id).toBe('ms-python.python');
+        expect(Array.isArray(runtimePayload.data.extensions[0].capabilities)).toBe(true);
 
         const uninstallResponse = await uninstallRoute.POST(new Request('http://localhost/api/v1/extensions/open-vsx/uninstall', {
             method: 'POST',

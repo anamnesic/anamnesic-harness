@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest) {
             });
         }
 
-        const hostInstalled = installer.listInstalledExtensions();
+        const hostInstalled = await installer.listInstalledExtensions();
         const localSet = new Set(local.map((entry) => entry.id));
         const hostSet = new Set(hostInstalled.map((entry) => entry.id));
 
