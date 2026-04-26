@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X, Pencil, Building2 } from 'lucide-react';
+import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X, Pencil, Building2, RotateCcw } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -12,7 +12,6 @@ import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { useWorkspace } from '@/src/context/WorkspaceContext';
 import { useRepository } from '@/src/context/RepositoryContext';
-import { RepositorySelector } from '@/src/components/RepositorySelector';
 
 interface Project {
     id: string;
@@ -44,6 +43,16 @@ interface ApiResponse<T> {
     timestamp: string;
 }
 
+interface RecentRepository {
+    id: string;
+    name: string;
+    localPath?: string;
+    workspaceId?: string | null;
+    lastOpenedAt: string;
+}
+
+const RECENT_REPOSITORIES_KEY = 'kairos-recent-repositories';
+
 export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: boolean; refreshToken?: number }) {
     const { workspace } = useWorkspace();
     const {
@@ -63,6 +72,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const [deleting, setDeleting] = useState<string | null>(null);
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [editForm, setEditForm] = useState({ name: '', description: '', status: 'active' });
+    const [recentRepositories, setRecentRepositories] = useState<RecentRepository[]>([]);
     const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
         open: false,
         folderPath: '',
@@ -81,6 +91,63 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
             setRepositoryById(projects[0].id);
         }
     }, [projects, repository, setRepositoryById]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        try {
+            const raw = localStorage.getItem(RECENT_REPOSITORIES_KEY);
+            if (!raw) {
+                setRecentRepositories([]);
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                setRecentRepositories([]);
+                return;
+            }
+
+            setRecentRepositories(parsed.slice(0, 8));
+        } catch {
+            setRecentRepositories([]);
+        }
+    }, []);
+
+    function persistRecentRepositories(nextItems: RecentRepository[]) {
+        setRecentRepositories(nextItems);
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        localStorage.setItem(RECENT_REPOSITORIES_KEY, JSON.stringify(nextItems));
+    }
+
+    function pushRecentRepository(project: Project) {
+        const nextItem: RecentRepository = {
+            id: project.id,
+            name: project.name,
+            localPath: project.metadata?.localPath,
+            workspaceId: project.workspaceId ?? workspace?.id ?? null,
+            lastOpenedAt: new Date().toISOString(),
+        };
+
+        const nextItems = [nextItem, ...recentRepositories.filter((item) => item.id !== project.id)].slice(0, 8);
+        persistRecentRepositories(nextItems);
+    }
+
+    useEffect(() => {
+        if (!repository) {
+            return;
+        }
+
+        const currentProject = projects.find((project) => project.id === repository.id);
+        if (currentProject) {
+            pushRecentRepository(currentProject);
+        }
+    }, [repository?.id, projects]);
 
     function joinSubfolder(basePath: string, subfolder: string) {
         const separator = basePath.includes('\\') ? '\\' : '/';
@@ -205,6 +272,39 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         }
     }
 
+    async function handleReopenRecent(item: RecentRepository) {
+        if (!item.localPath) {
+            toast('Este repositório recente não tem caminho salvo para reabrir.', 'error');
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            await apiFetch('/api/v1/projects', {
+                method: 'POST',
+                body: JSON.stringify({ name: item.name, localPath: item.localPath }),
+            });
+
+            toast(`Repositório "${item.name}" reaberto`, 'success');
+            await Promise.all([refetch(), refreshRepositories()]);
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao reabrir repositório', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    function handleOpenRecent(item: RecentRepository) {
+        const target = projects.find((project) => project.id === item.id);
+        if (!target) {
+            toast('Esse repositório não está carregado no workspace atual.', 'error');
+            return;
+        }
+
+        setRepositoryById(target.id);
+        pushRecentRepository(target);
+    }
+
     async function handleEdit() {
         if (!editingProject) return;
         setSubmitting(true);
@@ -246,6 +346,14 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         ? projects.find((p) => p.id === repository.id) || null
         : null;
 
+    const recentItems = recentRepositories.slice(0, 6);
+
+    const openFolderBrowser = () => {
+        setAttachTargetProjectId(null);
+        setBrowserMode('import-repository');
+        setShowBrowser(true);
+    };
+
     if (!workspace) {
         return (
             <motion.div
@@ -254,9 +362,48 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 animate={{ opacity: 1 }}
                 className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
             >
-                <div className="mb-4">
-                    <RepositorySelector />
+                <div className="mb-6 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
+                    <button
+                        onClick={openFolderBrowser}
+                        disabled={submitting}
+                        className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                    >
+                        <FolderOpen className="size-3.5" />
+                        {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
+                    </button>
                 </div>
+                {recentItems.length > 0 && (
+                    <div className="bento-card mb-6">
+                        <p className="label-caps mb-3">Recentes</p>
+                        <div className="space-y-2">
+                            {recentItems.map((item) => (
+                                <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-accent truncate">{item.name}</p>
+                                        {item.localPath && <p className="text-xs text-text-dim truncate font-mono">{item.localPath}</p>}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                            onClick={() => handleOpenRecent(item)}
+                                            className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors"
+                                        >
+                                            Abrir
+                                        </button>
+                                        <button
+                                            onClick={() => handleReopenRecent(item)}
+                                            disabled={submitting || !item.localPath}
+                                            className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-text-dim hover:text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                                        >
+                                            <RotateCcw className="size-3" />
+                                            Abrir de novo
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 <div className="bento-card py-16 text-center space-y-3">
                     <Building2 className="size-10 text-border mx-auto" />
                     <h3 className="font-bold text-accent">Selecione um workspace</h3>
@@ -286,26 +433,46 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                         <ArrowLeft className="size-4" />
                         Voltar para Repositórios
                     </button>
-                    <RepositorySelector />
+                    <button
+                        onClick={openFolderBrowser}
+                        disabled={submitting}
+                        className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                    >
+                        <FolderOpen className="size-3.5" />
+                        {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
+                    </button>
                 </div>
+                {recentItems.length > 0 && (
+                    <div className="bento-card mb-4">
+                        <p className="label-caps mb-2">Recentes</p>
+                        <div className="flex flex-wrap gap-2">
+                            {recentItems.map((item) => (
+                                <div key={item.id} className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1">
+                                    <button
+                                        onClick={() => handleOpenRecent(item)}
+                                        className="text-xs font-bold text-accent hover:text-highlight transition-colors"
+                                    >
+                                        {item.name}
+                                    </button>
+                                    <button
+                                        onClick={() => handleReopenRecent(item)}
+                                        disabled={submitting || !item.localPath}
+                                        className="rounded-md p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                        title="Abrir de novo"
+                                    >
+                                        <RotateCcw className="size-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 <div className="bento-card space-y-2 mb-2">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                             <span className="font-bold text-accent text-lg">{selectedProject.name}</span>
                             <StatusBadge status={selectedProject.status} />
                         </div>
-                        <button
-                            onClick={() => {
-                                setAttachTargetProjectId(selectedProject.id);
-                                setBrowserMode('attach-folder');
-                                setShowBrowser(true);
-                            }}
-                            disabled={submitting}
-                            className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                        >
-                            <FolderOpen className="size-3.5" />
-                            {submitting ? 'Adicionando…' : 'Adicionar pasta'}
-                        </button>
                     </div>
                     {selectedProject.description && (
                         <p className="text-sm text-text-dim leading-relaxed">{selectedProject.description}</p>
@@ -381,23 +548,48 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
             className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
         >
             <div className="mb-8 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
-                    <RepositorySelector />
-                </div>
+                <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
                 <button
-                    onClick={() => {
-                        setAttachTargetProjectId(null);
-                        setBrowserMode('import-repository');
-                        setShowBrowser(true);
-                    }}
+                    onClick={openFolderBrowser}
                     disabled={submitting}
                     className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
                 >
                     <FolderOpen className="size-3.5" />
-                    {submitting ? 'Selecionando…' : 'Selecionar pasta'}
+                    {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
                 </button>
             </div>
+
+            {recentItems.length > 0 && (
+                <div className="bento-card mb-6">
+                    <p className="label-caps mb-3">Recentes</p>
+                    <div className="space-y-2">
+                        {recentItems.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-accent truncate">{item.name}</p>
+                                    {item.localPath && <p className="text-xs text-text-dim truncate font-mono">{item.localPath}</p>}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        onClick={() => handleOpenRecent(item)}
+                                        className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors"
+                                    >
+                                        Abrir
+                                    </button>
+                                    <button
+                                        onClick={() => handleReopenRecent(item)}
+                                        disabled={submitting || !item.localPath}
+                                        className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-text-dim hover:text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                                    >
+                                        <RotateCcw className="size-3" />
+                                        Abrir de novo
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <p className="text-xs text-text-dim -mt-5 mb-6">Workspace ativo: {workspace.name}</p>
 
