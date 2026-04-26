@@ -55,6 +55,18 @@ function getCodingRolePrompt(index: number, total: number, modelId: string): str
 }
 
 async function getActiveProvider(): Promise<Provider | null> {
+    const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
+
+    try {
+        const { OllamaProvider } = await import('@/src/core/providers/OllamaProvider');
+        const ollama = new OllamaProvider(ollamaBaseUrl);
+        if (await ollama.isAvailable()) {
+            return ollama;
+        }
+    } catch {
+        // Continue with fallback providers
+    }
+
     try {
         const preferred = aiProviderRegistry.getDefault();
         if (preferred && await preferred.isAvailable()) {
@@ -62,16 +74,6 @@ async function getActiveProvider(): Promise<Provider | null> {
         }
     } catch {
         // Continue with fallback providers
-    }
-
-    try {
-        const { OllamaProvider } = await import('@/src/core/providers/OllamaProvider');
-        const ollama = new OllamaProvider();
-        if (await ollama.isAvailable()) {
-            return ollama;
-        }
-    } catch {
-        // Ignore and return null below
     }
 
     return null;

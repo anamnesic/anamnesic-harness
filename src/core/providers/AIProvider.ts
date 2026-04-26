@@ -74,7 +74,7 @@ export abstract class AIProvider {
 // Provider registry and factory
 export class AIProviderRegistry {
   private providers = new Map<string, AIProvider>();
-  private _defaultProvider: string = 'copilot';
+  private _defaultProvider: string = 'ollama';
   
   register(provider: AIProvider): void {
     this.providers.set(provider.vendor, provider);

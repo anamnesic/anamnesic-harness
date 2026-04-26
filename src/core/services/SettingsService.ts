@@ -158,6 +158,30 @@ export class SettingsService {
         );
       }
     }
+
+    const defaultAiProvider = await this.getSetting(workspaceId, 'ai.provider.default');
+    if (!defaultAiProvider) {
+      await this.setSetting(
+        workspaceId,
+        'ai.provider.default',
+        'ollama',
+        'string',
+        'Default AI provider for runtime requests',
+        false
+      );
+    }
+
+    const ollamaBaseUrl = await this.getSetting(workspaceId, 'ai.provider.ollama.baseUrl');
+    if (!ollamaBaseUrl) {
+      await this.setSetting(
+        workspaceId,
+        'ai.provider.ollama.baseUrl',
+        'http://127.0.0.1:11434',
+        'string',
+        'Ollama API base URL',
+        false
+      );
+    }
   }
 
   private getFlagDescription(key: keyof FeatureFlags): string {

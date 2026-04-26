@@ -45,7 +45,8 @@ export async function initializeProviders(options: {
   aiProviderRegistry.register(new MockAIProvider());
 
   // Register Ollama if available (local, free)
-  const ollama = new OllamaProvider(options.ollamaBaseUrl);
+  const ollamaBaseUrl = options.ollamaBaseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
+  const ollama = new OllamaProvider(ollamaBaseUrl);
   aiProviderRegistry.register(ollama);
 
   // Register Claude if API key provided
@@ -74,8 +75,8 @@ export async function initializeProviders(options: {
     }
   }
 
-  // Set Copilot as default (best free option for cloud-based inference)
-  aiProviderRegistry.setDefault('copilot');
+  // Force local-first default to Ollama on port 11434.
+  aiProviderRegistry.setDefault('ollama');
 }
 
 /**
