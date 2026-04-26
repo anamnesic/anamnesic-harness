@@ -68,12 +68,21 @@ interface RepositoryTreeNode {
 
 export type ProjectTabId = 'repository' | 'git' | 'context' | 'decisions';
 
+export interface RepoEditorHeaderState {
+    openTabs: string[];
+    activeFile: string | null;
+    dirtyFiles: Record<string, boolean>;
+    onSelectFile: (filePath: string) => void;
+    onCloseFile: (filePath: string) => void;
+}
+
 interface ProjectsProps {
     embedded?: boolean;
     refreshToken?: number;
     activeTab?: ProjectTabId;
     onTabChange?: (tab: ProjectTabId) => void;
     hideTabBar?: boolean;
+    onHeaderStateChange?: (state: RepoEditorHeaderState | null) => void;
 }
 
 export function Projects({
@@ -82,6 +91,7 @@ export function Projects({
     activeTab: controlledActiveTab,
     onTabChange,
     hideTabBar = false,
+    onHeaderStateChange,
 }: ProjectsProps) {
     const { workspace } = useWorkspace();
     const {
@@ -320,6 +330,33 @@ export function Projects({
             return next;
         });
     }
+
+    useEffect(() => {
+        if (!onHeaderStateChange) {
+            return;
+        }
+
+        if (activeTab !== 'repository') {
+            onHeaderStateChange(null);
+            return;
+        }
+
+        onHeaderStateChange({
+            openTabs: openRepoTabs,
+            activeFile: selectedRepoFile,
+            dirtyFiles: repoDirtyFiles,
+            onSelectFile: (filePath: string) => setSelectedRepoFile(filePath),
+            onCloseFile: closeRepoTab,
+        });
+
+        return () => onHeaderStateChange(null);
+    }, [
+        activeTab,
+        onHeaderStateChange,
+        openRepoTabs,
+        selectedRepoFile,
+        repoDirtyFiles,
+    ]);
 
     useEffect(() => {
         if (!selectedProject) {
@@ -797,45 +834,6 @@ export function Projects({
                                                             onChange={(e) => {
                                                                 if (!selectedRepoFile) return;
                                                                 const nextDraft = e.target.value;
-                                                                const baseContent = repositoryFile?.content ?? '';
-                                                                setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
-                                                                setRepoDirtyFiles((prev) => ({
-                                                                    ...prev,
-                                                                    [selectedRepoFile]: nextDraft !== baseContent,
-                                                                }));
-                                                            }}
-                                                            onKeyDown={(e) => {
-                                                                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-                                                                    e.preventDefault();
-                                                                    if (!savingRepoFile) {
-                                                                        void saveRepositoryFile();
-                                                                    }
-                                                                }
-                                                            }}
-                                                            onScroll={(e) => {
-                                                                if (repoLineGutterRef.current) {
-                                                                    repoLineGutterRef.current.scrollTop = e.currentTarget.scrollTop;
-                                                                }
-                                                            }}
-                                                            spellCheck={false}
-                                                            className="h-full flex-1 resize-none bg-transparent px-3 py-3 font-mono text-xs leading-relaxed text-highlight outline-none"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </section>
-                                    </div>
-                                </div>
-                            ) : activeTab === 'git' ? (
-                                <div className="bento-card">
-                                    <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
-                                        <div className="mb-3 flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <GitBranch className="size-4 text-primary" />
-                                                <p className="label-caps">Source control</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {insights?.branch && (
                                                     <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold text-text-dim">
                                                         {insights.branch}
                                                     </span>
