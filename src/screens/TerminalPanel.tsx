@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Terminal, Trash2, Send, Square, RotateCw, Circle, Maximize2, Minimize2 } from 'lucide-react';
+import { Terminal, Trash2, Square, RotateCw, Circle, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
+
+type XTermType = import('xterm').Terminal;
+type FitAddonType = import('@xterm/addon-fit').FitAddon;
 
 function getAuthHeaders(extra?: Record<string, string>): Record<string, string> {
     const headers: Record<string, string> = { ...(extra ?? {}) };
@@ -27,12 +30,6 @@ const CLI_TABS: { id: CliTab; label: string; colorClass: string }[] = [
     { id: 'copilot', label: 'Copilot', colorClass: 'text-purple-400' },
     { id: 'codex', label: 'Codex', colorClass: 'text-green-400' },
 ];
-
-/** Strip ANSI escape codes for rendering in plain HTML */
-function stripAnsi(str: string): string {
-    // eslint-disable-next-line no-control-regex
-    return str.replace(/\x1b\[[0-9;]*[mGKHF]/g, '');
-}
 
 type SessionStatus = 'disconnected' | 'connecting' | 'running' | 'exited';
 
@@ -61,31 +58,20 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
     const [isMaximized, setIsMaximized] = useState(false);
     const [activeTab, setActiveTab] = useState<CliTab>('claude');
     const [tabState, setTabState] = useState<TabStateMap>(INITIAL);
-    const [inputs, setInputs] = useState<Record<CliTab, string>>({
-        claude: '',
-        gemini: '',
-        copilot: '',
-        codex: '',
-    });
-    const outputRefs = useRef<Partial<Record<CliTab, HTMLDivElement | null>>>({});
-    // Keep SSE reader abort controllers per tab
+    const hostRefs = useRef<Partial<Record<CliTab, HTMLDivElement | null>>>({});
+    const xtermRefs = useRef<Partial<Record<CliTab, XTermType>>>({});
+    const fitRefs = useRef<Partial<Record<CliTab, FitAddonType>>>({});
+    const writtenLengths = useRef<Record<CliTab, number>>({ claude: 0, gemini: 0, copilot: 0, codex: 0 });
     const sseAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
 
     const repoPath = repository?.metadata?.localPath ?? '';
 
-    useEffect(() => {
-        for (const tab of CLI_TABS) {
-            const ref = outputRefs.current[tab.id];
-            if (ref) {
-                ref.scrollTop = ref.scrollHeight;
-            }
-        }
-    }, [tabState]);
+    const visibleTabs = isMaximized ? CLI_TABS.map(tab => tab.id) : [activeTab];
 
     const appendOutput = useCallback((tab: CliTab, text: string) => {
         setTabState(prev => ({
             ...prev,
-            [tab]: { ...prev[tab], output: prev[tab].output + stripAnsi(text) },
+            [tab]: { ...prev[tab], output: prev[tab].output + text },
         }));
     }, []);
 
@@ -175,52 +161,28 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
         setTabState(prev => ({ ...prev, [tab]: initialTabState() }));
     }, [tabState]);
 
-    const sendInput = useCallback(async (tab: CliTab) => {
+    const sendInput = useCallback(async (tab: CliTab, data: string) => {
         const current = tabState[tab];
         let sid = current.sessionId;
-        const line = inputs[tab];
-        if (!line) return;
+        if (!data) return;
 
-        // Start session on first send so CLIs that require immediate stdin don't exit.
+        // Start session on first keystroke so the PTY is available before interactive input.
         if (!sid || current.status !== 'running') {
             sid = await connect(tab);
         }
 
         if (!sid) return;
-        setInputs(prev => ({ ...prev, [tab]: '' }));
-        // Echo locally
-        appendOutput(tab, line + '\n');
         try {
             await fetch(`/api/terminal/sessions/${sid}/input`, {
                 method: 'POST',
                 headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ data: line + '\n' }),
+                body: JSON.stringify({ data }),
             });
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             appendOutput(tab, `[send error: ${msg}]\n`);
         }
-    }, [tabState, inputs, appendOutput, connect]);
-
-    const handleKeyDown = (tab: CliTab, e: React.KeyboardEvent<HTMLInputElement>) => {
-        const current = tabState[tab];
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            void sendInput(tab);
-        }
-        // Ctrl+C
-        if (e.key === 'c' && e.ctrlKey) {
-            e.preventDefault();
-            const sid = current.sessionId;
-            if (sid) {
-                fetch(`/api/terminal/sessions/${sid}/input`, {
-                    method: 'POST',
-                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                    body: JSON.stringify({ data: '\x03' }),
-                }).catch(() => { /* ignore */ });
-            }
-        }
-    };
+    }, [tabState, appendOutput, connect]);
 
     const StatusDot = ({ status }: { status: SessionStatus }) => {
         if (status === 'running') return <Circle className="size-2 fill-green-500 text-green-500" />;
@@ -228,11 +190,116 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
         return <Circle className="size-2 fill-text-dim text-text-dim" />;
     };
 
-    const asideClass = 'flex h-screen w-full min-w-0 flex-col border-l border-border bg-[#0a0a0a]';
+    const asideClass = isMaximized
+        ? 'flex h-full min-w-0 flex-1 flex-col bg-[#0a0a0a]'
+        : 'flex h-full min-w-0 flex-1 flex-col bg-[#0a0a0a]';
 
     useEffect(() => {
         onMaximizeChange?.(isMaximized);
     }, [isMaximized, onMaximizeChange]);
+
+    const ensureTerminal = useCallback(async (tab: CliTab) => {
+        const host = hostRefs.current[tab];
+        if (!host || xtermRefs.current[tab]) return;
+
+        const [{ Terminal: XTerm }, { FitAddon }] = await Promise.all([
+            import('xterm'),
+            import('@xterm/addon-fit'),
+        ]);
+
+        if (!hostRefs.current[tab] || xtermRefs.current[tab]) return;
+
+        const fitAddon = new FitAddon();
+        const term = new XTerm({
+            convertEol: false,
+            cursorBlink: true,
+            cursorStyle: 'bar',
+            fontFamily: 'Consolas, "Courier New", monospace',
+            fontSize: isMaximized ? 12 : 13,
+            scrollback: 5000,
+            theme: {
+                background: '#0a0a0a',
+                foreground: '#d4d4d8',
+                cursor: '#ec5b13',
+                black: '#09090b',
+                brightBlack: '#52525b',
+                green: '#4ade80',
+                brightGreen: '#86efac',
+                red: '#f87171',
+                brightRed: '#fca5a5',
+                yellow: '#facc15',
+                blue: '#60a5fa',
+                magenta: '#c084fc',
+                cyan: '#22d3ee',
+                white: '#f4f4f5',
+            },
+        });
+
+        term.loadAddon(fitAddon);
+        term.open(host);
+        fitAddon.fit();
+        term.write(tabState[tab].output);
+        writtenLengths.current[tab] = tabState[tab].output.length;
+        term.onData((data) => {
+            void sendInput(tab, data);
+        });
+        xtermRefs.current[tab] = term;
+        fitRefs.current[tab] = fitAddon;
+    }, [isMaximized, sendInput, tabState]);
+
+    useEffect(() => {
+        const visible = new Set<CliTab>(visibleTabs);
+        for (const tab of CLI_TABS.map(item => item.id)) {
+            if (!visible.has(tab) && xtermRefs.current[tab]) {
+                xtermRefs.current[tab]?.dispose();
+                delete xtermRefs.current[tab];
+                delete fitRefs.current[tab];
+                writtenLengths.current[tab] = 0;
+            }
+        }
+
+        for (const tab of visibleTabs) {
+            void ensureTerminal(tab);
+        }
+    }, [visibleTabs, ensureTerminal]);
+
+    useEffect(() => {
+        for (const tab of visibleTabs) {
+            const term = xtermRefs.current[tab];
+            if (!term) continue;
+            const next = tabState[tab].output;
+            const written = writtenLengths.current[tab];
+            if (next.length < written) {
+                term.clear();
+                term.write(next);
+                writtenLengths.current[tab] = next.length;
+                continue;
+            }
+            if (next.length > written) {
+                term.write(next.slice(written));
+                writtenLengths.current[tab] = next.length;
+            }
+        }
+    }, [tabState, visibleTabs]);
+
+    useEffect(() => {
+        const fitVisible = () => {
+            for (const tab of visibleTabs) {
+                fitRefs.current[tab]?.fit();
+            }
+        };
+
+        const timer = window.setTimeout(fitVisible, 50);
+        window.addEventListener('resize', fitVisible);
+        return () => {
+            window.clearTimeout(timer);
+            window.removeEventListener('resize', fitVisible);
+        };
+    }, [visibleTabs, isMaximized, activeTab]);
+
+    useEffect(() => {
+        xtermRefs.current[activeTab]?.focus();
+    }, [activeTab, isMaximized]);
 
     const activeDef = CLI_TABS.find(t => t.id === activeTab)!;
     const activeState = tabState[activeTab];
@@ -243,7 +310,7 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
             <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
                 <Terminal className="size-4 text-primary shrink-0" />
                 <span className="text-xs font-black uppercase tracking-widest text-text-dim">Terminal</span>
-                <span className="text-[9px] text-text-dim/70">4 sessões simultâneas</span>
+                <span className="text-[9px] text-text-dim/70">terminal real PTY</span>
                 {repoPath && (
                     <span className="ml-2 max-w-60 truncate font-mono text-[9px] text-text-dim" title={repoPath}>
                         {repoPath}
@@ -328,40 +395,12 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
                                     </div>
                                 </div>
 
-                                <div
-                                    ref={el => { outputRefs.current[tab.id] = el; }}
-                                    className="scrollbar-kairos min-h-0 flex-1 overflow-y-auto p-2 font-mono text-[10px] leading-relaxed"
-                                >
-                                    {current.output.length === 0 && current.status === 'connecting' && (
-                                        <p className="italic text-text-dim">Iniciando...</p>
-                                    )}
-                                    {current.output.length === 0 && current.status === 'disconnected' && (
-                                        <p className="italic text-text-dim">Desconectado</p>
-                                    )}
-                                    <pre className="whitespace-pre-wrap break-all text-green-300">{current.output}</pre>
-                                </div>
-
-                                <div className="shrink-0 border-t border-border/40 px-2 py-1.5">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className={cn('shrink-0 font-mono text-[10px] font-bold', tab.colorClass)}>›</span>
-                                        <input
-                                            type="text"
-                                            value={inputs[tab.id]}
-                                            onChange={e => setInputs(prev => ({ ...prev, [tab.id]: e.target.value }))}
-                                            onKeyDown={e => handleKeyDown(tab.id, e)}
-                                            disabled={current.status !== 'running'}
-                                            placeholder={current.status === 'running' ? 'Comando...' : 'Offline'}
-                                            className="flex-1 bg-transparent font-mono text-[10px] text-highlight placeholder:text-text-dim/40 focus:outline-none disabled:opacity-40"
-                                        />
-                                        <button
-                                            onClick={() => void sendInput(tab.id)}
-                                            disabled={!inputs[tab.id]}
-                                            title="Enviar"
-                                            className="shrink-0 text-primary transition-colors hover:text-accent disabled:opacity-30"
-                                        >
-                                            <Send className="size-3" />
-                                        </button>
-                                    </div>
+                                <div className="min-h-0 flex-1 p-2">
+                                    <div
+                                        ref={el => { hostRefs.current[tab.id] = el; }}
+                                        onClick={() => xtermRefs.current[tab.id]?.focus()}
+                                        className="terminal-host h-full w-full overflow-hidden rounded border border-border/20"
+                                    />
                                 </div>
                             </section>
                         );
@@ -436,40 +475,16 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
                         </div>
                     </div>
 
-                    <div
-                        ref={el => { outputRefs.current[activeTab] = el; }}
-                        className="scrollbar-kairos min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed"
-                    >
-                        {activeState.output.length === 0 && activeState.status === 'connecting' && (
-                            <p className="italic text-text-dim">Iniciando {activeDef.label}...</p>
-                        )}
-                        {activeState.output.length === 0 && activeState.status === 'disconnected' && (
-                            <p className="italic text-text-dim">Digite um comando para iniciar a sessão.</p>
-                        )}
-                        <pre className="whitespace-pre-wrap break-all text-green-300">{activeState.output}</pre>
+                    <div className="min-h-0 flex-1 p-3">
+                        <div
+                            ref={el => { hostRefs.current[activeTab] = el; }}
+                            onClick={() => xtermRefs.current[activeTab]?.focus()}
+                            className="terminal-host h-full w-full overflow-hidden rounded-xl border border-border/30"
+                        />
                     </div>
 
                     <div className="shrink-0 border-t border-border/40 px-3 py-2">
-                        <div className="flex items-center gap-2">
-                            <span className={cn('shrink-0 font-mono text-xs font-bold', activeDef.colorClass)}>›</span>
-                            <input
-                                type="text"
-                                value={inputs[activeTab]}
-                                onChange={e => setInputs(prev => ({ ...prev, [activeTab]: e.target.value }))}
-                                onKeyDown={e => handleKeyDown(activeTab, e)}
-                                placeholder="Comando..."
-                                className="flex-1 bg-transparent font-mono text-[11px] text-highlight placeholder:text-text-dim/40 focus:outline-none"
-                            />
-                            <button
-                                onClick={() => void sendInput(activeTab)}
-                                disabled={!inputs[activeTab]}
-                                title="Enviar"
-                                className="shrink-0 text-primary transition-colors hover:text-accent disabled:opacity-30"
-                            >
-                                <Send className="size-3.5" />
-                            </button>
-                        </div>
-                        <p className="mt-1 text-[9px] text-text-dim/40">Enter envia · Ctrl+C interrompe</p>
+                        <p className="text-[10px] text-text-dim/60">Clique no terminal e digite diretamente. Ctrl+C interrompe, Enter envia, e a autenticação roda na própria UI da ferramenta.</p>
                     </div>
                 </>
             )}
