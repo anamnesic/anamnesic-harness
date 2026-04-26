@@ -1,0 +1,21 @@
+{
+  "projectId": "system",
+  "generatedAt": "2026-04-26T15:02:55.186Z",
+  "provider": "gemini",
+  "command": "gemini",
+  "exitCode": 0,
+  "inputEvents": 14,
+  "plan": {
+    "risks": [],
+    "opportunities": [],
+    "taskCandidates": [],
+    "recommendations": [
+      {
+        "title": "Manual review required",
+        "rationale": "Model output did not contain JSON",
+        "action": "Inspect recent enriched events and run planner again."
+      }
+    ]
+  },
+  "pendingApprovals": []
+}

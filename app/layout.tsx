@@ -20,6 +20,8 @@ export const viewport: Viewport = {
     userScalable: false,
 };
 
+import { Providers } from './providers';
+
 export default function RootLayout({
     children,
 }: {
@@ -27,7 +29,9 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" className="dark">
-            <body className="bg-bg antialiased selection:bg-primary/20">{children}</body>
+            <body className="bg-bg antialiased selection:bg-primary/20">
+                <Providers>{children}</Providers>
+            </body>
         </html>
     );
 }

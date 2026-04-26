@@ -168,6 +168,9 @@ export class SettingsService {
       enableVectorMemory: 'Enable vector-based memory storage and retrieval',
       enableApprovalFlow: 'Enable approval workflow for sensitive operations',
       enableMetricsCollection: 'Enable collection of system metrics',
+      enableAutonomousModification: 'Allow agent to modify files autonomously',
+      enableDeepRetrieval: 'Enable deep search and multi-step memory retrieval',
+      enableJitEngine: 'Enable Just-In-Time execution for rapid task processing',
     };
     return descriptions[key] || `Feature flag: ${key}`;
   }

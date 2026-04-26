@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
         const { AgentService } = await import('@/src/core/services/AgentService');
         const service = new AgentService(db);
-        const agents = await service.listByWorkspace(workspaceId, false);
+        const agents = await service.ensurePrebuiltAgents(workspaceId);
         return ok(agents);
     } catch {
         return err('INTERNAL_ERROR', 'Failed to list agents', 500);

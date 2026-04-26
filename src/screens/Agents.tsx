@@ -563,94 +563,94 @@ export function Agents({ onNavigate }: AgentsProps) {
                                 const isPrebuilt = Boolean(agent.metadata?.prebuilt);
                                 return (
                                     <div key={agent.id} className="bento-card flex h-full flex-col gap-3">
-                                {/* Top row */}
-                                <div className="space-y-2">
-                                    <h3 className="break-words text-base font-bold leading-tight text-accent">
-                                        {agent.name}
-                                    </h3>
+                                        {/* Top row */}
+                                        <div className="space-y-2">
+                                            <h3 className="break-words text-base font-bold leading-tight text-accent">
+                                                {agent.name}
+                                            </h3>
 
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-xs text-text-dim font-mono">v{agent.version}</span>
-                                        </div>
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-xs text-text-dim font-mono">v{agent.version}</span>
+                                                </div>
 
-                                        <div className="flex items-center gap-2 shrink-0">
-                                                            <button
-                                                                onClick={() => openEditModal(agent)}
-                                                                className="rounded-lg border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-text-dim hover:text-accent hover:border-accent/40 transition-colors"
-                                                                aria-label="Editar agente"
-                                                            >
-                                                                <span className="flex items-center gap-1">
-                                                                    <Pencil className="size-3" />
-                                                                    Editar
-                                                                </span>
-                                                            </button>
-                                            <StateBadge
-                                                state={agent.state}
-                                                agentId={agent.id}
-                                                onStateChange={handleStateChange}
-                                            />
-                                            {isPrebuilt ? (
-                                                <button
-                                                    onClick={() => void handleToggleActive(agent)}
-                                                    className={cn(
-                                                        'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
-                                                        agent.isActive
-                                                            ? 'border-green-500/40 bg-green-500/15 text-green-400'
-                                                            : 'border-zinc-500/40 bg-zinc-500/15 text-zinc-400'
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <button
+                                                        onClick={() => openEditModal(agent)}
+                                                        className="rounded-lg border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-text-dim hover:text-accent hover:border-accent/40 transition-colors"
+                                                        aria-label="Editar agente"
+                                                    >
+                                                        <span className="flex items-center gap-1">
+                                                            <Pencil className="size-3" />
+                                                            Editar
+                                                        </span>
+                                                    </button>
+                                                    <StateBadge
+                                                        state={agent.state}
+                                                        agentId={agent.id}
+                                                        onStateChange={handleStateChange}
+                                                    />
+                                                    {isPrebuilt ? (
+                                                        <button
+                                                            onClick={() => void handleToggleActive(agent)}
+                                                            className={cn(
+                                                                'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                                                                agent.isActive
+                                                                    ? 'border-green-500/40 bg-green-500/15 text-green-400'
+                                                                    : 'border-zinc-500/40 bg-zinc-500/15 text-zinc-400'
+                                                            )}
+                                                            aria-label={agent.isActive ? 'Desativar agente' : 'Ativar agente'}
+                                                        >
+                                                            {agent.isActive ? 'Ativo' : 'Inativo'}
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleDelete(agent.id, agent.name)}
+                                                            className="rounded-lg p-1 text-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                            aria-label="Delete agent"
+                                                        >
+                                                            <Trash2 className="size-3.5" />
+                                                        </button>
                                                     )}
-                                                    aria-label={agent.isActive ? 'Desativar agente' : 'Ativar agente'}
-                                                >
-                                                    {agent.isActive ? 'Ativo' : 'Inativo'}
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleDelete(agent.id, agent.name)}
-                                                    className="rounded-lg p-1 text-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                                    aria-label="Delete agent"
-                                                >
-                                                    <Trash2 className="size-3.5" />
-                                                </button>
-                                            )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
 
-                                {/* Description */}
-                                {agent.description && (
-                                    <p className="text-sm text-text-dim leading-relaxed">{agent.description}</p>
-                                )}
+                                        {/* Description */}
+                                        {agent.description && (
+                                            <p className="text-sm text-text-dim leading-relaxed">{agent.description}</p>
+                                        )}
 
-                                {/* Capacidades */}
-                                {agent.capabilities?.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {agent.capabilities.map(cap => (
-                                            <span
-                                                key={cap}
-                                                className="rounded-md bg-white/5 border border-border px-2 py-0.5 text-[10px] font-semibold text-text-dim uppercase tracking-wider"
-                                            >
-                                                {cap}
+                                        {/* Capacidades */}
+                                        {agent.capabilities?.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {agent.capabilities.map(cap => (
+                                                    <span
+                                                        key={cap}
+                                                        className="rounded-md bg-white/5 border border-border px-2 py-0.5 text-[10px] font-semibold text-text-dim uppercase tracking-wider"
+                                                    >
+                                                        {cap}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Stats footer */}
+                                        <div className="mt-auto flex items-center gap-4 border-t border-border/40 pt-1 text-xs text-text-dim">
+                                            <span>
+                                                <span className="text-green-400 font-semibold">{agent.tasksCompleted ?? 0}</span> completed
                                             </span>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Stats footer */}
-                                <div className="mt-auto flex items-center gap-4 border-t border-border/40 pt-1 text-xs text-text-dim">
-                                    <span>
-                                        <span className="text-green-400 font-semibold">{agent.tasksCompleted ?? 0}</span> completed
-                                    </span>
-                                    <span>
-                                        <span className="text-red-400 font-semibold">{agent.tasksFailed ?? 0}</span> failed
-                                    </span>
-                                    <button
-                                        onClick={() => { setTaskAgent(agent); setShowTaskModal(true); }}
-                                        className="ml-auto flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20 transition-colors"
-                                    >
-                                        <Play className="size-2.5" />
-                                        Atribuir tarefa
-                                    </button>
-                                </div>
+                                            <span>
+                                                <span className="text-red-400 font-semibold">{agent.tasksFailed ?? 0}</span> failed
+                                            </span>
+                                            <button
+                                                onClick={() => { setTaskAgent(agent); setShowTaskModal(true); }}
+                                                className="ml-auto flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20 transition-colors"
+                                            >
+                                                <Play className="size-2.5" />
+                                                Atribuir tarefa
+                                            </button>
+                                        </div>
                                     </div>
                                 );
                             })}

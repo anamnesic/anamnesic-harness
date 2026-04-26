@@ -9,6 +9,9 @@ export interface FeatureFlags {
     enableVectorMemory: boolean;
     enableApprovalFlow: boolean;
     enableMetricsCollection: boolean;
+    enableAutonomousModification: boolean;
+    enableDeepRetrieval: boolean;
+    enableJitEngine: boolean;
 }
 
 function parseFlag(key: string, defaultValue: boolean): boolean {
@@ -25,6 +28,9 @@ function getFlags(): FeatureFlags {
         enableVectorMemory: parseFlag('KAIROS_FEATURE_VECTOR_MEMORY', false),
         enableApprovalFlow: parseFlag('KAIROS_FEATURE_APPROVAL_FLOW', false),
         enableMetricsCollection: parseFlag('KAIROS_FEATURE_METRICS', true),
+        enableAutonomousModification: parseFlag('KAIROS_FEATURE_AUTONOMOUS', false),
+        enableDeepRetrieval: parseFlag('KAIROS_FEATURE_DEEP_RETRIEVAL', true),
+        enableJitEngine: parseFlag('KAIROS_FEATURE_JIT', true),
     };
 }
 

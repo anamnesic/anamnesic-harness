@@ -50,6 +50,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+
+    // Refresh token every 1 hour
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiFetch<{ token: string; data?: { token: string } }>('/api/v1/auth/refresh', {
+          method: 'POST',
+        });
+        const newToken = (res as any).data?.token ?? res.token;
+        if (newToken) {
+          setToken(newToken);
+          localStorage.setItem('kairos-token', newToken);
+          console.log('Token refreshed automatically');
+        }
+      } catch (error) {
+        console.error('Failed to refresh token:', error);
+        // If refresh fails with 401, logout
+        if ((error as any).code === 'AUTH_ERROR' || (error as any).status === 401) {
+          logout();
+        }
+      }
+    }, 3600000); // 1 hour
+
+    return () => clearInterval(interval);
+  }, [token]);
+
   const bootstrapSystem = async () => {
     try {
       await apiFetch('/api/v1/system/bootstrap', { method: 'POST' });
@@ -64,6 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(token);
     localStorage.setItem('kairos-user', JSON.stringify(user));
     localStorage.setItem('kairos-token', token);
+    
+    // Set cookie for middleware
+    const expires = new Date();
+    expires.setTime(expires.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    document.cookie = `kairos-token=${token};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+    
     // Trigger bootstrap after login
     bootstrapSystem();
   };
@@ -73,6 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     localStorage.removeItem('kairos-user');
     localStorage.removeItem('kairos-token');
+    
+    // Clear cookie
+    document.cookie = 'kairos-token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Lax';
   };
 
   const value = {

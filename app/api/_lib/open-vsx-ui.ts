@@ -155,7 +155,7 @@ export async function getUiRenderHtml(namespace: string, name: string): Promise<
     const htmlDirRel = descriptor.htmlRelPath.split('/').slice(0, -1).join('/');
     const baseHref = `/api/v1/extensions/open-vsx/${namespace}/${name}/ui/file/${htmlDirRel ? `${htmlDirRel}/` : ''}`;
 
-        const bridge = `<script>
+    const bridge = `<script>
 (function(){
     const state = {};
     const extensionId = ${JSON.stringify(descriptor.extensionId)};
