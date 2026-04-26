@@ -1,76 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { Lightbulb, Search, Plus, Filter } from 'lucide-react';
-import { apiFetch } from '@/src/lib/api';
-import { useToast } from '@/src/components/Toast';
-import { useWorkspace } from '@/src/context/WorkspaceContext';
+import { Lightbulb } from 'lucide-react';
+import { useRepository } from '@/src/context/RepositoryContext';
 import { DecisionsPanel } from './DecisionsPanel';
 
-interface Project {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-}
-
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  timestamp: string;
-}
-
 export function Decisions() {
-  const { workspace } = useWorkspace();
-  const { toast } = useToast();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const { repository, repositories, isLoading } = useRepository();
 
-  useEffect(() => {
-    if (workspace) {
-      fetchProjects();
-    }
-  }, [workspace]);
-
-  async function fetchProjects() {
-    try {
-      setLoading(true);
-      const res = await apiFetch<ApiResponse<{ items: Project[] }>>(`/api/v1/workspaces/${workspace?.id}/projects`);
-      const items = res.data?.items || [];
-      setProjects(items);
-      if (items.length > 0) {
-        setSelectedProject(items[0].id);
-      }
-    } catch (error: any) {
-      toast(error?.message || 'Falha ao carregar projetos', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="size-8 rounded-full border-2 border-primary/30 border-t-primary/60 animate-spin mx-auto" />
-          <p className="text-sm text-text-dim">Carregando projetos...</p>
+          <p className="text-sm text-text-dim">Carregando repositórios...</p>
         </div>
       </div>
     );
   }
 
-  if (projects.length === 0) {
+  if (repositories.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-4 max-w-md">
           <Lightbulb className="size-12 text-primary/40 mx-auto" />
           <div>
-            <h3 className="font-bold text-text mb-2">Nenhum projeto encontrado</h3>
+            <h3 className="font-bold text-text mb-2">Nenhum repositório encontrado</h3>
             <p className="text-sm text-text-dim">
-              Crie um projeto primeiro para começar a registrar decisões.
+              Crie ou importe um repositório primeiro para começar a registrar decisões.
             </p>
           </div>
         </div>
@@ -84,38 +40,15 @@ export function Decisions() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Lightbulb className="size-4 text-primary" />
-            <h3 className="font-bold text-accent">Decisões do projeto</h3>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-dim" />
-              <input
-                type="text"
-                placeholder="Buscar contexto..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-3 py-1.5 bg-bg/60 border border-border rounded-lg text-sm focus:outline-none focus:border-primary/60 w-32"
-              />
-            </div>
-
-            <select
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              className="bg-bg/60 border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-primary/60"
-            >
-              {projects.map(project => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
+            <h3 className="font-bold text-accent">
+              Decisões do repositório: {repository?.name ?? 'Nenhum'}
+            </h3>
           </div>
         </div>
 
-        {selectedProject && (
+        {repository?.id && (
           <div className="border-t border-border/60 pt-4">
-            <DecisionsPanel projectId={selectedProject} />
+            <DecisionsPanel projectId={repository.id} />
           </div>
         )}
       </div>

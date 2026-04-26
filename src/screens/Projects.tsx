@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X, Pencil, Building2 } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
@@ -11,6 +11,7 @@ import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { useWorkspace } from '@/src/context/WorkspaceContext';
+import { useRepository } from '@/src/context/RepositoryContext';
 
 interface Project {
     id: string;
@@ -44,11 +45,15 @@ interface ApiResponse<T> {
 
 export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: boolean; refreshToken?: number }) {
     const { workspace } = useWorkspace();
+    const {
+        repository,
+        setRepositoryById,
+        refreshRepositories,
+    } = useRepository();
     const projectsPath = workspace?.id ? `/api/v1/projects?workspaceId=${workspace.id}&refresh=${refreshToken}` : null;
     const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
 
-    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'context' | 'decisions'>('context');
     const [showBrowser, setShowBrowser] = useState(false);
     const [browserMode, setBrowserMode] = useState<'import-repository' | 'attach-folder'>('import-repository');
@@ -63,6 +68,18 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         folderName: '',
         gitSubfolders: [],
     });
+
+    const projects = data?.data ?? [];
+
+    useEffect(() => {
+        if (!projects.length) {
+            return;
+        }
+
+        if (!repository || !projects.some((project) => project.id === repository.id)) {
+            setRepositoryById(projects[0].id);
+        }
+    }, [projects, repository, setRepositoryById]);
 
     function joinSubfolder(basePath: string, subfolder: string) {
         const separator = basePath.includes('\\') ? '\\' : '/';
@@ -79,7 +96,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 body: JSON.stringify({ name: base, localPath: folderPath }),
             });
             toast(`Repositório "${base}" importado`, 'success');
-            refetch();
+            await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
             // Check if it's a NO_GIT_REPO error with git subfolders
             if (e?.code === 'NO_GIT_REPO') {
@@ -95,7 +112,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     });
 
                     toast(`A pasta tem 1 repositório Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
-                    refetch();
+                    await Promise.all([refetch(), refreshRepositories()]);
                     return;
                 }
 
@@ -145,7 +162,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
             });
 
             toast('Pasta adicionada ao repositório', 'success');
-            refetch();
+            await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
             toast(e.message ?? 'Falha ao adicionar pasta ao repositório', 'error');
         } finally {
@@ -197,7 +214,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
             });
             toast('Repositório atualizado', 'success');
             setEditingProject(null);
-            refetch();
+            await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
             toast(e.message ?? 'Falha ao atualizar projeto', 'error');
         } finally {
@@ -210,7 +227,13 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         try {
             await apiFetch(`/api/v1/projects/${id}`, { method: 'DELETE' });
             toast('Repositório excluído', 'success');
-            refetch();
+            if (repository?.id === id) {
+                const fallback = projects.find((item) => item.id !== id);
+                if (fallback) {
+                    setRepositoryById(fallback.id);
+                }
+            }
+            await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
             toast(e.message ?? 'Falha ao excluir projeto', 'error');
         } finally {
@@ -218,8 +241,9 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         }
     }
 
-    const projects = data?.data ?? [];
-    const selectedProject = projects.find(p => p.id === selectedProjectId);
+    const selectedProject = repository && projects.some((p) => p.id === repository.id)
+        ? projects.find((p) => p.id === repository.id) || null
+        : null;
 
     if (!workspace) {
         return (
@@ -247,7 +271,11 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
             >
                 <button
-                    onClick={() => setSelectedProjectId(null)}
+                    onClick={() => {
+                        if (projects.length > 0) {
+                            setRepositoryById(projects[0].id);
+                        }
+                    }}
                     className="flex items-center gap-2 text-sm text-text-dim hover:text-accent transition-colors mb-6"
                 >
                     <ArrowLeft className="size-4" />
@@ -378,7 +406,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                         <div
                             key={project.id}
                             className="bento-card space-y-2 cursor-pointer hover:border-primary/60 transition-colors"
-                            onClick={() => setSelectedProjectId(project.id)}
+                            onClick={() => setRepositoryById(project.id)}
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <span className="font-bold text-accent">{project.name}</span>

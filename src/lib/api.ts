@@ -19,8 +19,11 @@ export async function apiFetch<T = unknown>(
     init?: RequestInit,
 ): Promise<T> {
     // Get workspace ID from localStorage
-    const workspaceId = typeof window !== 'undefined' 
-        ? localStorage.getItem('kairos-selected-workspace') 
+    const workspaceId = typeof window !== 'undefined'
+        ? localStorage.getItem('kairos-selected-workspace')
+        : null;
+    const projectId = typeof window !== 'undefined'
+        ? localStorage.getItem('kairos-selected-repository')
         : null;
 
     const headers: Record<string, string> = {
@@ -37,6 +40,11 @@ export async function apiFetch<T = unknown>(
     // Add workspace header if available and not already set
     if (workspaceId && !headers['X-Workspace-Id']) {
         headers['X-Workspace-Id'] = workspaceId;
+    }
+
+    // Add globally selected repository header if available
+    if (projectId && !headers['X-Project-Id']) {
+        headers['X-Project-Id'] = projectId;
     }
 
     const res = await fetch(path, {

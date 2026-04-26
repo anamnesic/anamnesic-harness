@@ -12,7 +12,7 @@ import {
   Bell,
   ArrowLeft,
   Activity,
-  Boxes,
+  FolderGit2,
   Bot,
   Camera,
   Lightbulb,
@@ -21,9 +21,10 @@ import {
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
-import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
+import { WorkspaceProvider } from './context/WorkspaceContext';
+import { RepositoryProvider } from './context/RepositoryContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { WorkspaceSelector } from './components/WorkspaceSelector';
+import { RepositorySelector } from './components/RepositorySelector';
 import { Dashboard } from './screens/Dashboard';
 import { MemoryLedger } from './screens/MemoryLedger';
 import { Observers } from './screens/Observers';
@@ -54,7 +55,7 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
 }) => (
   <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
     <div className="flex items-center gap-4">
-      <WorkspaceSelector />
+      <RepositorySelector />
       {onBack ? (
         <button
           onClick={onBack}
@@ -99,7 +100,7 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
 
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
-  { id: 'workspaces', label: 'Espaços', icon: Boxes },
+  { id: 'workspaces', label: 'Repos', icon: FolderGit2 },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'decisions', label: 'Decisões', icon: Lightbulb },
@@ -163,7 +164,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'redteaming':
       return { title: 'Red Teaming', subtitle: 'Simulação de ataques', element: <RedTeaming />, onBack: goHome, rightElement: undefined };
     case 'workspaces':
-      return { title: 'Espaços', subtitle: 'Workspaces e repositórios em uma única tela', element: <Workspaces />, onBack: goHome, rightElement: undefined };
+      return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: goHome, rightElement: undefined };
     case 'ledger':
       return { title: 'Memória', subtitle: 'Recuperação histórica', element: <MemoryLedger />, onBack: goHome, rightElement: undefined };
     case 'observers':
@@ -196,11 +197,11 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'workflows':
       return { title: 'Workflows', subtitle: 'Pipelines de automação', element: <Workflows />, onBack: goHome, rightElement: undefined };
     case 'projects':
-      return { title: 'Espaços', subtitle: 'Workspaces e repositórios em uma única tela', element: <Workspaces />, onBack: goHome, rightElement: undefined };
+      return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: goHome, rightElement: undefined };
     case 'decisions':
       return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
     case 'apikeys':
-      return { title: 'Chaves de API', subtitle: 'Credenciais de projeto do workspace', element: <ApiKeysHub />, onBack: goHome, rightElement: undefined };
+      return { title: 'Chaves de API', subtitle: 'Credenciais do repositório selecionado', element: <ApiKeysHub />, onBack: goHome, rightElement: undefined };
     case 'security':
       return { title: 'Auditoria', subtitle: 'Auditoria de vulnerabilidades', element: <Security onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
     case 'integrations':
@@ -248,33 +249,35 @@ function AppContent() {
 
   return (
     <WorkspaceProvider>
-      <ToastProvider>
-        <OnboardingModal />
-        <div className="flex min-h-screen flex-col bg-bg font-sans text-highlight selection:bg-primary/20">
-          <Header
-            title={config.title}
-            subtitle={config.subtitle}
-            onBack={config.onBack}
-            rightElement={config.rightElement}
-            activeTab={activeTab}
-          />
-          <main className="flex-1 flex flex-col overflow-x-hidden">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.02 }}
-                transition={{ duration: 0.2 }}
-                className="flex-1 flex flex-col"
-              >
-                {config.element}
-              </motion.div>
-            </AnimatePresence>
-          </main>
-          <BottomNav active={activeTab} onChange={setActiveTab} />
-        </div>
-      </ToastProvider>
+      <RepositoryProvider>
+        <ToastProvider>
+          <OnboardingModal />
+          <div className="flex min-h-screen flex-col bg-bg font-sans text-highlight selection:bg-primary/20">
+            <Header
+              title={config.title}
+              subtitle={config.subtitle}
+              onBack={config.onBack}
+              rightElement={config.rightElement}
+              activeTab={activeTab}
+            />
+            <main className="flex-1 flex flex-col overflow-x-hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex-1 flex flex-col"
+                >
+                  {config.element}
+                </motion.div>
+              </AnimatePresence>
+            </main>
+            <BottomNav active={activeTab} onChange={setActiveTab} />
+          </div>
+        </ToastProvider>
+      </RepositoryProvider>
     </WorkspaceProvider>
   );
 }
