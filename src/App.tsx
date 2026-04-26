@@ -286,14 +286,14 @@ function AppContent() {
       <RepositoryProvider>
         <ToastProvider>
           <OnboardingModal />
-          <div className="flex min-h-screen bg-bg font-sans text-highlight selection:bg-primary/20">
+          <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
             {/* Left Sidebar - Repositories */}
-            <aside className="w-64 border-r border-border bg-card/50 overflow-y-auto flex flex-col">
+            <aside className="h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto flex flex-col">
               <Projects />
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex h-screen flex-1 flex-col overflow-hidden">
               <Header
                 title={config.title}
                 subtitle={config.subtitle}
@@ -301,7 +301,7 @@ function AppContent() {
                 rightElement={config.rightElement}
                 activeTab={activeTab}
               />
-              <main className="flex-1 flex flex-col overflow-x-hidden">
+              <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
@@ -319,7 +319,7 @@ function AppContent() {
             </div>
 
             {/* Right Sidebar - Chat */}
-            <aside className="w-80 border-l border-border bg-card/50 overflow-y-auto">
+            <aside className="h-screen w-80 shrink-0 border-l border-border bg-card/50 overflow-y-auto">
               <ChatPanel />
             </aside>
           </div>
