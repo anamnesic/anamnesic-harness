@@ -75,9 +75,25 @@ interface RepositoryTreeNode {
     children?: RepositoryTreeNode[];
 }
 
+export type ProjectTabId = 'repository' | 'git' | 'context' | 'decisions';
+
+interface ProjectsProps {
+    embedded?: boolean;
+    refreshToken?: number;
+    activeTab?: ProjectTabId;
+    onTabChange?: (tab: ProjectTabId) => void;
+    hideTabBar?: boolean;
+}
+
 const RECENT_REPOSITORIES_KEY = 'kairos-recent-repositories';
 
-export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: boolean; refreshToken?: number }) {
+export function Projects({
+    embedded = false,
+    refreshToken = 0,
+    activeTab: controlledActiveTab,
+    onTabChange,
+    hideTabBar = false,
+}: ProjectsProps) {
     const { workspace } = useWorkspace();
     const {
         repository,
@@ -93,7 +109,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
 
-    const [activeTab, setActiveTab] = useState<'repository' | 'git' | 'context' | 'decisions'>('repository');
+    const [internalActiveTab, setInternalActiveTab] = useState<ProjectTabId>('repository');
     const [showBrowser, setShowBrowser] = useState(false);
     const [browserMode, setBrowserMode] = useState<'import-repository' | 'attach-folder'>('import-repository');
     const [attachTargetProjectId, setAttachTargetProjectId] = useState<string | null>(null);
@@ -113,6 +129,14 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     });
 
     const projects = data?.data ?? [];
+    const activeTab = controlledActiveTab ?? internalActiveTab;
+
+    function handleTabChange(tab: ProjectTabId) {
+        if (!controlledActiveTab) {
+            setInternalActiveTab(tab);
+        }
+        onTabChange?.(tab);
+    }
 
     useEffect(() => {
         if (!projects.length) {
@@ -527,7 +551,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     }
 
     const tabItems: Array<{
-        id: 'repository' | 'git' | 'context' | 'decisions';
+        id: ProjectTabId;
         label: string;
         icon: typeof FileText;
     }> = [
@@ -752,36 +776,38 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     className={embedded ? 'w-full' : 'flex-1 w-full max-w-6xl mx-auto p-3 pb-32 sm:p-6'}
                 >
                     <div className="space-y-3">
-                        <aside className="bento-card p-1.5">
-                            <div className="flex items-center gap-1">
-                                {tabItems.map((tab) => {
-                                    const Icon = tab.icon;
-                                    const isActive = activeTab === tab.id;
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            title={tab.label}
-                                            aria-label={tab.label}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={cn(
-                                                'relative rounded-md p-2 transition-colors',
-                                                isActive
-                                                    ? 'text-accent bg-card/70'
-                                                    : 'text-text-dim hover:text-highlight hover:bg-card/40',
-                                            )}
-                                        >
-                                            <Icon className="size-4" />
-                                            {isActive && (
-                                                <motion.div
-                                                    layoutId="activeTab"
-                                                    className="absolute -bottom-1 left-1 right-1 h-0.5 bg-primary"
-                                                />
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </aside>
+                        {!hideTabBar && (
+                            <aside className="bento-card p-1.5">
+                                <div className="flex items-center gap-1">
+                                    {tabItems.map((tab) => {
+                                        const Icon = tab.icon;
+                                        const isActive = activeTab === tab.id;
+                                        return (
+                                            <button
+                                                key={tab.id}
+                                                title={tab.label}
+                                                aria-label={tab.label}
+                                                onClick={() => handleTabChange(tab.id)}
+                                                className={cn(
+                                                    'relative rounded-md p-2 transition-colors',
+                                                    isActive
+                                                        ? 'text-accent bg-card/70'
+                                                        : 'text-text-dim hover:text-highlight hover:bg-card/40',
+                                                )}
+                                            >
+                                                <Icon className="size-4" />
+                                                {isActive && (
+                                                    <motion.div
+                                                        layoutId="activeTab"
+                                                        className="absolute -bottom-1 left-1 right-1 h-0.5 bg-primary"
+                                                    />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </aside>
+                        )}
 
                         <section className="min-w-0">
                             {activeTab === 'repository' ? (

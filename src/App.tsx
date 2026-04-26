@@ -17,6 +17,10 @@ import {
   RotateCw,
   Maximize2,
   Minimize2,
+  Folder,
+  FileText,
+  GitBranch,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -35,7 +39,7 @@ import { Snapshots } from './screens/Snapshots';
 import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
-import { Projects } from './screens/Projects';
+import { Projects, type ProjectTabId } from './screens/Projects';
 import { ModelBenchmarks } from './screens/ModelBenchmarks';
 import { RedTeaming } from './screens/RedTeaming';
 import { Integrations } from './screens/Integrations';
@@ -115,12 +119,20 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
 
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
+  { id: 'projects', label: 'Repos', icon: Folder },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'terminal', label: 'Terminal', icon: Terminal },
   { id: 'decisions', label: 'Decisões', icon: Lightbulb },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
+
+const PROJECT_TABS: Array<{ id: ProjectTabId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: 'repository', label: 'Repo', icon: FileText },
+  { id: 'git', label: 'Git', icon: GitBranch },
+  { id: 'context', label: 'Contexto', icon: BookOpen },
+  { id: 'decisions', label: 'Decisões', icon: Lightbulb },
+];
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
 type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations';
@@ -181,6 +193,8 @@ function useScreenConfig(
   setActive: (id: TabId) => void,
   terminalHeaderState: TerminalHeaderState | null,
   setTerminalHeaderState: (state: TerminalHeaderState | null) => void,
+  projectTab: ProjectTabId,
+  setProjectTab: (tab: ProjectTabId) => void,
 ) {
   switch (active) {
     case 'dashboard':
@@ -266,7 +280,36 @@ function useScreenConfig(
     case 'workflows':
       return { title: 'Workflows', subtitle: 'Pipelines de automação', element: <Workflows />, onBack: goHome, rightElement: undefined };
     case 'projects':
-      return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: undefined, rightElement: undefined };
+      return {
+        title: 'Repositórios',
+        subtitle: 'Explorer, Git, Contexto e Decisões',
+        element: <Projects embedded activeTab={projectTab} onTabChange={setProjectTab} hideTabBar />,
+        onBack: goHome,
+        rightElement: (
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-card/70 p-1">
+            {PROJECT_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = projectTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setProjectTab(tab.id)}
+                  title={tab.label}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                    isActive
+                      ? 'bg-bg text-highlight border border-border'
+                      : 'text-text-dim hover:text-accent hover:bg-card/50',
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ),
+      };
     case 'decisions':
       return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
     case 'integrations':
@@ -297,9 +340,18 @@ function useScreenConfig(
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [projectTab, setProjectTab] = useState<ProjectTabId>('repository');
   const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
-  const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'), setActiveTab, terminalHeaderState, setTerminalHeaderState);
+  const config = useScreenConfig(
+    activeTab,
+    () => setActiveTab('dashboard'),
+    setActiveTab,
+    terminalHeaderState,
+    setTerminalHeaderState,
+    projectTab,
+    setProjectTab,
+  );
 
   if (isLoading) {
     return (
@@ -319,11 +371,6 @@ function AppContent() {
         <ToastProvider>
           <OnboardingModal />
           <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
-            {/* Left Sidebar - Repositories */}
-            <aside className="scrollbar-kairos hidden h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto lg:flex lg:flex-col">
-              <Projects />
-            </aside>
-
             {/* Main Content */}
             <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
               <Header
