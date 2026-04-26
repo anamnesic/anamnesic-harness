@@ -10,6 +10,17 @@ const PUBLIC_API_PREFIXES = [
     '/api/health',
 ];
 
+function isPublicDashboardReadRoute(request: NextRequest, pathname: string): boolean {
+    if (request.method !== 'GET') return false;
+
+    return (
+        pathname === '/api/v1/metrics' ||
+        pathname === '/api/v1/agents/stats' ||
+        pathname === '/api/v1/workflows/stats' ||
+        pathname === '/api/v1/orchestrator/runs'
+    );
+}
+
 function isOpenVsxUiAssetRoute(pathname: string): boolean {
     return pathname.startsWith('/api/v1/extensions/open-vsx/') && pathname.includes('/ui/file/');
 }
@@ -25,6 +36,7 @@ export async function proxy(request: NextRequest) {
     // Public paths
     if (
         PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+        isPublicDashboardReadRoute(request, pathname) ||
         isOpenVsxUiAssetRoute(pathname) ||
         !pathname.startsWith('/api/')
     ) {
