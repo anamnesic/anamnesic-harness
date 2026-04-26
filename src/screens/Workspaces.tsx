@@ -16,6 +16,7 @@ interface Workspace {
     name: string;
     slug: string;
     description?: string | null;
+    metadata?: { localPath?: string;[key: string]: unknown } | null;
     status?: string;
     createdAt?: string;
     updatedAt?: string;
@@ -103,7 +104,7 @@ export function Workspaces() {
     const { workspace, refreshWorkspaces, setWorkspace } = useWorkspace();
 
     const [showCreate, setShowCreate] = useState(false);
-    const [editing, setEditing] = useState<Workspace | null>(null);
+    const [editingFolderWorkspace, setEditingFolderWorkspace] = useState<Workspace | null>(null);
     const [detail, setDetail] = useState<Workspace | null>(null);
     const [showFolderBrowser, setShowFolderBrowser] = useState(false);
     const [repositoryRefreshToken, setRepositoryRefreshToken] = useState(0);
@@ -125,15 +126,13 @@ export function Workspaces() {
     }
 
     function openEdit(ws: Workspace) {
-        setName(ws.name);
-        setSlug(ws.slug);
-        setDescription(ws.description ?? '');
-        setEditing(ws);
+        setEditingFolderWorkspace(ws);
+        setShowFolderBrowser(true);
     }
 
     function closeAll() {
         setShowCreate(false);
-        setEditing(null);
+        setEditingFolderWorkspace(null);
         resetForm();
     }
 
@@ -156,22 +155,7 @@ export function Workspaces() {
     }
 
     async function handleEdit() {
-        if (!editing) return;
-        if (!name.trim() || !slug.trim()) { toast('Name and slug are required', 'error'); return; }
-        setSubmitting(true);
-        try {
-            await apiFetch(`/api/v1/workspaces/${editing.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ name: name.trim(), slug: slug.trim(), description: description.trim() }),
-            });
-            toast('Workspace updated', 'success');
-            refetch();
-            closeAll();
-        } catch (e: any) {
-            toast(e.message ?? 'Falha ao atualizar workspace', 'error');
-        } finally {
-            setSubmitting(false);
-        }
+        return;
     }
 
     async function handleDelete(ws: Workspace) {
@@ -231,6 +215,18 @@ export function Workspaces() {
         setShowFolderBrowser(false);
         setSubmitting(true);
         try {
+            if (editingFolderWorkspace) {
+                await apiFetch(`/api/v1/workspaces/${editingFolderWorkspace.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ localPath: folderPath }),
+                });
+                toast(`A pasta do workspace "${editingFolderWorkspace.name}" foi atualizada`, 'success');
+                setEditingFolderWorkspace(null);
+                refetch();
+                refreshWorkspaces();
+                return;
+            }
+
             const targetWorkspace = await ensureTargetWorkspace(folderName);
 
             await apiFetch('/api/v1/projects', {
@@ -290,6 +286,7 @@ export function Workspaces() {
 
             toast(e.message ?? 'Falha ao selecionar pasta', 'error');
         } finally {
+            setEditingFolderWorkspace(null);
             setSubmitting(false);
         }
     }
@@ -383,20 +380,20 @@ export function Workspaces() {
             </section>
 
             <AnimatePresence>
-                {(showCreate || editing) && (
+                {showCreate && (
                     <FormModal
                         key="form-modal"
-                        title={editing ? 'Edit Workspace' : 'New Workspace'}
+                        title="New Workspace"
                         name={name}
                         slug={slug}
                         description={description}
-                        onName={(v) => { setName(v); if (!editing) setSlug(slugify(v)); }}
+                        onName={(v) => { setName(v); setSlug(slugify(v)); }}
                         onSlug={(v) => setSlug(slugify(v))}
                         onDescription={setDescription}
                         onClose={closeAll}
-                        onSubmit={editing ? handleEdit : handleCreate}
+                        onSubmit={handleCreate}
                         submitting={submitting}
-                        submitLabel={editing ? 'Save' : 'Create'}
+                        submitLabel="Create"
                     />
                 )}
                 {detail && (
@@ -410,6 +407,7 @@ export function Workspaces() {
                     <FolderBrowser
                         onClose={() => setShowFolderBrowser(false)}
                         onSelect={handleWorkspaceFolderSelected}
+                        initialPath={editingFolderWorkspace?.metadata?.localPath}
                     />
                 )}
             </AnimatePresence>
