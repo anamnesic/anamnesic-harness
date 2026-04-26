@@ -63,7 +63,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
     if (!session.exited) {
         broadcast(session, '\x1b[2m[session terminated by user]\x1b[0m\n');
-        try { session.proc.kill('SIGTERM'); } catch { /* already dead */ }
+        try { session.proc.kill(); } catch { /* already dead */ }
     }
 
     sessions.delete(sessionId);

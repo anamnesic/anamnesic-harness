@@ -1,7 +1,7 @@
-import type { ChildProcess } from 'node:child_process';
+import type { IPty } from 'node-pty';
 
 export interface Session {
-    proc: ChildProcess;
+    proc: IPty;
     cli: string;
     cwd: string;
     /** Buffered output so late subscribers get recent history */

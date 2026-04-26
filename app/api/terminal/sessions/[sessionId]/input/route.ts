@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (data === null) return new Response('Missing data', { status: 400 });
 
     try {
-        session.proc.stdin?.write(data);
+        session.proc.write(data);
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         return new Response(JSON.stringify({ error: msg }), {
