@@ -30,9 +30,9 @@ function getCliArgs(cli: CliType, prompt: string): { cmd: string; args: string[]
             return { cmd: firstAvailable(['gemini', 'gemini-cli']), args: ['-p', prompt] };
         case 'copilot':
             if (commandExists('copilot')) {
-                return { cmd: 'copilot', args: ['-p', prompt] };
+                return { cmd: 'copilot', args: ['-s', '-p', prompt] };
             }
-            return { cmd: 'gh', args: ['copilot', '-p', prompt] };
+            return { cmd: 'gh', args: ['copilot', '--', '-s', '-p', prompt] };
         case 'codex':
             return { cmd: 'codex', args: [prompt] };
     }
