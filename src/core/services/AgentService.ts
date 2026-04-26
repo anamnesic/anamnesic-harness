@@ -8,6 +8,8 @@ export interface CreateAgentInput {
   description?: string;
   capabilities: AgentCapability[];
   config?: Record<string, any>;
+  isActive?: boolean;
+  metadata?: Record<string, any>;
 }
 
 export interface UpdateAgentInput {
@@ -16,7 +18,87 @@ export interface UpdateAgentInput {
   capabilities?: AgentCapability[];
   config?: Record<string, any>;
   state?: AgentState;
+  isActive?: boolean;
+  metadata?: Record<string, any>;
 }
+
+const PREBUILT_AGENTS: Array<{
+  name: string;
+  description: string;
+  capabilities: AgentCapability[];
+  metadata: Record<string, any>;
+}> = [
+    {
+      name: 'Inversao',
+      description: 'Usa inversao antes do prompt para explorar o problema pelo angulo contrario.',
+      capabilities: ['reasoning', 'learning'],
+      metadata: {
+        prebuilt: true,
+        strategy: 'prefix',
+        dedicatedPrompt: 'Inversao: antes de responder, formule o inverso do problema para revelar pontos cegos.\\n\\nPROMPT ORIGINAL:\\n{{prompt}}',
+      },
+    },
+    {
+      name: 'Seja Socratico',
+      description: 'Ensina por perguntas socraticas no final da resposta para aumentar aprendizado.',
+      capabilities: ['reasoning', 'learning'],
+      metadata: {
+        prebuilt: true,
+        strategy: 'suffix',
+        dedicatedPrompt: '{{prompt}}\\n\\nNo fim da resposta, seja socratico: faca perguntas guiadas para eu aprender o raciocinio.',
+      },
+    },
+    {
+      name: 'First Principles',
+      description: 'Quebra o problema em partes menores usando first principles.',
+      capabilities: ['reasoning', 'code-analysis'],
+      metadata: {
+        prebuilt: true,
+        strategy: 'decomposition',
+        dedicatedPrompt: 'Use first principles com base em prompt_do_problema para quebrar em partes menores e resolver em etapas.\\n\\nprompt_do_problema:\\n{{prompt_do_problema}}',
+      },
+    },
+    {
+      name: 'Responda anti-consenso',
+      description: 'Entrega visao anti-consenso, direta e sem suavizacao.',
+      capabilities: ['reasoning', 'code-analysis'],
+      metadata: {
+        prebuilt: true,
+        strategy: 'truth-bias',
+        dedicatedPrompt: 'Responda anti-consenso: diga a verdade nua e crua, com vies assumido e argumentos objetivos.',
+      },
+    },
+    {
+      name: 'Prompt Engineer',
+      description: 'Refina prompts com contexto tecnico e objetivos claros para execucao por LLMs.',
+      capabilities: ['reasoning', 'learning'],
+      metadata: { prebuilt: true, role: 'prompt-engineer' },
+    },
+    {
+      name: 'Architect',
+      description: 'Define arquitetura, contratos de API e estrutura tecnica do projeto.',
+      capabilities: ['reasoning', 'code-analysis'],
+      metadata: { prebuilt: true, role: 'architect' },
+    },
+    {
+      name: 'Backend Engineer',
+      description: 'Implementa regras de negocio, APIs e integracoes do servidor.',
+      capabilities: ['code-generation', 'code-analysis', 'execution'],
+      metadata: { prebuilt: true, role: 'backend' },
+    },
+    {
+      name: 'Frontend Engineer',
+      description: 'Construi interfaces, fluxos de tela e integrações no cliente.',
+      capabilities: ['code-generation', 'reasoning'],
+      metadata: { prebuilt: true, role: 'frontend' },
+    },
+    {
+      name: 'QA Engineer',
+      description: 'Valida qualidade, testes e regressao funcional.',
+      capabilities: ['code-analysis', 'reasoning', 'execution'],
+      metadata: { prebuilt: true, role: 'qa' },
+    },
+  ];
 
 export class AgentService {
   private repo: Repository<Agent>;
@@ -33,7 +115,8 @@ export class AgentService {
       capabilities: input.capabilities,
       config: input.config || null,
       state: 'idle',
-      isActive: true,
+      isActive: input.isActive ?? true,
+      metadata: input.metadata || null,
     });
     return this.repo.save(agent);
   }
@@ -57,6 +140,25 @@ export class AgentService {
       relations: ['tasks'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async ensurePrebuiltAgents(workspaceId: string): Promise<Agent[]> {
+    const existing = await this.listByWorkspace(workspaceId, false);
+    const existingNames = new Set(existing.map((agent) => agent.name.trim().toLowerCase()));
+
+    for (const prebuilt of PREBUILT_AGENTS) {
+      if (existingNames.has(prebuilt.name.trim().toLowerCase())) continue;
+      await this.create({
+        workspaceId,
+        name: prebuilt.name,
+        description: prebuilt.description,
+        capabilities: prebuilt.capabilities,
+        isActive: true,
+        metadata: prebuilt.metadata,
+      });
+    }
+
+    return this.listByWorkspace(workspaceId, false);
   }
 
   async update(id: string, input: UpdateAgentInput): Promise<Agent | null> {
@@ -87,12 +189,12 @@ export class AgentService {
     }
 
     await this.repo.update(id, { lastActivityAt: new Date() });
-    
+
     const updated = await this.getById(id);
     if (updated) {
-      getEventBus().emit('agent:stats', { 
-        id, 
-        tasksCompleted: updated.tasksCompleted, 
+      getEventBus().emit('agent:stats', {
+        id,
+        tasksCompleted: updated.tasksCompleted,
         tasksFailed: updated.tasksFailed,
         agent: updated
       });
