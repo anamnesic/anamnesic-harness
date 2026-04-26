@@ -694,7 +694,7 @@ export function Projects({
                         <section className="min-w-0">
                             {activeTab === 'repository' ? (
                                 <div className="flex min-h-128 flex-col gap-4 lg:flex-row">
-                                    <aside className="bento-card flex h-screen min-h-0 flex-col lg:w-72 lg:shrink-0">
+                                    <aside className="bento-card flex h-dvh min-h-0 flex-col lg:w-72 lg:shrink-0">
                                         <input
                                             value={repoQuery}
                                             onChange={(e) => setRepoQuery(e.target.value)}
