@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X, Trash2, Bot, ListTodo, Play } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
@@ -21,11 +21,12 @@ interface Agent {
     version: string;
     capabilities: AgentCapability[];
     state: AgentState;
-    isAtivo: boolean;
+    isActive: boolean;
     tasksCompleted: number;
     tasksFailed: number;
     lastActivityAt: string | null;
     createdAt: string;
+    metadata?: Record<string, any> | null;
 }
 
 interface ApiResponse {
@@ -135,10 +136,19 @@ export function Agents({ onNavigate }: AgentsProps) {
 
     const agents: Agent[] = (data as any)?.data ?? data ?? [];
 
-    const totalAgents = agents.length;
-    const activeAgents = agents.filter(a => a.state === 'running' || a.state === 'idle').length;
-    const totalCompleted = agents.reduce((sum, a) => sum + (a.tasksCompleted ?? 0), 0);
-    const totalFailed = agents.reduce((sum, a) => sum + (a.tasksFailed ?? 0), 0);
+    const sortedAgents = useMemo(() => {
+        return [...agents].sort((a, b) => {
+            const aPrebuilt = Boolean(a.metadata?.prebuilt);
+            const bPrebuilt = Boolean(b.metadata?.prebuilt);
+            if (aPrebuilt !== bPrebuilt) return aPrebuilt ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+    }, [agents]);
+
+    const totalAgents = sortedAgents.length;
+    const activeAgents = sortedAgents.filter(a => a.isActive).length;
+    const totalCompleted = sortedAgents.reduce((sum, a) => sum + (a.tasksCompleted ?? 0), 0);
+    const totalFailed = sortedAgents.reduce((sum, a) => sum + (a.tasksFailed ?? 0), 0);
 
     function closeModal() {
         setShowModal(false);
@@ -163,7 +173,7 @@ export function Agents({ onNavigate }: AgentsProps) {
         if (!name.trim()) { toast('Nome é obrigatório', 'error'); return; }
         if (capabilities.length === 0) { toast('Selecione ao menos uma capacidade', 'error'); return; }
         if (!workspace) { toast('Nenhum workspace ativo', 'error'); return; }
-        
+
         setSubmitting(true);
         try {
             await apiFetch('/api/v1/agents', {
@@ -243,11 +253,24 @@ export function Agents({ onNavigate }: AgentsProps) {
         }
     }
 
+    async function handleToggleActive(agent: Agent) {
+        try {
+            await apiFetch(`/api/v1/agents/${agent.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ isActive: !agent.isActive }),
+            });
+            toast(`Agente ${!agent.isActive ? 'ativado' : 'desativado'}`, 'success');
+            refetch();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao atualizar status do agente', 'error');
+        }
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full"
+            className="flex-1 w-full max-w-7xl mx-auto p-6 pb-32"
         >
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
@@ -271,7 +294,7 @@ export function Agents({ onNavigate }: AgentsProps) {
             </div>
 
             {/* Stats row */}
-            <div className="mb-6 grid grid-cols-4 gap-3">
+            <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
                 {[
                     { label: 'Total', value: totalAgents },
                     { label: 'Ativo', value: activeAgents },
@@ -296,69 +319,92 @@ export function Agents({ onNavigate }: AgentsProps) {
                     <p className="text-text-dim text-sm">Nenhum agente configurado</p>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    {agents.map(agent => (
-                        <div key={agent.id} className="bento-card space-y-3">
-                            {/* Top row */}
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <span className="font-bold text-accent truncate">{agent.name}</span>
-                                    <span className="text-xs text-text-dim font-mono shrink-0">v{agent.version}</span>
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+                    {sortedAgents.map(agent => {
+                        const isPrebuilt = Boolean(agent.metadata?.prebuilt);
+                        return (
+                            <div key={agent.id} className="bento-card flex h-full flex-col gap-3">
+                                {/* Top row */}
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="font-bold text-accent truncate">{agent.name}</span>
+                                        <span className="text-xs text-text-dim font-mono shrink-0">v{agent.version}</span>
+                                        {isPrebuilt && (
+                                            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-dim">
+                                                pre-feito
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <StateBadge
+                                            state={agent.state}
+                                            agentId={agent.id}
+                                            onStateChange={handleStateChange}
+                                        />
+                                        {isPrebuilt ? (
+                                            <button
+                                                onClick={() => void handleToggleActive(agent)}
+                                                className={cn(
+                                                    'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                                                    agent.isActive
+                                                        ? 'border-green-500/40 bg-green-500/15 text-green-400'
+                                                        : 'border-zinc-500/40 bg-zinc-500/15 text-zinc-400'
+                                                )}
+                                                aria-label={agent.isActive ? 'Desativar agente' : 'Ativar agente'}
+                                            >
+                                                {agent.isActive ? 'Ativo' : 'Inativo'}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleDelete(agent.id, agent.name)}
+                                                className="rounded-lg p-1 text-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                aria-label="Delete agent"
+                                            >
+                                                <Trash2 className="size-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <StateBadge
-                                        state={agent.state}
-                                        agentId={agent.id}
-                                        onStateChange={handleStateChange}
-                                    />
+
+                                {/* Description */}
+                                {agent.description && (
+                                    <p className="text-sm text-text-dim leading-relaxed">{agent.description}</p>
+                                )}
+
+                                {/* Capacidades */}
+                                {agent.capabilities?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {agent.capabilities.map(cap => (
+                                            <span
+                                                key={cap}
+                                                className="rounded-md bg-white/5 border border-border px-2 py-0.5 text-[10px] font-semibold text-text-dim uppercase tracking-wider"
+                                            >
+                                                {cap}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Stats footer */}
+                                <div className="mt-auto flex items-center gap-4 border-t border-border/40 pt-1 text-xs text-text-dim">
+                                    <span>
+                                        <span className="text-green-400 font-semibold">{agent.tasksCompleted ?? 0}</span> completed
+                                    </span>
+                                    <span>
+                                        <span className="text-red-400 font-semibold">{agent.tasksFailed ?? 0}</span> failed
+                                    </span>
                                     <button
-                                        onClick={() => handleDelete(agent.id, agent.name)}
-                                        className="rounded-lg p-1 text-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                        aria-label="Delete agent"
+                                        onClick={() => { setTaskAgent(agent); setShowTaskModal(true); }}
+                                        className="ml-auto flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20 transition-colors"
                                     >
-                                        <Trash2 className="size-3.5" />
+                                        <Play className="size-2.5" />
+                                        Atribuir tarefa
                                     </button>
+                                    <span className="label-caps !mb-0">{agent.workspaceId.slice(0, 8)}</span>
                                 </div>
                             </div>
-
-                            {/* Description */}
-                            {agent.description && (
-                                <p className="text-sm text-text-dim leading-relaxed">{agent.description}</p>
-                            )}
-
-                            {/* Capacidades */}
-                            {agent.capabilities?.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {agent.capabilities.map(cap => (
-                                        <span
-                                            key={cap}
-                                            className="rounded-md bg-white/5 border border-border px-2 py-0.5 text-[10px] font-semibold text-text-dim uppercase tracking-wider"
-                                        >
-                                            {cap}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Stats footer */}
-                            <div className="flex items-center gap-4 pt-1 border-t border-border/40 text-xs text-text-dim">
-                                <span>
-                                    <span className="text-green-400 font-semibold">{agent.tasksCompleted ?? 0}</span> completed
-                                </span>
-                                <span>
-                                    <span className="text-red-400 font-semibold">{agent.tasksFailed ?? 0}</span> failed
-                                </span>
-                                <button
-                                    onClick={() => { setTaskAgent(agent); setShowTaskModal(true); }}
-                                    className="ml-auto flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20 transition-colors"
-                                >
-                                    <Play className="size-2.5" />
-                                    Atribuir tarefa
-                                </button>
-                                <span className="label-caps !mb-0">{agent.workspaceId.slice(0, 8)}</span>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -491,7 +537,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                                     />
                                 </div>
 
-                                
+
                                 <div>
                                     <label className="label-caps block mb-2">Capacidades</label>
                                     <div className="grid grid-cols-2 gap-1.5">
