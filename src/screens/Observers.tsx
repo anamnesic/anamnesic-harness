@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { FolderOpen, Terminal, Código2, Shield, ChevronRight } from 'lucide-react';
+import { FolderOpen, Terminal, Code2, Shield, ChevronRight } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -22,7 +22,7 @@ interface ObserversData { observers: Observer[] }
 const OBSERVER_ICONS: Record<string, any> = {
     fs: FolderOpen,
     terminal: Terminal,
-    api: Código2,
+    api: Code2,
 };
 
 export function Observers() {
@@ -70,7 +70,7 @@ export function Observers() {
                     [0, 1, 2].map(i => <SkeletonCard key={i} />)
                 ) : (
                     observers.map(obs => {
-                        const Icon = OBSERVER_ICONS[obs.id] ?? Código2;
+                        const Icon = OBSERVER_ICONS[obs.id] ?? Code2;
                         const isToggling = toggling === obs.id;
                         return (
                             <div key={obs.id} className={cn('bento-card', !obs.active && 'opacity-50 grayscale')}>

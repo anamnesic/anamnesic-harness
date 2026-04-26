@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Código2, CircleCheck, Share2 } from 'lucide-react';
+import { Code2, CircleCheck, Share2 } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
@@ -85,7 +85,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                         ].map(env => (
                             <div key={env.label} className="bg-bg border border-border p-4 rounded-xl flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <Código2 className="size-5 text-text-dim" />
+                                    <Code2 className="size-5 text-text-dim" />
                                     <div>
                                         <p className="text-[8px] font-black text-text-dim uppercase">{env.label}</p>
                                         <p className="text-sm font-bold font-mono">{env.val}</p>

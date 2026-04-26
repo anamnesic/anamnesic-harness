@@ -97,7 +97,7 @@ export function Projects() {
                 method: 'POST',
                 body: JSON.stringify({
                     name: folderName,
-                    slug: folderName.toBaixaerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+                    slug: folderName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
                     description: `Workspace with git repositories`,
                 }),
             });
