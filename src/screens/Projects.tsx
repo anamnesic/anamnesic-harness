@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb } from 'lucide-react';
+import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -89,6 +89,8 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const [attachTargetProjectId, setAttachTargetProjectId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
+    const [gitBusy, setGitBusy] = useState(false);
+    const [commitMessage, setCommitMessage] = useState('');
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [editForm, setEditForm] = useState({ name: '', description: '', status: 'active' });
     const [recentRepositories, setRecentRepositories] = useState<RecentRepository[]>([]);
@@ -378,7 +380,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         : null;
 
     const insightsPath = selectedProject ? `/api/v1/projects/${selectedProject.id}/repository-insights` : null;
-    const { data: insightsResponse, loading: insightsLoading } = useApi<ApiResponse<RepositoryInsights>>(insightsPath);
+    const { data: insightsResponse, loading: insightsLoading, refetch: refetchInsights } = useApi<ApiResponse<RepositoryInsights>>(insightsPath);
     const insights = insightsResponse?.data;
 
     const stagedChanges = insights?.changes?.filter((change) => change.staged) ?? [];
@@ -389,11 +391,11 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         label: string;
         icon: typeof FileText;
     }> = [
-        { id: 'repository', label: 'Repositório', icon: FileText },
-        { id: 'git', label: 'Git', icon: GitBranch },
-        { id: 'context', label: 'Contexto', icon: BookOpen },
-        { id: 'decisions', label: 'Decisões', icon: Lightbulb },
-    ];
+            { id: 'repository', label: 'Repositório', icon: FileText },
+            { id: 'git', label: 'Git', icon: GitBranch },
+            { id: 'context', label: 'Contexto', icon: BookOpen },
+            { id: 'decisions', label: 'Decisões', icon: Lightbulb },
+        ];
 
     const recentItems = recentRepositories.slice(0, 6);
 
@@ -402,6 +404,33 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         setBrowserMode('import-repository');
         setShowBrowser(true);
     };
+
+    async function runGitAction(action: 'stage-all' | 'commit') {
+        if (!selectedProject) return;
+        if (action === 'commit' && !commitMessage.trim()) {
+            toast('Digite uma mensagem de commit', 'error');
+            return;
+        }
+
+        setGitBusy(true);
+        try {
+            await apiFetch<ApiResponse<RepositoryInsights>>(`/api/v1/projects/${selectedProject.id}/repository-insights`, {
+                method: 'POST',
+                body: JSON.stringify({ action, message: commitMessage }),
+            });
+            if (action === 'commit') {
+                setCommitMessage('');
+                toast('Commit realizado', 'success');
+            } else {
+                toast('Mudanças staged com sucesso', 'success');
+            }
+            await refetchInsights();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha na ação de Git', 'error');
+        } finally {
+            setGitBusy(false);
+        }
+    }
 
     const renderRepositoryStartScreen = ({ showWorkspaceHint }: { showWorkspaceHint: boolean }) => (
         <motion.div
@@ -647,9 +676,19 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                             <GitCommitHorizontal className="size-4 text-primary" />
                                             <p className="label-caps">Changes para commit</p>
                                         </div>
-                                        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold text-accent">
-                                            {stagedChanges.length} staged
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => void refetchInsights()}
+                                                disabled={insightsLoading || gitBusy}
+                                                title="Atualizar"
+                                                className="rounded-md border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                            >
+                                                <RefreshCw className="size-3.5" />
+                                            </button>
+                                            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold text-accent">
+                                                {stagedChanges.length} staged
+                                            </span>
+                                        </div>
                                     </div>
                                     {insightsLoading ? (
                                         <p className="text-sm text-text-dim">Carregando mudanças...</p>
@@ -677,6 +716,31 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                     ) : (
                                         <p className="text-sm text-text-dim">Working tree limpo.</p>
                                     )}
+
+                                    <div className="mt-4 space-y-2 border-t border-border/60 pt-3">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => void runGitAction('stage-all')}
+                                                disabled={insightsLoading || gitBusy || !insights?.isGitRepo}
+                                                className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                                            >
+                                                Stage all
+                                            </button>
+                                        </div>
+                                        <input
+                                            value={commitMessage}
+                                            onChange={(e) => setCommitMessage(e.target.value)}
+                                            placeholder="Mensagem do commit"
+                                            className="w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
+                                        />
+                                        <button
+                                            onClick={() => void runGitAction('commit')}
+                                            disabled={insightsLoading || gitBusy || !insights?.isGitRepo || !stagedChanges.length || !commitMessage.trim()}
+                                            className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                        >
+                                            Commit staged
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
