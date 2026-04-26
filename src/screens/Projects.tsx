@@ -271,18 +271,18 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 animate={{ opacity: 1, x: 0 }}
                 className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
             >
-                <button
-                    onClick={() => {
-                        if (projects.length > 0) {
-                            setRepositoryById(projects[0].id);
-                        }
-                    }}
-                    className="flex items-center gap-2 text-sm text-text-dim hover:text-accent transition-colors mb-6"
-                >
-                    <ArrowLeft className="size-4" />
-                    Voltar para Repositórios
-                </button>
-                <div className="mb-4">
+                <div className="mb-6 flex items-center justify-between gap-3">
+                    <button
+                        onClick={() => {
+                            if (projects.length > 0) {
+                                setRepositoryById(projects[0].id);
+                            }
+                        }}
+                        className="flex items-center gap-2 text-sm text-text-dim hover:text-accent transition-colors"
+                    >
+                        <ArrowLeft className="size-4" />
+                        Voltar para Repositórios
+                    </button>
                     <RepositorySelector />
                 </div>
                 <div className="bento-card space-y-2 mb-2">
@@ -378,7 +378,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
             className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
         >
             <div className="mb-8 flex items-center justify-between">
-                <div className="space-y-3">
+                <div className="flex items-center gap-3">
                     <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
                     <RepositorySelector />
                 </div>
