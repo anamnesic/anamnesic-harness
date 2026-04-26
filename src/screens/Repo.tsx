@@ -700,25 +700,29 @@ export function Projects({
                                         <div className="mb-3 flex items-center gap-1 rounded-lg border border-border/60 bg-bg/70 p-1">
                                             <button
                                                 onClick={() => setRepoSidebarTab('files')}
+                                                title="Arquivos"
+                                                aria-label="Arquivos"
                                                 className={cn(
-                                                    'flex-1 rounded-md px-2 py-1 text-[11px] font-bold transition-colors',
+                                                    'flex flex-1 items-center justify-center rounded-md px-2 py-1.5 transition-colors',
                                                     repoSidebarTab === 'files'
                                                         ? 'bg-card text-highlight'
                                                         : 'text-text-dim hover:text-highlight',
                                                 )}
                                             >
-                                                Arquivos
+                                                <Folder className="size-4" />
                                             </button>
                                             <button
                                                 onClick={() => setRepoSidebarTab('git')}
+                                                title="Git"
+                                                aria-label="Git"
                                                 className={cn(
-                                                    'flex-1 rounded-md px-2 py-1 text-[11px] font-bold transition-colors',
+                                                    'flex flex-1 items-center justify-center rounded-md px-2 py-1.5 transition-colors',
                                                     repoSidebarTab === 'git'
                                                         ? 'bg-card text-highlight'
                                                         : 'text-text-dim hover:text-highlight',
                                                 )}
                                             >
-                                                Git
+                                                <GitBranch className="size-4" />
                                             </button>
                                         </div>
 
