@@ -67,6 +67,7 @@ interface RepositoryTreeNode {
 }
 
 export type ProjectTabId = 'repository' | 'git' | 'context' | 'decisions';
+type RepoSidebarTab = 'files' | 'git';
 
 interface ProjectsProps {
     embedded?: boolean;
@@ -112,6 +113,7 @@ export function Projects({
     const [repoDirtyFiles, setRepoDirtyFiles] = useState<Record<string, boolean>>({});
     const [savingRepoFile, setSavingRepoFile] = useState(false);
     const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
+    const [repoSidebarTab, setRepoSidebarTab] = useState<RepoSidebarTab>('files');
     const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
         open: false,
         folderPath: '',
@@ -695,28 +697,152 @@ export function Projects({
                             {activeTab === 'repository' ? (
                                 <div className="flex h-[calc(100dvh-9rem)] min-h-0 flex-col gap-4 overflow-hidden lg:flex-row">
                                     <aside className="bento-card flex h-full min-h-0 flex-col overflow-hidden lg:w-72 lg:shrink-0">
-                                        <input
-                                            value={repoQuery}
-                                            onChange={(e) => setRepoQuery(e.target.value)}
-                                            placeholder="Filtrar arquivos"
-                                            className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
-                                        />
-
-                                        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-                                            {insightsLoading ? (
-                                                <p className="text-sm text-text-dim">Carregando arquivos...</p>
-                                            ) : !insights?.isGitRepo ? (
-                                                <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
-                                            ) : !repositoryFiles.length ? (
-                                                <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
-                                            ) : (
-                                                <div className="space-y-1">
-                                                    {repositoryTree.length
-                                                        ? renderRepositoryTree(repositoryTree)
-                                                        : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
-                                                </div>
-                                            )}
+                                        <div className="mb-3 flex items-center gap-1 rounded-lg border border-border/60 bg-bg/70 p-1">
+                                            <button
+                                                onClick={() => setRepoSidebarTab('files')}
+                                                className={cn(
+                                                    'flex-1 rounded-md px-2 py-1 text-[11px] font-bold transition-colors',
+                                                    repoSidebarTab === 'files'
+                                                        ? 'bg-card text-highlight'
+                                                        : 'text-text-dim hover:text-highlight',
+                                                )}
+                                            >
+                                                Arquivos
+                                            </button>
+                                            <button
+                                                onClick={() => setRepoSidebarTab('git')}
+                                                className={cn(
+                                                    'flex-1 rounded-md px-2 py-1 text-[11px] font-bold transition-colors',
+                                                    repoSidebarTab === 'git'
+                                                        ? 'bg-card text-highlight'
+                                                        : 'text-text-dim hover:text-highlight',
+                                                )}
+                                            >
+                                                Git
+                                            </button>
                                         </div>
+
+                                        {repoSidebarTab === 'files' ? (
+                                            <>
+                                                <input
+                                                    value={repoQuery}
+                                                    onChange={(e) => setRepoQuery(e.target.value)}
+                                                    placeholder="Filtrar arquivos"
+                                                    className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
+                                                />
+
+                                                <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                                                    {insightsLoading ? (
+                                                        <p className="text-sm text-text-dim">Carregando arquivos...</p>
+                                                    ) : !insights?.isGitRepo ? (
+                                                        <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
+                                                    ) : !repositoryFiles.length ? (
+                                                        <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
+                                                    ) : (
+                                                        <div className="space-y-1">
+                                                            {repositoryTree.length
+                                                                ? renderRepositoryTree(repositoryTree)
+                                                                : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                                                <div className="space-y-2 border-b border-border/60 pb-3">
+                                                    <input
+                                                        value={commitMessage}
+                                                        onChange={(e) => setCommitMessage(e.target.value)}
+                                                        placeholder="Mensagem do commit"
+                                                        onKeyDown={(e) => {
+                                                            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                void runGitAction('commit');
+                                                            }
+                                                        }}
+                                                        className="w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
+                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => void runGitAction('commit')}
+                                                            disabled={insightsLoading || gitBusy || !insights?.isGitRepo || !stagedChanges.length || !commitMessage.trim()}
+                                                            className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                                        >
+                                                            Commit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => void runGitAction('stage-all')}
+                                                            disabled={insightsLoading || gitBusy || !insights?.isGitRepo}
+                                                            className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                                                        >
+                                                            Stage all
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-3">
+                                                    <div className="mb-2 flex items-center justify-between">
+                                                        <p className="label-caps">Changes</p>
+                                                        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold text-accent">
+                                                            {insights?.changes?.length ?? 0}
+                                                        </span>
+                                                    </div>
+                                                    {insightsLoading ? (
+                                                        <p className="text-sm text-text-dim">Carregando mudan├ºas...</p>
+                                                    ) : !insights?.isGitRepo ? (
+                                                        <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
+                                                    ) : insights?.changes?.length ? (
+                                                        <div className="space-y-1">
+                                                            {insights.changes.map((change, index) => (
+                                                                <div key={`${change.path}-${index}`} className="rounded-md border border-border/50 px-2 py-1.5">
+                                                                    <p className="truncate font-mono text-xs text-text-dim">{change.path}</p>
+                                                                    <div className="mt-1 flex items-center gap-1">
+                                                                        <span className={cn(
+                                                                            'shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold',
+                                                                            change.staged ? 'bg-green-500/15 text-green-400' : 'bg-zinc-500/20 text-zinc-300',
+                                                                        )}>
+                                                                            {change.status}
+                                                                        </span>
+                                                                        {change.unstaged && (
+                                                                            <button
+                                                                                title="Stage arquivo"
+                                                                                onClick={() => void runGitAction('stage-file', change.path)}
+                                                                                disabled={gitBusy || insightsLoading}
+                                                                                className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                                                            >
+                                                                                <GitCommitHorizontal className="size-3" />
+                                                                            </button>
+                                                                        )}
+                                                                        {change.staged && (
+                                                                            <button
+                                                                                title="Unstage arquivo"
+                                                                                onClick={() => void runGitAction('unstage-file', change.path)}
+                                                                                disabled={gitBusy || insightsLoading}
+                                                                                className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                                                            >
+                                                                                <Minus className="size-3" />
+                                                                            </button>
+                                                                        )}
+                                                                        {change.unstaged && (
+                                                                            <button
+                                                                                title="Descartar mudan├ºas"
+                                                                                onClick={() => void runGitAction('discard-file', change.path)}
+                                                                                disabled={gitBusy || insightsLoading}
+                                                                                className="rounded border border-border p-1 text-text-dim hover:text-red-400 transition-colors disabled:opacity-50"
+                                                                            >
+                                                                                <Undo2 className="size-3" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-text-dim">Sem mudan├ºas pendentes.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </aside>
 
                                     <section className="min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
