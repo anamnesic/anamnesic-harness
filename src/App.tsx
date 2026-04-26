@@ -378,7 +378,7 @@ function AppContent() {
   );
 
   const repoTabsInAppbar = activeTab === 'repo-files' && repoEditorHeaderState ? (
-    <div className="overflow-x-auto rounded-lg border border-border/60 bg-bg/90">
+    <div className="overflow-x-auto rounded-lg border border-border/60 bg-bg/90 lg:ml-72 lg:w-[calc(100%-18rem)]">
       <div className="flex items-stretch">
         {repoEditorHeaderState.openTabs.length ? repoEditorHeaderState.openTabs.map((filePath) => {
           const isActive = repoEditorHeaderState.activeFile === filePath;
