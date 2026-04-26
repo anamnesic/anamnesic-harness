@@ -302,7 +302,12 @@ function AppContent() {
             </div>
 
             {/* Right Sidebar - Terminal */}
-            <div className="hidden lg:block">
+            <div
+              className={cn(
+                'hidden h-screen min-w-0 lg:flex',
+                terminalMaximized ? 'lg:flex-[2_1_0%]' : 'lg:flex-[1_1_0%]',
+              )}
+            >
               <TerminalPanel onMaximizeChange={setTerminalMaximized} />
             </div>
           </div>

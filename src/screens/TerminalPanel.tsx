@@ -228,9 +228,7 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
         return <Circle className="size-2 fill-text-dim text-text-dim" />;
     };
 
-    const asideClass = isMaximized
-        ? 'flex h-screen min-w-0 flex-[2] flex-col border-l border-border bg-[#0a0a0a]'
-        : 'flex h-screen min-w-0 flex-1 flex-col border-l border-border bg-[#0a0a0a]';
+    const asideClass = 'flex h-screen w-full min-w-0 flex-col border-l border-border bg-[#0a0a0a]';
 
     useEffect(() => {
         onMaximizeChange?.(isMaximized);
