@@ -71,6 +71,32 @@ interface ApiResponse<T> {
     timestamp: string;
 }
 
+function normalizeWorkspaceName(value: string) {
+    const trimmed = value.trim();
+    if (trimmed.length >= 2) {
+        return trimmed;
+    }
+
+    if (trimmed.length === 1) {
+        return `Workspace ${trimmed.toUpperCase()}`;
+    }
+
+    return 'Workspace';
+}
+
+function buildWorkspaceSlug(value: string) {
+    const asciiValue = value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    const baseSlug = slugify(asciiValue);
+
+    if (baseSlug.length >= 2) {
+        return baseSlug;
+    }
+
+    return `workspace-${Date.now().toString(36)}`;
+}
+
 export function Workspaces() {
     const { data, loading, refetch } = useApi<ApiResponse<Workspace[]>>('/api/v1/workspaces');
     const { toast } = useToast();
@@ -172,11 +198,20 @@ export function Workspaces() {
             return workspace;
         }
 
+        const safeName = normalizeWorkspaceName(baseName);
+        const safeSlug = buildWorkspaceSlug(safeName);
+        const existingWorkspace = workspaces.find((item) => item.slug === safeSlug || item.name === safeName);
+
+        if (existingWorkspace) {
+            setWorkspace(existingWorkspace);
+            return existingWorkspace;
+        }
+
         const createdWorkspace = await apiFetch<ApiResponse<Workspace>>('/api/v1/workspaces', {
             method: 'POST',
             body: JSON.stringify({
-                name: baseName,
-                slug: slugify(baseName),
+                name: safeName,
+                slug: safeSlug,
                 description: 'Workspace criado automaticamente para receber um repositório importado',
             }),
         });
