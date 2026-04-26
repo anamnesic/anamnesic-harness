@@ -2,6 +2,7 @@ import type { DataSource } from 'typeorm';
 
 let db: DataSource | null = null;
 let observersInitialized = false;
+let workflowsInitialized = false;
 
 export async function getDb(): Promise<DataSource> {
     if (db && db.isInitialized) return db;
@@ -13,22 +14,27 @@ export async function getDb(): Promise<DataSource> {
     
     // Initialize observers on first DB connection
     if (!observersInitialized) {
-        await initializeObservers();
+        await initializeObservers(db);
         observersInitialized = true;
     }
     
     // Initialize workflow triggers on first DB connection
-    if (!observersInitialized) {
-        await initializeWorkflowTriggers();
+    if (!workflowsInitialized) {
+        await initializeWorkflowTriggers(db);
+        workflowsInitialized = true;
     }
     
     return db;
 }
 
-async function initializeObservers(): Promise<void> {
+async function initializeObservers(database: DataSource): Promise<void> {
     try {
         const { ObserverService } = await import('@/src/core/services/ObserverService');
+        const { SettingsService } = await import('@/src/core/services/SettingsService');
         const observerService = ObserverService.getInstance();
+        const settingsService = new SettingsService(database);
+        
+        await observerService.setSettingsService(settingsService);
         await observerService.initialize();
         console.log('Observers initialized successfully');
     } catch (error) {
@@ -37,9 +43,8 @@ async function initializeObservers(): Promise<void> {
     }
 }
 
-async function initializeWorkflowTriggers(): Promise<void> {
+async function initializeWorkflowTriggers(database: DataSource): Promise<void> {
     try {
-        const db = await getDb();
         const { AdvancedFeaturesFactory } = await import('@/src/core/services/AdvancedFeaturesFactory');
         const { WorkflowTriggerInitializer } = await import('@/src/core/services/WorkflowTriggerInitializer');
         
@@ -48,15 +53,15 @@ async function initializeWorkflowTriggers(): Promise<void> {
             httpServer: null as any, // Not needed for triggers
             jwtSecret: process.env.JWT_SECRET || 'dummy-secret',
             aiProvider: null as any, // Not needed for triggers
-            db,
+            db: database,
             enableAutomation: true,
         });
         
         const triggerService = factory.getWorkflowTriggers();
         const initializer = new WorkflowTriggerInitializer(triggerService);
         
-        await initializer.initialize(db);
-        await initializer.createSampleTriggers(db);
+        await initializer.initialize(database);
+        await initializer.createSampleTriggers(database);
         
         console.log('Workflow triggers initialized successfully');
     } catch (error) {

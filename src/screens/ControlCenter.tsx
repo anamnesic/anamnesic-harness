@@ -60,6 +60,11 @@ export function ControlCenter() {
     const [planRuns, setPlanRuns] = useState<Run[]>([]);
     const [planCheckpoints, setPlanCheckpoints] = useState<any[]>([]);
     const [loadingPlanDetails, setLoadingPlanDetails] = useState(false);
+    
+    // Tasks drill-down state
+    const [selectedRunForTasks, setSelectedRunForTasks] = useState<string | null>(null);
+    const [runTasks, setRunTasks] = useState<any[]>([]);
+    const [loadingTasks, setLoadingTasks] = useState(false);
 
     useEventStream<{ runs: Run[] }>('runs.snapshot', snap => {
         setLiveRuns(Array.isArray(snap.runs) ? snap.runs : []);
@@ -228,6 +233,26 @@ export function ControlCenter() {
             toast(e.message ?? 'Rollback failed', 'error');
         } finally {
             setRollbackSubmitting(false);
+        }
+    }
+
+    async function fetchRunTasks(runId: string) {
+        if (selectedRunForTasks === runId) {
+            setSelectedRunForTasks(null);
+            setRunTasks([]);
+            return;
+        }
+        
+        setSelectedRunForTasks(runId);
+        setLoadingTasks(true);
+        try {
+            const response = await apiFetch<{ data?: any[] }>(`/api/v1/orchestrator/runs/${runId}/tasks`);
+            setRunTasks(Array.isArray(response) ? response : (response.data || []));
+        } catch (e: any) {
+            toast('Failed to load tasks for run', 'error');
+            setRunTasks([]);
+        } finally {
+            setLoadingTasks(false);
         }
     }
 
@@ -558,6 +583,8 @@ export function ControlCenter() {
                         </motion.div>
                     </motion.div>
                 )}
+            </AnimatePresence>
+
             {/* Plan Creation Modal */}
             <AnimatePresence>
                 {showPlanForm && (
@@ -1005,10 +1032,53 @@ export function ControlCenter() {
                                                                 {run.status}
                                                             </span>
                                                         </div>
-                                                        <span className="text-xs text-text-dim">
-                                                            {new Date(run.createdAt).toLocaleString()}
-                                                        </span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs text-text-dim">
+                                                                {new Date(run.createdAt).toLocaleString()}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => fetchRunTasks(run.id)}
+                                                                className="text-xs font-bold uppercase tracking-widest text-primary hover:text-primary/80 transition-colors"
+                                                            >
+                                                                {selectedRunForTasks === run.id ? 'Hide Tasks' : 'View Tasks'}
+                                                            </button>
+                                                        </div>
                                                     </div>
+                                                    
+                                                    {selectedRunForTasks === run.id && (
+                                                        <div className="mt-4 pt-4 border-t border-border">
+                                                            {loadingTasks ? (
+                                                                <div className="space-y-2">
+                                                                    {[0, 1].map(i => (
+                                                                        <Skeleton key={i} className="h-10 w-full" />
+                                                                    ))}
+                                                                </div>
+                                                            ) : runTasks.length > 0 ? (
+                                                                <div className="space-y-2">
+                                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-text-dim mb-2">Tasks ({runTasks.length})</h5>
+                                                                    {runTasks.map(task => (
+                                                                        <div key={task.id} className="p-2 bg-card border border-border rounded flex flex-col gap-1">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className="text-xs font-bold text-accent truncate">{task.description}</span>
+                                                                                <span className={cn(
+                                                                                    'text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded',
+                                                                                    task.status === 'completed' ? 'bg-green-500/10 text-green-400' :
+                                                                                    task.status === 'failed' ? 'bg-red-500/10 text-red-400' :
+                                                                                    task.status === 'running' ? 'bg-blue-500/10 text-blue-400' :
+                                                                                    'bg-zinc-500/10 text-zinc-400'
+                                                                                )}>
+                                                                                    {task.status}
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className="text-[10px] font-mono text-text-dim">Type: {task.type}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-xs text-text-dim text-center py-2">No tasks found for this run.</p>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -1050,8 +1120,6 @@ export function ControlCenter() {
                         </motion.div>
                     </motion.div>
                 )}
-            </AnimatePresence>
-
             </AnimatePresence>
         </motion.div>
     );

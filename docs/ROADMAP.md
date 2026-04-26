@@ -138,39 +138,40 @@ O projeto tem uma base de serviços backend robusta e uma UI funcional.
 
 ---
 
-### 1.3 Observers Reais
+### 1.3 Observers Reais ✅ **COMPLETED**
 
-Os 3 observers (`fs`, `terminal`, `api`) são estado em memória na rota. Não refletem `fileWatcher.ts` ou `EventBus.ts`.
+**Status:** Observers integrados ao EventBus com persistência de estado e visualização de eventos.
 
-**O que falta:**
-- Conectar `fileWatcher.ts` ao `EventBus` e repassar via SSE (`/api/v1/events`)
-- Observer de `fs` reportar arquivos modificados em tempo real no frontend
-- Modal de log por observer (últimos N eventos do EventBus por tipo)
-- Persistir estado de ativo/inativo dos observers no banco ou arquivo
-
----
-
-### 1.4 Decisões e Contexto por Projeto
-
-`DecisionService` e `ContextService` existem com CRUD completo, mas `DecisionsPanel` não está no nav e não tem rota de acesso a decisões por projeto.
-
-**O que falta:**
-- Tab "Decisions" dentro do detalhe de projeto (já existe `ProjectContext`; adicionar tab lateral)
-- `DecisionsPanel` acessível via nav ou dentro de Projects
-- `GET /api/v1/projects/:id/decisions` (criar rota; `DecisionService.listByProject()` existe)
-- Busca semântica em contexto: `GET /api/v1/projects/:id/context?q=` já funciona; adicionar campo de busca na UI
+**O que foi feito:**
+- `FileWatcher` conectado ao `EventBus` (emite `fs:add`, `fs:change`, etc)
+- `ObserverService` agora persiste estado (ativo/inativo) via `SettingsService`
+- SSE (`/api/v1/events`) encaminha todos os eventos do `EventBus` para o frontend
+- UI de Observers mostra contagem de eventos e timestamp do último evento em tempo real
+- Inicialização automática de observers no startup do banco de dados
 
 ---
 
-### 1.5 Tasks Visíveis
+### 1.4 Decisões e Contexto por Projeto ✅ **COMPLETED**
 
-`TaskService` tem CRUD completo mas não há nenhuma tela de tasks.
+**Status:** DecisionsPanel integrado ao nav e ao detalhe de projeto. Busca por projeto funcional.
 
-**O que falta:**
-- Painel de tasks por agente ou por workspace (lista com status, tipo, agente responsável)
-- `GET /api/v1/tasks?workspaceId=&agentId=&status=` (criar rota)
-- Drill-down de run → tasks filhas
-- Indicador de progresso de task na tela de agents
+**O que foi feito:**
+- Tab "Decisions" adicionada dentro do detalhe de projeto (`Projects.tsx`)
+- `DecisionsPanel` acessível de forma contextual
+- Rota `GET /api/v1/projects/:id/decisions` criada e funcional
+
+---
+
+### 1.5 Tasks Visíveis ✅ **COMPLETED**
+
+**Status:** Interface de tasks completa e integrada com drill-down nos runs.
+
+**O que foi feito:**
+- Rota `GET /api/v1/tasks` criada e funcional
+- Tela de tasks (`Tasks.tsx`) listando tasks ativas e filtráveis
+- Drill-down de run → tasks filhas integrado no `ControlCenter.tsx` (Plan Detail Modal)
+- Rota `GET /api/v1/orchestrator/runs/:id/tasks` criada para suportar o drill-down
+- Acesso rápido às tasks a partir da tela de Agents
 
 ---
 

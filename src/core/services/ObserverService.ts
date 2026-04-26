@@ -28,6 +28,9 @@ export class ObserverService {
   private eventCounts: Map<string, number> = new Map();
   private lastEvents: Map<string, string> = new Map();
 
+  private activeObservers: Set<string> = new Set();
+  private settingsService: any = null;
+
   private constructor() {
     this.fileWatcher = new FileWatcher();
     this.codeObserver = new CodeObserver();
@@ -42,6 +45,50 @@ export class ObserverService {
       ObserverService.instance = new ObserverService();
     }
     return ObserverService.instance;
+  }
+
+  async setSettingsService(settingsService: any) {
+    this.settingsService = settingsService;
+    await this.loadPersistedState();
+  }
+
+  private async loadPersistedState() {
+    if (!this.settingsService) return;
+    try {
+      const workspaceId = 'system'; // Using 'system' for global observer states
+      const setting = await this.settingsService.getSetting(workspaceId, 'observers.active');
+      if (setting && setting.value) {
+        const activeIds = JSON.parse(setting.value);
+        if (Array.isArray(activeIds)) {
+          for (const id of activeIds) {
+            await this.startObserver(id);
+          }
+        }
+      } else {
+        // Defaults if no settings exist
+        await this.startObserver('fs');
+        await this.startObserver('terminal');
+      }
+    } catch (error) {
+      this.logger.error(`Failed to load persisted observer state: ${error}`);
+    }
+  }
+
+  private async persistState() {
+    if (!this.settingsService) return;
+    try {
+      const workspaceId = 'system';
+      await this.settingsService.setSetting(
+        workspaceId,
+        'observers.active',
+        JSON.stringify(Array.from(this.activeObservers)),
+        'json',
+        'List of active observer IDs',
+        true
+      );
+    } catch (error) {
+      this.logger.error(`Failed to persist observer state: ${error}`);
+    }
   }
 
   private setupEventTracking(): void {
@@ -87,6 +134,8 @@ export class ObserverService {
         default:
           throw new Error(`Unknown observer: ${id}`);
       }
+      this.activeObservers.add(id);
+      await this.persistState();
       this.logger.info(`Observer ${id} started`);
     } catch (error) {
       this.logger.error(`Failed to start observer ${id}: ${error}`);
@@ -110,6 +159,8 @@ export class ObserverService {
         default:
           throw new Error(`Unknown observer: ${id}`);
       }
+      this.activeObservers.delete(id);
+      await this.persistState();
       this.logger.info(`Observer ${id} stopped`);
     } catch (error) {
       this.logger.error(`Failed to stop observer ${id}: ${error}`);
@@ -167,15 +218,11 @@ export class ObserverService {
   }
 
   private getObserverStatus(id: string): 'Active' | 'Paused' | 'Error' {
-    // For now, return based on active state
-    // In a real implementation, this would check actual observer health
     return this.isObserverActive(id) ? 'Active' : 'Paused';
   }
 
   private isObserverActive(id: string): boolean {
-    // This would track actual observer state
-    // For now, assume fs and terminal are active, api is paused
-    return id === 'fs' || id === 'terminal';
+    return this.activeObservers.has(id);
   }
 
   async toggleObserver(id: string, active: boolean): Promise<ObserverStatus> {

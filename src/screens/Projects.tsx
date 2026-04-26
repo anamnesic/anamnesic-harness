@@ -46,6 +46,7 @@ export function Projects() {
     const { toast } = useToast();
 
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'context' | 'decisions'>('context');
     const [showBrowser, setShowBrowser] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
@@ -153,8 +154,47 @@ export function Projects() {
                         </div>
                     )}
                 </div>
-                <ProjectContext projectId={selectedProject.id} />
-                <DecisionsPanel projectId={selectedProject.id} />
+                
+                <div className="flex items-center gap-4 border-b border-border mb-6">
+                    <button
+                        onClick={() => setActiveTab('context')}
+                        className={cn(
+                            'pb-3 text-sm font-bold transition-colors relative',
+                            activeTab === 'context' ? 'text-accent' : 'text-text-dim hover:text-highlight'
+                        )}
+                    >
+                        Context
+                        {activeTab === 'context' && (
+                            <motion.div
+                                layoutId="activeTab"
+                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                            />
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('decisions')}
+                        className={cn(
+                            'pb-3 text-sm font-bold transition-colors relative',
+                            activeTab === 'decisions' ? 'text-accent' : 'text-text-dim hover:text-highlight'
+                        )}
+                    >
+                        Decisions
+                        {activeTab === 'decisions' && (
+                            <motion.div
+                                layoutId="activeTab"
+                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                            />
+                        )}
+                    </button>
+                </div>
+
+                <div className="mt-4">
+                    {activeTab === 'context' ? (
+                        <ProjectContext projectId={selectedProject.id} />
+                    ) : (
+                        <DecisionsPanel projectId={selectedProject.id} />
+                    )}
+                </div>
             </motion.div>
         );
     }

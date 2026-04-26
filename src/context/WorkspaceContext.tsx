@@ -48,17 +48,19 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         total: number;
       }>('/api/v1/workspaces?limit=100');
       
-      setWorkspaces(response.items);
+      const items = response?.items || [];
+      setWorkspaces(items);
       
       // If no workspace is selected and there are workspaces, select the default or first one
-      if (!workspace && response.items.length > 0) {
-        const defaultWorkspace = response.items.find(w => w.isDefault) || response.items[0];
+      if (!workspace && items.length > 0) {
+        const defaultWorkspace = items.find(w => w.isDefault) || items[0];
         setWorkspace(defaultWorkspace);
         // Store in localStorage for persistence
         localStorage.setItem('kairos-selected-workspace', defaultWorkspace.id);
       }
     } catch (error) {
       console.error('Failed to load workspaces:', error);
+      setWorkspaces([]);
       toast('Failed to load workspaces', 'error');
     } finally {
       setIsLoading(false);

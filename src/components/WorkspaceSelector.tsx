@@ -10,7 +10,7 @@ export function WorkspaceSelector() {
   const { workspace, workspaces, setWorkspace, isLoading } = useWorkspace();
   const [isOpen, setIsOpen] = useState(false);
 
-  if (isLoading || workspaces.length <= 1) {
+  if (isLoading || !workspaces || workspaces.length <= 1) {
     return null; // Don't show selector if loading or only one workspace
   }
 
