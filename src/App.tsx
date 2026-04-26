@@ -53,19 +53,19 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
   onTabChange: (id: TabId) => void;
 }) => {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-bg/80 px-3 py-3 backdrop-blur-xl text-highlight sm:px-6 sm:py-5">
-      <div className="flex items-center gap-3">
-        <div className="flex min-w-0 shrink-0 items-center gap-4">
+    <header className="sticky top-0 z-50 border-b border-border bg-bg/80 px-3 py-2 backdrop-blur-xl text-highlight sm:px-5 sm:py-3">
+      <div className="flex items-center gap-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-3">
           {onBack ? (
             <button
               onClick={onBack}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
             >
-              <ArrowLeft className="size-5" />
+              <ArrowLeft className="size-4" />
             </button>
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Activity className="size-6" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Activity className="size-5" />
             </div>
           )}
           <div className="min-w-0">
@@ -78,10 +78,10 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
                 className="mb-1"
               />
             )}
-            <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
+            <h1 className="text-lg font-bold leading-none tracking-tight">{title}</h1>
             {subtitle && (
               <p className={cn(
-                'mt-1.5 text-text-dim',
+                'mt-1 text-text-dim',
                 activeTab === 'dashboard'
                   ? 'text-[10px] font-bold uppercase tracking-[0.2em]'
                   : 'text-xs'
@@ -92,13 +92,13 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
           </div>
         </div>
         <div className="mx-auto min-w-0 flex-1 overflow-x-auto px-1">
-          <div className="mx-auto flex w-max items-center gap-1 rounded-xl border border-border bg-card/60 p-1">
+          <div className="mx-auto flex w-max items-center gap-1 rounded-xl border border-border bg-card/60 p-0.5">
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                  'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
                   activeTab === tab.id
                     ? 'bg-bg text-highlight border border-border'
                     : 'text-text-dim hover:text-accent hover:bg-card/60',
@@ -110,11 +110,11 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <RepositorySelector />
           {rightElement ?? (
-            <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
-              <Bell className="size-5 text-accent group-hover:scale-110 transition-transform" />
+            <button className="flex h-9 w-9 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
+              <Bell className="size-4 text-accent group-hover:scale-110 transition-transform" />
               <span className="absolute right-3 top-3 flex size-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
