@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, X, Trash2, Bot, ListTodo, Play } from 'lucide-react';
+import { Plus, X, Trash2, Bot, ListTodo, Play, Pencil } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { usePolling } from '@/src/lib/usePolling';
 import { useToast } from '@/src/components/Toast';
@@ -122,6 +122,7 @@ export function Agents({ onNavigate }: AgentsProps) {
     const { workspace } = useWorkspace();
 
     const [showModal, setShowModal] = useState(false);
+    const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [capabilities, setCapacidades] = useState<AgentCapability[]>([]);
@@ -152,9 +153,18 @@ export function Agents({ onNavigate }: AgentsProps) {
 
     function closeModal() {
         setShowModal(false);
+        setEditingAgent(null);
         setName('');
         setDescription('');
         setCapacidades(['reasoning']);
+    }
+
+    function openEditModal(agent: Agent) {
+        setEditingAgent(agent);
+        setName(agent.name);
+        setDescription(agent.description ?? '');
+        setCapacidades((agent.capabilities?.length ? agent.capabilities : ['reasoning']) as AgentCapability[]);
+        setShowModal(true);
     }
 
     function closeTaskModal() {
@@ -172,24 +182,36 @@ export function Agents({ onNavigate }: AgentsProps) {
     async function handleSubmit() {
         if (!name.trim()) { toast('Nome é obrigatório', 'error'); return; }
         if (capabilities.length === 0) { toast('Selecione ao menos uma capacidade', 'error'); return; }
-        if (!workspace) { toast('Nenhum workspace ativo', 'error'); return; }
+        if (!editingAgent && !workspace) { toast('Nenhum workspace ativo', 'error'); return; }
 
         setSubmitting(true);
         try {
-            await apiFetch('/api/v1/agents', {
-                method: 'POST',
-                body: JSON.stringify({
-                    name: name.trim(),
-                    description: description.trim() || undefined,
-                    workspaceId: workspace.id,
-                    capabilities,
-                }),
-            });
-            toast('Agente criado', 'success');
+            if (editingAgent) {
+                await apiFetch(`/api/v1/agents/${editingAgent.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        name: name.trim(),
+                        description: description.trim() || undefined,
+                        capabilities,
+                    }),
+                });
+                toast('Agente atualizado', 'success');
+            } else {
+                await apiFetch('/api/v1/agents', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: name.trim(),
+                        description: description.trim() || undefined,
+                        workspaceId: workspace!.id,
+                        capabilities,
+                    }),
+                });
+                toast('Agente criado', 'success');
+            }
             refetch();
             closeModal();
         } catch (e: any) {
-            toast(e.message ?? 'Falha ao criar agente', 'error');
+            toast(e.message ?? `Falha ao ${editingAgent ? 'atualizar' : 'criar'} agente`, 'error');
         } finally {
             setSubmitting(false);
         }
@@ -333,14 +355,19 @@ export function Agents({ onNavigate }: AgentsProps) {
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="text-xs text-text-dim font-mono">v{agent.version}</span>
-                                            {isPrebuilt && (
-                                                <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-dim">
-                                                    pre-feito
-                                                </span>
-                                            )}
                                         </div>
 
                                         <div className="flex items-center gap-2 shrink-0">
+                                                            <button
+                                                                onClick={() => openEditModal(agent)}
+                                                                className="rounded-lg border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-text-dim hover:text-accent hover:border-accent/40 transition-colors"
+                                                                aria-label="Editar agente"
+                                                            >
+                                                                <span className="flex items-center gap-1">
+                                                                    <Pencil className="size-3" />
+                                                                    Editar
+                                                                </span>
+                                                            </button>
                                             <StateBadge
                                                 state={agent.state}
                                                 agentId={agent.id}
@@ -406,7 +433,6 @@ export function Agents({ onNavigate }: AgentsProps) {
                                         <Play className="size-2.5" />
                                         Atribuir tarefa
                                     </button>
-                                    <span className="label-caps !mb-0">{agent.workspaceId.slice(0, 8)}</span>
                                 </div>
                             </div>
                         );
@@ -515,7 +541,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                             className="bento-card w-full max-w-md space-y-4"
                         >
                             <div className="flex items-center justify-between">
-                                <h3 className="font-bold text-base">Novo agente</h3>
+                                <h3 className="font-bold text-base">{editingAgent ? 'Editar agente' : 'Novo agente'}</h3>
                                 <button onClick={closeModal} className="rounded-lg p-1 text-text-dim hover:text-accent transition-colors">
                                     <X className="size-4" />
                                 </button>
@@ -574,7 +600,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                                     disabled={submitting}
                                     className="rounded-xl bg-primary/90 hover:bg-primary px-4 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
                                 >
-                                    {submitting ? 'Criando...' : 'Criar agente'}
+                                    {submitting ? (editingAgent ? 'Salvando...' : 'Criando...') : (editingAgent ? 'Salvar' : 'Criar agente')}
                                 </button>
                             </div>
                         </motion.div>
