@@ -2,9 +2,15 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
-import { aiProviderRegistry } from '@/src/core/providers/AIProvider';
+import { aiProviderRegistry, type AIProvider as Provider } from '@/src/core/providers/AIProvider';
 
 type InteractionMode = 'ask' | 'coding';
+
+type ModelSelection = {
+    requested: string[];
+    supported: string[];
+    fallback: string;
+};
 
 function createSseResponse(content: string): Response {
     const stream = new ReadableStream({
@@ -48,6 +54,59 @@ function getCodingRolePrompt(index: number, total: number, modelId: string): str
     ].join(' ');
 }
 
+async function getActiveProvider(): Promise<Provider | null> {
+    try {
+        const preferred = aiProviderRegistry.getDefault();
+        if (preferred && await preferred.isAvailable()) {
+            return preferred;
+        }
+    } catch {
+        // Continue with fallback providers
+    }
+
+    try {
+        const { OllamaProvider } = await import('@/src/core/providers/OllamaProvider');
+        const ollama = new OllamaProvider();
+        if (await ollama.isAvailable()) {
+            return ollama;
+        }
+    } catch {
+        // Ignore and return null below
+    }
+
+    return null;
+}
+
+async function resolveModelSelection(provider: Provider, requestedModelIds: string[]): Promise<ModelSelection> {
+    let supportedModelIds: string[] = [];
+
+    try {
+        const models = await provider.getModels();
+        supportedModelIds = models.map((m) => m.id).filter(Boolean);
+    } catch {
+        supportedModelIds = [];
+    }
+
+    const uniqueRequested = Array.from(new Set(
+        requestedModelIds
+            .filter((id) => typeof id === 'string')
+            .map((id) => id.trim())
+            .filter((id) => id.length > 0)
+    ));
+
+    const supported = supportedModelIds.length > 0
+        ? uniqueRequested.filter((id) => supportedModelIds.includes(id))
+        : uniqueRequested;
+
+    const fallback = supported[0] || supportedModelIds[0] || provider.getDefaultModel?.() || 'default';
+
+    return {
+        requested: uniqueRequested,
+        supported,
+        fallback,
+    };
+}
+
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
@@ -61,9 +120,8 @@ export async function GET(req: NextRequest) {
             return new Response('channelId is required', { status: 400 });
         }
 
-        // Get AI provider
-        const provider = aiProviderRegistry.getDefault();
-        if (!provider || !(await provider.isAvailable())) {
+        const provider = await getActiveProvider();
+        if (!provider) {
             return new Response('No AI provider available', { status: 503 });
         }
 
@@ -81,13 +139,14 @@ export async function GET(req: NextRequest) {
                 content: entry.message,
             }));
 
+        const selection = await resolveModelSelection(provider, []);
         const chatResponse = await provider.chat(
             {
                 messages,
                 maxTokens,
                 temperature,
             },
-            'default',
+            selection.fallback,
         );
 
         return createSseResponse(chatResponse.message.content || '');
@@ -123,7 +182,7 @@ export async function POST(req: NextRequest) {
         const db = await getDb();
         const { ChatHistoryService } = await import('@/src/core/services/ChatHistoryService');
         const chatService = new ChatHistoryService(db);
-        
+
         await chatService.saveHistory({
             channelId,
             message,
@@ -131,9 +190,8 @@ export async function POST(req: NextRequest) {
             metadata: { type: 'request' }
         });
 
-        // Get AI provider
-        const provider = aiProviderRegistry.getDefault();
-        if (!provider || !(await provider.isAvailable())) {
+        const provider = await getActiveProvider();
+        if (!provider) {
             return new Response('No AI provider available', { status: 503 });
         }
 
@@ -148,18 +206,16 @@ export async function POST(req: NextRequest) {
                 content: entry.message,
             }));
 
-        const uniqueModelIds = Array.isArray(modelIds)
-            ? Array.from(new Set(modelIds.filter((id) => typeof id === 'string' && id.trim().length > 0)))
-            : [];
+        const selection = await resolveModelSelection(provider, Array.isArray(modelIds) ? modelIds : []);
 
         const safeMode: InteractionMode = interactionMode === 'coding' ? 'coding' : 'ask';
-        const fallbackModel = provider.getDefaultModel?.() || 'default';
+        const fallbackModel = selection.fallback;
 
         let finalContent = '';
         let usedModels: string[] = [];
 
-        if (safeMode === 'coding' && uniqueModelIds.length > 1) {
-            usedModels = uniqueModelIds;
+        if (safeMode === 'coding' && selection.supported.length > 1) {
+            usedModels = selection.supported;
 
             const results = await Promise.allSettled(
                 usedModels.map((modelId, index) =>
@@ -192,7 +248,7 @@ export async function POST(req: NextRequest) {
                 })
                 .join('\n\n---\n\n');
         } else {
-            const selectedModel = uniqueModelIds[0] || fallbackModel;
+            const selectedModel = selection.supported[0] || fallbackModel;
             usedModels = [selectedModel];
 
             const response = await provider.chat(
@@ -215,6 +271,7 @@ export async function POST(req: NextRequest) {
                 type: 'response',
                 interactionMode: safeMode,
                 modelIds: usedModels,
+                ignoredModelIds: selection.requested.filter((id) => !selection.supported.includes(id)),
             },
         });
 

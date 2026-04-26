@@ -165,7 +165,8 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
       });
 
       if (!response.ok) {
-        throw new Error('Stream request failed');
+        const errorText = await response.text().catch(() => '');
+        throw new Error(errorText || 'Stream request failed');
       }
 
       const reader = response.body?.getReader();
