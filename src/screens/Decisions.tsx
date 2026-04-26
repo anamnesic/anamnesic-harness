@@ -80,7 +80,7 @@ function formatWhen(iso: string): string {
 }
 
 export function Decisions() {
-  const { data, loading, error, refetch } = useApi<ApiEnvelope<DecisionFeedData>>('/api/v1/decisions/feed');
+  const { data, loading, error, refetch } = useApi<ApiEnvelope<DecisionFeedData>>('/api/v1/decisions/data');
   const [sourceFilter, setSourceFilter] = useState<DecisionFeedItem['source'] | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<DecisionFeedItem['status'] | 'all'>('all');
   const [query, setQuery] = useState('');
