@@ -15,10 +15,29 @@ function getCliArgs(cli: CliType, prompt: string): { cmd: string; args: string[]
         case 'gemini':
             return { cmd: 'gemini', args: ['-p', prompt] };
         case 'copilot':
-            return { cmd: 'gh', args: ['copilot', 'suggest', '-t', 'shell', prompt] };
+            return { cmd: 'gh', args: ['copilot', 'suggest', prompt] };
         case 'codex':
             return { cmd: 'codex', args: [prompt] };
     }
+}
+
+function quoteForCmd(value: string): string {
+    if (!/[\s"]/u.test(value)) return value;
+    return `"${value.replace(/"/g, '""')}"`;
+}
+
+function getSpawnCommand(cli: CliType, prompt: string): { file: string; args: string[] } {
+    const { cmd, args } = getCliArgs(cli, prompt);
+    if (process.platform !== 'win32') {
+        return { file: cmd, args };
+    }
+
+    const comspec = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe';
+    const commandLine = [cmd, ...args].map(quoteForCmd).join(' ');
+    return {
+        file: comspec,
+        args: ['/d', '/c', commandLine],
+    };
 }
 
 export async function POST(req: NextRequest) {
@@ -45,7 +64,7 @@ export async function POST(req: NextRequest) {
             ? cwd.trim()
             : process.cwd();
 
-    const { cmd, args } = getCliArgs(cli as CliType, prompt.trim());
+    const { file, args } = getSpawnCommand(cli as CliType, prompt.trim());
 
     const encoder = new TextEncoder();
 
@@ -53,16 +72,19 @@ export async function POST(req: NextRequest) {
         start(controller) {
             let proc: ReturnType<typeof spawn>;
             try {
-                proc = spawn(cmd, args, {
+                proc = spawn(file, args, {
                     cwd: resolvedCwd,
-                    env: process.env,
-                    shell: true,
+                    env: {
+                        ...process.env,
+                        TERM: process.env.TERM || 'xterm-256color',
+                        COLORTERM: process.env.COLORTERM || 'truecolor',
+                    },
                     stdio: ['ignore', 'pipe', 'pipe'],
                 });
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
                 controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: 'stderr', data: `Falha ao iniciar ${cmd}: ${msg}` })}\n\n`)
+                    encoder.encode(`data: ${JSON.stringify({ type: 'stderr', data: `Falha ao iniciar ${file}: ${msg}` })}\n\n`)
                 );
                 controller.close();
                 return;

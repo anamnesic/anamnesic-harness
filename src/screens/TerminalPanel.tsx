@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, Square, RotateCw, Circle, Maximize2, Minimize2 } from 'lucide-react';
+import { Trash2, Square, RotateCw, Circle, Maximize2, Minimize2, Send } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 
@@ -65,11 +65,14 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     const [isMaximized, setIsMaximized] = useState(false);
     const [activeTab, setActiveTab] = useState<CliTab>('claude');
     const [tabState, setTabState] = useState<TabStateMap>(INITIAL);
+    const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ claude: '', gemini: '', copilot: '', codex: '' });
+    const [promptStreaming, setPromptStreaming] = useState<Record<CliTab, boolean>>({ claude: false, gemini: false, copilot: false, codex: false });
     const hostRefs = useRef<Partial<Record<CliTab, HTMLDivElement | null>>>({});
     const xtermRefs = useRef<Partial<Record<CliTab, XTermType>>>({});
     const fitRefs = useRef<Partial<Record<CliTab, FitAddonType>>>({});
     const writtenLengths = useRef<Record<CliTab, number>>({ claude: 0, gemini: 0, copilot: 0, codex: 0 });
     const sseAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
+    const promptAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
 
     const repoPath = repository?.metadata?.localPath ?? '';
 
@@ -190,6 +193,72 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
             appendOutput(tab, `[send error: ${msg}]\n`);
         }
     }, [tabState, appendOutput, connect]);
+
+    const streamPrompt = useCallback(async (tab: CliTab) => {
+        const prompt = promptInput[tab]?.trim();
+        if (!prompt || promptStreaming[tab]) return;
+
+        promptAborts.current[tab]?.abort();
+        const abort = new AbortController();
+        promptAborts.current[tab] = abort;
+
+        setPromptStreaming(prev => ({ ...prev, [tab]: true }));
+        setPromptInput(prev => ({ ...prev, [tab]: '' }));
+        appendOutput(tab, `\x1b[2m[prompt stream: ${prompt}]\x1b[0m\n`);
+
+        try {
+            const resp = await fetch('/api/terminal/stream', {
+                method: 'POST',
+                headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ cli: tab, prompt, cwd: repoPath }),
+                signal: abort.signal,
+            });
+
+            if (!resp.ok || !resp.body) {
+                const body = await resp.text();
+                appendOutput(tab, `\x1b[31m[stream error ${resp.status}] ${body}\x1b[0m\n`);
+                return;
+            }
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                const chunks = buffer.split('\n\n');
+                buffer = chunks.pop() ?? '';
+
+                for (const chunk of chunks) {
+                    if (!chunk.startsWith('data: ')) continue;
+                    try {
+                        const evt = JSON.parse(chunk.slice(6)) as { type?: 'stdout' | 'stderr' | 'exit'; data?: string };
+                        const text = typeof evt.data === 'string' ? evt.data : '';
+                        if (!text) continue;
+                        if (evt.type === 'stderr') {
+                            appendOutput(tab, `\x1b[31m${text}\x1b[0m`);
+                        } else if (evt.type === 'exit') {
+                            appendOutput(tab, `\x1b[2m${text}\x1b[0m\n`);
+                        } else {
+                            appendOutput(tab, text);
+                        }
+                    } catch {
+                        // ignore malformed events
+                    }
+                }
+            }
+        } catch (e: unknown) {
+            if (e instanceof Error && e.name === 'AbortError') return;
+            const msg = e instanceof Error ? e.message : String(e);
+            appendOutput(tab, `\x1b[31m[stream failed] ${msg}\x1b[0m\n`);
+        } finally {
+            setPromptStreaming(prev => ({ ...prev, [tab]: false }));
+            promptAborts.current[tab] = undefined;
+        }
+    }, [appendOutput, promptInput, promptStreaming, repoPath]);
 
     const StatusDot = ({ status }: { status: SessionStatus }) => {
         if (status === 'running') return <Circle className="size-2 fill-green-500 text-green-500" />;
@@ -330,6 +399,15 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         xtermRefs.current[activeTab]?.focus();
     }, [activeTab, isMaximized]);
 
+    useEffect(() => {
+        return () => {
+            for (const tab of CLI_TABS) {
+                sseAborts.current[tab.id]?.abort();
+                promptAborts.current[tab.id]?.abort();
+            }
+        };
+    }, []);
+
     const activeDef = CLI_TABS.find(t => t.id === activeTab)!;
     const activeState = tabState[activeTab];
 
@@ -465,11 +543,51 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                         />
                     </div>
 
-                    <div className="shrink-0 border-t border-border/40 px-3 py-2">
-                        <p className="text-[10px] text-text-dim/60">Clique no terminal e digite diretamente. Ctrl+C interrompe, Enter envia, e a autenticação roda na própria UI da ferramenta.</p>
-                    </div>
                 </>
             )}
+
+            <div className="shrink-0 border-t border-border/40 px-3 py-2">
+                <div className="flex items-center gap-2">
+                    {isMaximized && (
+                        <select
+                            value={activeTab}
+                            onChange={e => setActiveTab(e.target.value as CliTab)}
+                            className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-text-dim"
+                        >
+                            {CLI_TABS.map(tab => (
+                                <option key={tab.id} value={tab.id}>{tab.label}</option>
+                            ))}
+                        </select>
+                    )}
+                    <input
+                        type="text"
+                        value={promptInput[activeTab]}
+                        onChange={e => setPromptInput(prev => ({ ...prev, [activeTab]: e.target.value }))}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                void streamPrompt(activeTab);
+                            }
+                        }}
+                        placeholder="Enviar prompt em modo stream para a CLI selecionada..."
+                        disabled={promptStreaming[activeTab]}
+                        className="flex-1 rounded-md border border-border bg-bg px-2.5 py-1.5 text-[11px] text-highlight placeholder:text-text-dim/60 focus:border-primary/50 focus:outline-none disabled:opacity-60"
+                    />
+                    <button
+                        onClick={() => void streamPrompt(activeTab)}
+                        disabled={!promptInput[activeTab]?.trim() || promptStreaming[activeTab]}
+                        className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-dim transition-colors hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                        title="Enviar prompt em stream"
+                    >
+                        <Send className="size-3.5" />
+                    </button>
+                </div>
+                <p className="mt-1 text-[10px] text-text-dim/60">
+                    {promptStreaming[activeTab]
+                        ? 'Executando prompt em stream...'
+                        : 'Enter envia prompt em stream. O retorno chega ao terminal em tempo real.'}
+                </p>
+            </div>
         </aside>
     );
 }
