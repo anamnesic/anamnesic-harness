@@ -14,7 +14,8 @@ function getCliCommand(cli: CliType): { cmd: string; args: string[] } {
     switch (cli) {
         case 'claude': return { cmd: 'claude', args: [] };
         case 'gemini': return { cmd: 'gemini', args: [] };
-        case 'copilot': return { cmd: 'gh', args: ['copilot', 'suggest', '-t', 'shell'] };
+        // Newer copilot CLIs don't support `-t shell`; keep a plain interactive command.
+        case 'copilot': return { cmd: 'copilot', args: [] };
         case 'codex': return { cmd: 'codex', args: [] };
     }
 }
@@ -40,7 +41,11 @@ export async function POST(req: NextRequest) {
     try {
         proc = spawn(cmd, args, {
             cwd: resolvedCwd,
-            env: { ...process.env, TERM: 'dumb', FORCE_COLOR: '0' },
+            env: {
+                ...process.env,
+                TERM: process.env.TERM || 'xterm-256color',
+                COLORTERM: process.env.COLORTERM || 'truecolor',
+            },
             shell: true,
             stdio: ['pipe', 'pipe', 'pipe'],
         });

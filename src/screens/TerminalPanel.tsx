@@ -55,6 +55,7 @@ const INITIAL: TabStateMap = {
 export function TerminalPanel() {
     const { repository } = useRepository();
     const [isMaximized, setIsMaximized] = useState(false);
+    const [activeTab, setActiveTab] = useState<CliTab>('claude');
     const [tabState, setTabState] = useState<TabStateMap>(INITIAL);
     const [inputs, setInputs] = useState<Record<CliTab, string>>({
         claude: '',
@@ -131,7 +132,7 @@ export function TerminalPanel() {
         })();
     }, [appendOutput, setStatus]);
 
-    const connect = useCallback(async (tab: CliTab) => {
+    const connect = useCallback(async (tab: CliTab): Promise<string | null> => {
         setStatus(tab, 'connecting');
         setTabState(prev => ({ ...prev, [tab]: { ...prev[tab], output: '', sessionId: null, status: 'connecting' } }));
 
@@ -145,27 +146,19 @@ export function TerminalPanel() {
                 const body = await resp.text();
                 appendOutput(tab, `[Erro ao iniciar sessão: ${body}]\n`);
                 setStatus(tab, 'exited');
-                return;
+                return null;
             }
             const { sessionId } = await resp.json() as { sessionId: string };
             setTabState(prev => ({ ...prev, [tab]: { ...prev[tab], sessionId, status: 'running' } }));
             subscribeToSession(tab, sessionId);
+            return sessionId;
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             appendOutput(tab, `[Erro: ${msg}]\n`);
             setStatus(tab, 'exited');
+            return null;
         }
     }, [repoPath, appendOutput, setStatus, subscribeToSession]);
-
-    // Auto-connect all terminals on mount
-    useEffect(() => {
-        for (const tab of CLI_TABS) {
-            if (tabState[tab.id].status === 'disconnected') {
-                connect(tab.id);
-            }
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const killSession = useCallback(async (tab: CliTab) => {
         const sid = tabState[tab].sessionId;
@@ -180,10 +173,16 @@ export function TerminalPanel() {
 
     const sendInput = useCallback(async (tab: CliTab) => {
         const current = tabState[tab];
-        const sid = current.sessionId;
-        if (!sid || current.status !== 'running') return;
+        let sid = current.sessionId;
         const line = inputs[tab];
         if (!line) return;
+
+        // Start session on first send so CLIs that require immediate stdin don't exit.
+        if (!sid || current.status !== 'running') {
+            sid = await connect(tab);
+        }
+
+        if (!sid) return;
         setInputs(prev => ({ ...prev, [tab]: '' }));
         // Echo locally
         appendOutput(tab, line + '\n');
@@ -197,7 +196,7 @@ export function TerminalPanel() {
             const msg = e instanceof Error ? e.message : String(e);
             appendOutput(tab, `[send error: ${msg}]\n`);
         }
-    }, [tabState, inputs, appendOutput]);
+    }, [tabState, inputs, appendOutput, connect]);
 
     const handleKeyDown = (tab: CliTab, e: React.KeyboardEvent<HTMLInputElement>) => {
         const current = tabState[tab];
@@ -228,6 +227,9 @@ export function TerminalPanel() {
     const asideClass = isMaximized
         ? 'fixed inset-y-0 right-0 z-60 flex w-[76vw] min-w-[980px] flex-col border-l border-border bg-[#0a0a0a] shadow-2xl'
         : 'flex h-screen w-[46vw] min-w-xl shrink-0 flex-col border-l border-border bg-[#0a0a0a]';
+
+    const activeDef = CLI_TABS.find(t => t.id === activeTab)!;
+    const activeState = tabState[activeTab];
 
     return (
         <aside className={asideClass}>
@@ -278,86 +280,193 @@ export function TerminalPanel() {
                 </div>
             </div>
 
-            <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-px bg-border">
-                {CLI_TABS.map(tab => {
-                    const current = tabState[tab.id];
-                    return (
-                        <section key={tab.id} className="flex min-h-0 flex-col bg-[#0a0a0a]">
-                            <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-2 py-1.5">
-                                <StatusDot status={current.status} />
-                                <span className={cn('text-[10px] font-bold uppercase tracking-wider', tab.colorClass)}>{tab.label}</span>
-                                <div className="ml-auto flex items-center gap-1">
-                                    <button
-                                        onClick={() => {
-                                            if (current.status === 'exited' || current.status === 'disconnected') {
-                                                void connect(tab.id);
-                                            } else {
-                                                void killSession(tab.id).then(() => connect(tab.id));
-                                            }
-                                        }}
-                                        title="Reiniciar"
-                                        className="text-text-dim transition-colors hover:text-accent"
-                                    >
-                                        <RotateCw className="size-3" />
-                                    </button>
-                                    <button
-                                        onClick={() => setTabState(prev => ({ ...prev, [tab.id]: { ...prev[tab.id], output: '' } }))}
-                                        title="Limpar"
-                                        className="text-text-dim transition-colors hover:text-accent"
-                                    >
-                                        <Trash2 className="size-3" />
-                                    </button>
-                                    {current.status === 'running' && (
+            {isMaximized ? (
+                <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-px bg-border">
+                    {CLI_TABS.map(tab => {
+                        const current = tabState[tab.id];
+                        return (
+                            <section key={tab.id} className="flex min-h-0 flex-col bg-[#0a0a0a]">
+                                <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-2 py-1.5">
+                                    <StatusDot status={current.status} />
+                                    <span className={cn('text-[10px] font-bold uppercase tracking-wider', tab.colorClass)}>{tab.label}</span>
+                                    <div className="ml-auto flex items-center gap-1">
                                         <button
-                                            onClick={() => void killSession(tab.id)}
-                                            title="Encerrar"
-                                            className="text-red-400 transition-colors hover:text-red-300"
+                                            onClick={() => {
+                                                if (current.status === 'exited' || current.status === 'disconnected') {
+                                                    void connect(tab.id);
+                                                } else {
+                                                    void killSession(tab.id).then(() => connect(tab.id));
+                                                }
+                                            }}
+                                            title="Reiniciar"
+                                            className="text-text-dim transition-colors hover:text-accent"
                                         >
-                                            <Square className="size-3" />
+                                            <RotateCw className="size-3" />
                                         </button>
+                                        <button
+                                            onClick={() => setTabState(prev => ({ ...prev, [tab.id]: { ...prev[tab.id], output: '' } }))}
+                                            title="Limpar"
+                                            className="text-text-dim transition-colors hover:text-accent"
+                                        >
+                                            <Trash2 className="size-3" />
+                                        </button>
+                                        {current.status === 'running' && (
+                                            <button
+                                                onClick={() => void killSession(tab.id)}
+                                                title="Encerrar"
+                                                className="text-red-400 transition-colors hover:text-red-300"
+                                            >
+                                                <Square className="size-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div
+                                    ref={el => { outputRefs.current[tab.id] = el; }}
+                                    className="scrollbar-kairos min-h-0 flex-1 overflow-y-auto p-2 font-mono text-[10px] leading-relaxed"
+                                >
+                                    {current.output.length === 0 && current.status === 'connecting' && (
+                                        <p className="italic text-text-dim">Iniciando...</p>
                                     )}
+                                    {current.output.length === 0 && current.status === 'disconnected' && (
+                                        <p className="italic text-text-dim">Desconectado</p>
+                                    )}
+                                    <pre className="whitespace-pre-wrap break-all text-green-300">{current.output}</pre>
                                 </div>
-                            </div>
 
-                            <div
-                                ref={el => { outputRefs.current[tab.id] = el; }}
-                                className="scrollbar-kairos min-h-0 flex-1 overflow-y-auto p-2 font-mono text-[10px] leading-relaxed"
+                                <div className="shrink-0 border-t border-border/40 px-2 py-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={cn('shrink-0 font-mono text-[10px] font-bold', tab.colorClass)}>›</span>
+                                        <input
+                                            type="text"
+                                            value={inputs[tab.id]}
+                                            onChange={e => setInputs(prev => ({ ...prev, [tab.id]: e.target.value }))}
+                                            onKeyDown={e => handleKeyDown(tab.id, e)}
+                                            disabled={current.status !== 'running'}
+                                            placeholder={current.status === 'running' ? 'Comando...' : 'Offline'}
+                                            className="flex-1 bg-transparent font-mono text-[10px] text-highlight placeholder:text-text-dim/40 focus:outline-none disabled:opacity-40"
+                                        />
+                                        <button
+                                            onClick={() => void sendInput(tab.id)}
+                                            disabled={!inputs[tab.id]}
+                                            title="Enviar"
+                                            className="shrink-0 text-primary transition-colors hover:text-accent disabled:opacity-30"
+                                        >
+                                            <Send className="size-3" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+                        );
+                    })}
+                </div>
+            ) : (
+                <>
+                    <div className="flex shrink-0 gap-1 border-b border-border px-3 pt-2">
+                        {CLI_TABS.map(tab => {
+                            const ts = tabState[tab.id];
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={cn(
+                                        'relative rounded-t-lg border border-b-0 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                                        activeTab === tab.id
+                                            ? `border-border bg-bg ${tab.colorClass}`
+                                            : 'border-transparent text-text-dim hover:text-accent',
+                                    )}
+                                >
+                                    {tab.label}
+                                    {ts.status === 'running' && (
+                                        <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-green-500" />
+                                    )}
+                                    {ts.status === 'connecting' && (
+                                        <span className="absolute -right-0.5 -top-0.5 size-1.5 animate-pulse rounded-full bg-yellow-500" />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-3 py-1.5">
+                        <StatusDot status={activeState.status} />
+                        <span className="text-[9px] text-text-dim">
+                            {activeState.status === 'connecting' ? 'conectando…' :
+                                activeState.status === 'running' ? `${activeDef.label} ativo` :
+                                    activeState.status === 'exited' ? 'processo encerrado' :
+                                        'desconectado'}
+                        </span>
+                        <div className="ml-auto flex items-center gap-1">
+                            <button
+                                onClick={() => {
+                                    if (activeState.status === 'disconnected' || activeState.status === 'exited') {
+                                        void connect(activeTab);
+                                    } else {
+                                        void killSession(activeTab).then(() => connect(activeTab));
+                                    }
+                                }}
+                                title="Reiniciar"
+                                className="text-text-dim transition-colors hover:text-accent"
                             >
-                                {current.output.length === 0 && current.status === 'connecting' && (
-                                    <p className="italic text-text-dim">Iniciando...</p>
-                                )}
-                                {current.output.length === 0 && current.status === 'disconnected' && (
-                                    <p className="italic text-text-dim">Desconectado</p>
-                                )}
-                                <pre className="whitespace-pre-wrap break-all text-green-300">{current.output}</pre>
-                            </div>
+                                <RotateCw className="size-3" />
+                            </button>
+                            <button
+                                onClick={() => setTabState(prev => ({ ...prev, [activeTab]: { ...prev[activeTab], output: '' } }))}
+                                title="Limpar"
+                                className="text-text-dim transition-colors hover:text-accent"
+                            >
+                                <Trash2 className="size-3" />
+                            </button>
+                            {activeState.status === 'running' && (
+                                <button
+                                    onClick={() => void killSession(activeTab)}
+                                    title="Encerrar"
+                                    className="text-red-400 transition-colors hover:text-red-300"
+                                >
+                                    <Square className="size-3" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
 
-                            <div className="shrink-0 border-t border-border/40 px-2 py-1.5">
-                                <div className="flex items-center gap-1.5">
-                                    <span className={cn('shrink-0 font-mono text-[10px] font-bold', tab.colorClass)}>›</span>
-                                    <input
-                                        type="text"
-                                        value={inputs[tab.id]}
-                                        onChange={e => setInputs(prev => ({ ...prev, [tab.id]: e.target.value }))}
-                                        onKeyDown={e => handleKeyDown(tab.id, e)}
-                                        disabled={current.status !== 'running'}
-                                        placeholder={current.status === 'running' ? 'Comando...' : 'Offline'}
-                                        className="flex-1 bg-transparent font-mono text-[10px] text-highlight placeholder:text-text-dim/40 focus:outline-none disabled:opacity-40"
-                                    />
-                                    <button
-                                        onClick={() => void sendInput(tab.id)}
-                                        disabled={current.status !== 'running' || !inputs[tab.id]}
-                                        title="Enviar"
-                                        className="shrink-0 text-primary transition-colors hover:text-accent disabled:opacity-30"
-                                    >
-                                        <Send className="size-3" />
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
-                    );
-                })}
-            </div>
+                    <div
+                        ref={el => { outputRefs.current[activeTab] = el; }}
+                        className="scrollbar-kairos min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed"
+                    >
+                        {activeState.output.length === 0 && activeState.status === 'connecting' && (
+                            <p className="italic text-text-dim">Iniciando {activeDef.label}...</p>
+                        )}
+                        {activeState.output.length === 0 && activeState.status === 'disconnected' && (
+                            <p className="italic text-text-dim">Digite um comando para iniciar a sessão.</p>
+                        )}
+                        <pre className="whitespace-pre-wrap break-all text-green-300">{activeState.output}</pre>
+                    </div>
+
+                    <div className="shrink-0 border-t border-border/40 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                            <span className={cn('shrink-0 font-mono text-xs font-bold', activeDef.colorClass)}>›</span>
+                            <input
+                                type="text"
+                                value={inputs[activeTab]}
+                                onChange={e => setInputs(prev => ({ ...prev, [activeTab]: e.target.value }))}
+                                onKeyDown={e => handleKeyDown(activeTab, e)}
+                                placeholder="Comando..."
+                                className="flex-1 bg-transparent font-mono text-[11px] text-highlight placeholder:text-text-dim/40 focus:outline-none"
+                            />
+                            <button
+                                onClick={() => void sendInput(activeTab)}
+                                disabled={!inputs[activeTab]}
+                                title="Enviar"
+                                className="shrink-0 text-primary transition-colors hover:text-accent disabled:opacity-30"
+                            >
+                                <Send className="size-3.5" />
+                            </button>
+                        </div>
+                        <p className="mt-1 text-[9px] text-text-dim/40">Enter envia · Ctrl+C interrompe</p>
+                    </div>
+                </>
+            )}
         </aside>
     );
 }
