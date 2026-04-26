@@ -38,12 +38,12 @@ Meta de arquitetura:
 
 ### Testes
 
-- [ ] Testar disponibilidade de cada CLI suportada
-- [ ] Testar prompt curto
-- [ ] Testar prompt longo
-- [ ] Testar streaming
-- [ ] Testar timeout
-- [ ] Testar parse de erro
+- [x] Testar disponibilidade de cada CLI suportada
+- [x] Testar prompt curto
+- [x] Testar prompt longo
+- [x] Testar streaming
+- [x] Testar timeout
+- [x] Testar parse de erro
 
 ---
 
