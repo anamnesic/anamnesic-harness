@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
@@ -46,6 +46,8 @@ import { Login } from './screens/Login';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
 import { TerminalPanel } from './screens/TerminalPanel';
+import { ExtensionsRightSidebar } from './components/ExtensionsRightSidebar';
+import { useApi } from './lib/api';
 
 interface TerminalHeaderState {
   repoPath: string;
@@ -335,6 +337,19 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
+  const { data: availability } = useApi<{ data?: { availableCli?: string[] } } | { availableCli?: string[] }>('/api/v1/system/ai-availability');
+
+  const installedExtensionIds = useMemo(() => {
+    const payload = (availability as { data?: { availableCli?: string[] } } | null)?.data
+      ? (availability as { data?: { availableCli?: string[] } }).data
+      : (availability as { availableCli?: string[] } | null);
+
+    const availableCli = payload?.availableCli ?? [];
+    const normalized = availableCli.map((name) => (name === 'claude-code' ? 'claude-code' : name.toLowerCase()));
+
+    return Array.from(new Set([...normalized, 'webhooks']));
+  }, [availability]);
+
   const config = useScreenConfig(
     activeTab,
     () => setActiveTab('dashboard'),
@@ -386,6 +401,10 @@ function AppContent() {
               </main>
               <BottomNav active={activeTab} onChange={setActiveTab} />
             </div>
+            <ExtensionsRightSidebar
+              installedExtensionIds={installedExtensionIds}
+              onNavigate={(tab) => setActiveTab(tab)}
+            />
           </div>
         </ToastProvider>
       </RepositoryProvider>
