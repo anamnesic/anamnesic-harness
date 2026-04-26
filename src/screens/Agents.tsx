@@ -125,7 +125,7 @@ function StateBadge({
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.1 }}
-                        className="absolute left-0 top-full z-20 mt-1 min-w-[110px] rounded-xl border border-border bg-card shadow-lg overflow-hidden"
+                        className="absolute left-0 top-full z-20 mt-1 min-w-27.5 rounded-xl border border-border bg-card shadow-lg overflow-hidden"
                     >
                         {states.map(s => (
                             <button
@@ -556,7 +556,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                                     <div key={agent.id} className="bento-card flex h-full flex-col gap-3">
                                         {/* Top row */}
                                         <div className="space-y-2">
-                                            <h3 className="break-words text-base font-bold leading-tight text-accent">
+                                            <h3 className="wrap-break-word text-base font-bold leading-tight text-accent">
                                                 {agent.name}
                                             </h3>
 
@@ -653,7 +653,7 @@ export function Agents({ onNavigate }: AgentsProps) {
                     <div className="bento-card space-y-3">
                         <div className="flex items-center justify-between gap-2">
                             <h3 className="text-base font-bold text-accent">Nova capacidade</h3>
-                            <span className="label-caps !mb-0">Skills</span>
+                            <span className="label-caps mb-0!">Skills</span>
                         </div>
 
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
