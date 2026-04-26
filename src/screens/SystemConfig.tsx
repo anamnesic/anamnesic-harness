@@ -25,8 +25,6 @@ interface SettingsData {
     aiSettings?: Record<string, unknown>;
     workspaceId?: string;
 }
-interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number; platform: string; nodeVersion: string }
-interface Project { id: string; name: string }
 interface AvailabilityData {
     cli: Record<'copilot' | 'gemini' | 'claude-code' | 'codex', boolean>;
     availableCli: string[];
@@ -43,7 +41,6 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const { repository } = useRepository();
     const { data: settings, loading: settingsLoading } = useApi<SettingsData>('/api/v1/settings');
     const { data: metrics, loading: metricsLoading } = useApi<MetricsData>('/api/v1/metrics');
-    const { data: projects } = useApi<Project[]>('/api/v1/projects');
     // Include repository ID in the URL to trigger refetch when repository changes
     const availabilityUrl = repository ? `/api/v1/system/ai-availability?projectId=${repository.id}` : '/api/v1/system/ai-availability';
     const { data: availability, loading: availabilityLoading, refetch: refetchAvailability } = useApi<{ data?: AvailabilityData } | AvailabilityData>(availabilityUrl);
@@ -53,14 +50,6 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const [localModelStates, setLocalModelStates] = useState<Record<string, boolean>>({});
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-
-    // Auto-select the current repository if available
-    useEffect(() => {
-        if (repository?.id && !selectedProjectId) {
-            setSelectedProjectId(repository.id);
-        }
-    }, [repository?.id, selectedProjectId]);
 
     const availabilityPayload = (availability as { data?: AvailabilityData } | null)?.data
         ? (availability as { data?: AvailabilityData }).data
@@ -303,23 +292,10 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
             <div className="bento-card space-y-4">
                 <div>
                     <span className="label-caps">Gerenciar chaves de API</span>
-                    <p className="text-xs text-text-dim mt-1">Select a project to manage its API keys</p>
+                    <p className="text-xs text-text-dim mt-1">Projeto: <span className="font-bold text-accent">{repository?.name ?? 'Nenhum'}</span></p>
                 </div>
-                <div>
-                    <label className="label-caps mb-1.5 block">Selecionar projeto</label>
-                    <select
-                        value={selectedProjectId ?? ''}
-                        onChange={e => setSelectedProjectId(e.target.value || null)}
-                        className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary transition-colors"
-                    >
-                        <option value="">— Choose a project —</option>
-                        {Array.isArray(projects) && projects.map((p: Project) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
-                </div>
-                {selectedProjectId && (
-                    <ApiKeys projectId={selectedProjectId} />
+                {repository?.id && (
+                    <ApiKeys projectId={repository.id} />
                 )}
             </div>
 
