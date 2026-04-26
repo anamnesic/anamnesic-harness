@@ -184,13 +184,13 @@ Meta de arquitetura:
 
 ### Implementacao
 
-- [ ] Criar `SelfOptimizationService`
-- [ ] Agregar metricas de benchmark, erro, latencia e uso de tools
-- [ ] Rodar analise periodica por CLI
-- [ ] Sugerir melhorias de configuracao
-- [ ] Sugerir mudancas de politica
-- [ ] Sugerir troca de provider/modelo por tipo de task
-- [ ] Registrar historico de otimizacoes aceitas/rejeitadas
+- [x] Criar `SelfOptimizationService`
+- [x] Agregar metricas de benchmark, erro, latencia e uso de tools
+- [x] Rodar analise periodica por CLI
+- [x] Sugerir melhorias de configuracao
+- [x] Sugerir mudancas de politica
+- [x] Sugerir troca de provider/modelo por tipo de task
+- [x] Registrar historico de otimizacoes aceitas/rejeitadas
 
 ---
 

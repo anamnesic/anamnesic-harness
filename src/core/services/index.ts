@@ -75,6 +75,14 @@ export {
 	type ProactivePlannerRunResult,
 	type ProactivePlan,
 } from './ProactivePlannerService';
+export {
+	SelfOptimizationService,
+	type SelfOptimizationServiceOptions,
+	type SelfOptimizationRunResult,
+	type SelfOptimizationPlan,
+	type OptimizationSuggestion,
+	type OptimizationDecision,
+} from './SelfOptimizationService';
 
 export { PersistentEventBus } from '../events/PersistentEventBus';
 export { ChatSyncService } from './ChatSyncService';

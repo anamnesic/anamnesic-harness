@@ -30,6 +30,7 @@ export async function bootstrapSystem(database: DataSource): Promise<void> {
     try {
         await initializeObservers(database);
         await initializeProactivePlanner();
+        await initializeSelfOptimization();
         await initializeWorkflowTriggers(database);
         await initializeRetentionPolicy(database);
         await initializeSync(database);
@@ -49,6 +50,16 @@ async function initializeProactivePlanner(): Promise<void> {
         console.log('Proactive Planner initialized and started');
     } catch (error) {
         console.error('Failed to initialize proactive planner:', error);
+    }
+}
+
+async function initializeSelfOptimization(): Promise<void> {
+    try {
+        const { ensureSelfOptimizationStarted } = await import('@/app/api/_lib/self-optimization');
+        await ensureSelfOptimizationStarted();
+        console.log('Self-Optimization Service initialized and started');
+    } catch (error) {
+        console.error('Failed to initialize self-optimization service:', error);
     }
 }
 
