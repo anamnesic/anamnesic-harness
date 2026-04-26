@@ -30,32 +30,52 @@ function hasGhCopilotExtension(): boolean {
     return output.includes('gh-copilot') || output.includes('github/gh-copilot');
 }
 
+function commandWorks(command: string, args: string[]): boolean {
+    const result = spawnSync(command, args, {
+        stdio: 'ignore',
+        timeout: 4000,
+    });
+    return result.status === 0;
+}
+
+function ghCopilotWorks(): boolean {
+    if (!commandExists('gh') || !hasGhCopilotExtension()) {
+        return false;
+    }
+
+    return commandWorks('gh', ['copilot', '--help']);
+}
+
 function detectCliAvailability(): Record<CliName, boolean> {
+    const hasCopilotBinary = commandExists('copilot') && commandWorks('copilot', ['--version']);
+    const hasGemini = commandExists('gemini') && commandWorks('gemini', ['--version']);
+    const hasClaudeCode = (
+        (commandExists('claude-code') && commandWorks('claude-code', ['--version']))
+        || (commandExists('claude') && commandWorks('claude', ['--version']))
+    );
+    const hasCodex = commandExists('codex') && commandWorks('codex', ['--version']);
+
     return {
-        copilot: commandExists('copilot') || hasGhCopilotExtension(),
-        gemini: commandExists('gemini'),
-        'claude-code': commandExists('claude') || commandExists('claude-code'),
-        codex: commandExists('codex'),
+        copilot: hasCopilotBinary || ghCopilotWorks(),
+        gemini: hasGemini,
+        'claude-code': hasClaudeCode,
+        codex: hasCodex,
     };
 }
 
 function isModelAvailable(modelId: string, cli: Record<CliName, boolean>): boolean {
     const id = modelId.toLowerCase();
 
-    if (id === 'auto') {
-        return cli.copilot || cli.codex || cli.gemini || cli['claude-code'];
-    }
-
     if (id.includes('claude')) {
-        return cli['claude-code'] || cli.copilot;
+        return cli['claude-code'];
     }
 
     if (id.includes('gemini')) {
-        return cli.gemini || cli.copilot;
+        return cli.gemini;
     }
 
     if (id.includes('codex')) {
-        return cli.codex || cli.copilot;
+        return cli.codex;
     }
 
     if (id.includes('gpt')) {
@@ -66,7 +86,11 @@ function isModelAvailable(modelId: string, cli: Record<CliName, boolean>): boole
         return cli.copilot;
     }
 
-    return cli.copilot;
+    if (id === 'auto') {
+        return cli.copilot || cli.codex || cli.gemini || cli['claude-code'];
+    }
+
+    return false;
 }
 
 export async function GET() {
