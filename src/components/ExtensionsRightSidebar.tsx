@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Blocks, TerminalSquare, PlugZap, ExternalLink, Search, ServerCog, Store, Bot } from 'lucide-react';
+import { Blocks, TerminalSquare, PlugZap, ExternalLink, Search, ServerCog, Store, Bot, ChevronDown } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { LucideIcon } from 'lucide-react';
 
@@ -133,6 +133,11 @@ interface ExtensionsRightSidebarProps {
 export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: ExtensionsRightSidebarProps) {
     const installedSet = useMemo(() => new Set(installedExtensionIds), [installedExtensionIds]);
     const [marketQuery, setMarketQuery] = useState('');
+    const [openSections, setOpenSections] = useState({
+        installed: true,
+        recommended: false,
+        mcp: false,
+    });
 
     const installedWithTab = useMemo(
         () => MARKET_EXTENSIONS.filter((extension) => extension.hasTab && installedSet.has(extension.id)),
@@ -196,6 +201,10 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         [marketQuery],
     );
 
+    function toggleSection(section: 'installed' | 'recommended' | 'mcp') {
+        setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+    }
+
     return (
         <aside className="hidden xl:flex h-screen w-88 shrink-0 flex-col border-l border-border bg-card/30">
             <div className="border-b border-border/60 px-4 py-4">
@@ -250,95 +259,116 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                             </div>
                         </div>
 
-                        <details className="rounded-xl border border-border bg-bg/50" open>
-                            <summary className="cursor-pointer list-none px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight">
-                                Instalados ({filteredInstalled.length})
-                            </summary>
-                            <div className="space-y-2 border-t border-border/60 p-3">
-                                {filteredInstalled.length === 0 ? (
-                                    <p className="text-xs text-text-dim">Nenhuma extensao instalada encontrada para esta busca.</p>
-                                ) : filteredInstalled.map((extension) => (
-                                    <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div>
-                                                <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
-                                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.publisher}</p>
+                        <div className="rounded-xl border border-border bg-bg/50">
+                            <button
+                                type="button"
+                                onClick={() => toggleSection('installed')}
+                                className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
+                            >
+                                <span>Instalados ({filteredInstalled.length})</span>
+                                <ChevronDown className={cn('size-4 transition-transform', openSections.installed && 'rotate-180')} />
+                            </button>
+                            {openSections.installed && (
+                                <div className="space-y-2 border-t border-border/60 p-3">
+                                    {filteredInstalled.length === 0 ? (
+                                        <p className="text-xs text-text-dim">Nenhuma extensao instalada encontrada para esta busca.</p>
+                                    ) : filteredInstalled.map((extension) => (
+                                        <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.publisher}</p>
+                                                </div>
+                                                <span className={cn('rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider', extension.accentClass)}>
+                                                    Instalada
+                                                </span>
                                             </div>
-                                            <span className={cn('rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider', extension.accentClass)}>
-                                                Instalada
-                                            </span>
-                                        </div>
-                                        <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
-                                        <div className="mt-3 flex items-center justify-between gap-2">
-                                            <button
-                                                onClick={() => onNavigate(extension.hostTab)}
-                                                className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
-                                            >
-                                                {extension.hostTab === 'terminal' ? <TerminalSquare className="size-3.5" /> : <PlugZap className="size-3.5" />}
-                                                Abrir aba
-                                            </button>
-                                            <span className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-dim">
-                                                {extension.commandHint}
-                                            </span>
-                                        </div>
-                                    </article>
-                                ))}
-                            </div>
-                        </details>
+                                            <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
+                                            <div className="mt-3 flex items-center justify-between gap-2">
+                                                <button
+                                                    onClick={() => onNavigate(extension.hostTab)}
+                                                    className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
+                                                >
+                                                    {extension.hostTab === 'terminal' ? <TerminalSquare className="size-3.5" /> : <PlugZap className="size-3.5" />}
+                                                    Abrir aba
+                                                </button>
+                                                <span className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-dim">
+                                                    {extension.commandHint}
+                                                </span>
+                                            </div>
+                                        </article>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
-                        <details className="rounded-xl border border-border bg-bg/50" open>
-                            <summary className="cursor-pointer list-none px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight">
-                                Recomendados ({filteredRecommended.length})
-                            </summary>
-                            <div className="space-y-2 border-t border-border/60 p-3">
-                                {filteredRecommended.length === 0 ? (
-                                    <p className="text-xs text-text-dim">Nenhuma recomendacao disponivel para esta busca.</p>
-                                ) : filteredRecommended.map((extension) => (
-                                    <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
-                                        <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.publisher}</p>
-                                        <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
-                                        <a
-                                            href={extension.openVsxUrl}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                        >
-                                            Ver no Open VSX
-                                            <ExternalLink className="size-3" />
-                                        </a>
-                                    </article>
-                                ))}
-                            </div>
-                        </details>
-
-                        <details className="rounded-xl border border-border bg-bg/50" open>
-                            <summary className="cursor-pointer list-none px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight">
-                                MCP ({filteredMcp.length})
-                            </summary>
-                            <div className="space-y-2 border-t border-border/60 p-3">
-                                {filteredMcp.length === 0 ? (
-                                    <p className="text-xs text-text-dim">Nenhum conector MCP encontrado para esta busca.</p>
-                                ) : filteredMcp.map((extension) => (
-                                    <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
-                                        <div className="flex items-center gap-2">
-                                            <ServerCog className="size-4 text-primary" />
+                        <div className="rounded-xl border border-border bg-bg/50">
+                            <button
+                                type="button"
+                                onClick={() => toggleSection('recommended')}
+                                className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
+                            >
+                                <span>Recomendados ({filteredRecommended.length})</span>
+                                <ChevronDown className={cn('size-4 transition-transform', openSections.recommended && 'rotate-180')} />
+                            </button>
+                            {openSections.recommended && (
+                                <div className="space-y-2 border-t border-border/60 p-3">
+                                    {filteredRecommended.length === 0 ? (
+                                        <p className="text-xs text-text-dim">Nenhuma recomendacao disponivel para esta busca.</p>
+                                    ) : filteredRecommended.map((extension) => (
+                                        <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
                                             <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
-                                        </div>
-                                        <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
-                                        <a
-                                            href={extension.openVsxUrl}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                        >
-                                            Abrir no Open VSX
-                                            <ExternalLink className="size-3" />
-                                        </a>
-                                    </article>
-                                ))}
-                            </div>
-                        </details>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.publisher}</p>
+                                            <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
+                                            <a
+                                                href={extension.openVsxUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                            >
+                                                Ver no Open VSX
+                                                <ExternalLink className="size-3" />
+                                            </a>
+                                        </article>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="rounded-xl border border-border bg-bg/50">
+                            <button
+                                type="button"
+                                onClick={() => toggleSection('mcp')}
+                                className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
+                            >
+                                <span>MCP ({filteredMcp.length})</span>
+                                <ChevronDown className={cn('size-4 transition-transform', openSections.mcp && 'rotate-180')} />
+                            </button>
+                            {openSections.mcp && (
+                                <div className="space-y-2 border-t border-border/60 p-3">
+                                    {filteredMcp.length === 0 ? (
+                                        <p className="text-xs text-text-dim">Nenhum conector MCP encontrado para esta busca.</p>
+                                    ) : filteredMcp.map((extension) => (
+                                        <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
+                                            <div className="flex items-center gap-2">
+                                                <ServerCog className="size-4 text-primary" />
+                                                <h4 className="text-sm font-bold text-highlight">{extension.title}</h4>
+                                            </div>
+                                            <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
+                                            <a
+                                                href={extension.openVsxUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                            >
+                                                Abrir no Open VSX
+                                                <ExternalLink className="size-3" />
+                                            </a>
+                                        </article>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ) : selectedExtension ? (
                     <div className="space-y-3">
