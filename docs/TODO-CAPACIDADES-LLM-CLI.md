@@ -85,9 +85,9 @@ Meta de arquitetura:
 
 ### Implementacao
 
-- [ ] Criar fila de eventos observados priorizada
-- [ ] Distinguir eventos criticos vs triviais
-- [ ] Enviar apenas eventos de alto sinal para LLM
+- [x] Criar fila de eventos observados priorizada
+- [x] Distinguir eventos criticos vs triviais
+- [x] Enviar apenas eventos de alto sinal para LLM
 - [ ] Detectar anomalias recorrentes
 - [ ] Gerar explicacoes resumidas de mudancas importantes
 - [ ] Produzir alertas semanticos para UI e ledger

@@ -39,6 +39,7 @@ describe.sequential('EventEnrichmentIngestionService', () => {
         const ingestion = new EventEnrichmentIngestionService(fakeEnricher as any, {
             batchSize: 2,
             flushIntervalMs: 5000,
+            minSignalForEnrichment: 'normal',
         });
 
         await ingestion.ingest(makeEntry('evt-1'));
@@ -59,6 +60,7 @@ describe.sequential('EventEnrichmentIngestionService', () => {
         const ingestion = new EventEnrichmentIngestionService(fakeEnricher as any, {
             batchSize: 5,
             flushIntervalMs: 100,
+            minSignalForEnrichment: 'normal',
         });
 
         await ingestion.ingest(makeEntry('evt-3'));
@@ -86,6 +88,50 @@ describe.sequential('EventEnrichmentIngestionService', () => {
         expect(content).toContain('"id":"evt-4"');
 
         await ingestion.stop();
+        expect(fakeEnricher.enrichBatch).toHaveBeenCalledTimes(0);
+    });
+
+    it('prioritizes critical events ahead of lower priority events', async () => {
+        const fakeEnricher = { enrichBatch: vi.fn().mockResolvedValue([]) };
+        const { EventEnrichmentIngestionService } = await import('../EventEnrichmentIngestionService');
+
+        const ingestion = new EventEnrichmentIngestionService(fakeEnricher as any, {
+            batchSize: 2,
+            flushIntervalMs: 5_000,
+            minSignalForEnrichment: 'normal',
+        });
+
+        await ingestion.ingest({
+            ...makeEntry('evt-5'),
+            content: 'processo finalizado com código 0',
+        });
+        await ingestion.ingest({
+            ...makeEntry('evt-6'),
+            content: 'API call GET /health -> 500 (120ms) failure',
+        });
+
         expect(fakeEnricher.enrichBatch).toHaveBeenCalledTimes(1);
+        const [batchArg] = fakeEnricher.enrichBatch.mock.calls[0];
+        expect(batchArg).toHaveLength(1);
+        expect(batchArg[0].id).toBe('evt-6');
+    });
+
+    it('sends only high-signal events to enrichment by default', async () => {
+        const fakeEnricher = { enrichBatch: vi.fn().mockResolvedValue([]) };
+        const { EventEnrichmentIngestionService } = await import('../EventEnrichmentIngestionService');
+
+        const ingestion = new EventEnrichmentIngestionService(fakeEnricher as any, {
+            batchSize: 3,
+            flushIntervalMs: 5_000,
+        });
+
+        await ingestion.ingest({ ...makeEntry('evt-7'), content: 'Code changed: src/foo.ts' });
+        await ingestion.ingest({ ...makeEntry('evt-8'), content: 'heartbeat ok' });
+        await ingestion.ingest({ ...makeEntry('evt-9'), content: 'terminal error timeout denied' });
+
+        expect(fakeEnricher.enrichBatch).toHaveBeenCalledTimes(1);
+        const [batchArg] = fakeEnricher.enrichBatch.mock.calls[0];
+        expect(batchArg).toHaveLength(1);
+        expect(batchArg[0].id).toBe('evt-9');
     });
 });
