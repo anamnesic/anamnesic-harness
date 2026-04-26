@@ -730,8 +730,8 @@ export function Projects({
 
                         <section className="min-w-0">
                             {activeTab === 'repository' ? (
-                                <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
-                                    <aside className="bento-card min-h-0">
+                                <div className="flex min-h-128 flex-col gap-4 lg:flex-row">
+                                    <aside className="bento-card min-h-0 lg:w-72 lg:shrink-0">
                                         <div className="mb-3 flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
                                                 <Folder className="size-4 text-primary" />
@@ -752,22 +752,24 @@ export function Projects({
                                             className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
                                         />
 
-                                        {insightsLoading ? (
-                                            <p className="text-sm text-text-dim">Carregando arquivos...</p>
-                                        ) : !insights?.isGitRepo ? (
-                                            <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
-                                        ) : !repositoryFiles.length ? (
-                                            <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
-                                        ) : (
-                                            <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
-                                                {repositoryTree.length
-                                                    ? renderRepositoryTree(repositoryTree)
-                                                    : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
-                                            </div>
-                                        )}
+                                        <div className="min-h-0 max-h-96 overflow-y-auto pr-1 lg:max-h-[64vh]">
+                                            {insightsLoading ? (
+                                                <p className="text-sm text-text-dim">Carregando arquivos...</p>
+                                            ) : !insights?.isGitRepo ? (
+                                                <p className="text-sm text-text-dim">Pasta sem reposit├│rio Git v├ílido.</p>
+                                            ) : !repositoryFiles.length ? (
+                                                <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
+                                            ) : (
+                                                <div className="space-y-1">
+                                                    {repositoryTree.length
+                                                        ? renderRepositoryTree(repositoryTree)
+                                                        : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
+                                                </div>
+                                            )}
+                                        </div>
                                     </aside>
 
-                                    <section className="min-h-0 overflow-hidden">
+                                    <section className="min-h-0 min-w-0 flex-1 overflow-hidden">
                                         {insightsLoading ? (
                                             <p className="text-sm text-text-dim">Carregando editor...</p>
                                         ) : !insights?.isGitRepo ? (
