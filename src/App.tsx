@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
   Shield,
-  Eye,
-  History,
+  Terminal,
   Settings2,
   Bell,
   ArrowLeft,
@@ -99,6 +98,7 @@ const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
+  { id: 'terminal', label: 'Terminal', icon: Terminal },
   { id: 'decisions', label: 'Decisões', icon: Lightbulb },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
@@ -202,6 +202,14 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
       return { title: 'Snapshots', subtitle: 'Estado em um ponto no tempo', element: <Snapshots />, onBack: goHome, rightElement: undefined };
     case 'agents':
       return { title: 'Agentes', subtitle: 'Registro de agentes', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
+    case 'terminal':
+      return {
+        title: 'Terminal',
+        subtitle: 'Sessões de CLI',
+        element: <TerminalPanel />,
+        onBack: goHome,
+        rightElement: undefined,
+      };
     case 'tasks':
       return { title: 'Tarefas', subtitle: 'Gerenciamento de tarefas', element: <Tasks />, onBack: goHome, rightElement: undefined };
     case 'workflows':
@@ -238,7 +246,6 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-  const [terminalMaximized, setTerminalMaximized] = useState(false);
   const { isAuthenticated, isLoading } = useAuth();
   const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'), setActiveTab);
 
@@ -261,22 +268,12 @@ function AppContent() {
           <OnboardingModal />
           <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
             {/* Left Sidebar - Repositories */}
-            <aside
-              className={cn(
-                'scrollbar-kairos hidden h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto lg:flex lg:flex-col',
-                terminalMaximized && 'lg:hidden',
-              )}
-            >
+            <aside className="scrollbar-kairos hidden h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto lg:flex lg:flex-col">
               <Projects />
             </aside>
 
             {/* Main Content */}
-            <div
-              className={cn(
-                'flex h-screen min-w-0 flex-1 flex-col overflow-hidden',
-                terminalMaximized ? 'lg:flex-[1_1_0%]' : 'lg:flex-[2_1_0%]',
-              )}
-            >
+            <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
               <Header
                 title={config.title}
                 subtitle={config.subtitle}
@@ -299,16 +296,6 @@ function AppContent() {
                 </AnimatePresence>
               </main>
               <BottomNav active={activeTab} onChange={setActiveTab} />
-            </div>
-
-            {/* Right Sidebar - Terminal */}
-            <div
-              className={cn(
-                'hidden h-screen min-w-0 lg:flex',
-                terminalMaximized ? 'lg:flex-[2_1_0%]' : 'lg:flex-[1_1_0%]',
-              )}
-            >
-              <TerminalPanel onMaximizeChange={setTerminalMaximized} />
             </div>
           </div>
         </ToastProvider>
