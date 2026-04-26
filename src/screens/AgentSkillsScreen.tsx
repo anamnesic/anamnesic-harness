@@ -78,8 +78,8 @@ export function AgentSkillsScreen() {
     const selectedSkill = promptCapabilities.find((item) => item.key === selectedSkillKey) ?? null;
 
     return (
-        <div className="flex-1 w-full max-w-7xl mx-auto p-6 pb-32 space-y-5">
-            <div className="flex items-center justify-end">
+        <div className="flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col mx-auto p-6">
+            <div className="mb-4 flex shrink-0 items-center justify-end">
                 <button
                     onClick={() => setOpen(true)}
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-primary/90 transition-colors"
@@ -98,10 +98,10 @@ export function AgentSkillsScreen() {
                     <p className="text-sm text-text-dim">Nenhuma skill encontrada.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
-                    <aside className="bento-card space-y-2">
-                        <p className="label-caps">Skills</p>
-                        <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1.5">
+                <div className="grid h-full min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+                    <aside className="bento-card flex min-h-0 flex-col space-y-2">
+                        <p className="label-caps shrink-0">Skills</p>
+                        <div className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-1.5">
                             {promptCapabilities.map((capability) => {
                                 const selected = capability.key === selectedSkillKey;
                                 return (
@@ -121,7 +121,7 @@ export function AgentSkillsScreen() {
                         </div>
                     </aside>
 
-                    <section className="bento-card space-y-4">
+                    <section className="bento-card min-h-0 space-y-4 overflow-y-auto">
                         {selectedSkill ? (
                             <>
                                 <div className="flex items-start justify-between gap-3">
