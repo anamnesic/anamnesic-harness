@@ -55,25 +55,25 @@ Meta de arquitetura:
 
 ### Implementacao
 
-- [ ] Criar pipeline `EventEnrichmentService`
+- [x] Criar pipeline `EventEnrichmentService`
 - [ ] Ao receber novo evento, enviar lote para `CliInferenceService`
-- [ ] Extrair classificacao semantica do evento
-- [ ] Extrair tags
-- [ ] Extrair nivel de relevancia
-- [ ] Extrair entidades citadas
-- [ ] Extrair acao sugerida
-- [ ] Persistir enrichment ao lado do evento original
+- [x] Extrair classificacao semantica do evento
+- [x] Extrair tags
+- [x] Extrair nivel de relevancia
+- [x] Extrair entidades citadas
+- [x] Extrair acao sugerida
+- [x] Persistir enrichment ao lado do evento original
 
 ### Esquema sugerido
 
-- [ ] Definir schema JSON para enrichment de evento
-- [ ] Validar parse de retorno por schema
-- [ ] Salvar eventos com `raw` + `enriched`
+- [x] Definir schema JSON para enrichment de evento
+- [x] Validar parse de retorno por schema
+- [x] Salvar eventos com `raw` + `enriched`
 
 ### Compatibilidade multi-CLI
 
-- [ ] Garantir prompt de enrichment agnostico a provider
-- [ ] Criar normalizacao para saidas textuais diferentes
+- [x] Garantir prompt de enrichment agnostico a provider
+- [x] Criar normalizacao para saidas textuais diferentes
 
 ---
 
