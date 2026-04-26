@@ -2,6 +2,7 @@ import { DataSource, Repository } from 'typeorm';
 import { Agent, AgentState, AgentCapability } from '../entities/Agent';
 import { getEventBus } from '@/src/observation/EventBus';
 import { mergeDefaultInternalSkillPrompts } from '@/src/core/agents/internalSkillPrompts';
+import { loadExternalSkillsFromData } from '@/src/core/agents/externalSkillCatalog';
 
 export interface CreateAgentInput {
   workspaceId: string;
@@ -217,6 +218,33 @@ export class AgentService {
         isActive: true,
         metadata: prebuilt.metadata,
       });
+      existingNames.add(prebuilt.name.trim().toLowerCase());
+    }
+
+    const externalSkills = await loadExternalSkillsFromData();
+    const providers = Array.from(new Set(externalSkills.map((skill) => skill.provider))).sort((a, b) => a.localeCompare(b));
+
+    for (const provider of providers) {
+      const providerAgentName = `${provider} Skills`;
+      const normalizedName = providerAgentName.trim().toLowerCase();
+      if (existingNames.has(normalizedName)) continue;
+
+      await this.create({
+        workspaceId,
+        name: providerAgentName,
+        description: `Agente prebuilt para skills importadas automaticamente de data/skills/${provider}.`,
+        capabilities: ['reasoning', 'learning'],
+        isActive: true,
+        metadata: {
+          prebuilt: true,
+          role: `skills-provider-${provider.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+          source: 'data/skills',
+          provider,
+          externalSkillProvider: true,
+        },
+      });
+
+      existingNames.add(normalizedName);
     }
 
     const refreshed = await this.listByWorkspace(workspaceId, false);
@@ -227,8 +255,48 @@ export class AgentService {
 
     if (promptEngineer) {
       const merged = mergeDefaultInternalSkillPrompts(promptEngineer.metadata);
-      if (merged.changed) {
-        await this.repo.update(promptEngineer.id, { metadata: merged.metadata });
+      const nextMetadata: Record<string, any> = { ...merged.metadata };
+
+      const promptTemplates = {
+        ...((nextMetadata.promptTemplates as Record<string, string> | undefined) ?? {}),
+      };
+
+      const customPromptCapabilities = [
+        ...((nextMetadata.customPromptCapabilities as Array<Record<string, any>> | undefined) ?? []),
+      ];
+
+      const customKeys = new Set(customPromptCapabilities.map((item) => String(item?.key ?? '').trim()).filter(Boolean));
+
+      let externalChanged = false;
+      for (const skill of externalSkills) {
+        const currentTemplate = (promptTemplates[skill.key] ?? '').trim();
+        if (currentTemplate !== skill.prompt) {
+          promptTemplates[skill.key] = skill.prompt;
+          externalChanged = true;
+        }
+
+        if (!customKeys.has(skill.key)) {
+          customPromptCapabilities.push({
+            key: skill.key,
+            title: skill.title,
+            description: skill.description,
+            prompt: skill.prompt,
+            isCustom: true,
+            source: 'data/skills',
+            provider: skill.provider,
+          });
+          customKeys.add(skill.key);
+          externalChanged = true;
+        }
+      }
+
+      if (externalChanged) {
+        nextMetadata.promptTemplates = promptTemplates;
+        nextMetadata.customPromptCapabilities = customPromptCapabilities;
+      }
+
+      if (merged.changed || externalChanged) {
+        await this.repo.update(promptEngineer.id, { metadata: nextMetadata });
       }
     }
 
