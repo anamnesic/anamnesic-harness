@@ -130,6 +130,7 @@ export function Agents({ onNavigate }: AgentsProps) {
     const [deleting, setDeleting] = useState<string | null>(null);
 
     const [showTaskModal, setShowTaskModal] = useState(false);
+    const [activeView, setActiveView] = useState<'agents' | 'prompt-engineer'>('agents');
     const [taskAgent, setTaskAgent] = useState<Agent | null>(null);
     const [taskDescription, setTaskDescription] = useState('');
     const [taskInput, setTaskInput] = useState('{\n  "query": ""\n}');
@@ -150,6 +151,33 @@ export function Agents({ onNavigate }: AgentsProps) {
     const activeAgents = sortedAgents.filter(a => a.isActive).length;
     const totalCompleted = sortedAgents.reduce((sum, a) => sum + (a.tasksCompleted ?? 0), 0);
     const totalFailed = sortedAgents.reduce((sum, a) => sum + (a.tasksFailed ?? 0), 0);
+
+    const capabilityInfo: Record<AgentCapability, { title: string; description: string }> = {
+        'code-generation': {
+            title: 'Code Generation',
+            description: 'Gera implementacoes de codigo com base em objetivo, contexto e restricoes.',
+        },
+        'code-analysis': {
+            title: 'Code Analysis',
+            description: 'Analisa base de codigo, identifica riscos, melhoria e inconsistencias.',
+        },
+        'security-analysis': {
+            title: 'Security Analysis',
+            description: 'Avalia vulnerabilidades, exposicoes e padroes inseguros.',
+        },
+        'reasoning': {
+            title: 'Reasoning',
+            description: 'Quebra problemas em etapas e toma decisoes com justificativa estruturada.',
+        },
+        'execution': {
+            title: 'Execution',
+            description: 'Executa acoes praticas, automacoes e tarefas orientadas a resultado.',
+        },
+        'learning': {
+            title: 'Learning',
+            description: 'Adapta comportamento conforme contexto e historico de uso.',
+        },
+    };
 
     function closeModal() {
         setShowModal(false);
@@ -315,37 +343,64 @@ export function Agents({ onNavigate }: AgentsProps) {
                 </button>
             </div>
 
-            {/* Stats row */}
-            <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-                {[
-                    { label: 'Total', value: totalAgents },
-                    { label: 'Ativo', value: activeAgents },
-                    { label: 'Completed', value: totalCompleted },
-                    { label: 'Failed', value: totalFailed },
-                ].map(stat => (
-                    <div key={stat.label} className="bento-card text-center">
-                        <p className="text-2xl font-bold">{stat.value}</p>
-                        <p className="label-caps text-text-dim mt-0.5">{stat.label}</p>
-                    </div>
-                ))}
+            <div className="mb-6 inline-flex rounded-xl border border-border bg-card/50 p-1">
+                <button
+                    onClick={() => setActiveView('agents')}
+                    className={cn(
+                        'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
+                        activeView === 'agents'
+                            ? 'bg-bg text-highlight border border-border'
+                            : 'text-text-dim hover:text-accent'
+                    )}
+                >
+                    Agentes
+                </button>
+                <button
+                    onClick={() => setActiveView('prompt-engineer')}
+                    className={cn(
+                        'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors',
+                        activeView === 'prompt-engineer'
+                            ? 'bg-bg text-highlight border border-border'
+                            : 'text-text-dim hover:text-accent'
+                    )}
+                >
+                    Prompt Enginer
+                </button>
             </div>
 
-            {/* Agent list */}
-            {loading ? (
-                <div className="space-y-4">
-                    {[0, 1, 2].map(i => <SkeletonCard key={i} />)}
-                </div>
-            ) : agents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 space-y-3">
-                    <Bot className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">Nenhum agente configurado</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                    {sortedAgents.map(agent => {
-                        const isPrebuilt = Boolean(agent.metadata?.prebuilt);
-                        return (
-                            <div key={agent.id} className="bento-card flex h-full flex-col gap-3">
+            {activeView === 'agents' ? (
+                <>
+                    {/* Stats row */}
+                    <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+                        {[
+                            { label: 'Total', value: totalAgents },
+                            { label: 'Ativo', value: activeAgents },
+                            { label: 'Completed', value: totalCompleted },
+                            { label: 'Failed', value: totalFailed },
+                        ].map(stat => (
+                            <div key={stat.label} className="bento-card text-center">
+                                <p className="text-2xl font-bold">{stat.value}</p>
+                                <p className="label-caps text-text-dim mt-0.5">{stat.label}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Agent list */}
+                    {loading ? (
+                        <div className="space-y-4">
+                            {[0, 1, 2].map(i => <SkeletonCard key={i} />)}
+                        </div>
+                    ) : agents.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-24 space-y-3">
+                            <Bot className="size-10 text-border" />
+                            <p className="text-text-dim text-sm">Nenhum agente configurado</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                            {sortedAgents.map(agent => {
+                                const isPrebuilt = Boolean(agent.metadata?.prebuilt);
+                                return (
+                                    <div key={agent.id} className="bento-card flex h-full flex-col gap-3">
                                 {/* Top row */}
                                 <div className="space-y-2">
                                     <h3 className="break-words text-base font-bold leading-tight text-accent">
@@ -434,9 +489,25 @@ export function Agents({ onNavigate }: AgentsProps) {
                                         Atribuir tarefa
                                     </button>
                                 </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {ALL_CAPABILITIES.map((capability) => (
+                        <div key={capability} className="bento-card space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <h3 className="text-base font-bold text-accent">{capabilityInfo[capability].title}</h3>
+                                <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
+                                    {capability}
+                                </span>
                             </div>
-                        );
-                    })}
+                            <p className="text-sm leading-relaxed text-text-dim">{capabilityInfo[capability].description}</p>
+                        </div>
+                    ))}
                 </div>
             )}
 
