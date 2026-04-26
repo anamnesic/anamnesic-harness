@@ -4,6 +4,9 @@ import { CodeObserver } from '@/src/observation/observers/codeObserver';
 import { TerminalObserver } from '@/src/observation/observers/terminalObserver';
 import { ApiObserver } from '@/src/observation/observers/apiObserver';
 import { getEventBus } from '@/src/observation/EventBus';
+import { randomUUID } from 'node:crypto';
+import { EventEnrichmentIngestionService } from './EventEnrichmentIngestionService';
+import type { MemoryEntry } from '@/src/memory';
 
 export interface ObserverStatus {
   id: string;
@@ -27,6 +30,7 @@ export class ObserverService {
   private apiObserver: ApiObserver;
   private eventCounts: Map<string, number> = new Map();
   private lastEvents: Map<string, string> = new Map();
+  private enrichmentIngestion = new EventEnrichmentIngestionService();
 
   private activeObservers: Set<string> = new Set();
   private settingsService: any = null;
@@ -36,8 +40,9 @@ export class ObserverService {
     this.codeObserver = new CodeObserver();
     this.terminalObserver = new TerminalObserver();
     this.apiObserver = new ApiObserver();
-    
+
     this.setupEventTracking();
+    this.setupEnrichmentIngestion();
   }
 
   static getInstance(): ObserverService {
@@ -93,7 +98,7 @@ export class ObserverService {
 
   private setupEventTracking(): void {
     const bus = getEventBus('default');
-    
+
     // Track all events for observer statistics
     const originalEmit = (bus as any).emit?.bind(bus);
     if (typeof originalEmit === 'function') {
@@ -101,6 +106,55 @@ export class ObserverService {
         this.updateEventStats(eventType);
         return originalEmit(eventType, data);
       };
+    }
+  }
+
+  private setupEnrichmentIngestion(): void {
+    const codeBus = getEventBus('code-observer');
+    const terminalBus = getEventBus('terminal-observer');
+    const apiBus = getEventBus('api-observer');
+
+    codeBus.on('code:changed', (event) => {
+      const filePath = String(event.data?.filePath || 'unknown');
+      void this.enqueueForEnrichment({
+        id: randomUUID(),
+        source: 'code-observer',
+        content: `Code changed: ${filePath}`,
+        timestamp: event.timestamp,
+      });
+    });
+
+    terminalBus.on('terminal:output', (event) => {
+      const sessionId = String(event.data?.sessionId || 'unknown');
+      const raw = String(event.data?.data || '');
+      const compact = raw.length > 1200 ? `${raw.slice(0, 1200)}...` : raw;
+      void this.enqueueForEnrichment({
+        id: randomUUID(),
+        source: 'terminal-observer',
+        content: `Terminal output [${sessionId}]: ${compact}`,
+        timestamp: event.timestamp,
+      });
+    });
+
+    apiBus.on('api:call', (event) => {
+      const method = String(event.data?.method || 'UNKNOWN');
+      const route = String(event.data?.path || 'unknown');
+      const statusCode = Number(event.data?.statusCode || 0);
+      const durationMs = Number(event.data?.durationMs || 0);
+      void this.enqueueForEnrichment({
+        id: randomUUID(),
+        source: 'api-observer',
+        content: `API call ${method} ${route} -> ${statusCode} (${durationMs}ms)`,
+        timestamp: event.timestamp,
+      });
+    });
+  }
+
+  private async enqueueForEnrichment(entry: MemoryEntry): Promise<void> {
+    try {
+      await this.enrichmentIngestion.ingest(entry);
+    } catch (error) {
+      this.logger.warn(`Failed to enqueue event enrichment: ${error}`);
     }
   }
 
@@ -231,7 +285,7 @@ export class ObserverService {
     } else {
       await this.stopObserver(id);
     }
-    
+
     const statuses = this.getObserverStatuses();
     return statuses.find(s => s.id === id)!;
   }
@@ -250,12 +304,12 @@ export class ObserverService {
   // Initialize all observers on service start
   async initialize(): Promise<void> {
     this.logger.info('Initializing ObserverService');
-    
+
     // Start default observers
     await this.startObserver('fs');
     this.startObserver('terminal');
     // API observer starts paused by default
-    
+
     this.logger.info('ObserverService initialized');
   }
 }

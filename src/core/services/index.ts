@@ -68,6 +68,7 @@ export type { StreamConfig, StreamMessage } from './StreamingChatService';
 export { PersistentEventStore, EventEntity } from './PersistentEventStore';
 export type { } from './PersistentEventStore';
 export { EventEnrichmentService } from './EventEnrichmentService';
+export { EventEnrichmentIngestionService } from './EventEnrichmentIngestionService';
 
 export { PersistentEventBus } from '../events/PersistentEventBus';
 export { ChatSyncService } from './ChatSyncService';

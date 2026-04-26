@@ -56,7 +56,7 @@ Meta de arquitetura:
 ### Implementacao
 
 - [x] Criar pipeline `EventEnrichmentService`
-- [ ] Ao receber novo evento, enviar lote para `CliInferenceService`
+- [x] Ao receber novo evento, enviar lote para `CliInferenceService`
 - [x] Extrair classificacao semantica do evento
 - [x] Extrair tags
 - [x] Extrair nivel de relevancia
