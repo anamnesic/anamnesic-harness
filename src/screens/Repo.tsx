@@ -943,8 +943,7 @@ export function Projects({
                                     </section>
                                 </div>
                             ) : activeTab === 'git' ? (
-                                <div className="bento-card">
-                                    <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
+                                <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
                                         <div className="mb-3 flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
                                                 <GitBranch className="size-4 text-primary" />
@@ -1082,7 +1081,6 @@ export function Projects({
                                                 <p className="text-sm text-text-dim">Sem hist├│rico dispon├¡vel.</p>
                                             )}
                                         </div>
-                                    </div>
                                 </div>
                             ) : activeTab === 'context' ? (
                                 <Wiki projectId={selectedProject.id} />
