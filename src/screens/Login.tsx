@@ -7,6 +7,15 @@ import { apiFetch } from '@/src/lib/api';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/components/Toast';
 
+type LoginResponse = {
+  user?: { id: string; email: string; fullName: string };
+  token?: string;
+  data?: {
+    user?: { id: string; email: string; fullName: string };
+    token?: string;
+  };
+};
+
 export function Login() {
   const { login } = useAuth();
   const { toast } = useToast();
@@ -17,15 +26,22 @@ export function Login() {
   const [loading, setLoading] = useState(false);
 
   const authenticate = async (loginEmail: string, loginPassword: string) => {
-    const res = await apiFetch<any>('/api/v1/auth/login', {
+    const res = await apiFetch<LoginResponse>('/api/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email: loginEmail, password: loginPassword }),
     });
 
-    if (res && res.user && res.token) {
-      login(res.user, res.token);
+    const payload = res?.data ?? res;
+    const user = payload?.user;
+    const token = payload?.token;
+
+    if (user && token) {
+      login(user, token);
       toast('Logged in successfully', 'success');
+      return;
     }
+
+    throw new Error('Login response is missing user or token');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
