@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert } from 'lucide-react';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, RefreshCcw } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonRow } from '@/src/components/Skeleton';
 import { useCallback, useRef } from 'react';
+import { apiFetch } from '@/src/lib/api';
 
 const ACTION_ICONS = [Code2, MemoryStick, Shield, Activity];
 const TOAST_THROTTLE_MS = 3000;
@@ -19,6 +20,22 @@ interface AgentStats { totalAgents: number; activeAgents: number; totalTasksComp
 interface WorkflowStats { total: number; active: number; totalExecutions: number; successfulExecutions: number; failedExecutions: number; successRate: number }
 interface RunsData { data?: Array<{ status: string }> | { items?: Array<{ status: string }>; total?: number }; count?: number }
 
+interface ProactiveInsightResponse {
+    success?: boolean;
+    data?: {
+        generatedAt: string;
+        provider: string;
+        inputEvents: number;
+        plan: {
+            risks: Array<{ title: string; severity: string; evidence: string; recommendedAction: string }>;
+            opportunities: Array<{ title: string; impact: string; evidence: string; suggestedAction: string }>;
+            taskCandidates: Array<{ title: string; description: string; priority: string; rationale: string; sensitivity: string }>;
+            recommendations: Array<{ title: string; rationale: string; action: string }>;
+        };
+        pendingApprovals: Array<{ requestId: string; taskTitle: string; reason: string; status: string }>;
+    };
+}
+
 interface DashboardProps {
     onNavigate: (id: any) => void;
 }
@@ -29,7 +46,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     const { data: history, loading: histLoading } = usePolling<HistoryData>('/api/chat/history?limit=3', 60000);
     const { data: agentStats } = usePolling<AgentStats>('/api/v1/agents/stats', 20000);
     const { data: workflowStats } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 20000);
+    const { data: proactiveInsights, loading: proactiveLoading, refetch: refetchProactive } = usePolling<ProactiveInsightResponse>('/api/v1/proactive/insights', 45000);
     const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
+    const [proactiveBusy, setProactiveBusy] = useState(false);
     const { toast } = useToast();
     const lastToastRef = useRef<Record<string, number>>({});
 
@@ -81,6 +100,40 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     const actions: any[] = Array.isArray(histInner)
         ? histInner
         : (histInner && Array.isArray((histInner as { items?: any[] }).items) ? (histInner as { items: any[] }).items : []);
+
+    const proactiveData = proactiveInsights?.data;
+    const topRecommendation = proactiveData?.plan?.recommendations?.[0];
+    const topRisk = proactiveData?.plan?.risks?.[0];
+    const topPendingApproval = proactiveData?.pendingApprovals?.find((item) => item.status === 'pending') || null;
+
+    async function runProactiveAction(action: 'refresh' | 'approve' | 'reject' | 'postpone', requestId?: string) {
+        setProactiveBusy(true);
+        try {
+            await apiFetch('/api/v1/proactive/insights', {
+                method: 'POST',
+                body: JSON.stringify({ action, requestId }),
+            });
+
+            if (action === 'refresh') {
+                toast('Insights proativos atualizados', 'success');
+            }
+            if (action === 'approve') {
+                toast('Ação aprovada', 'success');
+            }
+            if (action === 'reject') {
+                toast('Ação rejeitada', 'info');
+            }
+            if (action === 'postpone') {
+                toast('Ação adiada', 'info');
+            }
+
+            await refetchProactive();
+        } catch (error) {
+            toast('Falha ao processar ação proativa', 'error');
+        } finally {
+            setProactiveBusy(false);
+        }
+    }
 
     return (
         <motion.div
@@ -146,14 +199,73 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
                 {/* Suggestion Card */}
                 <div className="bento-card col-span-4 md:col-span-2">
-                    <span className="label-caps">Sugestão proativa</span>
-                    <h3 className="text-lg font-bold tracking-tight">Refatorar middleware de autenticação</h3>
-                    <p className="text-xs text-text-dim mt-2 line-clamp-2">
-                        Repetitive patterns detected in routing logic. Abstracting into a shared utility could reduce bundle size by ~4KB.
-                    </p>
-                    <button className="mt-6 bg-highlight text-bg py-2.5 rounded-xl font-bold text-xs hover:bg-accent transition-colors w-full">
-                        Apply Optimization
-                    </button>
+                    <div className="flex items-center justify-between">
+                        <span className="label-caps">Sugestão proativa</span>
+                        <button
+                            onClick={() => void runProactiveAction('refresh')}
+                            disabled={proactiveBusy}
+                            className="rounded-lg border border-border p-1.5 hover:border-primary/60 transition-colors disabled:opacity-60"
+                            aria-label="Atualizar insights proativos"
+                        >
+                            <RefreshCcw className="size-3.5" />
+                        </button>
+                    </div>
+
+                    {proactiveLoading ? (
+                        <div className="space-y-2 mt-4">
+                            <SkeletonRow />
+                            <SkeletonRow />
+                            <SkeletonRow />
+                        </div>
+                    ) : (
+                        <>
+                            <h3 className="text-lg font-bold tracking-tight mt-2">
+                                {topRecommendation?.title || topRisk?.title || 'Sem sugestão prioritária no momento'}
+                            </h3>
+                            <p className="text-xs text-text-dim mt-2 line-clamp-3">
+                                {topRecommendation?.rationale || topRisk?.evidence || 'Nenhum insight relevante gerado ainda.'}
+                            </p>
+                            <p className="text-[10px] text-text-dim mt-3">
+                                {proactiveData
+                                    ? `Provider: ${proactiveData.provider} · Eventos: ${proactiveData.inputEvents}`
+                                    : 'Aguardando primeira execução do planner'}
+                            </p>
+                        </>
+                    )}
+
+                    {topPendingApproval && (
+                        <div className="mt-4 rounded-xl border border-border p-3 bg-bg/40">
+                            <p className="text-[10px] uppercase tracking-widest text-text-dim font-bold">Aprovação pendente</p>
+                            <p className="text-sm font-semibold mt-1">{topPendingApproval.taskTitle}</p>
+                            <p className="text-xs text-text-dim mt-1 line-clamp-2">{topPendingApproval.reason}</p>
+                            <div className="grid grid-cols-3 gap-2 mt-3">
+                                <button
+                                    onClick={() => void runProactiveAction('approve', topPendingApproval.requestId)}
+                                    disabled={proactiveBusy}
+                                    className="flex items-center justify-center gap-1 rounded-lg bg-green-500/15 text-green-400 py-2 text-[11px] font-bold hover:bg-green-500/20 transition-colors disabled:opacity-60"
+                                >
+                                    <CheckCircle2 className="size-3.5" />
+                                    Aprovar
+                                </button>
+                                <button
+                                    onClick={() => void runProactiveAction('reject', topPendingApproval.requestId)}
+                                    disabled={proactiveBusy}
+                                    className="flex items-center justify-center gap-1 rounded-lg bg-red-500/15 text-red-400 py-2 text-[11px] font-bold hover:bg-red-500/20 transition-colors disabled:opacity-60"
+                                >
+                                    <XCircle className="size-3.5" />
+                                    Rejeitar
+                                </button>
+                                <button
+                                    onClick={() => void runProactiveAction('postpone', topPendingApproval.requestId)}
+                                    disabled={proactiveBusy}
+                                    className="flex items-center justify-center gap-1 rounded-lg bg-yellow-500/15 text-yellow-400 py-2 text-[11px] font-bold hover:bg-yellow-500/20 transition-colors disabled:opacity-60"
+                                >
+                                    <Clock3 className="size-3.5" />
+                                    Adiar
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Operações de segurança Card */}

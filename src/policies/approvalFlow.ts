@@ -70,6 +70,27 @@ export class ApprovalFlow {
         return this.get(id)?.status === 'pending';
     }
 
+    list(status?: ApprovalStatus): ApprovalRequest[] {
+        const all = Array.from(this.requests.values()).map((req) => this.get(req.id) ?? req);
+        if (!status) {
+            return all.sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+        }
+
+        return all
+            .filter((req) => req.status === status)
+            .sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+    }
+
+    postpone(id: string, by: string, ttlMs: number = DEFAULT_TTL_MS): ApprovalRequest {
+        const req = this.requests.get(id);
+        if (!req) throw new Error(`Approval request not found: ${id}`);
+        if (req.status !== 'pending') throw new Error(`Cannot postpone non-pending request: ${id}`);
+        req.expiresAt = new Date(Date.now() + Math.max(5_000, ttlMs));
+        req.reason = `Postponed by ${by}`;
+        this.logger.info(`Approval postponed [${id}] by ${by}`);
+        return req;
+    }
+
     private resolve(id: string, status: 'approved' | 'denied', by: string, reason?: string): ApprovalRequest {
         const req = this.requests.get(id);
         if (!req) throw new Error(`Approval request not found: ${id}`);

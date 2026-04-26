@@ -44,18 +44,8 @@ export async function bootstrapSystem(database: DataSource): Promise<void> {
 
 async function initializeProactivePlanner(): Promise<void> {
     try {
-        const { ProactivePlannerService } = await import('@/src/core/services/ProactivePlannerService');
-        const { ApprovalFlow } = await import('@/src/policies/approvalFlow');
-
-        const proactivePlanner = ProactivePlannerService.getInstance({
-            approvalFlow: new ApprovalFlow(),
-            intervalMs: 5 * 60_000,
-            recentWindowDays: 2,
-            maxEvents: 250,
-            requireApprovalForSensitiveTasks: true,
-        });
-
-        await proactivePlanner.start('system');
+        const { ensureProactivePlannerStarted } = await import('@/app/api/_lib/proactive');
+        await ensureProactivePlannerStarted('system');
         console.log('Proactive Planner initialized and started');
     } catch (error) {
         console.error('Failed to initialize proactive planner:', error);

@@ -170,9 +170,9 @@ Meta de arquitetura:
 
 ### UX
 
-- [ ] Exibir propostas proativas no dashboard
-- [ ] Exibir racional resumido
-- [ ] Permitir aprovar, rejeitar ou adiar
+- [x] Exibir propostas proativas no dashboard
+- [x] Exibir racional resumido
+- [x] Permitir aprovar, rejeitar ou adiar
 
 ---
 
