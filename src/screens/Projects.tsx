@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X, Pencil, Building2, RotateCcw } from 'lucide-react';
+import { Trash2, FolderOpen, FolderGit2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -43,6 +43,20 @@ interface ApiResponse<T> {
     timestamp: string;
 }
 
+interface GitChange {
+    path: string;
+    status: string;
+    staged: boolean;
+}
+
+interface RepositoryInsights {
+    branch: string;
+    files: string[];
+    changes: GitChange[];
+    graphLines: string[];
+    isGitRepo: boolean;
+}
+
 interface RecentRepository {
     id: string;
     name: string;
@@ -69,7 +83,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
 
-    const [activeTab, setActiveTab] = useState<'context' | 'decisions'>('context');
+    const [activeTab, setActiveTab] = useState<'repository' | 'context' | 'decisions'>('repository');
     const [showBrowser, setShowBrowser] = useState(false);
     const [browserMode, setBrowserMode] = useState<'import-repository' | 'attach-folder'>('import-repository');
     const [attachTargetProjectId, setAttachTargetProjectId] = useState<string | null>(null);
@@ -363,6 +377,13 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         ? projects.find((p) => p.id === repository.id) || null
         : null;
 
+    const insightsPath = selectedProject ? `/api/v1/projects/${selectedProject.id}/repository-insights` : null;
+    const { data: insightsResponse, loading: insightsLoading } = useApi<ApiResponse<RepositoryInsights>>(insightsPath);
+    const insights = insightsResponse?.data;
+
+    const stagedChanges = insights?.changes?.filter((change) => change.staged) ?? [];
+    const unstagedChanges = insights?.changes?.filter((change) => !change.staged) ?? [];
+
     const recentItems = recentRepositories.slice(0, 6);
 
     const openFolderBrowser = () => {
@@ -380,50 +401,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         >
             <div className="mb-8 flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Start</h2>
-            </div>
-
-            {repository && (
-                <div className="bento-card mb-6 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                        <p className="label-caps mb-1">Contexto ativo</p>
-                        <p className="text-sm font-semibold text-accent truncate">{repository.name}</p>
-                    </div>
-                    <StatusBadge status={projects.find((item) => item.id === repository.id)?.status} />
-                </div>
-            )}
-
-            <div className="bento-card mb-6">
-                <p className="label-caps mb-3">Recentes</p>
-                {recentItems.length > 0 ? (
-                    <div className="space-y-2">
-                        {recentItems.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5">
-                                <div className="min-w-0">
-                                    <p className="text-sm font-semibold text-accent truncate">{item.name}</p>
-                                    {item.localPath && <p className="text-xs text-text-dim truncate font-mono">{item.localPath}</p>}
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                        onClick={() => handleOpenRecent(item)}
-                                        className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors"
-                                    >
-                                        Abrir
-                                    </button>
-                                    <button
-                                        onClick={() => handleReopenRecent(item)}
-                                        disabled={submitting || !item.localPath}
-                                        className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-[11px] font-bold text-text-dim hover:text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                                    >
-                                        <RotateCcw className="size-3" />
-                                        Abrir de novo
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-sm text-text-dim">Nenhum repositório recente ainda.</p>
-                )}
             </div>
 
             {showWorkspaceHint && (
@@ -592,51 +569,12 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     key="project-detail"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
+                    className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-6xl mx-auto w-full'}
                 >
-                    <div className="mb-6 flex items-center justify-between gap-3">
-                        <button
-                            onClick={() => {
-                                if (projects.length > 0) {
-                                    setRepositoryById(projects[0].id);
-                                }
-                            }}
-                            className="flex items-center gap-2 text-sm text-text-dim hover:text-accent transition-colors"
-                        >
-                            <ArrowLeft className="size-4" />
-                            Voltar para Repositórios
-                        </button>
-                    </div>
-                    {recentItems.length > 0 && (
-                        <div className="bento-card mb-4">
-                            <p className="label-caps mb-2">Recentes</p>
-                            <div className="flex flex-wrap gap-2">
-                                {recentItems.map((item) => (
-                                    <div key={item.id} className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1">
-                                        <button
-                                            onClick={() => handleOpenRecent(item)}
-                                            className="text-xs font-bold text-accent hover:text-highlight transition-colors"
-                                        >
-                                            {item.name}
-                                        </button>
-                                        <button
-                                            onClick={() => handleReopenRecent(item)}
-                                            disabled={submitting || !item.localPath}
-                                            className="rounded-md p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
-                                            title="Abrir de novo"
-                                        >
-                                            <RotateCcw className="size-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                     <div className="bento-card space-y-2 mb-2">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
                                 <span className="font-bold text-accent text-lg">{selectedProject.name}</span>
-                                <StatusBadge status={selectedProject.status} />
                             </div>
                         </div>
                         {selectedProject.description && (
@@ -662,6 +600,21 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     </div>
 
                     <div className="flex items-center gap-4 border-b border-border mb-6">
+                        <button
+                            onClick={() => setActiveTab('repository')}
+                            className={cn(
+                                'pb-3 text-sm font-bold transition-colors relative',
+                                activeTab === 'repository' ? 'text-accent' : 'text-text-dim hover:text-highlight'
+                            )}
+                        >
+                            Repositório
+                            {activeTab === 'repository' && (
+                                <motion.div
+                                    layoutId="activeTab"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                                />
+                            )}
+                        </button>
                         <button
                             onClick={() => setActiveTab('context')}
                             className={cn(
@@ -695,7 +648,94 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     </div>
 
                     <div className="mt-4">
-                        {activeTab === 'context' ? (
+                        {activeTab === 'repository' ? (
+                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                                <div className="bento-card min-h-72">
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <FileText className="size-4 text-primary" />
+                                        <p className="label-caps">Lista de arquivos</p>
+                                    </div>
+                                    {insightsLoading ? (
+                                        <p className="text-sm text-text-dim">Carregando arquivos...</p>
+                                    ) : !insights?.isGitRepo ? (
+                                        <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                    ) : insights?.files?.length ? (
+                                        <div className="max-h-80 overflow-y-auto space-y-1 pr-1">
+                                            {insights.files.map((filePath, index) => (
+                                                <p key={`${filePath}-${index}`} className="truncate font-mono text-xs text-text-dim">
+                                                    {filePath}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
+                                    )}
+                                </div>
+
+                                <div className="bento-card min-h-72">
+                                    <div className="mb-3 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <GitCommitHorizontal className="size-4 text-primary" />
+                                            <p className="label-caps">Changes para commit</p>
+                                        </div>
+                                        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold text-accent">
+                                            {stagedChanges.length} staged
+                                        </span>
+                                    </div>
+                                    {insightsLoading ? (
+                                        <p className="text-sm text-text-dim">Carregando mudanças...</p>
+                                    ) : !insights?.isGitRepo ? (
+                                        <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                    ) : insights?.changes?.length ? (
+                                        <div className="max-h-80 overflow-y-auto space-y-3 pr-1">
+                                            <div>
+                                                <p className="label-caps mb-1">Staged</p>
+                                                {stagedChanges.length ? stagedChanges.map((change, index) => (
+                                                    <p key={`${change.path}-staged-${index}`} className="truncate font-mono text-xs text-text-dim">
+                                                        [{change.status}] {change.path}
+                                                    </p>
+                                                )) : <p className="text-xs text-text-dim">Nenhuma mudança staged.</p>}
+                                            </div>
+                                            <div>
+                                                <p className="label-caps mb-1">Working tree</p>
+                                                {unstagedChanges.length ? unstagedChanges.map((change, index) => (
+                                                    <p key={`${change.path}-unstaged-${index}`} className="truncate font-mono text-xs text-text-dim">
+                                                        [{change.status}] {change.path}
+                                                    </p>
+                                                )) : <p className="text-xs text-text-dim">Nenhuma mudança pendente.</p>}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-text-dim">Working tree limpo.</p>
+                                    )}
+                                </div>
+
+                                <div className="bento-card min-h-72">
+                                    <div className="mb-3 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <GitGraph className="size-4 text-primary" />
+                                            <p className="label-caps">Histórico</p>
+                                        </div>
+                                        {insights?.branch && (
+                                            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold text-text-dim">
+                                                {insights.branch}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {insightsLoading ? (
+                                        <p className="text-sm text-text-dim">Carregando histórico...</p>
+                                    ) : !insights?.isGitRepo ? (
+                                        <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                    ) : insights?.graphLines?.length ? (
+                                        <pre className="max-h-80 overflow-y-auto whitespace-pre font-mono text-[11px] text-text-dim">
+                                            {insights.graphLines.join('\n')}
+                                        </pre>
+                                    ) : (
+                                        <p className="text-sm text-text-dim">Sem histórico disponível.</p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : activeTab === 'context' ? (
                             <ProjectContext projectId={selectedProject.id} />
                         ) : (
                             <DecisionsPanel projectId={selectedProject.id} />
