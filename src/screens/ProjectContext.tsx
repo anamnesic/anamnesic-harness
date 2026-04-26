@@ -42,7 +42,7 @@ export function ProjectContext({ projectId }: { projectId: string }) {
   const filteredFiles = files.filter((file) => file.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <div className="mt-4 grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
+    <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
       <aside className="bento-card min-h-0">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export function ProjectContext({ projectId }: { projectId: string }) {
         ) : !payload?.selectedFile ? (
           <p className="text-sm text-text-dim">Selecione um arquivo .md na lateral.</p>
         ) : (
-          <article className="max-h-[58vh] overflow-y-auto pr-1 text-sm leading-relaxed text-highlight">
+          <article className="max-h-[64vh] overflow-y-auto pr-1 text-sm leading-relaxed text-highlight">
             <div className="space-y-3">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
