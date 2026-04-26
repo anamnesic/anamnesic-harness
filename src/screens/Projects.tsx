@@ -68,21 +68,12 @@ interface RepositoryTreeNode {
 
 export type ProjectTabId = 'repository' | 'git' | 'context' | 'decisions';
 
-export interface RepoEditorHeaderState {
-    openTabs: string[];
-    activeFile: string | null;
-    dirtyFiles: Record<string, boolean>;
-    onSelectFile: (filePath: string) => void;
-    onCloseFile: (filePath: string) => void;
-}
-
 interface ProjectsProps {
     embedded?: boolean;
     refreshToken?: number;
     activeTab?: ProjectTabId;
     onTabChange?: (tab: ProjectTabId) => void;
     hideTabBar?: boolean;
-    onHeaderStateChange?: (state: RepoEditorHeaderState | null) => void;
 }
 
 export function Projects({
@@ -91,7 +82,6 @@ export function Projects({
     activeTab: controlledActiveTab,
     onTabChange,
     hideTabBar = false,
-    onHeaderStateChange,
 }: ProjectsProps) {
     const { workspace } = useWorkspace();
     const {
@@ -330,33 +320,6 @@ export function Projects({
             return next;
         });
     }
-
-    useEffect(() => {
-        if (!onHeaderStateChange) {
-            return;
-        }
-
-        if (activeTab !== 'repository') {
-            onHeaderStateChange(null);
-            return;
-        }
-
-        onHeaderStateChange({
-            openTabs: openRepoTabs,
-            activeFile: selectedRepoFile,
-            dirtyFiles: repoDirtyFiles,
-            onSelectFile: (filePath: string) => setSelectedRepoFile(filePath),
-            onCloseFile: closeRepoTab,
-        });
-
-        return () => onHeaderStateChange(null);
-    }, [
-        activeTab,
-        onHeaderStateChange,
-        openRepoTabs,
-        selectedRepoFile,
-        repoDirtyFiles,
-    ]);
 
     useEffect(() => {
         if (!selectedProject) {
@@ -770,6 +733,45 @@ export function Projects({
                                     </aside>
 
                                     <section className="min-h-0 min-w-0 flex-1 overflow-hidden">
+                                        <div className="mb-3 overflow-x-auto rounded-lg border border-border/60 bg-bg/90">
+                                            <div className="flex items-stretch">
+                                                {openRepoTabs.length ? openRepoTabs.map((filePath) => {
+                                                    const isActive = selectedRepoFile === filePath;
+                                                    const isDirty = repoDirtyFiles[filePath] ?? false;
+                                                    const fileName = filePath.split('/').pop() || filePath;
+
+                                                    return (
+                                                        <button
+                                                            key={filePath}
+                                                            onClick={() => setSelectedRepoFile(filePath)}
+                                                            className={cn(
+                                                                'group flex max-w-56 shrink-0 items-center gap-2 border-r border-border/60 px-3 py-2 text-xs transition-colors',
+                                                                isActive
+                                                                    ? 'bg-card text-highlight'
+                                                                    : 'text-text-dim hover:bg-card/40 hover:text-highlight',
+                                                            )}
+                                                            title={filePath}
+                                                        >
+                                                            {getFileIcon(filePath)}
+                                                            <span className="truncate font-mono">{fileName}</span>
+                                                            {isDirty && <span className="text-primary">●</span>}
+                                                            <span
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    closeRepoTab(filePath);
+                                                                }}
+                                                                className="rounded p-0.5 text-text-dim opacity-70 transition hover:bg-card hover:opacity-100"
+                                                            >
+                                                                <X className="size-3" />
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                }) : (
+                                                    <div className="px-3 py-2 text-xs text-text-dim">Nenhum arquivo aberto</div>
+                                                )}
+                                            </div>
+                                        </div>
+
                                         {insightsLoading ? (
                                             <p className="text-sm text-text-dim">Carregando editor...</p>
                                         ) : !insights?.isGitRepo ? (

@@ -20,7 +20,6 @@ import {
   FileText,
   GitBranch,
   BookOpen,
-  X,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -39,7 +38,7 @@ import { Snapshots } from './screens/Snapshots';
 import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
-import { Projects, type ProjectTabId, type RepoEditorHeaderState } from './screens/Projects';
+import { Projects, type ProjectTabId } from './screens/Projects';
 import { ModelBenchmarks } from './screens/ModelBenchmarks';
 import { RedTeaming } from './screens/RedTeaming';
 import { Integrations } from './screens/Integrations';
@@ -60,12 +59,11 @@ interface TerminalHeaderState {
   onClearAll: () => void;
 }
 
-const Header = ({ title, subtitle, onBack, rightElement, bottomElement, activeTab }: {
+const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
   rightElement?: React.ReactNode;
-  bottomElement?: React.ReactNode;
   activeTab: string;
 }) => {
   return (
@@ -120,7 +118,6 @@ const Header = ({ title, subtitle, onBack, rightElement, bottomElement, activeTa
           )}
         </div>
       </div>
-      {bottomElement ? <div className="mt-3">{bottomElement}</div> : null}
     </header>
   );
 };
@@ -196,7 +193,6 @@ function useScreenConfig(
   setActive: (id: TabId) => void,
   terminalHeaderState: TerminalHeaderState | null,
   setTerminalHeaderState: (state: TerminalHeaderState | null) => void,
-  setRepoEditorHeaderState: (state: RepoEditorHeaderState | null) => void,
 ) {
   switch (active) {
     case 'dashboard':
@@ -287,7 +283,7 @@ function useScreenConfig(
       return {
         title: 'Repositório',
         subtitle: 'Explorer de arquivos',
-        element: <Projects embedded activeTab="repository" hideTabBar onHeaderStateChange={setRepoEditorHeaderState} />,
+        element: <Projects embedded activeTab="repository" hideTabBar />,
         onBack: undefined,
         rightElement: undefined,
       };
@@ -295,7 +291,7 @@ function useScreenConfig(
       return {
         title: 'Git',
         subtitle: 'Source control do repositório',
-        element: <Projects embedded activeTab="git" hideTabBar onHeaderStateChange={setRepoEditorHeaderState} />,
+        element: <Projects embedded activeTab="git" hideTabBar />,
         onBack: undefined,
         rightElement: undefined,
       };
@@ -303,7 +299,7 @@ function useScreenConfig(
       return {
         title: 'Docs',
         subtitle: 'Documentação do projeto',
-        element: <Projects embedded activeTab="context" hideTabBar onHeaderStateChange={setRepoEditorHeaderState} />,
+        element: <Projects embedded activeTab="context" hideTabBar />,
         onBack: undefined,
         rightElement: undefined,
       };
@@ -311,7 +307,7 @@ function useScreenConfig(
       return {
         title: 'Decisões',
         subtitle: 'Registro de decisões do repositório',
-        element: <Projects embedded activeTab="decisions" hideTabBar onHeaderStateChange={setRepoEditorHeaderState} />,
+        element: <Projects embedded activeTab="decisions" hideTabBar />,
         onBack: undefined,
         rightElement: undefined,
       };
@@ -347,7 +343,6 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
-  const [repoEditorHeaderState, setRepoEditorHeaderState] = useState<RepoEditorHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
   const { data: openVsxInstalled } = useApi<{ data?: { extensions?: Array<string | { id?: string; identifier?: string }> } } | Array<string | { id?: string; identifier?: string }> | null>('/api/v1/extensions/open-vsx/installed');
 
@@ -374,51 +369,7 @@ function AppContent() {
     setActiveTab,
     terminalHeaderState,
     setTerminalHeaderState,
-    setRepoEditorHeaderState,
   );
-
-  const repoTabsInAppbar = activeTab === 'repo-files' && repoEditorHeaderState ? (
-    <div className="lg:pl-72">
-      <div className="overflow-x-auto rounded-lg border border-border/60 bg-bg/90">
-        <div className="flex items-stretch">
-        {repoEditorHeaderState.openTabs.length ? repoEditorHeaderState.openTabs.map((filePath) => {
-          const isActive = repoEditorHeaderState.activeFile === filePath;
-          const isDirty = repoEditorHeaderState.dirtyFiles[filePath] ?? false;
-          const fileName = filePath.split('/').pop() || filePath;
-
-          return (
-            <button
-              key={filePath}
-              onClick={() => repoEditorHeaderState.onSelectFile(filePath)}
-              className={cn(
-                'group flex max-w-56 shrink-0 items-center gap-2 border-r border-border/60 px-3 py-2 text-xs transition-colors',
-                isActive
-                  ? 'bg-card text-highlight'
-                  : 'text-text-dim hover:bg-card/40 hover:text-highlight',
-              )}
-              title={filePath}
-            >
-              <FileText className="size-3.5 shrink-0" />
-              <span className="truncate font-mono">{fileName}</span>
-              {isDirty && <span className="text-primary">●</span>}
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  repoEditorHeaderState.onCloseFile(filePath);
-                }}
-                className="rounded p-0.5 text-text-dim opacity-70 transition hover:bg-card hover:opacity-100"
-              >
-                <X className="size-3" />
-              </span>
-            </button>
-          );
-        }) : (
-          <div className="px-3 py-2 text-xs text-text-dim">Nenhum arquivo aberto</div>
-        )}
-        </div>
-      </div>
-    </div>
-  ) : undefined;
 
   const showExtensionsSidebar = activeTab !== 'repo-files';
 
@@ -441,7 +392,6 @@ function AppContent() {
             subtitle={config.subtitle}
             onBack={config.onBack}
             rightElement={config.rightElement}
-            bottomElement={repoTabsInAppbar}
             activeTab={activeTab}
           />
           <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
