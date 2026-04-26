@@ -9,6 +9,11 @@ import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { useWorkspace } from '@/src/context/WorkspaceContext';
+import {
+    INTERNAL_AGENT_SKILLS,
+    INTERNAL_SKILL_INFO,
+    DEFAULT_INTERNAL_SKILL_PROMPTS,
+} from '@/src/core/agents/internalSkillPrompts';
 
 type AgentState = 'idle' | 'running' | 'paused' | 'error' | 'stopped';
 type AgentCapability = 'code-generation' | 'code-analysis' | 'security-analysis' | 'reasoning' | 'execution' | 'learning';
@@ -41,42 +46,6 @@ interface PromptCapabilityItem {
     prompt: string;
     isCustom?: boolean;
 }
-
-const ALL_CAPABILITIES: AgentCapability[] = [
-    'code-generation',
-    'code-analysis',
-    'security-analysis',
-    'reasoning',
-    'execution',
-    'learning',
-];
-
-const CAPABILITY_INFO: Record<AgentCapability, { title: string; description: string }> = {
-    'code-generation': {
-        title: 'Code Generation',
-        description: 'Gera implementacoes de codigo com base em objetivo, contexto e restricoes.',
-    },
-    'code-analysis': {
-        title: 'Code Analysis',
-        description: 'Analisa base de codigo, identifica riscos, melhoria e inconsistencias.',
-    },
-    'security-analysis': {
-        title: 'Security Analysis',
-        description: 'Avalia vulnerabilidades, exposicoes e padroes inseguros.',
-    },
-    reasoning: {
-        title: 'Reasoning',
-        description: 'Quebra problemas em etapas e toma decisoes com justificativa estruturada.',
-    },
-    execution: {
-        title: 'Execution',
-        description: 'Executa acoes praticas, automacoes e tarefas orientadas a resultado.',
-    },
-    learning: {
-        title: 'Learning',
-        description: 'Adapta comportamento conforme contexto e historico de uso.',
-    },
-};
 
 const STATE_STYLES: Record<AgentState, string> = {
     idle: 'bg-green-500/15 text-green-400',
@@ -203,11 +172,11 @@ export function AgentManagementScreen({ onNavigate, defaultView = 'agents', hide
         const templates = (metadata?.promptTemplates as Record<string, string> | undefined) ?? {};
         const customCapabilities = (metadata?.customPromptCapabilities as PromptCapabilityItem[] | undefined) ?? [];
 
-        const base = ALL_CAPABILITIES.map((capability) => ({
+        const base = INTERNAL_AGENT_SKILLS.map((capability) => ({
             key: capability,
-            title: CAPABILITY_INFO[capability].title,
-            description: CAPABILITY_INFO[capability].description,
-            prompt: templates[capability] ?? '',
+            title: INTERNAL_SKILL_INFO[capability].title,
+            description: INTERNAL_SKILL_INFO[capability].description,
+            prompt: templates[capability] ?? DEFAULT_INTERNAL_SKILL_PROMPTS[capability],
             isCustom: false,
         }));
 

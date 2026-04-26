@@ -6,8 +6,12 @@ import { Plus, X } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { AgentManagementScreen } from './AgentManagementScreen';
-
-type AgentCapability = 'code-generation' | 'code-analysis' | 'security-analysis' | 'reasoning' | 'execution' | 'learning';
+import {
+    INTERNAL_AGENT_SKILLS,
+    INTERNAL_SKILL_INFO,
+    DEFAULT_INTERNAL_SKILL_PROMPTS,
+    type InternalAgentSkill,
+} from '@/src/core/agents/internalSkillPrompts';
 
 interface Agent {
     id: string;
@@ -27,42 +31,6 @@ interface PromptCapabilityItem {
     prompt: string;
 }
 
-const ALL_CAPABILITIES: AgentCapability[] = [
-    'code-generation',
-    'code-analysis',
-    'security-analysis',
-    'reasoning',
-    'execution',
-    'learning',
-];
-
-const CAPABILITY_INFO: Record<AgentCapability, { title: string; description: string }> = {
-    'code-generation': {
-        title: 'Code Generation',
-        description: 'Gera implementacoes de codigo com base em objetivo, contexto e restricoes.',
-    },
-    'code-analysis': {
-        title: 'Code Analysis',
-        description: 'Analisa base de codigo, identifica riscos, melhoria e inconsistencias.',
-    },
-    'security-analysis': {
-        title: 'Security Analysis',
-        description: 'Avalia vulnerabilidades, exposicoes e padroes inseguros.',
-    },
-    reasoning: {
-        title: 'Reasoning',
-        description: 'Quebra problemas em etapas e toma decisoes com justificativa estruturada.',
-    },
-    execution: {
-        title: 'Execution',
-        description: 'Executa acoes praticas, automacoes e tarefas orientadas a resultado.',
-    },
-    learning: {
-        title: 'Learning',
-        description: 'Adapta comportamento conforme contexto e historico de uso.',
-    },
-};
-
 export function AgentSkillsScreen() {
     const [open, setOpen] = useState(false);
     const { data, loading } = usePolling<ApiResponse>('/api/v1/agents', 20000);
@@ -77,11 +45,11 @@ export function AgentSkillsScreen() {
         const templates = (metadata?.promptTemplates as Record<string, string> | undefined) ?? {};
         const customCapabilities = (metadata?.customPromptCapabilities as PromptCapabilityItem[] | undefined) ?? [];
 
-        const base = ALL_CAPABILITIES.map((capability) => ({
+        const base = INTERNAL_AGENT_SKILLS.map((capability) => ({
             key: capability,
-            title: CAPABILITY_INFO[capability].title,
-            description: CAPABILITY_INFO[capability].description,
-            prompt: templates[capability] ?? '',
+            title: INTERNAL_SKILL_INFO[capability].title,
+            description: INTERNAL_SKILL_INFO[capability].description,
+            prompt: templates[capability] ?? DEFAULT_INTERNAL_SKILL_PROMPTS[capability],
         }));
 
         const custom = customCapabilities.map((item) => ({
@@ -126,7 +94,7 @@ export function AgentSkillsScreen() {
                             </div>
 
                             <p className="text-sm leading-relaxed text-text-dim">{capability.description}</p>
-                            <p className="text-xs text-text-dim line-clamp-6 whitespace-pre-wrap">{capability.prompt || 'Sem prompt definido'}</p>
+                            <p className="text-xs text-text-dim line-clamp-6 whitespace-pre-wrap">{capability.prompt || DEFAULT_INTERNAL_SKILL_PROMPTS[capability.key as InternalAgentSkill]}</p>
                         </div>
                     ))}
                 </div>

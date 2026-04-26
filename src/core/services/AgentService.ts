@@ -1,6 +1,7 @@
 import { DataSource, Repository } from 'typeorm';
 import { Agent, AgentState, AgentCapability } from '../entities/Agent';
 import { getEventBus } from '@/src/observation/EventBus';
+import { mergeDefaultInternalSkillPrompts } from '@/src/core/agents/internalSkillPrompts';
 
 export interface CreateAgentInput {
   workspaceId: string;
@@ -72,7 +73,7 @@ const PREBUILT_AGENTS: Array<{
       name: 'Prompt Engineer',
       description: 'Refina prompts com contexto tecnico e objetivos claros para execucao por LLMs.',
       capabilities: ['reasoning', 'learning'],
-      metadata: { prebuilt: true, role: 'prompt-engineer' },
+      metadata: mergeDefaultInternalSkillPrompts({ prebuilt: true, role: 'prompt-engineer' }).metadata,
     },
     {
       name: 'Architect',
@@ -216,6 +217,19 @@ export class AgentService {
         isActive: true,
         metadata: prebuilt.metadata,
       });
+    }
+
+    const refreshed = await this.listByWorkspace(workspaceId, false);
+    const promptEngineer = refreshed.find((agent) => (
+      agent.name.trim().toLowerCase() === 'prompt engineer'
+      || agent.metadata?.role === 'prompt-engineer'
+    ));
+
+    if (promptEngineer) {
+      const merged = mergeDefaultInternalSkillPrompts(promptEngineer.metadata);
+      if (merged.changed) {
+        await this.repo.update(promptEngineer.id, { metadata: merged.metadata });
+      }
     }
 
     return this.listByWorkspace(workspaceId, false);
