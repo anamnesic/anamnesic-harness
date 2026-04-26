@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Projects } from './Projects';
+import { Projects } from './Repo';
 
 export function Workspaces() {
     return (

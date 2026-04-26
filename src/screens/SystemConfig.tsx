@@ -18,6 +18,9 @@ const FLAG_LABELS: Record<string, string> = {
     enableVectorMemory: 'Vector Memory',
     enableApprovalFlow: 'Approval Flow',
     enableMetricsCollection: 'Metrics Collection',
+    enableAutonomousModification: 'Autonomous Modification',
+    enableDeepRetrieval: 'Deep Retrieval',
+    enableJitEngine: 'JIT Engine',
 };
 
 interface SettingsData {

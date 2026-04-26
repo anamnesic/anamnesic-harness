@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
-import { ProjectContext } from './ProjectContext';
+import { Wiki } from './Wiki';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
 import { useApi, apiFetch } from '@/src/lib/api';
@@ -527,7 +527,7 @@ export function Projects({
     }> = [
             { id: 'repository', label: 'Reposit├│rio', icon: FileText },
             { id: 'git', label: 'Git', icon: GitBranch },
-            { id: 'context', label: 'Docs', icon: BookOpen },
+            { id: 'context', label: 'Wiki', icon: BookOpen },
             { id: 'decisions', label: 'Decis├Áes', icon: Lightbulb },
         ];
 
@@ -955,7 +955,7 @@ export function Projects({
                                     </div>
                                 </div>
                             ) : activeTab === 'context' ? (
-                                <ProjectContext projectId={selectedProject.id} />
+                                <Wiki projectId={selectedProject.id} />
                             ) : (
                                 <DecisionsPanel projectId={selectedProject.id} />
                             )}

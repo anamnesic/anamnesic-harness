@@ -39,7 +39,7 @@ import { Snapshots } from './screens/Snapshots';
 import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
-import { Projects, type ProjectTabId } from './screens/Projects';
+import { Projects, type ProjectTabId } from './screens/Repo';
 import { ModelBenchmarks } from './screens/ModelBenchmarks';
 import { RedTeaming } from './screens/RedTeaming';
 import { Integrations } from './screens/Integrations';
@@ -126,7 +126,7 @@ const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
   { id: 'repo-files', label: 'Repo', icon: FileText },
   { id: 'repo-git', label: 'Git', icon: GitBranch },
-  { id: 'repo-context', label: 'Docs', icon: BookOpen },
+  { id: 'repo-context', label: 'Wiki', icon: BookOpen },
   { id: 'repo-decisions', label: 'Decisoes', icon: Lightbulb },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
@@ -306,8 +306,8 @@ function useScreenConfig(
       };
     case 'repo-context':
       return {
-        title: 'Docs',
-        subtitle: 'Documentação do projeto',
+        title: 'Wiki',
+        subtitle: 'Wiki do projeto',
         element: <Projects embedded activeTab="context" hideTabBar />,
         onBack: undefined,
         rightElement: undefined,

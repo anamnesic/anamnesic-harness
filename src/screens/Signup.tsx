@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { LogIn, Mail, Lock, Activity, ArrowRight, Loader2 } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Activity, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
 import { apiFetch } from '@/src/lib/api';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/components/Toast';
 
-type LoginResponse = {
+type SignupResponse = {
   user?: { id: string; email: string; fullName: string };
   token?: string;
   data?: {
@@ -16,50 +16,44 @@ type LoginResponse = {
   };
 };
 
-interface LoginProps {
-  onNavigateToSignup: () => void;
+interface SignupProps {
+  onBackToLogin: () => void;
 }
 
-export function Login({ onNavigateToSignup }: LoginProps) {
+export function Signup({ onBackToLogin }: SignupProps) {
   const { login } = useAuth();
   const { toast } = useToast();
-  const quickEmail = 'system@kairos.local';
-  const quickSenha = 'kairos2026';
   const [email, setEmail] = useState('');
-  const [password, setSenha] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const authenticate = async (loginEmail: string, loginSenha: string) => {
-    const res = await apiFetch<LoginResponse>('/api/v1/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: loginEmail, password: loginSenha }),
-    });
-
-    const payload = res?.data ?? res;
-    const user = payload?.user;
-    const token = payload?.token;
-
-    if (user && token) {
-      login(user, token);
-      toast('Login realizado com sucesso', 'success');
-      return;
-    }
-
-    throw new Error('Login response is missing user or token');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!email || !password || !fullName) {
       toast('Preencha todos os campos', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      await authenticate(email, password);
+      const res = await apiFetch<SignupResponse>('/api/v1/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, fullName }),
+      });
+
+      const payload = res?.data ?? res;
+      const user = payload?.user;
+      const token = payload?.token;
+
+      if (user && token) {
+        login(user, token);
+        toast('Conta criada com sucesso', 'success');
+      } else {
+        throw new Error('Signup response is missing user or token');
+      }
     } catch (error: any) {
-      toast(error?.message || 'Falha no login', 'error');
+      toast(error?.message || 'Falha no cadastro', 'error');
     } finally {
       setLoading(false);
     }
@@ -78,20 +72,35 @@ export function Login({ onNavigateToSignup }: LoginProps) {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className="flex flex-col items-center mb-12">
+        <div className="flex flex-col items-center mb-10">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-6 shadow-xl shadow-primary/10 border border-primary/20">
-            <Activity className="size-8" />
+            <UserPlus className="size-8" />
           </div>
           <h1 className="text-4xl font-black tracking-tighter uppercase text-highlight">
-            Kairos
+            Cadastro
           </h1>
           <p className="text-text-dim text-xs font-bold uppercase tracking-[0.3em] mt-2">
-            Orquestração de IA Proativa
+            Crie sua conta no Kairos
           </p>
         </div>
 
-        <form id="kairos-login-form" onSubmit={handleSubmit} className="bento-card space-y-6">
+        <form onSubmit={handleSubmit} className="bento-card space-y-6">
           <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="label-caps px-1">Nome Completo</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-text-dim group-focus-within:text-primary transition-colors" />
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary/60 transition-all placeholder:text-text-dim/50"
+                  placeholder="Seu nome"
+                  required
+                />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <label className="label-caps px-1">E-mail</label>
               <div className="relative group">
@@ -114,7 +123,7 @@ export function Login({ onNavigateToSignup }: LoginProps) {
                 <input
                   type="password"
                   value={password}
-                  onChange={(e) => setSenha(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary/60 transition-all placeholder:text-text-dim/50"
                   placeholder="••••••••"
                   required
@@ -132,7 +141,7 @@ export function Login({ onNavigateToSignup }: LoginProps) {
               <Loader2 className="size-5 animate-spin" />
             ) : (
               <>
-                Entrar
+                Cadastrar
                 <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
               </>
             )}
@@ -141,33 +150,11 @@ export function Login({ onNavigateToSignup }: LoginProps) {
           <div className="text-center pt-2">
             <button
               type="button"
-              disabled={loading}
-              onClick={async () => {
-                setEmail(quickEmail);
-                setSenha(quickSenha);
-                setLoading(true);
-                try {
-                  await authenticate(quickEmail, quickSenha);
-                } catch (error: any) {
-                  toast(error?.message || 'Falha no login', 'error');
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="text-[10px] text-text-dim uppercase tracking-widest font-bold hover:text-primary transition-colors cursor-pointer"
+              onClick={onBackToLogin}
+              className="text-[10px] text-text-dim uppercase tracking-widest font-bold hover:text-primary transition-colors cursor-pointer flex items-center justify-center gap-2 mx-auto"
             >
-              Login rápido <span className="text-accent">{quickEmail}</span>
-            </button>
-          </div>
-
-          <div className="text-center pt-2 border-t border-border/50">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={onNavigateToSignup}
-              className="text-[10px] text-text-dim uppercase tracking-widest font-bold hover:text-primary transition-colors cursor-pointer"
-            >
-              Não tem uma conta? <span className="text-primary">Criar conta</span>
+              <ArrowLeft className="size-3" />
+              Já tem uma conta? Entrar
             </button>
           </div>
         </form>

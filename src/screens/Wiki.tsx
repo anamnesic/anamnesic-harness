@@ -84,7 +84,7 @@ function buildDocsTree(files: string[]): DocsTreeNode[] {
     return toArray(root);
 }
 
-export function ProjectContext({ projectId }: { projectId: string }) {
+export function Wiki({ projectId }: { projectId: string }) {
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [query, setQuery] = useState('');
     const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
