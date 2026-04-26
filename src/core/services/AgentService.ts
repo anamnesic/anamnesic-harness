@@ -98,6 +98,66 @@ const PREBUILT_AGENTS: Array<{
       capabilities: ['code-analysis', 'reasoning', 'execution'],
       metadata: { prebuilt: true, role: 'qa' },
     },
+    {
+      name: 'Product Manager',
+      description: 'Transforma objetivos em requisitos, criterios de aceite e backlog priorizado.',
+      capabilities: ['reasoning', 'learning'],
+      metadata: { prebuilt: true, role: 'product-manager' },
+    },
+    {
+      name: 'DevOps Engineer',
+      description: 'Configura CI/CD, infraestrutura, deploy e operacao do projeto.',
+      capabilities: ['execution', 'reasoning', 'code-analysis'],
+      metadata: { prebuilt: true, role: 'devops' },
+    },
+    {
+      name: 'Code Reviewer',
+      description: 'Revisa padroes, seguranca, performance e prontidao para merge.',
+      capabilities: ['code-analysis', 'reasoning'],
+      metadata: { prebuilt: true, role: 'code-review' },
+    },
+    {
+      name: 'Organizer',
+      description: 'Organiza estrutura de projeto, padroes e consistencia de arquivos.',
+      capabilities: ['reasoning', 'execution'],
+      metadata: { prebuilt: true, role: 'organizer' },
+    },
+    {
+      name: 'Git Agent',
+      description: 'Opera fluxo Git: branch, commit, push e suporte a PR.',
+      capabilities: ['execution', 'reasoning'],
+      metadata: { prebuilt: true, role: 'git' },
+    },
+    {
+      name: 'Dead Code Cleaner',
+      description: 'Identifica e remove codigo morto, exports nao usados e arquivos orfaos.',
+      capabilities: ['code-analysis', 'execution'],
+      metadata: { prebuilt: true, role: 'dead-code' },
+    },
+    {
+      name: 'Troubleshooter',
+      description: 'Diagnostica falhas e aplica correcoes orientadas a causa raiz.',
+      capabilities: ['reasoning', 'code-analysis', 'execution'],
+      metadata: { prebuilt: true, role: 'troubleshooter' },
+    },
+    {
+      name: 'Advanced Software Development Agent',
+      description: 'Agente avancado para desenvolvimento autonomo com raciocinio multi-etapas.',
+      capabilities: ['code-generation', 'code-analysis', 'reasoning', 'execution', 'learning'],
+      metadata: { prebuilt: true, role: 'advanced-software-agent' },
+    },
+    {
+      name: 'Advanced Security Agent',
+      description: 'Agente avancado para analise de seguranca, vulnerabilidades e simulacoes.',
+      capabilities: ['security-analysis', 'code-analysis', 'reasoning', 'execution'],
+      metadata: { prebuilt: true, role: 'advanced-security-agent' },
+    },
+    {
+      name: 'Advanced Multimodal Agent',
+      description: 'Agente avancado para analise multimodal de texto, imagem e artefatos.',
+      capabilities: ['reasoning', 'learning', 'execution', 'code-analysis'],
+      metadata: { prebuilt: true, role: 'advanced-multimodal-agent' },
+    },
   ];
 
 export class AgentService {

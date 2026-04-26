@@ -43,7 +43,7 @@ describe('AgentService', () => {
         expect((created.metadata as any)?.dedicatedPrompt).toContain('{{prompt}}');
     });
 
-    it('should list prebuilt agents with requested dedicated prompt strategies', async () => {
+    it('should list all prebuilt agents including prompt strategies and advanced agents', async () => {
         const list = await service.ensurePrebuiltAgents('ws-prebuilt');
 
         const byName = new Map(list.map((agent) => [agent.name, agent]));
@@ -52,6 +52,16 @@ describe('AgentService', () => {
         const socratico = byName.get('Seja Socratico');
         const firstPrinciples = byName.get('First Principles');
         const antiConsenso = byName.get('Responda anti-consenso');
+        const productManager = byName.get('Product Manager');
+        const devops = byName.get('DevOps Engineer');
+        const codeReviewer = byName.get('Code Reviewer');
+        const organizer = byName.get('Organizer');
+        const gitAgent = byName.get('Git Agent');
+        const deadCode = byName.get('Dead Code Cleaner');
+        const troubleshooter = byName.get('Troubleshooter');
+        const advancedSoftware = byName.get('Advanced Software Development Agent');
+        const advancedSecurity = byName.get('Advanced Security Agent');
+        const advancedMultimodal = byName.get('Advanced Multimodal Agent');
 
         expect(inversao).toBeDefined();
         expect((inversao?.metadata as any)?.dedicatedPrompt).toContain('PROMPT ORIGINAL');
@@ -66,6 +76,21 @@ describe('AgentService', () => {
 
         expect(antiConsenso).toBeDefined();
         expect((antiConsenso?.metadata as any)?.dedicatedPrompt).toContain('anti-consenso');
+
+        expect(productManager).toBeDefined();
+        expect(devops).toBeDefined();
+        expect(codeReviewer).toBeDefined();
+        expect(organizer).toBeDefined();
+        expect(gitAgent).toBeDefined();
+        expect(deadCode).toBeDefined();
+        expect(troubleshooter).toBeDefined();
+
+        expect(advancedSoftware).toBeDefined();
+        expect((advancedSoftware?.metadata as any)?.role).toBe('advanced-software-agent');
+        expect(advancedSecurity).toBeDefined();
+        expect((advancedSecurity?.metadata as any)?.role).toBe('advanced-security-agent');
+        expect(advancedMultimodal).toBeDefined();
+        expect((advancedMultimodal?.metadata as any)?.role).toBe('advanced-multimodal-agent');
     });
 
     it('should list only active agents when onlyActive is true', async () => {
