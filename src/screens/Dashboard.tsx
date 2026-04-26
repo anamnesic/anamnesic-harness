@@ -7,8 +7,10 @@ import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonRow } from '@/src/components/Skeleton';
+import { useCallback, useRef } from 'react';
 
 const ACTION_ICONS = [Code2, MemoryStick, Shield, Activity];
+const TOAST_THROTTLE_MS = 3000;
 
 interface HealthData { status: string; service: string; timestamp: string }
 interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number }
@@ -24,25 +26,48 @@ interface DashboardProps {
 export function Dashboard({ onNavigate }: DashboardProps) {
     const { data: health, error: healthErr } = usePolling<HealthData>('/api/health', 30000);
     const { data: metrics, loading: metricsLoading } = usePolling<MetricsData>('/api/v1/metrics', 30000);
-    const { data: history, loading: histLoading } = usePolling<HistoryData>('/api/chat/history?limit=3', 5000);
-    const { data: agentStats } = usePolling<AgentStats>('/api/v1/agents/stats', 5000);
-    const { data: workflowStats } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 5000);
+    const { data: history, loading: histLoading } = usePolling<HistoryData>('/api/chat/history?limit=3', 60000);
+    const { data: agentStats } = usePolling<AgentStats>('/api/v1/agents/stats', 20000);
+    const { data: workflowStats } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 20000);
     const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
     const { toast } = useToast();
+    const lastToastRef = useRef<Record<string, number>>({});
+
+    const throttledToast = useCallback((msg: string, type: 'success' | 'error' | 'info', key: string) => {
+        const now = Date.now();
+        if (now - (lastToastRef.current[key] || 0) > TOAST_THROTTLE_MS) {
+            toast(msg, type);
+            lastToastRef.current[key] = now;
+        }
+    }, [toast]);
+
+    const handleRunSnapshot = useCallback((snap: any) => {
+        setLiveRuns(snap.runs ?? []);
+    }, []);
+
+    const handleTaskUpdate = useCallback((event: any) => {
+        throttledToast(
+            `Task ${event.status}: ${event.task?.description?.slice(0, 30)}...`,
+            event.status === 'completed' ? 'success' : event.status === 'failed' ? 'error' : 'info',
+            `task-${event.id}-${event.status}`
+        );
+    }, [throttledToast]);
+
+    const handleAgentState = useCallback((event: any) => {
+        throttledToast(
+            `Agent ${event.agent?.name} is ${event.state}`,
+            'info',
+            `agent-${event.id}-${event.state}`
+        );
+    }, [throttledToast]);
 
     useEventStream<{ runs: Array<{ status: string }> }>(
         'runs.snapshot',
-        snap => setLiveRuns(snap.runs ?? []),
+        handleRunSnapshot,
     );
 
-    useEventStream<any>('task:update', event => {
-        toast(`Task ${event.status}: ${event.task?.description?.slice(0, 30)}...`, 
-            event.status === 'completed' ? 'success' : event.status === 'failed' ? 'error' : 'info');
-    });
-
-    useEventStream<any>('agent:state', event => {
-        toast(`Agent ${event.agent?.name} is now ${event.state}`, 'info');
-    });
+    useEventStream<any>('task:update', handleTaskUpdate);
+    useEventStream<any>('agent:state', handleAgentState);
 
     const runningCount = liveRuns.filter(r => r.status === 'running').length;
     const pausedCount = liveRuns.filter(r => r.status === 'paused').length;

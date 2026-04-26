@@ -62,10 +62,15 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
     loadHistory();
   }, [loadHistory]);
 
+  const lastScrollTime = useRef(0);
+
   // Auto-scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamContent]);
+    const now = Date.now();
+    const behavior = isStreaming && now - lastScrollTime.current < 150 ? 'auto' : 'smooth';
+    messagesEndRef.current?.scrollIntoView({ behavior });
+    lastScrollTime.current = now;
+  }, [messages, streamContent, isStreaming]);
 
   // Handle streaming response
   const handleStreamResponse = useCallback(async (message: string) => {
@@ -77,6 +82,7 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('kairos-token')}`
         },
         body: JSON.stringify({
           message,
@@ -96,6 +102,9 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
         throw new Error('No response body');
       }
 
+      let accumulated = '';
+      let lastUpdate = Date.now();
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -109,17 +118,22 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
               const data = JSON.parse(line.slice(6));
               
               switch (data.type) {
-                case 'start':
-                  // Stream started
-                  break;
                 case 'chunk':
-                  setStreamContent(prev => prev + (data.content || ''));
+                  accumulated += (data.content || '');
+                  // Batch updates to every 80ms
+                  const now = Date.now();
+                  if (now - lastUpdate > 80) {
+                    setStreamContent(accumulated);
+                    lastUpdate = now;
+                  }
                   break;
                 case 'end':
-                  // Stream ended
+                  setStreamContent(accumulated);
                   setIsStreaming(false);
-                  setStreamContent('');
-                  await loadHistory(); // Reload history to get the saved message
+                  setTimeout(() => {
+                    setStreamContent('');
+                    loadHistory();
+                  }, 500);
                   break;
                 case 'error':
                   throw new Error(data.error || 'Stream error');
