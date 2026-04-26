@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, FolderOpen } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useApi } from '@/src/lib/api';
@@ -18,9 +18,76 @@ interface DocsResponse {
     timestamp: string;
 }
 
+interface DocsTreeNode {
+    name: string;
+    path: string;
+    type: 'file' | 'folder';
+    children?: DocsTreeNode[];
+}
+
+function buildDocsTree(files: string[]): DocsTreeNode[] {
+    type MutableNode = { type: 'file' | 'folder'; children: Map<string, MutableNode> };
+    const root = new Map<string, MutableNode>();
+
+    for (const file of files) {
+        const normalized = file.replace(/\\/g, '/');
+        const parts = normalized.split('/').filter(Boolean);
+        if (!parts.length) continue;
+
+        let cursor = root;
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            const isLeaf = i === parts.length - 1;
+            const existing = cursor.get(part);
+            if (existing) {
+                cursor = existing.children;
+                continue;
+            }
+
+            const next: MutableNode = {
+                type: isLeaf ? 'file' : 'folder',
+                children: new Map<string, MutableNode>(),
+            };
+            cursor.set(part, next);
+            cursor = next.children;
+        }
+    }
+
+    const toArray = (map: Map<string, MutableNode>, parentPath = ''): DocsTreeNode[] => {
+        const entries = Array.from(map.entries());
+        entries.sort((a, b) => {
+            if (a[1].type !== b[1].type) {
+                return a[1].type === 'folder' ? -1 : 1;
+            }
+            return a[0].localeCompare(b[0]);
+        });
+
+        return entries.map(([name, node]) => {
+            const path = parentPath ? `${parentPath}/${name}` : name;
+            if (node.type === 'folder') {
+                return {
+                    name,
+                    path,
+                    type: 'folder',
+                    children: toArray(node.children, path),
+                };
+            }
+
+            return {
+                name,
+                path,
+                type: 'file',
+            };
+        });
+    };
+
+    return toArray(root);
+}
+
 export function ProjectContext({ projectId }: { projectId: string }) {
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [query, setQuery] = useState('');
+    const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
 
     const apiPath = useMemo(() => {
         const base = `/api/v1/projects/${projectId}/docs`;
@@ -40,6 +107,54 @@ export function ProjectContext({ projectId }: { projectId: string }) {
 
     const files = payload?.files ?? [];
     const filteredFiles = files.filter((file) => file.toLowerCase().includes(query.toLowerCase()));
+    const tree = useMemo(() => buildDocsTree(filteredFiles), [filteredFiles]);
+
+    function renderTree(nodes: DocsTreeNode[], depth = 0): React.ReactNode {
+        return nodes.map((node) => {
+            if (node.type === 'folder') {
+                const isCollapsed = collapsedFolders[node.path] === true;
+                return (
+                    <div key={node.path}>
+                        <button
+                            onClick={() => setCollapsedFolders((prev) => ({ ...prev, [node.path]: !isCollapsed }))}
+                            className="flex w-full items-center gap-1 rounded px-2 py-1.5 text-left hover:bg-card/40"
+                            style={{ paddingLeft: `${8 + depth * 14}px` }}
+                            title={node.path}
+                        >
+                            {isCollapsed ? (
+                                <ChevronRight className="size-3 shrink-0 text-text-dim" />
+                            ) : (
+                                <ChevronDown className="size-3 shrink-0 text-text-dim" />
+                            )}
+                            {isCollapsed ? (
+                                <Folder className="size-3.5 shrink-0 text-amber-300" />
+                            ) : (
+                                <FolderOpen className="size-3.5 shrink-0 text-amber-300" />
+                            )}
+                            <span className="truncate text-xs text-highlight">{node.name}</span>
+                        </button>
+                        {!isCollapsed && node.children?.length ? renderTree(node.children, depth + 1) : null}
+                    </div>
+                );
+            }
+
+            return (
+                <button
+                    key={node.path}
+                    onClick={() => setSelectedFile(node.path)}
+                    className={cn(
+                        'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-card/40',
+                        selectedFile === node.path ? 'bg-card text-accent border border-border' : 'text-text-dim hover:text-highlight',
+                    )}
+                    style={{ paddingLeft: `${26 + depth * 14}px` }}
+                    title={node.path}
+                >
+                    <FileText className="size-3.5 shrink-0" />
+                    <span className="truncate font-mono text-xs">{node.name}</span>
+                </button>
+            );
+        });
+    }
 
     return (
         <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
@@ -72,21 +187,7 @@ export function ProjectContext({ projectId }: { projectId: string }) {
                     <p className="text-sm text-text-dim">Nenhum arquivo .md encontrado em docs.</p>
                 ) : (
                     <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
-                        {filteredFiles.map((file) => (
-                            <button
-                                key={file}
-                                onClick={() => setSelectedFile(file)}
-                                className={cn(
-                                    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
-                                    selectedFile === file
-                                        ? 'bg-card text-accent border border-border'
-                                        : 'text-text-dim hover:bg-card/40 hover:text-highlight',
-                                )}
-                            >
-                                <FileText className="size-3.5 shrink-0" />
-                                <span className="truncate font-mono">{file}</span>
-                            </button>
-                        ))}
+                        {tree.length ? renderTree(tree) : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
                     </div>
                 )}
             </aside>
