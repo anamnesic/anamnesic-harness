@@ -105,6 +105,10 @@ export function Projects({
     const [submitting, setSubmitting] = useState(false);
     const [gitBusy, setGitBusy] = useState(false);
     const [commitMessage, setCommitMessage] = useState('');
+    const [repoQuery, setRepoQuery] = useState('');
+    const [selectedRepoFile, setSelectedRepoFile] = useState<string | null>(null);
+    const [repoDraft, setRepoDraft] = useState('');
+    const [savingRepoFile, setSavingRepoFile] = useState(false);
     const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
     const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
         open: false,
@@ -271,9 +275,62 @@ export function Projects({
     const insightsPath = selectedProject ? `/api/v1/projects/${selectedProject.id}/repository-insights` : null;
     const { data: insightsResponse, loading: insightsLoading, refetch: refetchInsights } = useApi<ApiResponse<RepositoryInsights>>(insightsPath);
     const insights = insightsResponse?.data;
+    const repositoryFiles = insights?.files ?? [];
+    const filteredRepositoryFiles = repositoryFiles.filter((file) => file.toLowerCase().includes(repoQuery.toLowerCase()));
+
+    const repositoryFilePath = selectedProject && selectedRepoFile
+        ? `/api/v1/projects/${selectedProject.id}/repository-file?file=${encodeURIComponent(selectedRepoFile)}`
+        : null;
+    const { data: repositoryFileResponse, loading: repositoryFileLoading, refetch: refetchRepositoryFile } = useApi<ApiResponse<{ selectedFile: string; content: string; size: number }>>(repositoryFilePath);
+    const repositoryFile = repositoryFileResponse?.data;
+
+    useEffect(() => {
+        if (!selectedProject) {
+            setSelectedRepoFile(null);
+            setRepoDraft('');
+            return;
+        }
+
+        if (!repositoryFiles.length) {
+            setSelectedRepoFile(null);
+            setRepoDraft('');
+            return;
+        }
+
+        if (!selectedRepoFile || !repositoryFiles.includes(selectedRepoFile)) {
+            setSelectedRepoFile(repositoryFiles[0]);
+        }
+    }, [selectedProject?.id, repositoryFiles, selectedRepoFile]);
+
+    useEffect(() => {
+        setRepoDraft(repositoryFile?.content ?? '');
+    }, [repositoryFile?.selectedFile, repositoryFile?.content]);
 
     const stagedChanges = insights?.changes?.filter((change) => change.staged) ?? [];
     const unstagedChanges = insights?.changes?.filter((change) => !change.staged) ?? [];
+
+    const repoHasUnsavedChanges = repoDraft !== (repositoryFile?.content ?? '');
+
+    async function saveRepositoryFile() {
+        if (!selectedProject || !selectedRepoFile) return;
+
+        setSavingRepoFile(true);
+        try {
+            await apiFetch(`/api/v1/projects/${selectedProject.id}/repository-file`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    file: selectedRepoFile,
+                    content: repoDraft,
+                }),
+            });
+            toast('Arquivo salvo com sucesso', 'success');
+            await refetchRepositoryFile();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao salvar arquivo', 'error');
+        } finally {
+            setSavingRepoFile(false);
+        }
+    }
 
     function getFileIcon(filePath: string) {
         const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
@@ -577,22 +634,96 @@ export function Projects({
 
                         <section className="min-w-0">
                             {activeTab === 'repository' ? (
-                                <div className="min-h-64 min-w-0 sm:min-h-72">
-                                    <div className="mb-3 flex items-center gap-2">
-                                        <Folder className="size-4 text-primary" />
-                                        <p className="label-caps">Lista de arquivos</p>
-                                    </div>
-                                    {insightsLoading ? (
-                                        <p className="text-sm text-text-dim">Carregando arquivos...</p>
-                                    ) : !insights?.isGitRepo ? (
-                                        <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
-                                    ) : insights?.files?.length ? (
-                                        <div className="max-h-[68vh] space-y-0.5 overflow-y-auto pr-1">
-                                            {renderRepositoryTree(repositoryTree)}
+                                <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
+                                    <aside className="bento-card min-h-0">
+                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <Folder className="size-4 text-primary" />
+                                                <p className="label-caps">Repo</p>
+                                            </div>
+                                            <button
+                                                onClick={() => void refetchInsights()}
+                                                className="rounded-md border border-border px-2 py-1 text-[10px] font-bold text-text-dim hover:text-accent transition-colors"
+                                            >
+                                                Refresh
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
-                                    )}
+
+                                        <input
+                                            value={repoQuery}
+                                            onChange={(e) => setRepoQuery(e.target.value)}
+                                            placeholder="Filtrar arquivos"
+                                            className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
+                                        />
+
+                                        {insightsLoading ? (
+                                            <p className="text-sm text-text-dim">Carregando arquivos...</p>
+                                        ) : !insights?.isGitRepo ? (
+                                            <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                        ) : !repositoryFiles.length ? (
+                                            <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
+                                        ) : (
+                                            <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
+                                                {filteredRepositoryFiles.map((file) => (
+                                                    <button
+                                                        key={file}
+                                                        onClick={() => setSelectedRepoFile(file)}
+                                                        className={cn(
+                                                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                                                            selectedRepoFile === file
+                                                                ? 'bg-card text-accent border border-border'
+                                                                : 'text-text-dim hover:bg-card/40 hover:text-highlight',
+                                                        )}
+                                                    >
+                                                        {getFileIcon(file)}
+                                                        <span className="truncate font-mono">{file}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </aside>
+
+                                    <section className="bento-card min-h-0">
+                                        <div className="mb-3 flex items-center justify-between gap-2 border-b border-border/60 pb-2">
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <FileCode2 className="size-4 text-primary" />
+                                                <p className="truncate font-mono text-xs text-text-dim">{selectedRepoFile ?? 'Sem arquivo selecionado'}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => void refetchRepositoryFile()}
+                                                    disabled={!selectedRepoFile || repositoryFileLoading}
+                                                    className="rounded-md border border-border px-2 py-1 text-[10px] font-bold text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                                >
+                                                    Reload
+                                                </button>
+                                                <button
+                                                    onClick={() => void saveRepositoryFile()}
+                                                    disabled={!selectedRepoFile || savingRepoFile || repositoryFileLoading || !repoHasUnsavedChanges}
+                                                    className="rounded-md border border-primary/50 bg-primary/15 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
+                                                >
+                                                    {savingRepoFile ? 'Salvando...' : 'Salvar'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {insightsLoading ? (
+                                            <p className="text-sm text-text-dim">Carregando editor...</p>
+                                        ) : !insights?.isGitRepo ? (
+                                            <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
+                                        ) : !selectedRepoFile ? (
+                                            <p className="text-sm text-text-dim">Selecione um arquivo na lateral.</p>
+                                        ) : repositoryFileLoading ? (
+                                            <p className="text-sm text-text-dim">Carregando conteúdo...</p>
+                                        ) : (
+                                            <textarea
+                                                value={repoDraft}
+                                                onChange={(e) => setRepoDraft(e.target.value)}
+                                                spellCheck={false}
+                                                className="h-[64vh] w-full resize-none rounded-lg border border-border bg-bg p-3 font-mono text-xs leading-relaxed text-highlight outline-none transition-colors focus:border-primary/60"
+                                            />
+                                        )}
+                                    </section>
                                 </div>
                             ) : activeTab === 'git' ? (
                                 <div className="bento-card">
