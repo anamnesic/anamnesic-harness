@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { spawn } from 'node-pty';
+import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { sessions, broadcast, type Session } from '../_sessions';
@@ -12,12 +13,27 @@ type SpawnCommand = { file: string; args: string[] };
 
 const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex']);
 
+function commandExists(cmd: string): boolean {
+    const checker = process.platform === 'win32' ? 'where' : 'which';
+    const result = spawnSync(checker, [cmd], { stdio: 'ignore' });
+    return result.status === 0;
+}
+
+function firstAvailable(candidates: string[]): string {
+    for (const cmd of candidates) {
+        if (commandExists(cmd)) return cmd;
+    }
+    return candidates[0];
+}
+
 function getCliCommand(cli: CliType): CliCommand {
     switch (cli) {
-        case 'claude': return { cmd: 'claude', args: [] };
-        case 'gemini': return { cmd: 'gemini', args: [] };
+        case 'claude': return { cmd: firstAvailable(['claude', 'claude-code', 'claude-ai']), args: [] };
+        case 'gemini': return { cmd: firstAvailable(['gemini', 'gemini-cli']), args: [] };
         // Newer copilot CLIs don't support `-t shell`; keep a plain interactive command.
-        case 'copilot': return { cmd: 'copilot', args: [] };
+        case 'copilot':
+            if (commandExists('copilot')) return { cmd: 'copilot', args: [] };
+            return { cmd: 'gh', args: ['copilot'] };
         case 'codex': return { cmd: 'codex', args: [] };
     }
 }

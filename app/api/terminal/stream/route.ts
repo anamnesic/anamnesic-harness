@@ -2,20 +2,37 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { spawn } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 type CliType = 'claude' | 'gemini' | 'copilot' | 'codex';
 
 const ALLOWED_CLI_TYPES = new Set<CliType>(['claude', 'gemini', 'copilot', 'codex']);
 
+function commandExists(cmd: string): boolean {
+    const checker = process.platform === 'win32' ? 'where' : 'which';
+    const result = spawnSync(checker, [cmd], { stdio: 'ignore' });
+    return result.status === 0;
+}
+
+function firstAvailable(candidates: string[]): string {
+    for (const cmd of candidates) {
+        if (commandExists(cmd)) return cmd;
+    }
+    return candidates[0];
+}
+
 function getCliArgs(cli: CliType, prompt: string): { cmd: string; args: string[] } {
     switch (cli) {
         case 'claude':
-            return { cmd: 'claude', args: ['--print', prompt] };
+            return { cmd: firstAvailable(['claude', 'claude-code', 'claude-ai']), args: ['--print', prompt] };
         case 'gemini':
-            return { cmd: 'gemini', args: ['-p', prompt] };
+            return { cmd: firstAvailable(['gemini', 'gemini-cli']), args: ['-p', prompt] };
         case 'copilot':
-            return { cmd: 'gh', args: ['copilot', 'suggest', prompt] };
+            if (commandExists('copilot')) {
+                return { cmd: 'copilot', args: ['-p', prompt] };
+            }
+            return { cmd: 'gh', args: ['copilot', '-p', prompt] };
         case 'codex':
             return { cmd: 'codex', args: [prompt] };
     }
