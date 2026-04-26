@@ -26,17 +26,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load auth from localStorage
-    const storedUser = localStorage.getItem('kairos-user');
-    const storedToken = localStorage.getItem('kairos-token');
+    try {
+      // Load auth from localStorage
+      const storedUser = localStorage.getItem('kairos-user');
+      const storedToken = localStorage.getItem('kairos-token');
 
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      setToken(storedToken);
-      // Trigger bootstrap for already logged in users
-      bootstrapSystem();
+      if (storedUser && storedToken) {
+        const parsedUser = JSON.parse(storedUser) as User;
+        setUser(parsedUser);
+        setToken(storedToken);
+        // Trigger bootstrap for already logged in users
+        bootstrapSystem();
+      }
+    } catch (error) {
+      console.error('Failed to restore auth from localStorage:', error);
+      // Clear invalid persisted auth state to unblock UI boot
+      localStorage.removeItem('kairos-user');
+      localStorage.removeItem('kairos-token');
+      setUser(null);
+      setToken(null);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const bootstrapSystem = async () => {
