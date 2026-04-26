@@ -160,13 +160,13 @@ Meta de arquitetura:
 
 ### Implementacao
 
-- [ ] Criar `ProactivePlannerService`
-- [ ] Rodar inferencia periodica sobre eventos recentes + memoria relevante
-- [ ] Gerar lista de riscos
-- [ ] Gerar lista de oportunidades
-- [ ] Gerar tasks candidatas
-- [ ] Gerar recomendacoes acionaveis
-- [ ] Encaminhar acoes para approval flow
+- [x] Criar `ProactivePlannerService`
+- [x] Rodar inferencia periodica sobre eventos recentes + memoria relevante
+- [x] Gerar lista de riscos
+- [x] Gerar lista de oportunidades
+- [x] Gerar tasks candidatas
+- [x] Gerar recomendacoes acionaveis
+- [x] Encaminhar acoes para approval flow
 
 ### UX
 

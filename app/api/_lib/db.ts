@@ -14,7 +14,7 @@ export async function getDb(): Promise<DataSource> {
     // Seed default data only
     const { seedDefaultData } = await import('./seed');
     await seedDefaultData(db);
-    
+
     return db;
 }
 
@@ -26,18 +26,39 @@ export async function bootstrapSystem(database: DataSource): Promise<void> {
     if (systemBootstrapped) return;
 
     console.log('Bootstrapping system services...');
-    
+
     try {
         await initializeObservers(database);
+        await initializeProactivePlanner();
         await initializeWorkflowTriggers(database);
         await initializeRetentionPolicy(database);
         await initializeSync(database);
-        
+
         systemBootstrapped = true;
         console.log('System services bootstrapped successfully');
     } catch (error) {
         console.error('System bootstrap failed:', error);
         // Don't set systemBootstrapped to true so we can retry
+    }
+}
+
+async function initializeProactivePlanner(): Promise<void> {
+    try {
+        const { ProactivePlannerService } = await import('@/src/core/services/ProactivePlannerService');
+        const { ApprovalFlow } = await import('@/src/policies/approvalFlow');
+
+        const proactivePlanner = ProactivePlannerService.getInstance({
+            approvalFlow: new ApprovalFlow(),
+            intervalMs: 5 * 60_000,
+            recentWindowDays: 2,
+            maxEvents: 250,
+            requireApprovalForSensitiveTasks: true,
+        });
+
+        await proactivePlanner.start('system');
+        console.log('Proactive Planner initialized and started');
+    } catch (error) {
+        console.error('Failed to initialize proactive planner:', error);
     }
 }
 
@@ -61,21 +82,21 @@ async function initializeRetentionPolicy(database: DataSource): Promise<void> {
         const { ChatHistoryService } = await import('@/src/core/services/ChatHistoryService');
         const { SettingsService } = await import('@/src/core/services/SettingsService');
         const { AdvancedFeaturesFactory } = await import('@/src/core/services/AdvancedFeaturesFactory');
-        
+
         const chatHistoryService = new ChatHistoryService(database);
         const settingsService = new SettingsService(database);
-        
+
         // Use factory for safety net
         const factory = new AdvancedFeaturesFactory({
             projectPath: process.cwd(),
             db: database,
         });
         const safetyNet = factory.getSafetyNet();
-        
+
         const retentionService = RetentionPolicyService.getInstance(chatHistoryService, safetyNet);
         await retentionService.setSettingsService(settingsService);
         await retentionService.start();
-        
+
         console.log('Retention Policy Service initialized and started');
     } catch (error) {
         console.error('Failed to initialize retention policy:', error);
@@ -90,7 +111,7 @@ async function initializeObservers(database: DataSource): Promise<void> {
         const observerService = ObserverService.getInstance();
         const settingsService = new SettingsService(database);
         const persistentStore = new PersistentEventStore(database);
-        
+
         observerService.setPersistentEventStore(persistentStore);
         await observerService.setSettingsService(settingsService);
         await observerService.initialize();
@@ -105,7 +126,7 @@ async function initializeWorkflowTriggers(database: DataSource): Promise<void> {
     try {
         const { AdvancedFeaturesFactory } = await import('@/src/core/services/AdvancedFeaturesFactory');
         const { WorkflowTriggerInitializer } = await import('@/src/core/services/WorkflowTriggerInitializer');
-        
+
         // Initialize the advanced features factory to get the trigger service
         const factory = new AdvancedFeaturesFactory({
             httpServer: null as any, // Not needed for triggers
@@ -114,12 +135,12 @@ async function initializeWorkflowTriggers(database: DataSource): Promise<void> {
             db: database,
             enableAutomation: true,
         });
-        
+
         const triggerService = factory.getWorkflowTriggers();
         const initializer = new WorkflowTriggerInitializer(triggerService);
-        
+
         await initializer.initialize(database);
-        
+
         console.log('Workflow triggers initialized successfully');
     } catch (error) {
         console.error('Failed to initialize workflow triggers:', error);
