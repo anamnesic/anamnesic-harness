@@ -17,14 +17,24 @@ export async function proxy(request: NextRequest) {
   }
 
   const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  let token: string | null = null;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  }
+
+  // EventSource cannot send custom Authorization headers, so accept token in query here.
+  if (!token && pathname.startsWith('/api/v1/events')) {
+    token = request.nextUrl.searchParams.get('token');
+  }
+
+  if (!token) {
     return new NextResponse(
       JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } }),
       { status: 401, headers: { 'content-type': 'application/json' } }
     );
   }
 
-  const token = authHeader.substring(7);
   try {
     const payload = jwt.verify(token, JWT_SECRET) as any;
     
@@ -32,6 +42,7 @@ export async function proxy(request: NextRequest) {
 
     // Add user info to headers for the route handlers
     const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('authorization', `Bearer ${token}`);
     requestHeaders.set('x-user-id', payload.userId as string);
     if (payload.email) requestHeaders.set('x-user-email', payload.email as string);
 
