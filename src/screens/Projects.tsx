@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph } from 'lucide-react';
+import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -83,7 +83,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
 
-    const [activeTab, setActiveTab] = useState<'repository' | 'context' | 'decisions'>('repository');
+    const [activeTab, setActiveTab] = useState<'repository' | 'git' | 'context' | 'decisions'>('repository');
     const [showBrowser, setShowBrowser] = useState(false);
     const [browserMode, setBrowserMode] = useState<'import-repository' | 'attach-folder'>('import-repository');
     const [attachTargetProjectId, setAttachTargetProjectId] = useState<string | null>(null);
@@ -384,6 +384,17 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const stagedChanges = insights?.changes?.filter((change) => change.staged) ?? [];
     const unstagedChanges = insights?.changes?.filter((change) => !change.staged) ?? [];
 
+    const tabItems: Array<{
+        id: 'repository' | 'git' | 'context' | 'decisions';
+        label: string;
+        icon: typeof FileText;
+    }> = [
+        { id: 'repository', label: 'Repositório', icon: FileText },
+        { id: 'git', label: 'Git', icon: GitBranch },
+        { id: 'context', label: 'Contexto', icon: BookOpen },
+        { id: 'decisions', label: 'Decisões', icon: Lightbulb },
+    ];
+
     const recentItems = recentRepositories.slice(0, 6);
 
     const openFolderBrowser = () => {
@@ -572,52 +583,33 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     className={embedded ? 'w-full' : 'flex-1 w-full max-w-6xl mx-auto p-3 pb-32 sm:p-6'}
                 >
                     <div className="mb-4 overflow-x-auto border-b border-border pb-1 sm:mb-6">
-                        <div className="flex min-w-max items-center gap-4">
-                            <button
-                                onClick={() => setActiveTab('repository')}
-                                className={cn(
-                                    'pb-3 text-sm font-bold transition-colors relative',
-                                    activeTab === 'repository' ? 'text-accent' : 'text-text-dim hover:text-highlight'
-                                )}
-                            >
-                                Repositório
-                                {activeTab === 'repository' && (
-                                    <motion.div
-                                        layoutId="activeTab"
-                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                                    />
-                                )}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('context')}
-                                className={cn(
-                                    'pb-3 text-sm font-bold transition-colors relative',
-                                    activeTab === 'context' ? 'text-accent' : 'text-text-dim hover:text-highlight'
-                                )}
-                            >
-                                Context
-                                {activeTab === 'context' && (
-                                    <motion.div
-                                        layoutId="activeTab"
-                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                                    />
-                                )}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('decisions')}
-                                className={cn(
-                                    'pb-3 text-sm font-bold transition-colors relative',
-                                    activeTab === 'decisions' ? 'text-accent' : 'text-text-dim hover:text-highlight'
-                                )}
-                            >
-                                Decisões
-                                {activeTab === 'decisions' && (
-                                    <motion.div
-                                        layoutId="activeTab"
-                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                                    />
-                                )}
-                            </button>
+                        <div className="flex min-w-max items-center gap-2">
+                            {tabItems.map((tab) => {
+                                const Icon = tab.icon;
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        title={tab.label}
+                                        aria-label={tab.label}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={cn(
+                                            'relative rounded-lg p-2.5 transition-colors',
+                                            isActive
+                                                ? 'text-accent bg-card/70'
+                                                : 'text-text-dim hover:text-highlight hover:bg-card/40',
+                                        )}
+                                    >
+                                        <Icon className="size-4" />
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeTab"
+                                                className="absolute -bottom-1 left-1 right-1 h-0.5 bg-primary"
+                                            />
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -645,6 +637,9 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                         <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>
                                     )}
                                 </div>
+                            </div>
+                        ) : activeTab === 'git' ? (
+                            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3 sm:gap-4">
 
                                 <div className="bento-card min-h-64 min-w-0 rounded-2xl sm:min-h-72">
                                     <div className="mb-3 flex items-center justify-between gap-2">
