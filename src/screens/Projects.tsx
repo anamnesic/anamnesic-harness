@@ -473,7 +473,7 @@ export function Projects({
     function renderRepositoryTree(nodes: RepositoryTreeNode[], depth = 0): React.ReactNode {
         return nodes.map((node) => {
             if (node.type === 'folder') {
-                const isCollapsed = collapsedFolders[node.path] === true;
+                const isCollapsed = collapsedFolders[node.path] !== false;
 
                 return (
                     <div key={node.path}>
@@ -693,7 +693,7 @@ export function Projects({
 
                         <section className="min-w-0">
                             {activeTab === 'repository' ? (
-                                <div className="flex min-h-0 max-h-[calc(100dvh-9rem)] flex-col gap-4 overflow-hidden lg:flex-row">
+                                <div className="flex h-[calc(100dvh-9rem)] min-h-0 flex-col gap-4 overflow-hidden lg:flex-row">
                                     <aside className="bento-card flex h-full min-h-0 flex-col overflow-hidden lg:w-72 lg:shrink-0">
                                         <input
                                             value={repoQuery}
