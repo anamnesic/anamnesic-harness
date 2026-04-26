@@ -7,6 +7,7 @@ import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
+import { Projects } from './Projects';
 
 interface Workspace {
     id: string;
@@ -161,67 +162,85 @@ export function Workspaces() {
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full"
+            className="flex-1 p-6 pb-32 max-w-5xl mx-auto w-full"
         >
-            <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">Workspaces</h2>
-                <button
-                    onClick={openCreate}
-                    className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
-                >
-                    <Plus className="size-3.5" />
-                    New Workspace
-                </button>
+            <div className="mb-10 space-y-2">
+                <h2 className="text-2xl font-bold tracking-tight">Espaços e Repositórios</h2>
+                <p className="text-sm text-text-dim">Uma visão única para gerenciar workspaces e os repositórios vinculados ao workspace ativo.</p>
             </div>
 
-            {loading ? (
-                <div className="space-y-4">
-                    {[0, 1, 2].map(i => <SkeletonCard key={i} />)}
+            <section className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-xl font-bold tracking-tight">Espaços</h3>
+                        <p className="text-xs text-text-dim mt-1">Selecione, crie e administre seus workspaces.</p>
+                    </div>
+                    <button
+                        onClick={openCreate}
+                        className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
+                    >
+                        <Plus className="size-3.5" />
+                        Novo Espaço
+                    </button>
                 </div>
-            ) : workspaces.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 space-y-3">
-                    <Building2 className="size-10 text-border" />
-                    <p className="text-text-dim text-sm">Ainda não há workspaces</p>
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    {workspaces.map(ws => (
-                        <div
-                            key={ws.id}
-                            onClick={() => setDetail(ws)}
-                            className="bento-card space-y-2 cursor-pointer hover:border-primary/40 transition-colors"
-                        >
-                            <div className="flex items-start justify-between gap-3">
-                                <span className="font-bold text-accent">{ws.name}</span>
-                                <div className="flex items-center gap-2">
-                                    <StatusBadge status={ws.status} />
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); openEdit(ws); }}
-                                        title="Edit workspace"
-                                        className="rounded-lg p-1.5 text-text-dim hover:text-accent hover:bg-bg/60 transition-colors"
-                                    >
-                                        <Pencil className="size-3.5" />
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(ws); }}
-                                        title="Delete workspace"
-                                        className="rounded-lg p-1.5 text-text-dim hover:text-red-400 hover:bg-bg/60 transition-colors"
-                                    >
-                                        <Trash2 className="size-3.5" />
-                                    </button>
+
+                {loading ? (
+                    <div className="space-y-4">
+                        {[0, 1, 2].map(i => <SkeletonCard key={i} />)}
+                    </div>
+                ) : workspaces.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-24 space-y-3 bento-card">
+                        <Building2 className="size-10 text-border" />
+                        <p className="text-text-dim text-sm">Ainda não há workspaces</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {workspaces.map(ws => (
+                            <div
+                                key={ws.id}
+                                onClick={() => setDetail(ws)}
+                                className="bento-card space-y-2 cursor-pointer hover:border-primary/40 transition-colors"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <span className="font-bold text-accent">{ws.name}</span>
+                                    <div className="flex items-center gap-2">
+                                        <StatusBadge status={ws.status} />
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); openEdit(ws); }}
+                                            title="Edit workspace"
+                                            className="rounded-lg p-1.5 text-text-dim hover:text-accent hover:bg-bg/60 transition-colors"
+                                        >
+                                            <Pencil className="size-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(ws); }}
+                                            title="Delete workspace"
+                                            className="rounded-lg p-1.5 text-text-dim hover:text-red-400 hover:bg-bg/60 transition-colors"
+                                        >
+                                            <Trash2 className="size-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
+                                <code className="text-xs text-text-dim font-mono">{ws.slug}</code>
+                                {ws.description && (
+                                    <p className="text-sm text-text-dim leading-relaxed">{ws.description}</p>
+                                )}
+                                {ws.createdAt && (
+                                    <p className="label-caps">{new Date(ws.createdAt).toLocaleDateString()}</p>
+                                )}
                             </div>
-                            <code className="text-xs text-text-dim font-mono">{ws.slug}</code>
-                            {ws.description && (
-                                <p className="text-sm text-text-dim leading-relaxed">{ws.description}</p>
-                            )}
-                            {ws.createdAt && (
-                                <p className="label-caps">{new Date(ws.createdAt).toLocaleDateString()}</p>
-                            )}
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            <section className="mt-12 space-y-6">
+                <div>
+                    <h3 className="text-xl font-bold tracking-tight">Repositórios</h3>
+                    <p className="text-xs text-text-dim mt-1">Os repositórios do workspace atualmente selecionado aparecem logo abaixo.</p>
                 </div>
-            )}
+                <Projects embedded />
+            </section>
 
             <AnimatePresence>
                 {(showCreate || editing) && (

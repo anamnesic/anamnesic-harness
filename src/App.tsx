@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   Activity,
   Boxes,
-  FolderKanban,
   Bot,
   Camera,
   Lightbulb,
@@ -30,7 +29,6 @@ import { MemoryLedger } from './screens/MemoryLedger';
 import { Observers } from './screens/Observers';
 import { ControlCenter } from './screens/ControlCenter';
 import { SystemConfig } from './screens/SystemConfig';
-import { Projects } from './screens/Projects';
 import { Agents } from './screens/Agents';
 import { Workflows } from './screens/Workflows';
 import { Security } from './screens/Security';
@@ -104,7 +102,6 @@ const TABS = [
   { id: 'workspaces', label: 'Espaços', icon: Boxes },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
-  { id: 'projects', label: 'Repositório', icon: FolderKanban },
   { id: 'decisions', label: 'Decisões', icon: Lightbulb },
   { id: 'apikeys', label: 'Chaves API', icon: Key },
   { id: 'security', label: 'Auditoria', icon: ShieldCheck },
@@ -166,7 +163,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'redteaming':
       return { title: 'Red Teaming', subtitle: 'Simulação de ataques', element: <RedTeaming />, onBack: goHome, rightElement: undefined };
     case 'workspaces':
-      return { title: 'Espaços', subtitle: 'Gerenciamento de workspaces', element: <Workspaces />, onBack: goHome, rightElement: undefined };
+      return { title: 'Espaços', subtitle: 'Workspaces e repositórios em uma única tela', element: <Workspaces />, onBack: goHome, rightElement: undefined };
     case 'ledger':
       return { title: 'Memória', subtitle: 'Recuperação histórica', element: <MemoryLedger />, onBack: goHome, rightElement: undefined };
     case 'observers':
@@ -199,7 +196,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'workflows':
       return { title: 'Workflows', subtitle: 'Pipelines de automação', element: <Workflows />, onBack: goHome, rightElement: undefined };
     case 'projects':
-      return { title: 'Repositório', subtitle: 'Repositórios do workspace ativo', element: <Projects />, onBack: goHome, rightElement: undefined };
+      return { title: 'Espaços', subtitle: 'Workspaces e repositórios em uma única tela', element: <Workspaces />, onBack: goHome, rightElement: undefined };
     case 'decisions':
       return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
     case 'apikeys':

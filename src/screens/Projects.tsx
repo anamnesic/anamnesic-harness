@@ -42,7 +42,7 @@ interface ApiResponse<T> {
     timestamp: string;
 }
 
-export function Projects() {
+export function Projects({ embedded = false }: { embedded?: boolean }) {
     const { workspace } = useWorkspace();
     const projectsPath = workspace?.id ? `/api/v1/projects?workspaceId=${workspace.id}` : null;
     const { data, loading, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
@@ -227,7 +227,7 @@ export function Projects() {
                 key="projects-no-workspace"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full"
+                className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
             >
                 <div className="bento-card py-16 text-center space-y-3">
                     <Building2 className="size-10 text-border mx-auto" />
@@ -244,7 +244,7 @@ export function Projects() {
                 key="project-detail"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full"
+                className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
             >
                 <button
                     onClick={() => setSelectedProjectId(null)}
@@ -343,7 +343,7 @@ export function Projects() {
             key="projects-list"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex-1 p-6 pb-32 max-w-3xl mx-auto w-full"
+            className={embedded ? 'w-full' : 'flex-1 p-6 pb-32 max-w-3xl mx-auto w-full'}
         >
             <div className="mb-8 flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
