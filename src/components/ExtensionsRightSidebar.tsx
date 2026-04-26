@@ -750,81 +750,76 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                         )}
                     </div>
                 ) : selectedExtension ? (
-                    <div className="space-y-3">
-                        <div className="rounded-xl border border-border bg-bg/50 p-3">
-                            <div className="mb-2 flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                    <p className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-highlight">{selectedExtension.displayName}</p>
-                                    <p className="truncate text-[10px] text-text-dim">{selectedExtension.namespace}.{selectedExtension.name}</p>
+                    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-bg/55">
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 px-3 py-2">
+                            <div className="min-w-0">
+                                <p className="truncate text-[11px] font-black uppercase tracking-[0.16em] text-highlight">{selectedExtension.displayName}</p>
+                                <p className="truncate text-[10px] text-text-dim">{selectedExtension.namespace}.{selectedExtension.name}</p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setActiveTab('market');
+                                    setSelectedMarketExtension({
+                                        id: selectedExtension.id,
+                                        namespace: selectedExtension.namespace,
+                                        name: selectedExtension.name,
+                                        displayName: selectedExtension.displayName,
+                                        description: selectedExtension.description,
+                                        version: selectedExtension.version,
+                                        verified: selectedExtension.verified,
+                                        iconUrl: selectedExtension.iconUrl,
+                                    });
+                                }}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                            >
+                                Market
+                            </button>
+                        </div>
+
+                        <div className="scrollbar-kairos flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-border/70 px-2 py-2">
+                            {selectedCompatibilityLoading ? (
+                                <span className="px-1.5 text-[10px] text-text-dim">Carregando views...</span>
+                            ) : selectedManifestViews.length > 0 ? (
+                                selectedManifestViews.map((view, index) => {
+                                    const key = getViewKey(view, index);
+                                    const active = selectedManifestViewKey === key;
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => setSelectedManifestViewKey(key)}
+                                            className={cn(
+                                                'shrink-0 rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-colors',
+                                                active
+                                                    ? 'border-primary/50 bg-primary/15 text-primary'
+                                                    : 'border-border bg-card/50 text-text-dim hover:border-accent/40 hover:text-accent',
+                                            )}
+                                            title={`${view.name ?? view.id ?? 'View'} (${view.container})`}
+                                        >
+                                            {view.name ?? view.id ?? `View ${index + 1}`}
+                                        </button>
+                                    );
+                                })
+                            ) : (
+                                <span className="px-1.5 text-[10px] text-text-dim">View principal</span>
+                            )}
+                        </div>
+
+                        <div className="min-h-0 flex-1 bg-bg/70">
+                            {selectedUiRuntimeLoading ? (
+                                <div className="flex h-full min-h-105 items-center justify-center text-xs text-text-dim">Carregando interface da extensao...</div>
+                            ) : selectedUiRuntime?.available && selectedUiRenderUrl ? (
+                                <iframe
+                                    ref={uiFrameRef}
+                                    src={selectedUiRenderUrl}
+                                    title={`ui-${selectedExtension.id}`}
+                                    className="h-full min-h-105 w-full bg-bg"
+                                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                                />
+                            ) : (
+                                <div className="flex h-full min-h-105 items-center justify-center px-4 text-center text-xs text-rose-300">
+                                    {selectedUiRuntime?.reason ?? 'A interface desta extensao nao foi detectada na VSIX instalada.'}
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        setActiveTab('market');
-                                        setSelectedMarketExtension({
-                                            id: selectedExtension.id,
-                                            namespace: selectedExtension.namespace,
-                                            name: selectedExtension.name,
-                                            displayName: selectedExtension.displayName,
-                                            description: selectedExtension.description,
-                                            version: selectedExtension.version,
-                                            verified: selectedExtension.verified,
-                                            iconUrl: selectedExtension.iconUrl,
-                                        });
-                                    }}
-                                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                >
-                                    Market
-                                </button>
-                            </div>
-
-                            <p className="text-[10px] text-text-dim">Views da extensao carregadas da VSIX instalada, para uso direto no Kairos.</p>
-
-                            <div className="mt-3 flex flex-wrap gap-1.5">
-                                {selectedCompatibilityLoading ? (
-                                    <span className="text-[10px] text-text-dim">Carregando views...</span>
-                                ) : selectedManifestViews.length > 0 ? (
-                                    selectedManifestViews.map((view, index) => {
-                                        const key = getViewKey(view, index);
-                                        const active = selectedManifestViewKey === key;
-                                        return (
-                                            <button
-                                                key={key}
-                                                onClick={() => setSelectedManifestViewKey(key)}
-                                                className={cn(
-                                                    'rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-colors',
-                                                    active
-                                                        ? 'border-primary/50 bg-primary/15 text-primary'
-                                                        : 'border-border bg-card/50 text-text-dim hover:border-accent/40 hover:text-accent',
-                                                )}
-                                                title={`${view.name ?? view.id ?? 'View'} (${view.container})`}
-                                            >
-                                                {view.name ?? view.id ?? `View ${index + 1}`}
-                                            </button>
-                                        );
-                                    })
-                                ) : (
-                                    <span className="text-[10px] text-text-dim">Nenhuma view declarada, usando view principal.</span>
-                                )}
-                            </div>
-
-                            <div className="mt-3 overflow-hidden rounded-lg border border-border/70 bg-bg/60">
-                                {selectedUiRuntimeLoading ? (
-                                    <div className="flex h-130 items-center justify-center text-xs text-text-dim">Detectando interface da extensao...</div>
-                                ) : selectedUiRuntime?.available && selectedUiRenderUrl ? (
-                                    <iframe
-                                        ref={uiFrameRef}
-                                        src={selectedUiRenderUrl}
-                                        title={`ui-${selectedExtension.id}`}
-                                        className="w-full bg-bg"
-                                        style={{ height: 520 }}
-                                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                                    />
-                                ) : (
-                                    <div className="flex h-130 items-center justify-center px-4 text-center text-xs text-rose-300">
-                                        {selectedUiRuntime?.reason ?? 'A interface desta extensao nao foi detectada na VSIX instalada.'}
-                                    </div>
-                                )}
-                            </div>
+                            )}
                         </div>
                     </div>
                 ) : (
