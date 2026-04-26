@@ -660,9 +660,9 @@ export function Projects({
                     key="project-detail"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={embedded ? 'w-full' : 'flex-1 w-full max-w-6xl mx-auto p-3 pb-32 sm:p-6'}
+                    className={embedded ? 'h-full w-full' : 'flex-1 w-full max-w-6xl mx-auto p-3 pb-32 sm:p-6'}
                 >
-                    <div className="space-y-3">
+                    <div className="flex h-full min-h-0 flex-col gap-3">
                         {!hideTabBar && (
                             <aside className="bento-card p-1.5">
                                 <div className="flex items-center gap-1">
@@ -696,7 +696,7 @@ export function Projects({
                             </aside>
                         )}
 
-                        <section className="min-w-0">
+                        <section className="min-w-0 min-h-0 flex-1">
                             {activeTab === 'repository' ? (
                                 <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden lg:flex-row">
                                     <aside className="bento-card flex h-full min-h-0 flex-col overflow-hidden lg:w-72 lg:shrink-0">
