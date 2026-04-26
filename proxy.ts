@@ -4,13 +4,28 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
 
+const PUBLIC_API_PREFIXES = [
+    '/api/v1/auth/login',
+    '/api/v1/auth/signup',
+    '/api/health',
+];
+
+function isOpenVsxUiAssetRoute(pathname: string): boolean {
+    return pathname.startsWith('/api/v1/extensions/open-vsx/') && pathname.includes('/ui/file/');
+}
+
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
+    // Let CORS preflight reach handlers untouched.
+    if (request.method === 'OPTIONS') {
+        return NextResponse.next();
+    }
+
     // Public paths
     if (
-        pathname.startsWith('/api/v1/auth/login') ||
-        pathname.startsWith('/api/health') ||
+        PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+        isOpenVsxUiAssetRoute(pathname) ||
         !pathname.startsWith('/api/')
     ) {
         return NextResponse.next();
@@ -23,8 +38,8 @@ export async function proxy(request: NextRequest) {
         token = authHeader.substring(7);
     }
 
-    // EventSource cannot set custom headers, so allow token via query only for SSE route.
-    if (!token && pathname.startsWith('/api/v1/events')) {
+    // EventSource and browser-managed subresource requests cannot always set custom headers.
+    if (!token && (pathname.startsWith('/api/v1/events') || pathname.startsWith('/api/v1/extensions/open-vsx/'))) {
         token = request.nextUrl.searchParams.get('token');
     }
 
@@ -57,7 +72,7 @@ export async function proxy(request: NextRequest) {
                 headers: requestHeaders,
             },
         });
-    } catch (error) {
+    } catch {
         return new NextResponse(
             JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } }),
             { status: 401, headers: { 'content-type': 'application/json' } }
