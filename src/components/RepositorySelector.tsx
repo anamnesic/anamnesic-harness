@@ -6,7 +6,11 @@ import { ChevronDown, FolderGit2, Check } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 
-export function RepositorySelector() {
+interface RepositorySelectorProps {
+    hideWhenEmpty?: boolean;
+}
+
+export function RepositorySelector({ hideWhenEmpty = false }: RepositorySelectorProps) {
     const { repository, repositories, setRepositoryById, isLoading } = useRepository();
     const [isOpen, setIsOpen] = useState(false);
 
@@ -15,6 +19,10 @@ export function RepositorySelector() {
     }
 
     const hasRepositories = repositories.length > 0;
+
+    if (hideWhenEmpty && !hasRepositories) {
+        return null;
+    }
 
     return (
         <div className="relative">

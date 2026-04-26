@@ -55,7 +55,7 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
 }) => (
   <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
     <div className="flex items-center gap-4">
-      <RepositorySelector />
+      <RepositorySelector hideWhenEmpty />
       {onBack ? (
         <button
           onClick={onBack}
