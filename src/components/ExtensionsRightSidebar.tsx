@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Blocks, TerminalSquare, PlugZap, ExternalLink, Search, ServerCog } from 'lucide-react';
+import { Blocks, TerminalSquare, PlugZap, ExternalLink, Search, ServerCog, Store, Bot } from 'lucide-react';
 import { cn } from '../lib/utils';
+import type { LucideIcon } from 'lucide-react';
 
 type HostTabId = 'terminal' | 'integrations';
 
@@ -117,8 +118,8 @@ function matchesSearchTerm(text: string, query: string): boolean {
 }
 
 type SidebarTab =
-    | { id: 'market'; label: 'Market'; extensionId?: undefined }
-    | { id: `ext:${string}`; label: string; extensionId: string };
+    | { id: 'market'; label: 'Market'; icon: LucideIcon; extensionId?: undefined }
+    | { id: `ext:${string}`; label: string; icon: LucideIcon; extensionId: string };
 
 function getInitialTab(tabs: SidebarTab[]): SidebarTab['id'] {
     return tabs[0]?.id ?? 'market';
@@ -142,9 +143,10 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         const extensionTabs: SidebarTab[] = installedWithTab.map((extension) => ({
             id: `ext:${extension.id}`,
             label: extension.title,
+            icon: extension.hostTab === 'terminal' ? Bot : PlugZap,
             extensionId: extension.id,
         }));
-        return [{ id: 'market', label: 'Market' }, ...extensionTabs];
+        return [{ id: 'market', label: 'Market', icon: Store }, ...extensionTabs];
     }, [installedWithTab]);
 
     const [activeTab, setActiveTab] = useState<SidebarTab['id']>(() => getInitialTab(tabs));
@@ -209,14 +211,15 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
+                        title={tab.label}
                         className={cn(
-                            'whitespace-nowrap rounded-lg border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors',
+                            'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
                             activeTab === tab.id
                                 ? 'border-primary/40 bg-primary/10 text-primary'
                                 : 'border-border bg-bg/50 text-text-dim hover:border-accent/50 hover:text-accent',
                         )}
                     >
-                        {tab.label}
+                        <tab.icon className="size-4" />
                     </button>
                 ))}
             </div>
@@ -225,8 +228,7 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                 {activeTab === 'market' ? (
                     <div className="space-y-3">
                         <div className="rounded-xl border border-border bg-bg/60 p-3">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-text-dim">Open VSX Marketplace</p>
-                            <div className="mt-2 flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                                 <div className="relative min-w-0 flex-1">
                                     <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-text-dim" />
                                     <input
