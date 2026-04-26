@@ -5,3 +5,5 @@ export * from './CliResultNormalizer';
 export * from './CliExecutionPolicy';
 export * from './CliInferenceService';
 export * from './CliTaskQueue';
+export * from './CliAuditTrail';
+export * from './SecretRedactor';

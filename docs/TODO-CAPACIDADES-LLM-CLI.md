@@ -215,12 +215,12 @@ Meta de arquitetura:
 
 ### Obrigatorio
 
-- [ ] Toda inferencia de CLI deve registrar provider, comando, duracao e exit code
-- [ ] Persistir prompts e outputs quando permitido por politica
-- [ ] Separar prompts sensiveis de prompts operacionais
-- [ ] Redigir segredos antes de enviar a CLIs
-- [ ] Integrar com `ApprovalFlow` para acoes sensiveis
-- [ ] Adicionar trilha de auditoria por inferencia
+- [x] Toda inferencia de CLI deve registrar provider, comando, duracao e exit code
+- [x] Persistir prompts e outputs quando permitido por politica
+- [x] Separar prompts sensiveis de prompts operacionais
+- [x] Redigir segredos antes de enviar a CLIs
+- [x] Integrar com `ApprovalFlow` para acoes sensiveis
+- [x] Adicionar trilha de auditoria por inferencia
 
 ---
 

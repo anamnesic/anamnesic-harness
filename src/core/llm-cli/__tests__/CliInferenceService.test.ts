@@ -76,7 +76,15 @@ function buildService() {
         backoffMs: 1,
     });
 
-    return new CliInferenceService({ registry, policy });
+    const auditTrail = {
+        buildRecord: vi.fn((params) => ({ id: 'audit', ...params })),
+        append: vi.fn().mockResolvedValue(undefined),
+    };
+
+    return {
+        service: new CliInferenceService({ registry, policy, auditTrail: auditTrail as any }),
+        auditTrail,
+    };
 }
 
 describe('CliInferenceService', () => {
@@ -85,7 +93,7 @@ describe('CliInferenceService', () => {
     });
 
     it('streams stdout/stderr chunks and normalizes result', async () => {
-        const service = buildService();
+        const { service } = buildService();
         spawnMock.mockReturnValue(createFakeChild({
             stdout: ['hello ', 'world'],
             stderr: ['warn'],
@@ -116,7 +124,7 @@ describe('CliInferenceService', () => {
     });
 
     it('retries once and succeeds on second attempt', async () => {
-        const service = buildService();
+        const { service } = buildService();
         spawnMock
             .mockImplementationOnce(() => createFakeChild({ exitCode: 1, stderr: ['first failed'] }))
             .mockImplementationOnce(() => createFakeChild({ exitCode: 0, stdout: ['second ok'] }));
@@ -136,7 +144,7 @@ describe('CliInferenceService', () => {
     });
 
     it('marks execution as timed out and kills process', async () => {
-        const service = buildService();
+        const { service } = buildService();
         const hangingChild = createFakeChild({ autoClose: false });
         spawnMock.mockReturnValue(hangingChild);
 
@@ -154,7 +162,7 @@ describe('CliInferenceService', () => {
     });
 
     it('parses spawn errors into normalized error output', async () => {
-        const service = buildService();
+        const { service } = buildService();
         spawnMock.mockReturnValue(createFakeChild({ emitError: 'boom' }));
 
         const result = await service.executePrompt({
@@ -166,5 +174,21 @@ describe('CliInferenceService', () => {
         expect(result.success).toBe(false);
         expect(result.error).toBe('boom');
         expect(result.exitCode).toBeNull();
+    });
+
+    it('redacts secrets before sending prompt to CLI and writes audit record', async () => {
+        const { service, auditTrail } = buildService();
+        spawnMock.mockReturnValue(createFakeChild({ stdout: ['ok'], exitCode: 0 }));
+
+        await service.executePrompt({
+            preferredProvider: 'gemini',
+            prompt: 'token=abc123 api_key=xyz987',
+            maxRetries: 0,
+        });
+
+        const spawnArgs = spawnMock.mock.calls[0]?.[1] as string[];
+        expect(spawnArgs[1]).toContain('token=[REDACTED]');
+        expect(spawnArgs[1]).toContain('api_key=[REDACTED]');
+        expect(auditTrail.append).toHaveBeenCalledTimes(1);
     });
 });
