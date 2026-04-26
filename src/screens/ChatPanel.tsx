@@ -73,7 +73,7 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
           metadata?: { type?: string };
         }>;
       }>(`/api/chat/history?channelId=${channelId}&limit=50`);
-      
+
       const formattedMessages = response.items.map(item => ({
         id: item.id,
         content: item.message,
@@ -81,7 +81,7 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
         timestamp: item.createdAt,
         type: item.metadata?.type as 'request' | 'response',
       }));
-      
+
       setMessages(formattedMessages);
     } catch (error) {
       console.error('Falha ao carregar histórico do chat:', error);
@@ -209,7 +209,7 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              
+
               switch (data.type) {
                 case 'chunk':
                   accumulated += (data.content || '');
@@ -280,7 +280,7 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
       const response = await apiFetch(`/api/chat/history?channelId=${channelId}`, {
         method: 'DELETE',
       });
-      
+
       setMessages([]);
       toast('Chat limpo', 'success');
     } catch (error) {
@@ -290,24 +290,25 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
   }, [channelId, toast]);
 
   return (
-    <div className={cn('flex flex-col h-full bg-card border border-border rounded-2xl', className)}>
+    <div className={cn('flex flex-col h-full min-h-0 bg-card border border-border rounded-2xl', className)}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="relative z-10 flex items-center justify-between gap-2 p-3 border-b border-border">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <MessageSquare className="size-5 text-primary" />
-          <h3 className="font-semibold text-highlight">Chat</h3>
-          <span className="text-xs text-text-dim bg-bg px-2 py-1 rounded-full">
+          <h3 className="font-semibold text-highlight shrink-0">Chat</h3>
+          <span className="hidden sm:inline-flex text-xs text-text-dim bg-bg px-2 py-1 rounded-full truncate max-w-24">
             {channelId}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           <div className="relative" ref={modelMenuRef}>
             <button
               onClick={() => setIsModelMenuOpen((open) => !open)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors border border-border"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors border border-border"
             >
-              <span className="font-semibold text-highlight">Modelos</span>
+              <span className="font-semibold text-highlight hidden sm:inline">Modelos</span>
+              <span className="font-semibold text-highlight sm:hidden">AI</span>
               <span className="text-[11px] text-text-dim">{selectedModelIds.length}</span>
               <ChevronDown className={cn('size-3 transition-transform', isModelMenuOpen && 'rotate-180')} />
             </button>
@@ -318,7 +319,7 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
                   initial={{ opacity: 0, y: -8, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                  className="absolute right-0 mt-2 w-80 max-h-80 overflow-y-auto rounded-xl border border-border bg-card shadow-2xl z-50"
+                  className="scrollbar-kairos absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-card shadow-2xl z-[80]"
                 >
                   <div className="px-3 py-2 border-b border-border text-[11px] font-bold uppercase tracking-wider text-text-dim">
                     Modelos disponíveis
@@ -360,9 +361,9 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
                           )}>
                             {checked && <Check className="size-3" />}
                           </span>
-                          <span className="min-w-0">
+                          <span className="min-w-0 flex-1">
                             <span className="block text-xs font-semibold truncate">{model.name}</span>
-                            <span className="block text-[11px] text-text-dim truncate">{model.description}</span>
+                            <span className="block text-[11px] text-text-dim line-clamp-2 leading-relaxed">{model.description}</span>
                           </span>
                         </button>
                       );
@@ -378,10 +379,11 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
 
           <button
             onClick={handleClearChat}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-dim hover:text-accent hover:bg-bg rounded-lg transition-colors"
+            title="Limpar chat"
           >
             <Trash2 className="size-3" />
-            Clear
+            <span className="hidden sm:inline">Clear</span>
           </button>
         </div>
       </div>
@@ -402,8 +404,8 @@ export function ChatPanel({ channelId = 'default', className }: ChatPanelProps) 
             >
               <div className={cn(
                 'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold',
-                message.sender === 'user' 
-                  ? 'bg-primary text-primary-foreground' 
+                message.sender === 'user'
+                  ? 'bg-primary text-primary-foreground'
                   : 'bg-accent text-accent-foreground'
               )}>
                 {message.sender === 'user' ? 'U' : 'AI'}
