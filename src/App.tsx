@@ -138,8 +138,38 @@ const PROJECT_TABS: Array<{ id: ProjectTabId; label: string; icon: React.Compone
 type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
-const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
-  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex w-[calc(100%-3rem)] max-w-xl">
+const BottomNav = ({
+  active,
+  onChange,
+  projectTab,
+  onProjectTabChange,
+}: {
+  active: TabId;
+  onChange: (id: TabId) => void;
+  projectTab: ProjectTabId;
+  onProjectTabChange: (id: ProjectTabId) => void;
+}) => (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex w-[calc(100%-3rem)] max-w-xl flex-col gap-2">
+    {active === 'projects' && (
+      <div className="flex w-full gap-1 p-1 bg-card/90 border border-border rounded-2xl backdrop-blur-xl shadow-2xl">
+        {PROJECT_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => onProjectTabChange(tab.id)}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-1.5 py-2 rounded-xl transition-all duration-300 text-[10px] font-bold uppercase tracking-wider',
+              projectTab === tab.id
+                ? 'bg-bg text-highlight shadow-sm border border-border'
+                : 'text-text-dim hover:text-accent',
+            )}
+          >
+            <tab.icon className={cn('size-3.5', projectTab === tab.id && 'text-primary')} />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+    )}
+
     <div className="flex w-full gap-1 p-1 bg-card/90 border border-border rounded-2xl backdrop-blur-xl shadow-2xl">
       {TABS.map(tab => (
         <button
@@ -285,30 +315,7 @@ function useScreenConfig(
         subtitle: 'Explorer, Git, Contexto e Decisões',
         element: <Projects embedded activeTab={projectTab} onTabChange={setProjectTab} hideTabBar />,
         onBack: goHome,
-        rightElement: (
-          <div className="flex items-center gap-1 rounded-xl border border-border bg-card/70 p-1">
-            {PROJECT_TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = projectTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setProjectTab(tab.id)}
-                  title={tab.label}
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
-                    isActive
-                      ? 'bg-bg text-highlight border border-border'
-                      : 'text-text-dim hover:text-accent hover:bg-card/50',
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        ),
+        rightElement: undefined,
       };
     case 'decisions':
       return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
@@ -394,7 +401,12 @@ function AppContent() {
                   </motion.div>
                 </AnimatePresence>
               </main>
-              <BottomNav active={activeTab} onChange={setActiveTab} />
+              <BottomNav
+                active={activeTab}
+                onChange={setActiveTab}
+                projectTab={projectTab}
+                onProjectTabChange={setProjectTab}
+              />
             </div>
           </div>
         </ToastProvider>
