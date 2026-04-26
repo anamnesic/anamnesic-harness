@@ -38,6 +38,17 @@ interface InstalledOpenVsxExtension {
     iconUrl?: string;
 }
 
+interface ExtensionDetails {
+    id: string;
+    namespace: string;
+    name: string;
+    displayName: string;
+    description: string;
+    version?: string;
+    verified?: boolean;
+    iconUrl?: string;
+}
+
 interface McpExtension {
     id: string;
     title: string;
@@ -95,6 +106,7 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         recommended: false,
         mcp: false,
     });
+    const [selectedMarketExtension, setSelectedMarketExtension] = useState<ExtensionDetails | null>(null);
     const [iconLoadError, setIconLoadError] = useState<Record<string, boolean>>({});
 
     const searchUrl = useMemo(() => {
@@ -191,12 +203,27 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         return null;
     }, [selectedExtension]);
 
+    const hostTabByExtensionId = useMemo(() => {
+        const map = new Map<string, HostTabId>();
+        for (const extension of installedRecords) {
+            const id = extension.id.toLowerCase();
+            if (id.includes('integration')) {
+                map.set(extension.id, 'integrations');
+                continue;
+            }
+            if (id.includes('terminal')) {
+                map.set(extension.id, 'terminal');
+            }
+        }
+        return map;
+    }, [installedRecords]);
+
     const selectedReadmeUrl = useMemo(() => {
-        if (!selectedExtension) {
+        if (!selectedMarketExtension) {
             return null;
         }
-        return `/api/v1/extensions/open-vsx/${selectedExtension.namespace}/${selectedExtension.name}/readme`;
-    }, [selectedExtension]);
+        return `/api/v1/extensions/open-vsx/${selectedMarketExtension.namespace}/${selectedMarketExtension.name}/readme`;
+    }, [selectedMarketExtension]);
 
     const {
         data: selectedReadmeData,
@@ -290,6 +317,34 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
     }
 
+    function openMarketDetails(extension: ExtensionDetails) {
+        setSelectedMarketExtension(extension);
+    }
+
+    function closeMarketDetails() {
+        setSelectedMarketExtension(null);
+    }
+
+    function handleTabClick(tab: SidebarTab) {
+        if (tab.id === 'market') {
+            setActiveTab('market');
+            return;
+        }
+
+        if (!tab.extensionId) {
+            setActiveTab(tab.id);
+            return;
+        }
+
+        const hostTab = hostTabByExtensionId.get(tab.extensionId);
+        if (hostTab) {
+            onNavigate(hostTab);
+            return;
+        }
+
+        setActiveTab(tab.id);
+    }
+
     return (
         <aside className="hidden xl:flex h-screen w-88 shrink-0 flex-col border-l border-border bg-card/30">
             <div className="border-b border-border/60 px-4 py-4">
@@ -304,7 +359,7 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
+                        onClick={() => handleTabClick(tab)}
                         title={tab.label}
                         className={cn(
                             'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
@@ -330,6 +385,94 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
             <div className="scrollbar-kairos flex-1 overflow-y-auto p-3">
                 {activeTab === 'market' ? (
                     <div className="space-y-3">
+                        {selectedMarketExtension ? (
+                            <div className="space-y-3">
+                                <div className="rounded-xl border border-border bg-bg/50 p-4">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Detalhes da extensao</p>
+                                    <div className="mt-2 flex items-start gap-3">
+                                        {selectedMarketExtension.iconUrl && !iconLoadError[`market:${selectedMarketExtension.id}`] ? (
+                                            <img
+                                                src={selectedMarketExtension.iconUrl}
+                                                alt={selectedMarketExtension.displayName}
+                                                className="size-10 rounded-lg border border-border/70 bg-card/60 object-cover"
+                                                onError={() => setIconLoadError((prev) => ({ ...prev, [`market:${selectedMarketExtension.id}`]: true }))}
+                                            />
+                                        ) : (
+                                            <div className="flex size-10 items-center justify-center rounded-lg border border-border/70 bg-card/60">
+                                                <Box className="size-5 text-primary" />
+                                            </div>
+                                        )}
+                                        <div className="min-w-0">
+                                            <h4 className="truncate text-lg font-black tracking-tight text-highlight">{selectedMarketExtension.displayName}</h4>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{selectedMarketExtension.namespace}.{selectedMarketExtension.name}</p>
+                                        </div>
+                                    </div>
+                                    <p className="mt-3 text-xs text-text-dim">{selectedMarketExtension.description}</p>
+
+                                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                                        {selectedMarketExtension.verified && (
+                                            <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-sky-300">
+                                                Verificada
+                                            </span>
+                                        )}
+                                        {selectedMarketExtension.version && (
+                                            <span className="rounded-full border border-border/80 bg-card/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-text-dim">
+                                                v{selectedMarketExtension.version}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                        <a
+                                            href={`https://open-vsx.org/extension/${selectedMarketExtension.namespace}/${selectedMarketExtension.name}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                        >
+                                            Open VSX
+                                            <ExternalLink className="size-3" />
+                                        </a>
+                                        {installedSet.has(selectedMarketExtension.id.toLowerCase()) ? (
+                                            <button
+                                                onClick={() => handleUninstall(selectedMarketExtension.id)}
+                                                disabled={busyExtensionId === selectedMarketExtension.id}
+                                                className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
+                                            >
+                                                {busyExtensionId === selectedMarketExtension.id ? 'Removendo...' : 'Remover'}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleInstall(selectedMarketExtension.namespace, selectedMarketExtension.name, selectedMarketExtension.id)}
+                                                disabled={busyExtensionId === selectedMarketExtension.id}
+                                                className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60 disabled:opacity-60"
+                                            >
+                                                {busyExtensionId === selectedMarketExtension.id ? 'Instalando...' : 'Instalar'}
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={closeMarketDetails}
+                                            className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/50 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-text-dim hover:border-accent/40 hover:text-accent"
+                                        >
+                                            Voltar ao market
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border border-border bg-bg/50 p-4">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">README da extensao</p>
+                                    {selectedReadmeLoading ? (
+                                        <p className="mt-2 text-xs text-text-dim">Carregando README...</p>
+                                    ) : selectedReadmeSnippet ? (
+                                        <pre className="scrollbar-kairos mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-border/70 bg-card/60 p-3 text-[11px] leading-relaxed text-text-dim">
+                                            {selectedReadmeSnippet}
+                                        </pre>
+                                    ) : (
+                                        <p className="mt-2 text-xs text-text-dim">README indisponivel para esta extensao.</p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <>
                         <div className="rounded-xl border border-border bg-bg/60 p-3">
                             <div className="flex items-center gap-2">
                                 <div className="relative min-w-0 flex-1">
@@ -369,7 +512,20 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                     ) : filteredInstalled.length === 0 ? (
                                         <p className="text-xs text-text-dim">Nenhuma extensao instalada encontrada para esta busca.</p>
                                     ) : filteredInstalled.map((extension) => (
-                                        <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
+                                        <article
+                                            key={extension.id}
+                                            onClick={() => openMarketDetails({
+                                                id: extension.id,
+                                                namespace: extension.namespace,
+                                                name: extension.name,
+                                                displayName: extension.displayName,
+                                                description: extension.description,
+                                                version: extension.version,
+                                                verified: extension.verified,
+                                                iconUrl: extension.iconUrl,
+                                            })}
+                                            className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
+                                        >
                                             <div className="flex items-start justify-between gap-2">
                                                 <div>
                                                     <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
@@ -391,7 +547,10 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                                     <ExternalLink className="size-3" />
                                                 </a>
                                                 <button
-                                                    onClick={() => handleUninstall(extension.id)}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        void handleUninstall(extension.id);
+                                                    }}
                                                     disabled={busyExtensionId === extension.id}
                                                     className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
                                                 >
@@ -420,7 +579,20 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                     ) : filteredRecommended.length === 0 ? (
                                         <p className="text-xs text-text-dim">Nenhuma recomendacao disponivel para esta busca.</p>
                                     ) : filteredRecommended.map((extension) => (
-                                        <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
+                                        <article
+                                            key={extension.id}
+                                            onClick={() => openMarketDetails({
+                                                id: extension.id,
+                                                namespace: extension.namespace,
+                                                name: extension.name,
+                                                displayName: extension.displayName,
+                                                description: extension.description,
+                                                version: extension.version,
+                                                verified: extension.verified,
+                                                iconUrl: extension.files?.icon,
+                                            })}
+                                            className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
+                                        >
                                             <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
                                             <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.namespace}</p>
                                             <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
@@ -435,7 +607,10 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                                     <ExternalLink className="size-3" />
                                                 </a>
                                                 <button
-                                                    onClick={() => handleInstall(extension.namespace, extension.name, extension.id)}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        void handleInstall(extension.namespace, extension.name, extension.id);
+                                                    }}
                                                     disabled={busyExtensionId === extension.id}
                                                     className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60 disabled:opacity-60"
                                                 >
@@ -464,7 +639,20 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                     ) : filteredMcp.length === 0 ? (
                                         <p className="text-xs text-text-dim">Nenhum conector MCP encontrado para esta busca.</p>
                                     ) : filteredMcp.map((extension) => (
-                                        <article key={extension.id} className="rounded-lg border border-border bg-card/40 p-3">
+                                        <article
+                                            key={extension.id}
+                                            onClick={() => openMarketDetails({
+                                                id: extension.id,
+                                                namespace: extension.namespace,
+                                                name: extension.name,
+                                                displayName: extension.displayName,
+                                                description: extension.description,
+                                                version: extension.version,
+                                                verified: extension.verified,
+                                                iconUrl: extension.files?.icon,
+                                            })}
+                                            className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
+                                        >
                                             <div className="flex items-center gap-2">
                                                 <ServerCog className="size-4 text-primary" />
                                                 <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
@@ -484,89 +672,48 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                 </div>
                             )}
                         </div>
+                            </>
+                        )}
                     </div>
                 ) : selectedExtension ? (
                     <div className="space-y-3">
                         <div className="rounded-xl border border-border bg-bg/50 p-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Interface da extensao</p>
-                            <div className="mt-2 flex items-start gap-3">
-                                {selectedExtension.iconUrl && !iconLoadError[selectedExtension.id] ? (
-                                    <img
-                                        src={selectedExtension.iconUrl}
-                                        alt={selectedExtension.displayName}
-                                        className="size-10 rounded-lg border border-border/70 bg-card/60 object-cover"
-                                        onError={() => setIconLoadError((prev) => ({ ...prev, [selectedExtension.id]: true }))}
-                                    />
-                                ) : (
-                                    <div className="flex size-10 items-center justify-center rounded-lg border border-border/70 bg-card/60">
-                                        <Box className="size-5 text-primary" />
-                                    </div>
-                                )}
-                                <div className="min-w-0">
-                                    <h4 className="truncate text-lg font-black tracking-tight text-highlight">{selectedExtension.displayName}</h4>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{selectedExtension.namespace}.{selectedExtension.name}</p>
-                                </div>
-                            </div>
-                            <p className="mt-3 text-xs text-text-dim">{selectedExtension.description}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Tela da extensao instalada</p>
+                            <h4 className="mt-2 text-sm font-black text-highlight">{selectedExtension.displayName}</h4>
+                            <p className="mt-2 text-xs text-text-dim">Use o card da extensao no Market para ver detalhes, README e acoes de instalacao/remocao.</p>
 
-                            <div className="mt-4 rounded-lg border border-border bg-card/70 p-3">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Status e metadados</p>
-                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
-                                        Ativa no Kairos
-                                    </span>
-                                    {selectedExtension.verified && (
-                                        <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-sky-300">
-                                            Verificada
-                                        </span>
-                                    )}
-                                    <span className="rounded-full border border-border/80 bg-card/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-text-dim">
-                                        v{selectedExtension.version}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                <a
-                                    href={`https://open-vsx.org/extension/${selectedExtension.namespace}/${selectedExtension.name}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                >
-                                    Open VSX
-                                    <ExternalLink className="size-3" />
-                                </a>
-                                <button
-                                    onClick={() => handleUninstall(selectedExtension.id)}
-                                    disabled={busyExtensionId === selectedExtension.id}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
-                                >
-                                    {busyExtensionId === selectedExtension.id ? 'Removendo...' : 'Remover'}
-                                </button>
-                            </div>
-
-                            {selectedHostTab && (
+                            {selectedHostTab ? (
                                 <button
                                     onClick={() => onNavigate(selectedHostTab)}
-                                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
+                                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
                                 >
                                     {selectedHostTab === 'terminal' ? <TerminalSquare className="size-4" /> : <PlugZap className="size-4" />}
-                                    Abrir interface relacionada
+                                    Abrir tela real da extensao
                                 </button>
-                            )}
-                        </div>
-
-                        <div className="rounded-xl border border-border bg-bg/50 p-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">README da extensao</p>
-                            {selectedReadmeLoading ? (
-                                <p className="mt-2 text-xs text-text-dim">Carregando README...</p>
-                            ) : selectedReadmeSnippet ? (
-                                <pre className="scrollbar-kairos mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-border/70 bg-card/60 p-3 text-[11px] leading-relaxed text-text-dim">
-                                    {selectedReadmeSnippet}
-                                </pre>
                             ) : (
-                                <p className="mt-2 text-xs text-text-dim">README indisponivel para esta extensao.</p>
+                                <p className="mt-3 rounded-lg border border-border/70 bg-card/60 p-3 text-xs text-text-dim">
+                                    Esta extensao nao possui tela dedicada mapeada no Kairos ainda.
+                                </p>
                             )}
+
+                            <button
+                                onClick={() => {
+                                    setActiveTab('market');
+                                    setSelectedMarketExtension({
+                                        id: selectedExtension.id,
+                                        namespace: selectedExtension.namespace,
+                                        name: selectedExtension.name,
+                                        displayName: selectedExtension.displayName,
+                                        description: selectedExtension.description,
+                                        version: selectedExtension.version,
+                                        verified: selectedExtension.verified,
+                                        iconUrl: selectedExtension.iconUrl,
+                                    });
+                                }}
+                                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                            >
+                                Ver detalhes no Market
+                            </button>
                         </div>
                     </div>
                 ) : (
