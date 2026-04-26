@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder } from 'lucide-react';
+import { Trash2, X, Pencil, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -68,6 +68,13 @@ interface RecentRepository {
     lastOpenedAt: string;
 }
 
+interface RepositoryTreeNode {
+    name: string;
+    path: string;
+    type: 'file' | 'folder';
+    children?: RepositoryTreeNode[];
+}
+
 const RECENT_REPOSITORIES_KEY = 'kairos-recent-repositories';
 
 export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: boolean; refreshToken?: number }) {
@@ -97,6 +104,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
     const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [editForm, setEditForm] = useState({ name: '', description: '', status: 'active' });
     const [recentRepositories, setRecentRepositories] = useState<RecentRepository[]>([]);
+    const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
     const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
         open: false,
         folderPath: '',
@@ -403,12 +411,119 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         return <FileText className="size-3.5 shrink-0 text-text-dim" />;
     }
 
-    function splitFilePath(filePath: string) {
-        const normalized = filePath.replace(/\\/g, '/');
-        const parts = normalized.split('/').filter(Boolean);
-        const name = parts[parts.length - 1] ?? normalized;
-        const dir = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
-        return { name, dir };
+    const repositoryTree = useMemo<RepositoryTreeNode[]>(() => {
+        const root = new Map<string, any>();
+        const files = insights?.files ?? [];
+
+        for (const filePath of files) {
+            const normalized = filePath.replace(/\\/g, '/');
+            const parts = normalized.split('/').filter(Boolean);
+            let cursor = root;
+            let parentPath = '';
+
+            for (let i = 0; i < parts.length; i += 1) {
+                const part = parts[i];
+                const currentPath = parentPath ? `${parentPath}/${part}` : part;
+                const isFile = i === parts.length - 1;
+                const existing = cursor.get(part);
+
+                if (!existing) {
+                    if (isFile) {
+                        cursor.set(part, {
+                            name: part,
+                            path: currentPath,
+                            type: 'file',
+                        });
+                    } else {
+                        const nextChildren = new Map<string, any>();
+                        cursor.set(part, {
+                            name: part,
+                            path: currentPath,
+                            type: 'folder',
+                            childrenMap: nextChildren,
+                        });
+                        cursor = nextChildren;
+                    }
+                } else if (existing.type === 'folder') {
+                    cursor = existing.childrenMap;
+                }
+
+                parentPath = currentPath;
+            }
+        }
+
+        const toNodes = (childrenMap: Map<string, any>): RepositoryTreeNode[] => {
+            const values = Array.from(childrenMap.values());
+            values.sort((a, b) => {
+                if (a.type !== b.type) {
+                    return a.type === 'folder' ? -1 : 1;
+                }
+                return a.name.localeCompare(b.name);
+            });
+
+            return values.map((node) => {
+                if (node.type === 'folder') {
+                    return {
+                        name: node.name,
+                        path: node.path,
+                        type: 'folder',
+                        children: toNodes(node.childrenMap),
+                    };
+                }
+
+                return {
+                    name: node.name,
+                    path: node.path,
+                    type: 'file',
+                };
+            });
+        };
+
+        return toNodes(root);
+    }, [insights?.files]);
+
+    function renderRepositoryTree(nodes: RepositoryTreeNode[], depth = 0): React.ReactNode {
+        return nodes.map((node) => {
+            if (node.type === 'folder') {
+                const isCollapsed = collapsedFolders[node.path] === true;
+
+                return (
+                    <div key={node.path}>
+                        <button
+                            onClick={() => setCollapsedFolders((prev) => ({ ...prev, [node.path]: !isCollapsed }))}
+                            className="flex w-full items-center gap-1 rounded px-2 py-1.5 text-left hover:bg-card/40"
+                            style={{ paddingLeft: `${8 + depth * 14}px` }}
+                            title={node.path}
+                        >
+                            {isCollapsed ? (
+                                <ChevronRight className="size-3 shrink-0 text-text-dim" />
+                            ) : (
+                                <ChevronDown className="size-3 shrink-0 text-text-dim" />
+                            )}
+                            {isCollapsed ? (
+                                <Folder className="size-3.5 shrink-0 text-amber-300" />
+                            ) : (
+                                <FolderOpen className="size-3.5 shrink-0 text-amber-300" />
+                            )}
+                            <span className="truncate text-xs text-highlight">{node.name}</span>
+                        </button>
+                        {!isCollapsed && node.children?.length ? renderRepositoryTree(node.children, depth + 1) : null}
+                    </div>
+                );
+            }
+
+            return (
+                <div
+                    key={node.path}
+                    className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-card/40"
+                    style={{ paddingLeft: `${26 + depth * 14}px` }}
+                    title={node.path}
+                >
+                    {getFileIcon(node.path)}
+                    <span className="truncate text-xs text-highlight">{node.name}</span>
+                </div>
+            );
+        });
     }
 
     const tabItems: Array<{
@@ -681,22 +796,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                         <p className="text-sm text-text-dim">Pasta sem repositório Git válido.</p>
                                     ) : insights?.files?.length ? (
                                         <div className="max-h-[68vh] space-y-0.5 overflow-y-auto pr-1">
-                                            {insights.files.map((filePath, index) => {
-                                                const { name, dir } = splitFilePath(filePath);
-                                                return (
-                                                    <div
-                                                        key={`${filePath}-${index}`}
-                                                        className="group flex items-center gap-2 rounded px-2 py-1.5 hover:bg-card/40"
-                                                        title={filePath}
-                                                    >
-                                                        {getFileIcon(filePath)}
-                                                        <span className="truncate text-xs text-highlight">{name}</span>
-                                                        {dir && (
-                                                            <span className="truncate text-[10px] text-text-dim/80">{dir}</span>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
+                                            {renderRepositoryTree(repositoryTree)}
                                         </div>
                                     ) : (
                                         <p className="text-sm text-text-dim">Nenhum arquivo encontrado.</p>

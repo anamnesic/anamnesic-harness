@@ -7,7 +7,7 @@ import { getDb } from '@/app/api/_lib/db';
 import { err, ok } from '@/app/api/_lib/response';
 
 const execFileAsync = promisify(execFile);
-const MAX_FILES = 250;
+const MAX_FILES = 5000;
 const MAX_COMMITS = 30;
 
 type GitChange = {
@@ -85,17 +85,21 @@ async function collectInsights(localPath: string): Promise<RepositoryInsights> {
         ]),
     ]);
 
+    const changes = parsePorcelain(porcelain);
     const allFiles = Array.from(
         new Set([
             ...tracked.split(/\r?\n/).filter(Boolean),
             ...untracked.split(/\r?\n/).filter(Boolean),
+            ...changes.map((change) => change.path).filter(Boolean),
         ]),
-    ).slice(0, MAX_FILES);
+    )
+        .sort((a, b) => a.localeCompare(b))
+        .slice(0, MAX_FILES);
 
     return {
         branch,
         files: allFiles,
-        changes: parsePorcelain(porcelain),
+        changes,
         graphLines: graph ? graph.split(/\r?\n/).filter(Boolean) : [],
         isGitRepo: true,
     };
