@@ -1,22 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Blocks, TerminalSquare, PlugZap, ExternalLink, Search, ServerCog, Store, Bot, ChevronDown } from 'lucide-react';
+import { Blocks, TerminalSquare, PlugZap, ExternalLink, Search, ServerCog, Store, Bot, ChevronDown, Box } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import { apiFetch, useApi } from '../lib/api';
 import { useToast } from './Toast';
 
 type HostTabId = 'terminal' | 'integrations';
-
-interface MarketplaceExtension {
-    id: string;
-    title: string;
-    publisher: string;
-    description: string;
-    recommended?: boolean;
-    openVsxUrl: string;
-}
 
 interface OpenVsxExtension {
     id: string;
@@ -47,80 +38,12 @@ interface InstalledOpenVsxExtension {
     iconUrl?: string;
 }
 
-interface OpenVsxTabExtension {
-    id: string;
-    title: string;
-    description: string;
-    hostTab: HostTabId;
-    icon: LucideIcon;
-}
-
 interface McpExtension {
     id: string;
     title: string;
     description: string;
     openVsxUrl: string;
 }
-
-const MARKET_EXTENSIONS: MarketplaceExtension[] = [
-    {
-        id: 'eclipse-cdt.cdt-gdb-vscode',
-        title: 'C/C++ GDB Debug',
-        publisher: 'Eclipse CDT',
-        description: 'Depuração para projetos C/C++ com integração GDB em ambientes compatíveis.',
-        recommended: true,
-        openVsxUrl: 'https://open-vsx.org/extension/eclipse-cdt/cdt-gdb-vscode',
-    },
-    {
-        id: 'redhat.vscode-yaml',
-        title: 'YAML',
-        publisher: 'Red Hat',
-        description: 'Validação e autocomplete YAML com suporte a schemas.',
-        recommended: true,
-        openVsxUrl: 'https://open-vsx.org/extension/redhat/vscode-yaml',
-    },
-    {
-        id: 'ms-python.python',
-        title: 'Python',
-        publisher: 'Microsoft',
-        description: 'Suporte completo para Python com linting, debugging e ambientes virtuais.',
-        recommended: true,
-        openVsxUrl: 'https://open-vsx.org/extension/ms-python/python',
-    },
-    {
-        id: 'esbenp.prettier-vscode',
-        title: 'Prettier',
-        publisher: 'Prettier',
-        description: 'Formatação opinativa para JS/TS/JSON/Markdown e outros formatos.',
-        recommended: true,
-        openVsxUrl: 'https://open-vsx.org/extension/esbenp/prettier-vscode',
-    },
-    {
-        id: 'dbaeumer.vscode-eslint',
-        title: 'ESLint',
-        publisher: 'Dirk Baeumer',
-        description: 'Análise estática JavaScript/TypeScript com correções rápidas.',
-        recommended: true,
-        openVsxUrl: 'https://open-vsx.org/extension/dbaeumer/vscode-eslint',
-    },
-];
-
-const OPEN_VSX_TAB_EXTENSIONS: OpenVsxTabExtension[] = [
-    {
-        id: 'kairos.integrations',
-        title: 'Kairos Integrations',
-        description: 'Integração Open VSX para configurar e operar conectores do Kairos.',
-        hostTab: 'integrations',
-        icon: PlugZap,
-    },
-    {
-        id: 'kairos.terminal-tools',
-        title: 'Kairos Terminal Tools',
-        description: 'Extensão Open VSX do Kairos para fluxo de terminal integrado.',
-        hostTab: 'terminal',
-        icon: Bot,
-    },
-];
 
 const MCP_EXTENSIONS: McpExtension[] = [
     {
@@ -151,8 +74,8 @@ function matchesSearchTerm(text: string, query: string): boolean {
 }
 
 type SidebarTab =
-    | { id: 'market'; label: 'Market'; icon: LucideIcon; extensionId?: undefined }
-    | { id: `ext:${string}`; label: string; icon: LucideIcon; extensionId: string };
+    | { id: 'market'; label: 'Market'; icon: LucideIcon; extensionId?: undefined; iconUrl?: undefined }
+    | { id: `ext:${string}`; label: string; icon: LucideIcon; extensionId: string; iconUrl?: string };
 
 function getInitialTab(tabs: SidebarTab[]): SidebarTab['id'] {
     return tabs[0]?.id ?? 'market';
@@ -172,6 +95,7 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         recommended: false,
         mcp: false,
     });
+    const [iconLoadError, setIconLoadError] = useState<Record<string, boolean>>({});
 
     const searchUrl = useMemo(() => {
         const params = new URLSearchParams({
@@ -222,16 +146,17 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
     );
 
     const installedWithTab = useMemo(
-        () => OPEN_VSX_TAB_EXTENSIONS.filter((extension) => installedSet.has(extension.id)),
-        [installedSet],
+        () => installedRecords.filter((extension) => installedSet.has(extension.id.toLowerCase())),
+        [installedRecords, installedSet],
     );
 
     const tabs = useMemo<SidebarTab[]>(() => {
         const extensionTabs: SidebarTab[] = installedWithTab.map((extension) => ({
             id: `ext:${extension.id}`,
-            label: extension.title,
-            icon: extension.icon,
+            label: extension.displayName,
+            icon: Box,
             extensionId: extension.id,
+            iconUrl: extension.iconUrl,
         }));
         return [{ id: 'market', label: 'Market', icon: Store }, ...extensionTabs];
     }, [installedWithTab]);
@@ -249,8 +174,43 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
             return null;
         }
         const extensionId = activeTab.replace('ext:', '');
-        return OPEN_VSX_TAB_EXTENSIONS.find((extension) => extension.id === extensionId) ?? null;
-    }, [activeTab]);
+        return installedRecords.find((extension) => extension.id === extensionId) ?? null;
+    }, [activeTab, installedRecords]);
+
+    const selectedHostTab = useMemo<HostTabId | null>(() => {
+        if (!selectedExtension) {
+            return null;
+        }
+        const id = selectedExtension.id.toLowerCase();
+        if (id.includes('integration')) {
+            return 'integrations';
+        }
+        if (id.includes('terminal')) {
+            return 'terminal';
+        }
+        return null;
+    }, [selectedExtension]);
+
+    const selectedReadmeUrl = useMemo(() => {
+        if (!selectedExtension) {
+            return null;
+        }
+        return `/api/v1/extensions/open-vsx/${selectedExtension.namespace}/${selectedExtension.name}/readme`;
+    }, [selectedExtension]);
+
+    const {
+        data: selectedReadmeData,
+        loading: selectedReadmeLoading,
+    } = useApi<{ data?: { content?: string } } | null>(selectedReadmeUrl);
+
+    const selectedReadmeSnippet = useMemo(() => {
+        const content = selectedReadmeData?.data?.content ?? '';
+        if (!content.trim()) {
+            return '';
+        }
+        const normalized = content.replace(/\r/g, '').trim();
+        return normalized.length > 1400 ? `${normalized.slice(0, 1400)}\n\n[...]` : normalized;
+    }, [selectedReadmeData]);
 
     const openVsxSearchUrl = useMemo(() => {
         const query = encodeURIComponent(marketQuery.trim());
@@ -353,7 +313,16 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                 : 'border-border bg-bg/50 text-text-dim hover:border-accent/50 hover:text-accent',
                         )}
                     >
-                        <tab.icon className="size-4" />
+                        {tab.iconUrl && !iconLoadError[tab.id] ? (
+                            <img
+                                src={tab.iconUrl}
+                                alt={tab.label}
+                                className="size-4 rounded-sm object-cover"
+                                onError={() => setIconLoadError((prev) => ({ ...prev, [tab.id]: true }))}
+                            />
+                        ) : (
+                            <tab.icon className="size-4" />
+                        )}
                     </button>
                 ))}
             </div>
@@ -519,22 +488,85 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                 ) : selectedExtension ? (
                     <div className="space-y-3">
                         <div className="rounded-xl border border-border bg-bg/50 p-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Aba da extensao instalada</p>
-                            <h4 className="mt-2 text-lg font-black tracking-tight text-highlight">{selectedExtension.title}</h4>
-                            <p className="mt-2 text-xs text-text-dim">{selectedExtension.description}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Interface da extensao</p>
+                            <div className="mt-2 flex items-start gap-3">
+                                {selectedExtension.iconUrl && !iconLoadError[selectedExtension.id] ? (
+                                    <img
+                                        src={selectedExtension.iconUrl}
+                                        alt={selectedExtension.displayName}
+                                        className="size-10 rounded-lg border border-border/70 bg-card/60 object-cover"
+                                        onError={() => setIconLoadError((prev) => ({ ...prev, [selectedExtension.id]: true }))}
+                                    />
+                                ) : (
+                                    <div className="flex size-10 items-center justify-center rounded-lg border border-border/70 bg-card/60">
+                                        <Box className="size-5 text-primary" />
+                                    </div>
+                                )}
+                                <div className="min-w-0">
+                                    <h4 className="truncate text-lg font-black tracking-tight text-highlight">{selectedExtension.displayName}</h4>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{selectedExtension.namespace}.{selectedExtension.name}</p>
+                                </div>
+                            </div>
+                            <p className="mt-3 text-xs text-text-dim">{selectedExtension.description}</p>
 
                             <div className="mt-4 rounded-lg border border-border bg-card/70 p-3">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Status</p>
-                                <p className="mt-1 text-xs text-accent">Instalada e pronta para uso no painel correspondente.</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Status e metadados</p>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                                        Ativa no Kairos
+                                    </span>
+                                    {selectedExtension.verified && (
+                                        <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-sky-300">
+                                            Verificada
+                                        </span>
+                                    )}
+                                    <span className="rounded-full border border-border/80 bg-card/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-text-dim">
+                                        v{selectedExtension.version}
+                                    </span>
+                                </div>
                             </div>
 
-                            <button
-                                onClick={() => onNavigate(selectedExtension.hostTab)}
-                                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
-                            >
-                                {selectedExtension.hostTab === 'terminal' ? <TerminalSquare className="size-4" /> : <PlugZap className="size-4" />}
-                                Abrir aba no painel
-                            </button>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                                <a
+                                    href={`https://open-vsx.org/extension/${selectedExtension.namespace}/${selectedExtension.name}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                >
+                                    Open VSX
+                                    <ExternalLink className="size-3" />
+                                </a>
+                                <button
+                                    onClick={() => handleUninstall(selectedExtension.id)}
+                                    disabled={busyExtensionId === selectedExtension.id}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
+                                >
+                                    {busyExtensionId === selectedExtension.id ? 'Removendo...' : 'Remover'}
+                                </button>
+                            </div>
+
+                            {selectedHostTab && (
+                                <button
+                                    onClick={() => onNavigate(selectedHostTab)}
+                                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
+                                >
+                                    {selectedHostTab === 'terminal' ? <TerminalSquare className="size-4" /> : <PlugZap className="size-4" />}
+                                    Abrir interface relacionada
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="rounded-xl border border-border bg-bg/50 p-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">README da extensao</p>
+                            {selectedReadmeLoading ? (
+                                <p className="mt-2 text-xs text-text-dim">Carregando README...</p>
+                            ) : selectedReadmeSnippet ? (
+                                <pre className="scrollbar-kairos mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-border/70 bg-card/60 p-3 text-[11px] leading-relaxed text-text-dim">
+                                    {selectedReadmeSnippet}
+                                </pre>
+                            ) : (
+                                <p className="mt-2 text-xs text-text-dim">README indisponivel para esta extensao.</p>
+                            )}
                         </div>
                     </div>
                 ) : (
