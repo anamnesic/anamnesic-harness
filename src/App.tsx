@@ -68,8 +68,8 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
 }) => {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg/80 px-3 py-3 backdrop-blur-xl text-highlight sm:px-6 sm:py-5">
-      <div className="flex items-center justify-between">
-        <div className="flex min-w-0 items-center gap-4">
+      <div className="flex items-center gap-3">
+        <div className="flex min-w-0 shrink-0 items-center gap-4">
           {onBack ? (
             <button
               onClick={onBack}
@@ -105,6 +105,25 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
             )}
           </div>
         </div>
+        <div className="mx-auto min-w-0 flex-1 overflow-x-auto px-1">
+          <div className="mx-auto flex w-max items-center gap-1 rounded-xl border border-border bg-card/60 p-1">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                  activeTab === tab.id
+                    ? 'bg-bg text-highlight border border-border'
+                    : 'text-text-dim hover:text-accent hover:bg-card/60',
+                )}
+              >
+                <tab.icon className={cn('size-3.5', activeTab === tab.id && 'text-primary')} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           <RepositorySelector />
           {rightElement ?? (
@@ -116,25 +135,6 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
               </span>
             </button>
           )}
-        </div>
-      </div>
-      <div className="mt-3 overflow-x-auto">
-        <div className="flex min-w-max items-center gap-1 rounded-xl border border-border bg-card/60 p-1">
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={cn(
-                'flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors',
-                activeTab === tab.id
-                  ? 'bg-bg text-highlight border border-border'
-                  : 'text-text-dim hover:text-accent hover:bg-card/60',
-              )}
-            >
-              <tab.icon className={cn('size-3.5', activeTab === tab.id && 'text-primary')} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
         </div>
       </div>
     </header>
