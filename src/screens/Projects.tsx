@@ -51,6 +51,8 @@ export function Projects() {
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'context' | 'decisions'>('context');
     const [showBrowser, setShowBrowser] = useState(false);
+    const [browserMode, setBrowserMode] = useState<'import-repository' | 'attach-folder'>('import-repository');
+    const [attachTargetProjectId, setAttachTargetProjectId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -115,6 +117,52 @@ export function Projects() {
         } finally {
             setSubmitting(false);
         }
+    }
+
+    async function handleAttachFolderToProject(projectId: string, folderPath: string) {
+        const project = projects.find((item) => item.id === projectId);
+        if (!project) {
+            toast('Repositório não encontrado', 'error');
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const currentMetadata = project.metadata ?? {};
+            const additionalPaths = Array.isArray(currentMetadata.additionalPaths)
+                ? currentMetadata.additionalPaths.filter((item: unknown): item is string => typeof item === 'string')
+                : [];
+
+            const nextPaths = Array.from(new Set([...additionalPaths, folderPath]));
+            const nextMetadata = {
+                ...currentMetadata,
+                additionalPaths: nextPaths,
+            };
+
+            await apiFetch(`/api/v1/projects/${projectId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ metadata: nextMetadata }),
+            });
+
+            toast('Pasta adicionada ao repositório', 'success');
+            refetch();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao adicionar pasta ao repositório', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleBrowserSelection(path: string) {
+        setShowBrowser(false);
+        if (browserMode === 'attach-folder' && attachTargetProjectId) {
+            await handleAttachFolderToProject(attachTargetProjectId, path);
+            setAttachTargetProjectId(null);
+            setBrowserMode('import-repository');
+            return;
+        }
+
+        await handleFolderSelected(path);
     }
 
     async function handleOpenAsWorkspace() {
@@ -206,9 +254,23 @@ export function Projects() {
                     Voltar para Repositórios
                 </button>
                 <div className="bento-card space-y-2 mb-2">
-                    <div className="flex items-center gap-3">
-                        <span className="font-bold text-accent text-lg">{selectedProject.name}</span>
-                        <StatusBadge status={selectedProject.status} />
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <span className="font-bold text-accent text-lg">{selectedProject.name}</span>
+                            <StatusBadge status={selectedProject.status} />
+                        </div>
+                        <button
+                            onClick={() => {
+                                setAttachTargetProjectId(selectedProject.id);
+                                setBrowserMode('attach-folder');
+                                setShowBrowser(true);
+                            }}
+                            disabled={submitting}
+                            className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
+                        >
+                            <FolderOpen className="size-3.5" />
+                            {submitting ? 'Adicionando…' : 'Adicionar pasta'}
+                        </button>
                     </div>
                     {selectedProject.description && (
                         <p className="text-sm text-text-dim leading-relaxed">{selectedProject.description}</p>
@@ -217,6 +279,17 @@ export function Projects() {
                         <div className="flex items-center gap-2 text-xs text-text-dim font-mono">
                             <FolderGit2 className="size-3.5 text-primary shrink-0" />
                             <span className="truncate">{selectedProject.metadata.localPath}</span>
+                        </div>
+                    )}
+                    {Array.isArray(selectedProject.metadata?.additionalPaths) && selectedProject.metadata.additionalPaths.length > 0 && (
+                        <div className="space-y-1">
+                            <p className="label-caps">Pastas adicionais</p>
+                            {selectedProject.metadata.additionalPaths.map((folderPath: string, index: number) => (
+                                <div key={`${folderPath}-${index}`} className="flex items-center gap-2 text-xs text-text-dim font-mono">
+                                    <FolderOpen className="size-3.5 text-primary shrink-0" />
+                                    <span className="truncate">{folderPath}</span>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -275,7 +348,11 @@ export function Projects() {
             <div className="mb-8 flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Repositórios</h2>
                 <button
-                    onClick={() => setShowBrowser(true)}
+                    onClick={() => {
+                        setAttachTargetProjectId(null);
+                        setBrowserMode('import-repository');
+                        setShowBrowser(true);
+                    }}
                     disabled={submitting}
                     className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
                 >
@@ -493,7 +570,7 @@ export function Projects() {
                 {showBrowser && (
                     <FolderBrowser
                         onClose={() => setShowBrowser(false)}
-                        onSelect={handleFolderSelected}
+                        onSelect={handleBrowserSelection}
                     />
                 )}
             </AnimatePresence>
