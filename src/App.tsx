@@ -111,6 +111,28 @@ const TABS = [
 type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
+const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex w-[calc(100%-3rem)] max-w-xl">
+    <div className="flex w-full gap-1 p-1 bg-card/90 border border-border rounded-2xl backdrop-blur-xl shadow-2xl">
+      {TABS.map(tab => (
+        <button
+          key={tab.id}
+          onClick={() => onChange(tab.id)}
+          className={cn(
+            'flex flex-1 flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all duration-300',
+            active === tab.id
+              ? 'bg-bg text-highlight shadow-sm border border-border'
+              : 'text-text-dim hover:text-accent',
+          )}
+        >
+          <tab.icon className={cn('size-5', active === tab.id && 'text-primary')} />
+          <span className="text-[9px] font-bold tracking-widest uppercase">{tab.label}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
 const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
   <aside className="w-64 border-r border-border bg-bg/50 flex flex-col h-screen sticky top-0 overflow-hidden">
     <div className="p-4 border-b border-border/50">
@@ -293,6 +315,7 @@ function AppContent() {
                   </motion.div>
                 </AnimatePresence>
               </main>
+              <BottomNav active={activeTab} onChange={setActiveTab} />
             </div>
 
             {/* Right Sidebar - Chat */}
