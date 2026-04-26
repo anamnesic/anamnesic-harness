@@ -373,6 +373,16 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                 </button>
             </div>
 
+            {repository && (
+                <div className="bento-card mb-6 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                        <p className="label-caps mb-1">Contexto ativo</p>
+                        <p className="text-sm font-semibold text-accent truncate">{repository.name}</p>
+                    </div>
+                    <StatusBadge status={projects.find((item) => item.id === repository.id)?.status} />
+                </div>
+            )}
+
             <div className="bento-card mb-6">
                 <p className="label-caps mb-3">Recentes</p>
                 {recentItems.length > 0 ? (
