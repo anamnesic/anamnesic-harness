@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Terminal, Trash2, Square, RotateCw, Circle, Maximize2, Minimize2 } from 'lucide-react';
+import { Trash2, Square, RotateCw, Circle, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 
@@ -51,9 +51,16 @@ const INITIAL: TabStateMap = {
 
 interface TerminalPanelProps {
     onMaximizeChange?: (isMaximized: boolean) => void;
+    onHeaderStateChange?: (state: {
+        repoPath: string;
+        isMaximized: boolean;
+        onToggleMaximize: () => void;
+        onRestartAll: () => void;
+        onClearAll: () => void;
+    }) => void;
 }
 
-export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
+export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: TerminalPanelProps) {
     const { repository } = useRepository();
     const [isMaximized, setIsMaximized] = useState(false);
     const [activeTab, setActiveTab] = useState<CliTab>('claude');
@@ -198,6 +205,28 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
         onMaximizeChange?.(isMaximized);
     }, [isMaximized, onMaximizeChange]);
 
+    useEffect(() => {
+        onHeaderStateChange?.({
+            repoPath,
+            isMaximized,
+            onToggleMaximize: () => setIsMaximized(prev => !prev),
+            onRestartAll: () => {
+                for (const tab of CLI_TABS) {
+                    void killSession(tab.id).then(() => connect(tab.id));
+                }
+            },
+            onClearAll: () => {
+                setTabState(prev => ({
+                    ...prev,
+                    claude: { ...prev.claude, output: '' },
+                    gemini: { ...prev.gemini, output: '' },
+                    copilot: { ...prev.copilot, output: '' },
+                    codex: { ...prev.codex, output: '' },
+                }));
+            },
+        });
+    }, [repoPath, isMaximized, killSession, connect, onHeaderStateChange]);
+
     const ensureTerminal = useCallback(async (tab: CliTab) => {
         const host = hostRefs.current[tab];
         if (!host || xtermRefs.current[tab]) return;
@@ -306,53 +335,6 @@ export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
 
     return (
         <aside className={asideClass}>
-            {/* Header */}
-            <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
-                <Terminal className="size-4 text-primary shrink-0" />
-                <span className="text-xs font-black uppercase tracking-widest text-text-dim">Terminal</span>
-                <span className="text-[9px] text-text-dim/70">terminal real PTY</span>
-                {repoPath && (
-                    <span className="ml-2 max-w-60 truncate font-mono text-[9px] text-text-dim" title={repoPath}>
-                        {repoPath}
-                    </span>
-                )}
-                <div className="ml-auto flex items-center gap-2">
-                    <button
-                        onClick={() => setIsMaximized(prev => !prev)}
-                        title={isMaximized ? 'Restaurar tamanho' : 'Maximizar terminal'}
-                        className="text-text-dim transition-colors hover:text-accent"
-                    >
-                        {isMaximized ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
-                    </button>
-                    <button
-                        onClick={() => {
-                            for (const tab of CLI_TABS) {
-                                void killSession(tab.id).then(() => connect(tab.id));
-                            }
-                        }}
-                        title="Reiniciar todas as sessões"
-                        className="text-text-dim transition-colors hover:text-accent"
-                    >
-                        <RotateCw className="size-3.5" />
-                    </button>
-                    <button
-                        onClick={() => {
-                            setTabState(prev => ({
-                                ...prev,
-                                claude: { ...prev.claude, output: '' },
-                                gemini: { ...prev.gemini, output: '' },
-                                copilot: { ...prev.copilot, output: '' },
-                                codex: { ...prev.codex, output: '' },
-                            }));
-                        }}
-                        title="Limpar saídas"
-                        className="text-text-dim transition-colors hover:text-accent"
-                    >
-                        <Trash2 className="size-3.5" />
-                    </button>
-                </div>
-            </div>
-
             {isMaximized ? (
                 <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-px bg-border">
                     {CLI_TABS.map(tab => {

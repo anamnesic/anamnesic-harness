@@ -13,6 +13,10 @@ import {
   Bot,
   Lightbulb,
   TrendingUp,
+  Trash2,
+  RotateCw,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -39,6 +43,14 @@ import { Login } from './screens/Login';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
 import { TerminalPanel } from './screens/TerminalPanel';
+
+interface TerminalHeaderState {
+  repoPath: string;
+  isMaximized: boolean;
+  onToggleMaximize: () => void;
+  onRestartAll: () => void;
+  onClearAll: () => void;
+}
 
 const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   title: string;
@@ -73,8 +85,15 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
             />
           )}
           <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
-          {subtitle && activeTab === 'dashboard' && (
-            <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mt-1.5">{subtitle}</p>
+          {subtitle && (
+            <p className={cn(
+              'mt-1.5 text-text-dim',
+              activeTab === 'dashboard'
+                ? 'text-[10px] font-bold uppercase tracking-[0.2em]'
+                : 'text-xs'
+            )}>
+              {subtitle}
+            </p>
           )}
         </div>
       </div>
@@ -156,7 +175,13 @@ const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
 );
 
 
-function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabId) => void) {
+function useScreenConfig(
+  active: TabId,
+  goHome: () => void,
+  setActive: (id: TabId) => void,
+  terminalHeaderState: TerminalHeaderState | null,
+  setTerminalHeaderState: (state: TerminalHeaderState | null) => void,
+) {
   switch (active) {
     case 'dashboard':
       return {
@@ -205,10 +230,36 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'terminal':
       return {
         title: 'Terminal',
-        subtitle: 'Sessões de CLI',
-        element: <TerminalPanel />,
+        subtitle: terminalHeaderState?.repoPath
+          ? `terminal real PTY · ${terminalHeaderState.repoPath}`
+          : 'terminal real PTY',
+        element: <TerminalPanel onHeaderStateChange={setTerminalHeaderState} />,
         onBack: goHome,
-        rightElement: undefined,
+        rightElement: terminalHeaderState ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={terminalHeaderState.onToggleMaximize}
+              title={terminalHeaderState.isMaximized ? 'Restaurar tamanho' : 'Maximizar terminal'}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
+            >
+              {terminalHeaderState.isMaximized ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </button>
+            <button
+              onClick={terminalHeaderState.onRestartAll}
+              title="Reiniciar todas as sessões"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
+            >
+              <RotateCw className="size-4" />
+            </button>
+            <button
+              onClick={terminalHeaderState.onClearAll}
+              title="Limpar saídas"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        ) : undefined,
       };
     case 'tasks':
       return { title: 'Tarefas', subtitle: 'Gerenciamento de tarefas', element: <Tasks />, onBack: goHome, rightElement: undefined };
@@ -246,8 +297,9 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
-  const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'), setActiveTab);
+  const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'), setActiveTab, terminalHeaderState, setTerminalHeaderState);
 
   if (isLoading) {
     return (
