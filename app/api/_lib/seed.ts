@@ -11,19 +11,21 @@ export async function seedDefaultData(db: DataSource): Promise<void> {
 
   // Check if system user exists
   let systemUser = await userRepo.findOne({ where: { email: 'system@kairos.local' } });
+  const correctPasswordHash = '051536f7eed9dd431a03e55acebd304a62c28b8480c94a5eee8e903bfad3e3cc';
   
   if (!systemUser) {
-    // SHA-256 for 'kairos2026'
-    const passwordHash = '4b1d624b7a19f20e40562e879a61761e3895e638b9903b41d063715c0e7d56e7';
-    
     systemUser = userRepo.create({
       email: 'system@kairos.local',
-      passwordHash,
+      passwordHash: correctPasswordHash,
       fullName: 'System',
       status: 'active',
     });
     systemUser = await userRepo.save(systemUser);
     console.log('Created system user');
+  } else if (systemUser.passwordHash !== correctPasswordHash) {
+    systemUser.passwordHash = correctPasswordHash;
+    await userRepo.save(systemUser);
+    console.log('Updated system user password hash');
   }
 
   // Check if default workspace exists

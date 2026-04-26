@@ -1,10 +1,7 @@
 import type { DataSource } from 'typeorm';
 
 let db: DataSource | null = null;
-let observersInitialized = false;
-let workflowsInitialized = false;
-let retentionInitialized = false;
-let syncInitialized = false;
+let systemBootstrapped = false;
 
 export async function getDb(): Promise<DataSource> {
     if (db && db.isInitialized) return db;
@@ -13,32 +10,35 @@ export async function getDb(): Promise<DataSource> {
     await import('reflect-metadata');
     const { getDatabase } = await import('@/src/core/database');
     db = await getDatabase();
-    
-    // Initialize observers on first DB connection
-    if (!observersInitialized) {
-        await initializeObservers(db);
-        observersInitialized = true;
-    }
-    
-    // Initialize workflow triggers on first DB connection
-    if (!workflowsInitialized) {
-        await initializeWorkflowTriggers(db);
-        workflowsInitialized = true;
-    }
 
-    // Initialize retention policy on first DB connection
-    if (!retentionInitialized) {
-        await initializeRetentionPolicy(db);
-        retentionInitialized = true;
-    }
-
-    // Initialize auto-sync on first DB connection
-    if (!syncInitialized) {
-        await initializeSync(db);
-        syncInitialized = true;
-    }
+    // Seed default data only
+    const { seedDefaultData } = await import('./seed');
+    await seedDefaultData(db);
     
     return db;
+}
+
+/**
+ * Bootstraps system services (observers, sync, workflows, retention).
+ * Should be called once after user authentication.
+ */
+export async function bootstrapSystem(database: DataSource): Promise<void> {
+    if (systemBootstrapped) return;
+
+    console.log('Bootstrapping system services...');
+    
+    try {
+        await initializeObservers(database);
+        await initializeWorkflowTriggers(database);
+        await initializeRetentionPolicy(database);
+        await initializeSync(database);
+        
+        systemBootstrapped = true;
+        console.log('System services bootstrapped successfully');
+    } catch (error) {
+        console.error('System bootstrap failed:', error);
+        // Don't set systemBootstrapped to true so we can retry
+    }
 }
 
 async function initializeSync(database: DataSource): Promise<void> {

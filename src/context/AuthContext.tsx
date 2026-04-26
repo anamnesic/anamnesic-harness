@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiFetch } from '../lib/api';
 
 interface User {
   id: string;
@@ -32,15 +33,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
       setToken(storedToken);
+      // Trigger bootstrap for already logged in users
+      bootstrapSystem();
     }
     setIsLoading(false);
   }, []);
+
+  const bootstrapSystem = async () => {
+    try {
+      await apiFetch('/api/v1/system/bootstrap', { method: 'POST' });
+      console.log('System bootstrap triggered');
+    } catch (error) {
+      console.error('Failed to trigger system bootstrap:', error);
+    }
+  };
 
   const login = (user: User, token: string) => {
     setUser(user);
     setToken(token);
     localStorage.setItem('kairos-user', JSON.stringify(user));
     localStorage.setItem('kairos-token', token);
+    // Trigger bootstrap after login
+    bootstrapSystem();
   };
 
   const logout = () => {
