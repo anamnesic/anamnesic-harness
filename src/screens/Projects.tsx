@@ -614,9 +614,9 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     animate={{ opacity: 1, x: 0 }}
                     className={embedded ? 'w-full' : 'flex-1 w-full max-w-6xl mx-auto p-3 pb-32 sm:p-6'}
                 >
-                    <div className="grid gap-3 md:grid-cols-[4rem_1fr] md:gap-4">
-                        <aside className="bento-card h-fit p-2 md:sticky md:top-4">
-                            <div className="flex flex-row gap-2 overflow-x-auto md:flex-col md:overflow-visible">
+                    <div className="space-y-3">
+                        <aside className="bento-card p-1.5">
+                            <div className="flex items-center gap-1 overflow-x-auto">
                                 {tabItems.map((tab) => {
                                     const Icon = tab.icon;
                                     const isActive = activeTab === tab.id;
@@ -627,7 +627,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                             aria-label={tab.label}
                                             onClick={() => setActiveTab(tab.id)}
                                             className={cn(
-                                                'relative rounded-lg p-2.5 transition-colors',
+                                                'relative rounded-md p-2 transition-colors',
                                                 isActive
                                                     ? 'text-accent bg-card/70'
                                                     : 'text-text-dim hover:text-highlight hover:bg-card/40',
@@ -637,7 +637,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                                             {isActive && (
                                                 <motion.div
                                                     layoutId="activeTab"
-                                                    className="absolute -bottom-1 left-1 right-1 h-0.5 bg-primary md:-right-1 md:bottom-1 md:top-1 md:left-auto md:h-auto md:w-0.5"
+                                                    className="absolute -bottom-1 left-1 right-1 h-0.5 bg-primary"
                                                 />
                                             )}
                                         </button>
