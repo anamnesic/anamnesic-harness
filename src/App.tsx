@@ -238,6 +238,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [terminalMaximized, setTerminalMaximized] = useState(false);
   const { isAuthenticated, isLoading } = useAuth();
   const config = useScreenConfig(activeTab, () => setActiveTab('dashboard'), setActiveTab);
 
@@ -265,7 +266,7 @@ function AppContent() {
             </aside>
 
             {/* Main Content */}
-            <div className="flex h-screen flex-1 flex-col overflow-hidden">
+            <div className={cn('flex h-screen flex-col overflow-hidden', terminalMaximized ? 'flex-1' : 'flex-[2]')}>
               <Header
                 title={config.title}
                 subtitle={config.subtitle}
@@ -291,7 +292,7 @@ function AppContent() {
             </div>
 
             {/* Right Sidebar - Terminal */}
-            <TerminalPanel />
+            <TerminalPanel onMaximizeChange={setTerminalMaximized} />
           </div>
         </ToastProvider>
       </RepositoryProvider>

@@ -52,7 +52,11 @@ const INITIAL: TabStateMap = {
     codex: initialTabState(),
 };
 
-export function TerminalPanel() {
+interface TerminalPanelProps {
+    onMaximizeChange?: (isMaximized: boolean) => void;
+}
+
+export function TerminalPanel({ onMaximizeChange }: TerminalPanelProps) {
     const { repository } = useRepository();
     const [isMaximized, setIsMaximized] = useState(false);
     const [activeTab, setActiveTab] = useState<CliTab>('claude');
@@ -225,8 +229,12 @@ export function TerminalPanel() {
     };
 
     const asideClass = isMaximized
-        ? 'fixed inset-y-0 right-0 z-60 flex w-[76vw] min-w-[980px] flex-col border-l border-border bg-[#0a0a0a] shadow-2xl'
-        : 'flex h-screen w-[46vw] min-w-xl shrink-0 flex-col border-l border-border bg-[#0a0a0a]';
+        ? 'flex h-screen min-w-0 flex-[2] flex-col border-l border-border bg-[#0a0a0a]'
+        : 'flex h-screen min-w-0 flex-1 flex-col border-l border-border bg-[#0a0a0a]';
+
+    useEffect(() => {
+        onMaximizeChange?.(isMaximized);
+    }, [isMaximized, onMaximizeChange]);
 
     const activeDef = CLI_TABS.find(t => t.id === activeTab)!;
     const activeState = tabState[activeTab];

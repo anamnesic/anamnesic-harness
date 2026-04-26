@@ -601,51 +601,51 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
 
                     <div className="mb-4 overflow-x-auto border-b border-border sm:mb-6">
                         <div className="flex min-w-max items-center gap-4">
-                        <button
-                            onClick={() => setActiveTab('repository')}
-                            className={cn(
-                                'pb-3 text-sm font-bold transition-colors relative',
-                                activeTab === 'repository' ? 'text-accent' : 'text-text-dim hover:text-highlight'
-                            )}
-                        >
-                            Repositório
-                            {activeTab === 'repository' && (
-                                <motion.div
-                                    layoutId="activeTab"
-                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                                />
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('context')}
-                            className={cn(
-                                'pb-3 text-sm font-bold transition-colors relative',
-                                activeTab === 'context' ? 'text-accent' : 'text-text-dim hover:text-highlight'
-                            )}
-                        >
-                            Context
-                            {activeTab === 'context' && (
-                                <motion.div
-                                    layoutId="activeTab"
-                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                                />
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('decisions')}
-                            className={cn(
-                                'pb-3 text-sm font-bold transition-colors relative',
-                                activeTab === 'decisions' ? 'text-accent' : 'text-text-dim hover:text-highlight'
-                            )}
-                        >
-                            Decisões
-                            {activeTab === 'decisions' && (
-                                <motion.div
-                                    layoutId="activeTab"
-                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                                />
-                            )}
-                        </button>
+                            <button
+                                onClick={() => setActiveTab('repository')}
+                                className={cn(
+                                    'pb-3 text-sm font-bold transition-colors relative',
+                                    activeTab === 'repository' ? 'text-accent' : 'text-text-dim hover:text-highlight'
+                                )}
+                            >
+                                Repositório
+                                {activeTab === 'repository' && (
+                                    <motion.div
+                                        layoutId="activeTab"
+                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                                    />
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('context')}
+                                className={cn(
+                                    'pb-3 text-sm font-bold transition-colors relative',
+                                    activeTab === 'context' ? 'text-accent' : 'text-text-dim hover:text-highlight'
+                                )}
+                            >
+                                Context
+                                {activeTab === 'context' && (
+                                    <motion.div
+                                        layoutId="activeTab"
+                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                                    />
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('decisions')}
+                                className={cn(
+                                    'pb-3 text-sm font-bold transition-colors relative',
+                                    activeTab === 'decisions' ? 'text-accent' : 'text-text-dim hover:text-highlight'
+                                )}
+                            >
+                                Decisões
+                                {activeTab === 'decisions' && (
+                                    <motion.div
+                                        layoutId="activeTab"
+                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                                    />
+                                )}
+                            </button>
                         </div>
                     </div>
 
