@@ -159,10 +159,14 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         setShowBrowser(false);
         setSubmitting(true);
         try {
-            await apiFetch('/api/v1/projects', {
+            const created = await apiFetch<ApiResponse<Project>>('/api/v1/projects', {
                 method: 'POST',
                 body: JSON.stringify({ name: base, localPath: folderPath }),
             });
+            const createdProject = created?.data;
+            if (createdProject?.id && typeof window !== 'undefined') {
+                localStorage.setItem('kairos-selected-repository', createdProject.id);
+            }
             toast(`Repositório "${base}" importado`, 'success');
             await Promise.all([refetch(), refreshRepositories()]);
         } catch (e: any) {
@@ -174,10 +178,14 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                     const singleRepoName = gitSubfolders[0];
                     const singleRepoPath = joinSubfolder(folderPath, singleRepoName);
 
-                    await apiFetch('/api/v1/projects', {
+                    const created = await apiFetch<ApiResponse<Project>>('/api/v1/projects', {
                         method: 'POST',
                         body: JSON.stringify({ name: singleRepoName, localPath: singleRepoPath }),
                     });
+                    const createdProject = created?.data;
+                    if (createdProject?.id && typeof window !== 'undefined') {
+                        localStorage.setItem('kairos-selected-repository', createdProject.id);
+                    }
 
                     toast(`A pasta tem 1 repositório Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
                     await Promise.all([refetch(), refreshRepositories()]);
@@ -280,10 +288,14 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
 
         setSubmitting(true);
         try {
-            await apiFetch('/api/v1/projects', {
+            const created = await apiFetch<ApiResponse<Project>>('/api/v1/projects', {
                 method: 'POST',
                 body: JSON.stringify({ name: item.name, localPath: item.localPath }),
             });
+            const createdProject = created?.data;
+            if (createdProject?.id && typeof window !== 'undefined') {
+                localStorage.setItem('kairos-selected-repository', createdProject.id);
+            }
 
             toast(`Repositório "${item.name}" reaberto`, 'success');
             await Promise.all([refetch(), refreshRepositories()]);
