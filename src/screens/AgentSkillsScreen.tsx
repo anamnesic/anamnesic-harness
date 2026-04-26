@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
@@ -33,6 +33,7 @@ interface PromptCapabilityItem {
 
 export function AgentSkillsScreen() {
     const [open, setOpen] = useState(false);
+    const [selectedSkillKey, setSelectedSkillKey] = useState<string | null>(null);
     const { data, loading } = usePolling<ApiResponse>('/api/v1/agents', 20000);
 
     const agents: Agent[] = (data as any)?.data ?? data ?? [];
@@ -62,6 +63,20 @@ export function AgentSkillsScreen() {
         return [...base, ...custom];
     }, [promptEngineerAgent]);
 
+    useEffect(() => {
+        if (!promptCapabilities.length) {
+            setSelectedSkillKey(null);
+            return;
+        }
+
+        const exists = selectedSkillKey && promptCapabilities.some((item) => item.key === selectedSkillKey);
+        if (!exists) {
+            setSelectedSkillKey(promptCapabilities[0].key);
+        }
+    }, [promptCapabilities, selectedSkillKey]);
+
+    const selectedSkill = promptCapabilities.find((item) => item.key === selectedSkillKey) ?? null;
+
     return (
         <div className="flex-1 w-full max-w-7xl mx-auto p-6 pb-32 space-y-5">
             <div className="flex items-center justify-end">
@@ -83,20 +98,53 @@ export function AgentSkillsScreen() {
                     <p className="text-sm text-text-dim">Nenhuma skill encontrada.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {promptCapabilities.map((capability) => (
-                        <div key={capability.key} className="bento-card space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                                <h3 className="text-base font-bold text-accent">{capability.title}</h3>
-                                <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
-                                    {capability.key}
-                                </span>
-                            </div>
-
-                            <p className="text-sm leading-relaxed text-text-dim">{capability.description}</p>
-                            <p className="text-xs text-text-dim line-clamp-6 whitespace-pre-wrap">{capability.prompt || DEFAULT_INTERNAL_SKILL_PROMPTS[capability.key as InternalAgentSkill]}</p>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
+                    <aside className="bento-card space-y-2">
+                        <p className="label-caps">Skills</p>
+                        <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-1.5">
+                            {promptCapabilities.map((capability) => {
+                                const selected = capability.key === selectedSkillKey;
+                                return (
+                                    <button
+                                        key={capability.key}
+                                        onClick={() => setSelectedSkillKey(capability.key)}
+                                        className={`w-full rounded-xl border px-3 py-2 text-left transition-colors ${selected
+                                            ? 'border-primary/50 bg-primary/10'
+                                            : 'border-border bg-card/40 hover:border-primary/30'
+                                            }`}
+                                    >
+                                        <p className="text-sm font-bold text-accent">{capability.title}</p>
+                                        <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">{capability.key}</p>
+                                    </button>
+                                );
+                            })}
                         </div>
-                    ))}
+                    </aside>
+
+                    <section className="bento-card space-y-4">
+                        {selectedSkill ? (
+                            <>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-accent">{selectedSkill.title}</h3>
+                                        <p className="mt-1 text-xs text-text-dim">{selectedSkill.description}</p>
+                                    </div>
+                                    <span className="rounded-md border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
+                                        {selectedSkill.key}
+                                    </span>
+                                </div>
+
+                                <div className="rounded-xl border border-border bg-card/40 p-3">
+                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-text-dim">Prompt</p>
+                                    <pre className="whitespace-pre-wrap text-xs leading-relaxed text-text-dim">
+                                        {selectedSkill.prompt || DEFAULT_INTERNAL_SKILL_PROMPTS[selectedSkill.key as InternalAgentSkill]}
+                                    </pre>
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-sm text-text-dim">Selecione uma skill para visualizar o prompt.</p>
+                        )}
+                    </section>
                 </div>
             )}
 
