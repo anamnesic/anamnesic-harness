@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, MessageSquare } from 'lucide-react';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, MessageSquare, Bug, TrendingUp, ShieldAlert } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -18,12 +18,12 @@ interface WorkflowStats { total: number; active: number; totalExecutions: number
 interface RunsData { data?: Array<{ status: string }> | { items?: Array<{ status: string }>; total?: number }; count?: number }
 
 interface DashboardProps {
-    onNavigate?: (id: 'dashboard' | 'workspaces' | 'control' | 'agents' | 'projects' | 'decisions' | 'apikeys' | 'security' | 'system' | 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat' | 'tasks') => void;
+    onNavigate: (id: any) => void;
 }
 
 export function Dashboard({ onNavigate }: DashboardProps) {
-    const { data: health, error: healthErr } = usePolling<HealthData>('/api/health', 5000);
-    const { data: metrics, loading: metricsLoading } = usePolling<MetricsData>('/api/v1/metrics', 5000);
+    const { data: health, error: healthErr } = usePolling<HealthData>('/api/health', 30000);
+    const { data: metrics, loading: metricsLoading } = usePolling<MetricsData>('/api/v1/metrics', 30000);
     const { data: history, loading: histLoading } = usePolling<HistoryData>('/api/chat/history?limit=3', 5000);
     const { data: agentStats } = usePolling<AgentStats>('/api/v1/agents/stats', 5000);
     const { data: workflowStats } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 5000);
@@ -66,12 +66,12 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <div className="flex items-center gap-2 mb-4">
                 <span
                     className={
-                        connected
+                        isOnline
                             ? 'size-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_12px_rgba(34,197,94,0.6)]'
                             : 'size-2 rounded-full bg-border'
                     }
                 />
-                <span className="label-caps">{connected ? 'Live • streaming' : 'Live • disconnected'}</span>
+                <span className="label-caps">{isOnline ? 'Live • streaming' : 'Live • disconnected'}</span>
             </div>
             <div className="grid grid-cols-4 gap-4">
                 {/* Hero Card */}
@@ -129,6 +129,31 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     <button className="mt-6 bg-highlight text-bg py-2.5 rounded-xl font-bold text-xs hover:bg-accent transition-colors w-full">
                         Apply Optimization
                     </button>
+                </div>
+
+                {/* Security Operations Card */}
+                <div className="bento-card col-span-4 md:col-span-2">
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="label-caps">Security Operations</span>
+                        <ShieldAlert className="size-4 text-red-500" />
+                    </div>
+                    <p className="text-xs text-text-dim mb-6">Advanced stress-testing and LLM performance benchmarking tools.</p>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => onNavigate('benchmarks')}
+                            className="flex-1 flex items-center justify-center gap-2 bg-card border border-border py-2.5 rounded-xl font-bold text-xs hover:border-primary/60 transition-colors"
+                        >
+                            <TrendingUp className="size-3.5" />
+                            Benchmarks
+                        </button>
+                        <button
+                            onClick={() => onNavigate('redteaming')}
+                            className="flex-1 flex items-center justify-center gap-2 bg-card border border-border py-2.5 rounded-xl font-bold text-xs hover:border-red-500/60 transition-colors text-red-500"
+                        >
+                            <Bug className="size-3.5" />
+                            Red Team
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stat: Threads */}

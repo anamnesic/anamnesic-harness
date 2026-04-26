@@ -130,9 +130,18 @@ function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void 
                                 <div className="space-y-3">
                                     {scan.vulnerabilities.map(v => (
                                         <div key={v.id} className="bento-card p-3! space-y-2">
-                                            <div className="flex items-center gap-2">
-                                                <SeverityBadge severity={v.severity} />
-                                                <span className="font-bold text-sm text-accent">{v.title}</span>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <SeverityBadge severity={v.severity} />
+                                                    <span className="font-bold text-sm text-accent">{v.title}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleSimulateAttack(v)}
+                                                    className="flex items-center gap-1 px-2 py-1 rounded bg-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all border border-red-500/20"
+                                                >
+                                                    <Bug className="size-2.5" />
+                                                    Simulate Attack
+                                                </button>
                                             </div>
                                             <p className="text-xs text-text-dim leading-relaxed">{v.description}</p>
                                             {v.location && (

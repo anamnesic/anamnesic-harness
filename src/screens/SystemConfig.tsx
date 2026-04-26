@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Code2, CircleCheck } from 'lucide-react';
+import { Code2, CircleCheck, Share2 } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
@@ -22,7 +22,7 @@ interface SettingsData { flags: Record<string, boolean> }
 interface MetricsData { uptime: string; memory: string; loadAvg: string; threads: number; platform: string; nodeVersion: string }
 interface Project { id: string; name: string }
 
-export function SystemConfig() {
+export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void }) {
     const { data: settings, loading: settingsLoading } = useApi<SettingsData>('/api/v1/settings');
     const { data: metrics, loading: metricsLoading } = useApi<MetricsData>('/api/v1/metrics');
     const { data: projects } = useApi<Project[]>('/api/v1/projects');
@@ -95,6 +95,22 @@ export function SystemConfig() {
                             </div>
                         ))
                     )}
+                </div>
+            </div>
+
+            {/* External Tools Card */}
+            <div className="bento-card border-primary/20 bg-primary/5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <span className="label-caps text-primary">Connect External Tools</span>
+                        <p className="text-xs text-text-dim mt-1">Configure outgoing webhooks for Slack, Discord and automation platforms.</p>
+                    </div>
+                    <button
+                        onClick={() => onNavigate?.('integrations')}
+                        className="bg-primary text-white p-3 rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                    >
+                        <Share2 className="size-5" />
+                    </button>
                 </div>
             </div>
 

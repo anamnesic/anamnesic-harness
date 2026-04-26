@@ -18,6 +18,7 @@ import {
   Camera,
   Lightbulb,
   Key,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -40,6 +41,8 @@ import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
 import { ApiKeysHub } from './screens/ApiKeysHub';
 import { ModelBenchmarks } from './screens/ModelBenchmarks';
+import { RedTeaming } from './screens/RedTeaming';
+import { Integrations } from './screens/Integrations';
 import { Login } from './screens/Login';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
@@ -109,7 +112,7 @@ const TABS = [
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat' | 'tasks' | 'benchmarks';
+type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
@@ -143,12 +146,25 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
         element: <Dashboard onNavigate={setActive} />,
         onBack: undefined,
         rightElement: (
-          <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
-            <div className="size-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-            <span className="text-primary text-[10px] font-bold uppercase tracking-wider">Online</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActive('benchmarks')}
+              className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-primary hover:border-primary/60 transition-colors mr-2"
+            >
+              <TrendingUp className="size-4" />
+              Benchmarks
+            </button>
+            <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
+              <div className="size-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+              <span className="text-primary text-[10px] font-bold uppercase tracking-wider">Online</span>
+            </div>
           </div>
         ),
       };
+    case 'benchmarks':
+      return { title: 'Benchmarks', subtitle: 'LLM Performance comparison', element: <ModelBenchmarks />, onBack: goHome, rightElement: undefined };
+    case 'redteaming':
+      return { title: 'Red Teaming', subtitle: 'Attack Simulation', element: <RedTeaming />, onBack: goHome, rightElement: undefined };
     case 'workspaces':
       return { title: 'Workspaces', subtitle: 'Workspace Management', element: <Workspaces />, onBack: goHome, rightElement: undefined };
     case 'ledger':
@@ -189,12 +205,14 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'apikeys':
       return { title: 'API Keys', subtitle: 'Workspace Project Credentials', element: <ApiKeysHub />, onBack: goHome, rightElement: undefined };
     case 'security':
-      return { title: 'Security', subtitle: 'Vulnerability Audit', element: <Security />, onBack: goHome, rightElement: undefined };
+      return { title: 'Security', subtitle: 'Vulnerability Audit', element: <Security onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
+    case 'integrations':
+      return { title: 'Integrations', subtitle: 'External Webhooks', element: <Integrations />, onBack: goHome, rightElement: undefined };
     case 'system':
       return {
         title: 'Engine',
         subtitle: 'System Configuration',
-        element: <SystemConfig />,
+        element: <SystemConfig onNavigate={setActive} />,
         onBack: goHome,
         rightElement: (
           <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">

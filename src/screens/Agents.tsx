@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X, Trash2, Bot, ListTodo, Play } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
+import { usePolling } from '@/src/lib/usePolling';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
@@ -115,7 +116,7 @@ interface AgentsProps {
 }
 
 export function Agents({ onNavigate }: AgentsProps) {
-    const { data, loading, refetch } = useApi<ApiResponse>('/api/v1/agents');
+    const { data, loading, refetch } = usePolling<ApiResponse>('/api/v1/agents', 20000);
     const { toast } = useToast();
     const { workspace } = useWorkspace();
 

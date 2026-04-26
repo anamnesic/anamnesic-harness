@@ -95,9 +95,9 @@ export class AdvancedFeaturesFactory {
       this.logger.info('[AdvancedFeatures] Advanced Security Analysis Service initialized');
     }
 
-    // Phase 7: Attack Simulation
-    if (config.enableAttackSimulation !== false) {
-      this.attackSimulation = new AttackSimulationFramework();
+    // Phase 7: Attack Simulation Framework
+    if (config.enableSecurity !== false) {
+      this.attackSimulation = AttackSimulationFramework.getInstance();
       this.logger.info('[AdvancedFeatures] Attack Simulation Framework initialized');
     }
 

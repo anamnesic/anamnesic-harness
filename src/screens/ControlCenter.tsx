@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, ScrollText, Undo2, X, Plus, Target, Clock, Shield, AlertTriangle, CheckCircle, Play, RotateCcw } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
+import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
@@ -34,7 +35,7 @@ export function ControlCenter() {
     const [offsetPlans, setOffsetPlans] = useState(0);
     const limitPlans = 10;
 
-    const { data: runs, loading: runsLoading, refetch } = useApi<any>(`/api/v1/orchestrator/runs?limit=${limitRuns}&offset=${offsetRuns}`);
+    const { data: runs, loading: runsLoading, refetch } = usePolling<any>(`/api/v1/orchestrator/runs?limit=${limitRuns}&offset=${offsetRuns}`, 15000);
     const { data: plans, loading: plansLoading } = useApi<any>(`/api/v1/orchestrator/plans?limit=${limitPlans}&offset=${offsetPlans}`);
     
     const { toast } = useToast();

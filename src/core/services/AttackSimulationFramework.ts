@@ -73,13 +73,28 @@ export type AttackPattern = 'random' | 'sequential' | 'fuzzing' | 'encoding' | '
 const logger = Logger.getInstance();
 
 export class AttackSimulationFramework {
+  private static instance: AttackSimulationFramework;
   private simulations: Map<string, AttackSimulation> = new Map();
   private payloadLibrary: Map<string, AttackPayload[]> = new Map();
   private evasionTechniques: Map<string, (payload: string) => string> = new Map();
 
-  constructor() {
+  private constructor() {
     this.initializePayloadLibrary();
     this.initializeEvasionTechniques();
+  }
+
+  public static getInstance(): AttackSimulationFramework {
+    if (!AttackSimulationFramework.instance) {
+      AttackSimulationFramework.instance = new AttackSimulationFramework();
+    }
+    return AttackSimulationFramework.instance;
+  }
+
+  /**
+   * Get all simulations
+   */
+  getAllSimulations(): AttackSimulation[] {
+    return Array.from(this.simulations.values()).sort((a, b) => b.startTime - a.startTime);
   }
 
   /**

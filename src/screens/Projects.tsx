@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X } from 'lucide-react';
+import { Trash2, FolderOpen, ArrowLeft, FolderGit2, X, Pencil } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
 import { DecisionsPanel } from './DecisionsPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
@@ -50,6 +50,8 @@ export function Projects() {
     const [showBrowser, setShowBrowser] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
+    const [editingProject, setEditingProject] = useState<Project | null>(null);
+    const [editForm, setEditForm] = useState({ name: '', description: '', status: 'active' });
     const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
         open: false,
         folderPath: '',
@@ -103,6 +105,24 @@ export function Projects() {
             // Note: In a real app, you might want to navigate to the workspace
         } catch (e: any) {
             toast(e.message ?? 'Failed to create workspace', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleEdit() {
+        if (!editingProject) return;
+        setSubmitting(true);
+        try {
+            await apiFetch(`/api/v1/projects/${editingProject.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(editForm),
+            });
+            toast('Project updated', 'success');
+            setEditingProject(null);
+            refetch();
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to update project', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -240,6 +260,21 @@ export function Projects() {
                                 <div className="flex items-center gap-2">
                                     <StatusBadge status={project.status} />
                                     <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingProject(project);
+                                            setEditForm({
+                                                name: project.name,
+                                                description: project.description || '',
+                                                status: project.status || 'active'
+                                            });
+                                        }}
+                                        className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
+                                        aria-label="Edit project"
+                                    >
+                                        <Pencil className="size-3.5" />
+                                    </button>
+                                    <button
                                         onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
                                         disabled={deleting === project.id}
                                         className="rounded-lg p-1.5 text-text-dim hover:text-red-400 transition-colors disabled:opacity-40"
@@ -320,6 +355,85 @@ export function Projects() {
                                     className="flex-1 rounded-lg bg-accent/20 border border-accent/40 px-4 py-2 text-xs font-bold text-accent hover:bg-accent/30 transition-colors disabled:opacity-50"
                                 >
                                     {submitting ? 'Creating…' : 'Open as Workspace'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {editingProject && (
+                    <motion.div
+                        key="edit-project-modal-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 backdrop-blur-sm p-4"
+                        onClick={(e) => { if (e.target === e.currentTarget) setEditingProject(null); }}
+                    >
+                        <motion.div
+                            key="edit-project-modal"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bento-card w-full max-w-md space-y-4"
+                        >
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold">Edit Project</h3>
+                                <button
+                                    onClick={() => setEditingProject(null)}
+                                    className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
+                                >
+                                    <X className="size-4" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="label-caps block mb-1">Name</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.name}
+                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="label-caps block mb-1">Description</label>
+                                    <textarea
+                                        value={editForm.description}
+                                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors min-h-[80px]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="label-caps block mb-1">Status</label>
+                                    <select
+                                        value={editForm.status}
+                                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                                        className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm focus:border-primary/60 outline-none transition-colors"
+                                    >
+                                        <option value="active">Active</option>
+                                        <option value="archived">Archived</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 pt-2">
+                                <button
+                                    onClick={() => setEditingProject(null)}
+                                    className="flex-1 rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dim hover:text-text transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleEdit}
+                                    disabled={submitting}
+                                    className="flex-1 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                >
+                                    {submitting ? 'Saving…' : 'Save Changes'}
                                 </button>
                             </div>
                         </motion.div>

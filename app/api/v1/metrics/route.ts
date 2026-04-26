@@ -1,7 +1,6 @@
 export const runtime = 'nodejs';
 
 import os from 'os';
-import { ok } from '@/app/api/_lib/db'; // Wait, ok is in response.ts
 import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
 
