@@ -228,10 +228,10 @@ Meta de arquitetura:
 
 ### Backend
 
-- [ ] Criar endpoints para consultar jobs de inferencia em background
-- [ ] Criar endpoints para summaries semanticos
-- [ ] Criar endpoints para insights proativos
-- [ ] Criar endpoints para recall reranqueado
+- [x] Criar endpoints para consultar jobs de inferencia em background
+- [x] Criar endpoints para summaries semanticos
+- [x] Criar endpoints para insights proativos
+- [x] Criar endpoints para recall reranqueado
 
 ### Frontend
 
