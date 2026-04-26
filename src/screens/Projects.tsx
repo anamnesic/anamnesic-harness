@@ -781,7 +781,7 @@ export function Projects({
                                             ) : repositoryFileLoading ? (
                                                 <p className="text-sm text-text-dim">Carregando conteúdo...</p>
                                             ) : (
-                                                <div className="h-[calc(100vh-19rem)] min-h-[22rem] overflow-hidden border border-border/60 bg-bg/80">
+                                                <div className="h-[calc(100vh-19rem)] min-h-88 overflow-hidden border border-border/60 bg-bg/80">
                                                     <div className="flex h-full">
                                                         <div
                                                             ref={repoLineGutterRef}
