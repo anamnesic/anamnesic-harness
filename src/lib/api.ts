@@ -46,6 +46,7 @@ export async function apiFetch<T = unknown>(
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const error = (body as any).error || {};
+        console.error(`[apiFetch Error] ${path} returned ${res.status}:`, error);
         throw new ApiError(
             error.code || 'UNKNOWN_ERROR',
             error.message || `HTTP ${res.status}`,
