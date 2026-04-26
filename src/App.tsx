@@ -41,7 +41,6 @@ import { Login } from './screens/Login';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
 import { TerminalPanel } from './screens/TerminalPanel';
-import { TerminalPanel as ChatPanel } from './screens/ChatPanel';
 
 const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   title: string;
@@ -54,54 +53,54 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
   const repoPath = repository?.metadata?.localPath;
 
   return (
-  <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
-    <div className="flex min-w-0 items-center gap-4">
-      {onBack ? (
-        <button
-          onClick={onBack}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-      ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Activity className="size-6" />
+    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-bg/80 px-6 py-5 backdrop-blur-xl text-highlight">
+      <div className="flex min-w-0 items-center gap-4">
+        {onBack ? (
+          <button
+            onClick={onBack}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Activity className="size-6" />
+          </div>
+        )}
+        <div className="min-w-0">
+          {activeTab !== 'dashboard' && (
+            <Breadcrumbs
+              items={[
+                { label: 'Início', onClick: onBack },
+                { label: title, active: true }
+              ]}
+              className="mb-1"
+            />
+          )}
+          <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
+          {subtitle && activeTab === 'dashboard' && (
+            <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mt-1.5">{subtitle}</p>
+          )}
+          {repoPath && (
+            <p className="mt-1.5 max-w-[44vw] truncate font-mono text-[10px] text-text-dim" title={repoPath}>
+              {repoPath}
+            </p>
+          )}
         </div>
-      )}
-      <div className="min-w-0">
-        {activeTab !== 'dashboard' && (
-          <Breadcrumbs
-            items={[
-              { label: 'Início', onClick: onBack },
-              { label: title, active: true }
-            ]}
-            className="mb-1"
-          />
-        )}
-        <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
-        {subtitle && activeTab === 'dashboard' && (
-          <p className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mt-1.5">{subtitle}</p>
-        )}
-        {repoPath && (
-          <p className="mt-1.5 max-w-[44vw] truncate font-mono text-[10px] text-text-dim" title={repoPath}>
-            {repoPath}
-          </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <RepositorySelector />
+        {rightElement ?? (
+          <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
+            <Bell className="size-5 text-accent group-hover:scale-110 transition-transform" />
+            <span className="absolute right-3 top-3 flex size-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
+            </span>
+          </button>
         )}
       </div>
-    </div>
-    <div className="flex items-center gap-3">
-      <RepositorySelector />
-      {rightElement ?? (
-        <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
-          <Bell className="size-5 text-accent group-hover:scale-110 transition-transform" />
-          <span className="absolute right-3 top-3 flex size-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
-          </span>
-        </button>
-      )}
-    </div>
-  </header>
+    </header>
   );
 };
 
@@ -114,7 +113,7 @@ const TABS = [
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'chat' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations';
+type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 const BottomNav = ({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) => (
@@ -210,18 +209,6 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
       };
     case 'snapshots':
       return { title: 'Snapshots', subtitle: 'Estado em um ponto no tempo', element: <Snapshots />, onBack: goHome, rightElement: undefined };
-    case 'chat':
-      return {
-        title: 'Chat',
-        subtitle: 'Assistente de IA',
-        element: (
-          <div className="flex-1 p-4">
-            <ChatPanel />
-          </div>
-        ),
-        onBack: goHome,
-        rightElement: undefined,
-      };
     case 'agents':
       return { title: 'Agentes', subtitle: 'Registro de agentes', element: <Agents onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
     case 'tasks':

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, MessageSquare, Bug, TrendingUp, ShieldAlert } from 'lucide-react';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -324,19 +324,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
             </div>
 
-            {/* Floating Chat Button */}
-            {onNavigate && (
-                <motion.button
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => onNavigate('chat')}
-                    className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
-                >
-                    <MessageSquare className="size-6" />
-                </motion.button>
-            )}
         </motion.div>
     );
 }
