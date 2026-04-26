@@ -770,43 +770,87 @@ export function Projects({
                                         ) : (
                                             <div className="h-[64vh] overflow-hidden border border-border/60 bg-bg/80">
                                                 <div className="flex h-full">
-                                                    <div
-                                                        ref={repoLineGutterRef}
-                                                        className="w-14 shrink-0 overflow-hidden border-r border-border/60 bg-card/40 px-2 py-3 text-right font-mono text-[11px] leading-relaxed text-text-dim"
-                                                    >
-                                                        {repoLineNumbers.map((lineNumber) => (
-                                                            <div key={lineNumber}>{lineNumber}</div>
-                                                        ))}
-                                                    </div>
-                                                    <textarea
-                                                        ref={repoTextareaRef}
-                                                        value={currentRepoDraft}
-                                                        onChange={(e) => {
-                                                            if (!selectedRepoFile) return;
-                                                            const nextDraft = e.target.value;
-                                                            const baseContent = repositoryFile?.content ?? '';
-                                                            setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
-                                                            setRepoDirtyFiles((prev) => ({
-                                                                ...prev,
-                                                                [selectedRepoFile]: nextDraft !== baseContent,
-                                                            }));
-                                                        }}
-                                                        onKeyDown={(e) => {
-                                                            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-                                                                e.preventDefault();
-                                                                if (!savingRepoFile) {
-                                                                    void saveRepositoryFile();
+                                                    <aside className="w-52 shrink-0 border-r border-border/60 bg-card/25">
+                                                        <div className="border-b border-border/60 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-text-dim">
+                                                            Editor
+                                                        </div>
+                                                        <div className="h-[calc(64vh-33px)] overflow-y-auto p-1.5">
+                                                            {openRepoTabs.length ? openRepoTabs.map((filePath) => {
+                                                                const isActive = selectedRepoFile === filePath;
+                                                                const isDirty = repoDirtyFiles[filePath] ?? false;
+                                                                const fileName = filePath.split('/').pop() || filePath;
+
+                                                                return (
+                                                                    <button
+                                                                        key={`editor-sidebar-${filePath}`}
+                                                                        onClick={() => setSelectedRepoFile(filePath)}
+                                                                        className={cn(
+                                                                            'group mb-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors',
+                                                                            isActive
+                                                                                ? 'bg-card text-highlight border border-border/60'
+                                                                                : 'text-text-dim hover:bg-card/40 hover:text-highlight',
+                                                                        )}
+                                                                        title={filePath}
+                                                                    >
+                                                                        {getFileIcon(filePath)}
+                                                                        <span className="min-w-0 flex-1 truncate font-mono">{fileName}</span>
+                                                                        {isDirty && <span className="text-primary">●</span>}
+                                                                        <span
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                closeRepoTab(filePath);
+                                                                            }}
+                                                                            className="rounded p-0.5 opacity-70 transition hover:bg-card hover:opacity-100"
+                                                                        >
+                                                                            <X className="size-3" />
+                                                                        </span>
+                                                                    </button>
+                                                                );
+                                                            }) : (
+                                                                <p className="px-2 py-1 text-xs text-text-dim">Nenhum arquivo aberto</p>
+                                                            )}
+                                                        </div>
+                                                    </aside>
+
+                                                    <div className="flex min-w-0 flex-1">
+                                                        <div
+                                                            ref={repoLineGutterRef}
+                                                            className="w-14 shrink-0 overflow-hidden border-r border-border/60 bg-card/40 px-2 py-3 text-right font-mono text-[11px] leading-relaxed text-text-dim"
+                                                        >
+                                                            {repoLineNumbers.map((lineNumber) => (
+                                                                <div key={lineNumber}>{lineNumber}</div>
+                                                            ))}
+                                                        </div>
+                                                        <textarea
+                                                            ref={repoTextareaRef}
+                                                            value={currentRepoDraft}
+                                                            onChange={(e) => {
+                                                                if (!selectedRepoFile) return;
+                                                                const nextDraft = e.target.value;
+                                                                const baseContent = repositoryFile?.content ?? '';
+                                                                setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
+                                                                setRepoDirtyFiles((prev) => ({
+                                                                    ...prev,
+                                                                    [selectedRepoFile]: nextDraft !== baseContent,
+                                                                }));
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                                                                    e.preventDefault();
+                                                                    if (!savingRepoFile) {
+                                                                        void saveRepositoryFile();
+                                                                    }
                                                                 }
-                                                            }
-                                                        }}
-                                                        onScroll={(e) => {
-                                                            if (repoLineGutterRef.current) {
-                                                                repoLineGutterRef.current.scrollTop = e.currentTarget.scrollTop;
-                                                            }
-                                                        }}
-                                                        spellCheck={false}
-                                                        className="h-full flex-1 resize-none bg-transparent px-3 py-3 font-mono text-xs leading-relaxed text-highlight outline-none"
-                                                    />
+                                                            }}
+                                                            onScroll={(e) => {
+                                                                if (repoLineGutterRef.current) {
+                                                                    repoLineGutterRef.current.scrollTop = e.currentTarget.scrollTop;
+                                                                }
+                                                            }}
+                                                            spellCheck={false}
+                                                            className="h-full flex-1 resize-none bg-transparent px-3 py-3 font-mono text-xs leading-relaxed text-highlight outline-none"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
