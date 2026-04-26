@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 import { ProjectContext } from './ProjectContext';
@@ -121,6 +121,8 @@ export function Projects({
 
     const projects = data?.data ?? [];
     const activeTab = controlledActiveTab ?? internalActiveTab;
+    const repoTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const repoLineGutterRef = useRef<HTMLDivElement | null>(null);
 
     function handleTabChange(tab: ProjectTabId) {
         if (!controlledActiveTab) {
@@ -289,10 +291,11 @@ export function Projects({
     const currentRepoDraft = selectedRepoFile
         ? (repoDraftByFile[selectedRepoFile] ?? repositoryFile?.content ?? '')
         : '';
-
-    const repoHasUnsavedChanges = selectedRepoFile
-        ? (repoDirtyFiles[selectedRepoFile] ?? false)
-        : false;
+    const repoLineCount = Math.max(1, currentRepoDraft.split('\n').length);
+    const repoLineNumbers = useMemo(
+        () => Array.from({ length: repoLineCount }, (_, i) => i + 1),
+        [repoLineCount],
+    );
 
     function openRepoFile(filePath: string) {
         setSelectedRepoFile(filePath);
@@ -727,7 +730,7 @@ export function Projects({
                                         )}
                                     </aside>
 
-                                    <section className="bento-card min-h-0">
+                                    <section className="min-h-0 overflow-hidden">
                                         <div className="-mx-4 -mt-4 mb-3 flex items-stretch overflow-x-auto border-b border-border/60 bg-bg/40 sm:-mx-6 sm:-mt-6">
                                             {openRepoTabs.length ? openRepoTabs.map((filePath) => {
                                                 const isActive = selectedRepoFile === filePath;
@@ -765,29 +768,6 @@ export function Projects({
                                             )}
                                         </div>
 
-                                        <div className="mb-3 flex items-center justify-between gap-2 border-b border-border/60 pb-2">
-                                            <div className="flex min-w-0 items-center gap-2">
-                                                <FileCode2 className="size-4 text-primary" />
-                                                <p className="truncate font-mono text-xs text-text-dim">{selectedRepoFile ?? 'Sem arquivo selecionado'}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => void refetchRepositoryFile()}
-                                                    disabled={!selectedRepoFile || repositoryFileLoading}
-                                                    className="rounded-md border border-border px-2 py-1 text-[10px] font-bold text-text-dim hover:text-accent transition-colors disabled:opacity-50"
-                                                >
-                                                    Reload
-                                                </button>
-                                                <button
-                                                    onClick={() => void saveRepositoryFile()}
-                                                    disabled={!selectedRepoFile || savingRepoFile || repositoryFileLoading || !repoHasUnsavedChanges}
-                                                    className="rounded-md border border-primary/50 bg-primary/15 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
-                                                >
-                                                    {savingRepoFile ? 'Salvando...' : 'Salvar'}
-                                                </button>
-                                            </div>
-                                        </div>
-
                                         {insightsLoading ? (
                                             <p className="text-sm text-text-dim">Carregando editor...</p>
                                         ) : !insights?.isGitRepo ? (
@@ -797,21 +777,47 @@ export function Projects({
                                         ) : repositoryFileLoading ? (
                                             <p className="text-sm text-text-dim">Carregando conteúdo...</p>
                                         ) : (
-                                            <textarea
-                                                value={currentRepoDraft}
-                                                onChange={(e) => {
-                                                    if (!selectedRepoFile) return;
-                                                    const nextDraft = e.target.value;
-                                                    const baseContent = repositoryFile?.content ?? '';
-                                                    setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
-                                                    setRepoDirtyFiles((prev) => ({
-                                                        ...prev,
-                                                        [selectedRepoFile]: nextDraft !== baseContent,
-                                                    }));
-                                                }}
-                                                spellCheck={false}
-                                                className="h-[64vh] w-full resize-none rounded-lg border border-border bg-bg p-3 font-mono text-xs leading-relaxed text-highlight outline-none transition-colors focus:border-primary/60"
-                                            />
+                                            <div className="h-[64vh] overflow-hidden border border-border/60 bg-bg/80">
+                                                <div className="flex h-full">
+                                                    <div
+                                                        ref={repoLineGutterRef}
+                                                        className="w-14 shrink-0 overflow-hidden border-r border-border/60 bg-card/40 px-2 py-3 text-right font-mono text-[11px] leading-relaxed text-text-dim"
+                                                    >
+                                                        {repoLineNumbers.map((lineNumber) => (
+                                                            <div key={lineNumber}>{lineNumber}</div>
+                                                        ))}
+                                                    </div>
+                                                    <textarea
+                                                        ref={repoTextareaRef}
+                                                        value={currentRepoDraft}
+                                                        onChange={(e) => {
+                                                            if (!selectedRepoFile) return;
+                                                            const nextDraft = e.target.value;
+                                                            const baseContent = repositoryFile?.content ?? '';
+                                                            setRepoDraftByFile((prev) => ({ ...prev, [selectedRepoFile]: nextDraft }));
+                                                            setRepoDirtyFiles((prev) => ({
+                                                                ...prev,
+                                                                [selectedRepoFile]: nextDraft !== baseContent,
+                                                            }));
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                                                                e.preventDefault();
+                                                                if (!savingRepoFile) {
+                                                                    void saveRepositoryFile();
+                                                                }
+                                                            }
+                                                        }}
+                                                        onScroll={(e) => {
+                                                            if (repoLineGutterRef.current) {
+                                                                repoLineGutterRef.current.scrollTop = e.currentTarget.scrollTop;
+                                                            }
+                                                        }}
+                                                        spellCheck={false}
+                                                        className="h-full flex-1 resize-none bg-transparent px-3 py-3 font-mono text-xs leading-relaxed text-highlight outline-none"
+                                                    />
+                                                </div>
+                                            </div>
                                         )}
                                     </section>
                                 </div>
