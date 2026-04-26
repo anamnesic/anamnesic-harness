@@ -134,4 +134,32 @@ describe.sequential('EventEnrichmentIngestionService', () => {
         expect(batchArg).toHaveLength(1);
         expect(batchArg[0].id).toBe('evt-9');
     });
+
+    it('detects recurring anomalies and emits semantic alert callback', async () => {
+        const fakeEnricher = { enrichBatch: vi.fn().mockResolvedValue([]) };
+        const onSemanticAlert = vi.fn();
+        const { EventEnrichmentIngestionService } = await import('../EventEnrichmentIngestionService');
+
+        const ingestion = new EventEnrichmentIngestionService(fakeEnricher as any, {
+            batchSize: 10,
+            flushIntervalMs: 5_000,
+            anomalyThreshold: 3,
+            minSignalForEnrichment: 'high',
+            onSemanticAlert,
+        });
+
+        await ingestion.ingest({ ...makeEntry('evt-10'), content: 'timeout while calling upstream service' });
+        await ingestion.ingest({ ...makeEntry('evt-11'), content: 'timeout while calling upstream service' });
+        await ingestion.ingest({ ...makeEntry('evt-12'), content: 'timeout while calling upstream service' });
+
+        expect(onSemanticAlert).toHaveBeenCalledTimes(1);
+        const alert = onSemanticAlert.mock.calls[0][0];
+        expect(alert.type).toBe('recurring-anomaly');
+        expect(alert.signature).toBe('timeout');
+        expect(alert.explanation).toContain('Recurring anomaly detected');
+
+        const alerts = ingestion.getRecentAlerts(10);
+        expect(alerts).toHaveLength(1);
+        expect(alerts[0].signature).toBe('timeout');
+    });
 });

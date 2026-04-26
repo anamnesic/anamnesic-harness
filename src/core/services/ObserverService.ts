@@ -7,6 +7,9 @@ import { getEventBus } from '@/src/observation/EventBus';
 import { randomUUID } from 'node:crypto';
 import { EventEnrichmentIngestionService } from './EventEnrichmentIngestionService';
 import type { MemoryEntry } from '@/src/memory';
+import type { SemanticAlert } from './EventEnrichmentIngestionService';
+import type { PersistentEventStore } from './PersistentEventStore';
+import { getPersistentEventBus, type PersistentEventBus } from '@/src/observation/PersistentEventBus';
 
 export interface ObserverStatus {
   id: string;
@@ -30,7 +33,15 @@ export class ObserverService {
   private apiObserver: ApiObserver;
   private eventCounts: Map<string, number> = new Map();
   private lastEvents: Map<string, string> = new Map();
-  private enrichmentIngestion = new EventEnrichmentIngestionService();
+  private semanticAlerts: SemanticAlert[] = [];
+  private persistentStore?: PersistentEventStore;
+  private persistentBus?: PersistentEventBus;
+  private recentEvents = new Map<string, Array<{ timestamp: string; message: string }>>();
+  private enrichmentIngestion = new EventEnrichmentIngestionService(undefined, {
+    onSemanticAlert: async (alert) => {
+      await this.onSemanticAlert(alert);
+    },
+  });
 
   private activeObservers: Set<string> = new Set();
   private settingsService: any = null;
@@ -55,6 +66,14 @@ export class ObserverService {
   async setSettingsService(settingsService: any) {
     this.settingsService = settingsService;
     await this.loadPersistedState();
+  }
+
+  setPersistentEventStore(store: PersistentEventStore): void {
+    this.persistentStore = store;
+    this.persistentBus = getPersistentEventBus('observer-service', store, {
+      workspaceId: 'system',
+      projectId: 'system',
+    });
   }
 
   private async loadPersistedState() {
@@ -113,9 +132,11 @@ export class ObserverService {
     const codeBus = getEventBus('code-observer');
     const terminalBus = getEventBus('terminal-observer');
     const apiBus = getEventBus('api-observer');
+    const syncBus = getEventBus('auto-sync');
 
     codeBus.on('code:changed', (event) => {
       const filePath = String(event.data?.filePath || 'unknown');
+      this.pushRecentEvent('fs', `Code changed: ${filePath}`, event.timestamp);
       void this.enqueueForEnrichment({
         id: randomUUID(),
         source: 'code-observer',
@@ -128,6 +149,7 @@ export class ObserverService {
       const sessionId = String(event.data?.sessionId || 'unknown');
       const raw = String(event.data?.data || '');
       const compact = raw.length > 1200 ? `${raw.slice(0, 1200)}...` : raw;
+      this.pushRecentEvent('terminal', `Terminal output [${sessionId}]`, event.timestamp);
       void this.enqueueForEnrichment({
         id: randomUUID(),
         source: 'terminal-observer',
@@ -141,10 +163,33 @@ export class ObserverService {
       const route = String(event.data?.path || 'unknown');
       const statusCode = Number(event.data?.statusCode || 0);
       const durationMs = Number(event.data?.durationMs || 0);
+      this.pushRecentEvent('api', `API call ${method} ${route} -> ${statusCode}`, event.timestamp);
       void this.enqueueForEnrichment({
         id: randomUUID(),
         source: 'api-observer',
         content: `API call ${method} ${route} -> ${statusCode} (${durationMs}ms)`,
+        timestamp: event.timestamp,
+      });
+    });
+
+    syncBus.on('auto-sync:error', (event) => {
+      const message = String(event.data?.data?.error || 'Auto-sync error');
+      this.pushRecentEvent('fs', `Auto-sync error: ${message}`, event.timestamp);
+      void this.enqueueForEnrichment({
+        id: randomUUID(),
+        source: 'auto-sync',
+        content: `Auto-sync error: ${message}`,
+        timestamp: event.timestamp,
+      });
+    });
+
+    syncBus.on('auto-sync:file-changed', (event) => {
+      const file = String(event.data?.data?.file || 'unknown');
+      this.pushRecentEvent('fs', `Auto-sync file changed: ${file}`, event.timestamp);
+      void this.enqueueForEnrichment({
+        id: randomUUID(),
+        source: 'auto-sync',
+        content: `Auto-sync file changed: ${file}`,
         timestamp: event.timestamp,
       });
     });
@@ -156,6 +201,38 @@ export class ObserverService {
     } catch (error) {
       this.logger.warn(`Failed to enqueue event enrichment: ${error}`);
     }
+  }
+
+  private async onSemanticAlert(alert: SemanticAlert): Promise<void> {
+    this.semanticAlerts.unshift(alert);
+    if (this.semanticAlerts.length > 500) {
+      this.semanticAlerts = this.semanticAlerts.slice(0, 500);
+    }
+
+    const defaultBus = getEventBus('default');
+    await defaultBus.emit('observer:semantic-alert', alert);
+
+    if (this.persistentBus) {
+      await this.persistentBus.emit('observer:semantic-alert', alert);
+      return;
+    }
+
+    if (this.persistentStore) {
+      await this.persistentStore.saveEvent({
+        type: 'observer:semantic-alert',
+        sourceId: 'observer-service',
+        data: alert,
+        timestamp: new Date(),
+        projectId: 'system',
+        workspaceId: 'system',
+      });
+    }
+  }
+
+  private pushRecentEvent(observerId: string, message: string, timestamp: Date): void {
+    const bucket = this.recentEvents.get(observerId) || [];
+    bucket.unshift({ timestamp: timestamp.toISOString(), message });
+    this.recentEvents.set(observerId, bucket.slice(0, 200));
   }
 
   private updateEventStats(eventType: string): void {
@@ -291,9 +368,13 @@ export class ObserverService {
   }
 
   getRecentEvents(observerId: string, limit: number = 50): any[] {
-    // This would query the EventBus or PersistentEventStore for recent events
-    // For now, return a placeholder
-    return [];
+    const safeLimit = Math.max(1, Math.min(limit, 200));
+    return (this.recentEvents.get(observerId) || []).slice(0, safeLimit);
+  }
+
+  getSemanticAlerts(limit: number = 50): SemanticAlert[] {
+    const safeLimit = Math.max(1, Math.min(limit, 200));
+    return this.semanticAlerts.slice(0, safeLimit);
   }
 
   // Convenience method for terminal recording

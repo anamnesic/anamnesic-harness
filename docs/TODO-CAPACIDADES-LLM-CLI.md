@@ -88,15 +88,15 @@ Meta de arquitetura:
 - [x] Criar fila de eventos observados priorizada
 - [x] Distinguir eventos criticos vs triviais
 - [x] Enviar apenas eventos de alto sinal para LLM
-- [ ] Detectar anomalias recorrentes
-- [ ] Gerar explicacoes resumidas de mudancas importantes
-- [ ] Produzir alertas semanticos para UI e ledger
+- [x] Detectar anomalias recorrentes
+- [x] Gerar explicacoes resumidas de mudancas importantes
+- [x] Produzir alertas semanticos para UI e ledger
 
 ### Integracao
 
-- [ ] Integrar com `PersistentEventBus`
-- [ ] Integrar com `AutoSyncService`
-- [ ] Expor resultados via API de observers/ledger
+- [x] Integrar com `PersistentEventBus`
+- [x] Integrar com `AutoSyncService`
+- [x] Expor resultados via API de observers/ledger
 
 ---
 

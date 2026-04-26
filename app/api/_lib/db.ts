@@ -85,10 +85,13 @@ async function initializeRetentionPolicy(database: DataSource): Promise<void> {
 async function initializeObservers(database: DataSource): Promise<void> {
     try {
         const { ObserverService } = await import('@/src/core/services/ObserverService');
+        const { PersistentEventStore } = await import('@/src/core/services/PersistentEventStore');
         const { SettingsService } = await import('@/src/core/services/SettingsService');
         const observerService = ObserverService.getInstance();
         const settingsService = new SettingsService(database);
+        const persistentStore = new PersistentEventStore(database);
         
+        observerService.setPersistentEventStore(persistentStore);
         await observerService.setSettingsService(settingsService);
         await observerService.initialize();
         console.log('Observers initialized successfully');

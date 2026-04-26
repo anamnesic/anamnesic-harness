@@ -9,6 +9,19 @@ interface Enricher {
 
 type SignalLevel = 'critical' | 'high' | 'normal' | 'trivial';
 
+export interface SemanticAlert {
+    id: string;
+    type: 'recurring-anomaly';
+    severity: Extract<SignalLevel, 'critical' | 'high'>;
+    source: string;
+    signature: string;
+    occurrences: number;
+    firstSeen: string;
+    lastSeen: string;
+    explanation: string;
+    sample: string;
+}
+
 interface QueuedEvent {
     entry: MemoryEntry;
     signal: SignalLevel;
@@ -21,6 +34,9 @@ export interface EventEnrichmentIngestionOptions {
     flushIntervalMs?: number;
     persistEnrichment?: boolean;
     minSignalForEnrichment?: SignalLevel;
+    anomalyWindowMs?: number;
+    anomalyThreshold?: number;
+    onSemanticAlert?: (alert: SemanticAlert) => void | Promise<void>;
 }
 
 export class EventEnrichmentIngestionService {
@@ -29,10 +45,22 @@ export class EventEnrichmentIngestionService {
     private readonly flushIntervalMs: number;
     private readonly persistEnrichment: boolean;
     private readonly minSignalForEnrichment: SignalLevel;
+    private readonly anomalyWindowMs: number;
+    private readonly anomalyThreshold: number;
+    private readonly onSemanticAlert?: (alert: SemanticAlert) => void | Promise<void>;
 
     private pending: QueuedEvent[] = [];
     private flushTimer: ReturnType<typeof setTimeout> | null = null;
     private flushing = false;
+    private anomalyMap = new Map<string, {
+        source: string;
+        signal: Extract<SignalLevel, 'critical' | 'high'>;
+        occurrences: number;
+        firstSeen: number;
+        lastSeen: number;
+        sample: string;
+    }>();
+    private recentAlerts: SemanticAlert[] = [];
 
     constructor(
         private readonly enricher: Enricher = new EventEnrichmentService(),
@@ -42,11 +70,15 @@ export class EventEnrichmentIngestionService {
         this.flushIntervalMs = Math.max(100, options.flushIntervalMs ?? 2_000);
         this.persistEnrichment = options.persistEnrichment ?? true;
         this.minSignalForEnrichment = options.minSignalForEnrichment ?? 'high';
+        this.anomalyWindowMs = Math.max(1_000, options.anomalyWindowMs ?? 15 * 60 * 1000);
+        this.anomalyThreshold = Math.max(2, options.anomalyThreshold ?? 3);
+        this.onSemanticAlert = options.onSemanticAlert;
     }
 
     async ingest(entry: MemoryEntry): Promise<void> {
         await memoryManager.log(entry);
         const queued = this.toQueuedEvent(entry);
+        await this.detectRecurringAnomaly(queued);
         this.pending.push(queued);
         this.pending.sort((a, b) => {
             if (a.priority === b.priority) {
@@ -99,6 +131,11 @@ export class EventEnrichmentIngestionService {
 
     getPendingCount(): number {
         return this.pending.length;
+    }
+
+    getRecentAlerts(limit: number = 50): SemanticAlert[] {
+        const safe = Math.max(1, Math.min(limit, 200));
+        return this.recentAlerts.slice(0, safe);
     }
 
     private toQueuedEvent(entry: MemoryEntry): QueuedEvent {
@@ -162,6 +199,92 @@ export class EventEnrichmentIngestionService {
             trivial: 1,
         };
         return rank[signal] >= rank[this.minSignalForEnrichment];
+    }
+
+    private async detectRecurringAnomaly(item: QueuedEvent): Promise<void> {
+        if (item.signal !== 'critical' && item.signal !== 'high') {
+            return;
+        }
+
+        const now = Date.now();
+        this.evictOldAnomalies(now);
+
+        const signature = this.buildSignature(item.entry.content);
+        if (!signature) return;
+
+        const current = this.anomalyMap.get(signature);
+        if (!current) {
+            this.anomalyMap.set(signature, {
+                source: item.entry.source,
+                signal: item.signal,
+                occurrences: 1,
+                firstSeen: now,
+                lastSeen: now,
+                sample: item.entry.content,
+            });
+            return;
+        }
+
+        current.occurrences += 1;
+        current.lastSeen = now;
+
+        if (current.occurrences < this.anomalyThreshold) {
+            return;
+        }
+
+        const alert: SemanticAlert = {
+            id: `${signature}-${now}`,
+            type: 'recurring-anomaly',
+            severity: current.signal,
+            source: current.source,
+            signature,
+            occurrences: current.occurrences,
+            firstSeen: new Date(current.firstSeen).toISOString(),
+            lastSeen: new Date(current.lastSeen).toISOString(),
+            explanation: `Recurring anomaly detected for ${signature}: observed ${current.occurrences} times in the recent window.`,
+            sample: current.sample,
+        };
+
+        this.recentAlerts.unshift(alert);
+        if (this.recentAlerts.length > 500) {
+            this.recentAlerts = this.recentAlerts.slice(0, 500);
+        }
+
+        try {
+            await this.onSemanticAlert?.(alert);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`Failed to emit semantic alert callback: ${message}`);
+        }
+
+        // Reset the counter after emitting an alert to avoid duplicate spam.
+        current.occurrences = 0;
+        current.firstSeen = now;
+        current.lastSeen = now;
+    }
+
+    private evictOldAnomalies(now: number): void {
+        for (const [key, state] of this.anomalyMap.entries()) {
+            if (now - state.lastSeen > this.anomalyWindowMs) {
+                this.anomalyMap.delete(key);
+            }
+        }
+    }
+
+    private buildSignature(content: string): string {
+        const normalized = content
+            .toLowerCase()
+            .replace(/\b\d+\b/g, '#')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!normalized) return '';
+
+        if (normalized.includes('timeout')) return 'timeout';
+        if (normalized.includes('denied') || normalized.includes('forbidden') || normalized.includes('unauthorized')) return 'permission-denied';
+        if (normalized.includes('error') || normalized.includes('failed') || normalized.includes('failure')) return 'execution-error';
+        if (normalized.includes('panic') || normalized.includes('fatal')) return 'fatal-runtime';
+
+        return normalized.slice(0, 120);
     }
 
     private ensureTimer(): void {
