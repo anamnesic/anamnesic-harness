@@ -234,7 +234,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <span className="label-caps">Modelos de IA</span>
-                        <p className="text-xs text-text-dim mt-1">Ative ou desative modelos disponíveis para uso nesta máquina.</p>
+                        <p className="text-xs text-text-dim mt-1">Modelos disponíveis com CLIs instalados e chaves configuradas.</p>
                     </div>
                 </div>
 
@@ -252,7 +252,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                     {availabilityLoading ? (
                         [0, 1, 2].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)
                     ) : availableModels.length === 0 ? (
-                        <p className="text-xs text-text-dim py-2">Nenhum modelo disponível no momento. Instale um CLI compatível para habilitar.</p>
+                        <p className="text-xs text-text-dim py-2">Nenhum modelo disponível. Instale um CLI e configure suas chaves de API.</p>
                     ) : availableModels.map((model) => {
                         const enabled = localModelStates[model.id] ?? true;
                         const cli = isCliModel(model.id);

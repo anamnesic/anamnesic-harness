@@ -161,52 +161,68 @@ function hasProviderKey(provider: ProviderName, keys: Partial<Record<ProviderNam
 
 function isModelAvailable(
     modelId: string,
+    provider: string,
     cli: Record<CliName, boolean>,
     keys: Partial<Record<ProviderName, boolean>>,
 ): boolean {
     const id = modelId.toLowerCase();
+    const prov = provider.toLowerCase();
 
-    if (id.includes('claude')) {
-        return cli['claude-code'] && hasProviderKey('claude', keys);
+    // Stricter provider-based checking
+    switch (prov) {
+        case 'claude':
+            return cli['claude-code'] && hasProviderKey('claude', keys);
+        case 'anthropic':
+            return cli['claude-code'] && hasProviderKey('claude', keys);
+        case 'gemini':
+            return cli.gemini && hasProviderKey('gemini', keys);
+        case 'google':
+            return cli.gemini && hasProviderKey('gemini', keys);
+        case 'chatgpt':
+        case 'openai':
+            // OpenAI via Codex CLI OR Copilot (which can provide GPT)
+            if (cli.copilot) {
+                return true;
+            }
+            return cli.codex && hasProviderKey('chatgpt', keys);
+        case 'copilot':
+        case 'xai':
+            // Copilot for GPT/Grok/Raptor
+            return cli.copilot;
+        case 'ollama':
+            return cli.ollama;
+        case 'vscode':
+        default:
+            // VSCode provider - check by model ID patterns
+            if (id.includes('claude')) {
+                return cli['claude-code'] && hasProviderKey('claude', keys);
+            }
+            if (id.includes('gemini')) {
+                return cli.gemini && hasProviderKey('gemini', keys);
+            }
+            if (id.includes('gpt')) {
+                if (cli.copilot) {
+                    return true;
+                }
+                return cli.codex && hasProviderKey('chatgpt', keys);
+            }
+            if (id.includes('grok') || id.includes('raptor')) {
+                return cli.copilot;
+            }
+            if (id.includes('ollama') || id.includes('mistral') || id.includes('llama') || id.includes('neural')) {
+                return cli.ollama;
+            }
+            if (id === 'auto') {
+                return (
+                    cli.copilot
+                    || (cli.codex && hasProviderKey('chatgpt', keys))
+                    || (cli.gemini && hasProviderKey('gemini', keys))
+                    || (cli['claude-code'] && hasProviderKey('claude', keys))
+                    || cli.ollama
+                );
+            }
+            return false;
     }
-
-    if (id.includes('gemini')) {
-        return cli.gemini && hasProviderKey('gemini', keys);
-    }
-
-    if (id.includes('codex')) {
-        return cli.codex && hasProviderKey('chatgpt', keys);
-    }
-
-    if (id.includes('gpt')) {
-        // Copilot can provide GPT families without local OpenAI key.
-        if (cli.copilot) {
-            return true;
-        }
-
-        return cli.codex && hasProviderKey('chatgpt', keys);
-    }
-
-    if (id.includes('grok') || id.includes('raptor')) {
-        return cli.copilot;
-    }
-
-    // Ollama models
-    if (id.includes('ollama') || id.includes('mistral') || id.includes('llama') || id.includes('neural')) {
-        return cli.ollama;
-    }
-
-    if (id === 'auto') {
-        return (
-            cli.copilot
-            || (cli.codex && hasProviderKey('chatgpt', keys))
-            || (cli.gemini && hasProviderKey('gemini', keys))
-            || (cli['claude-code'] && hasProviderKey('claude', keys))
-            || cli.ollama
-        );
-    }
-
-    return false;
 }
 
 export async function GET(req: NextRequest) {
@@ -236,7 +252,7 @@ export async function GET(req: NextRequest) {
         const models: Record<string, boolean> = {};
 
         for (const model of AVAILABLE_MODELS) {
-            models[model.id] = isModelAvailable(model.id, cli, providerKeys);
+            models[model.id] = isModelAvailable(model.id, model.provider, cli, providerKeys);
         }
 
         const availableCli = (Object.entries(cli)
