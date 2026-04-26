@@ -71,54 +71,54 @@ const Header = ({ title, subtitle, onBack, rightElement, bottomElement, activeTa
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg/80 px-3 py-3 backdrop-blur-xl text-highlight sm:px-6 sm:py-5">
       <div className="flex items-center justify-between">
-      <div className="flex min-w-0 items-center gap-4">
-        {onBack ? (
-          <button
-            onClick={onBack}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
-          >
-            <ArrowLeft className="size-5" />
-          </button>
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Activity className="size-6" />
-          </div>
-        )}
-        <div className="min-w-0">
-          {activeTab !== 'dashboard' && (
-            <Breadcrumbs
-              items={[
-                { label: 'Início', onClick: onBack },
-                { label: title, active: true }
-              ]}
-              className="mb-1"
-            />
+        <div className="flex min-w-0 items-center gap-4">
+          {onBack ? (
+            <button
+              onClick={onBack}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Activity className="size-6" />
+            </div>
           )}
-          <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
-          {subtitle && (
-            <p className={cn(
-              'mt-1.5 text-text-dim',
-              activeTab === 'dashboard'
-                ? 'text-[10px] font-bold uppercase tracking-[0.2em]'
-                : 'text-xs'
-            )}>
-              {subtitle}
-            </p>
+          <div className="min-w-0">
+            {activeTab !== 'dashboard' && (
+              <Breadcrumbs
+                items={[
+                  { label: 'Início', onClick: onBack },
+                  { label: title, active: true }
+                ]}
+                className="mb-1"
+              />
+            )}
+            <h1 className="text-xl font-bold leading-none tracking-tight">{title}</h1>
+            {subtitle && (
+              <p className={cn(
+                'mt-1.5 text-text-dim',
+                activeTab === 'dashboard'
+                  ? 'text-[10px] font-bold uppercase tracking-[0.2em]'
+                  : 'text-xs'
+              )}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <RepositorySelector />
+          {rightElement ?? (
+            <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
+              <Bell className="size-5 text-accent group-hover:scale-110 transition-transform" />
+              <span className="absolute right-3 top-3 flex size-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
+              </span>
+            </button>
           )}
         </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <RepositorySelector />
-        {rightElement ?? (
-          <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
-            <Bell className="size-5 text-accent group-hover:scale-110 transition-transform" />
-            <span className="absolute right-3 top-3 flex size-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
-            </span>
-          </button>
-        )}
-      </div>
       </div>
       {bottomElement ? <div className="mt-3">{bottomElement}</div> : null}
     </header>
@@ -418,6 +418,8 @@ function AppContent() {
     </div>
   ) : undefined;
 
+  const showExtensionsSidebar = activeTab !== 'repo-files';
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
@@ -456,10 +458,12 @@ function AppContent() {
           </main>
           <BottomNav active={activeTab} onChange={setActiveTab} />
         </div>
-        <ExtensionsRightSidebar
-          installedExtensionIds={installedExtensionIds}
-          onNavigate={(tab) => setActiveTab(tab)}
-        />
+        {showExtensionsSidebar ? (
+          <ExtensionsRightSidebar
+            installedExtensionIds={installedExtensionIds}
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
+        ) : null}
       </div>
     </>
   );
