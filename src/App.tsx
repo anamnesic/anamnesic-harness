@@ -124,7 +124,7 @@ const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
   { id: 'repo-files', label: 'Repo', icon: FileText },
   { id: 'repo-git', label: 'Git', icon: GitBranch },
-  { id: 'repo-context', label: 'Contexto', icon: BookOpen },
+  { id: 'repo-context', label: 'Docs', icon: BookOpen },
   { id: 'repo-decisions', label: 'Decisoes', icon: Lightbulb },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
@@ -295,7 +295,7 @@ function useScreenConfig(
       };
     case 'repo-context':
       return {
-        title: 'Contexto',
+        title: 'Docs',
         subtitle: 'Documentação do projeto',
         element: <Projects embedded activeTab="context" hideTabBar />,
         onBack: undefined,
@@ -377,60 +377,44 @@ function AppContent() {
     );
   }
 
-  if (!isAuthenticated) {
-    return authView === 'login' ? (
-      <Login onNavigateToSignup={() => setAuthView('signup')} />
-    ) : (
-      <Signup onBackToLogin={() => setAuthView('login')} />
-    );
-  }
-
   return (
-    <WorkspaceProvider>
-      <RepositoryProvider>
-        <ToastProvider>
-          <OnboardingModal />
-          <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
-            {/* Main Content */}
-            <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
-              <Header
-                title={config.title}
-                subtitle={config.subtitle}
-                onBack={config.onBack}
-                rightElement={config.rightElement}
-                activeTab={activeTab}
-              />
-              <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.02 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 flex flex-col"
-                  >
-                    {config.element}
-                  </motion.div>
-                </AnimatePresence>
-              </main>
-              <BottomNav active={activeTab} onChange={setActiveTab} />
-            </div>
-            <ExtensionsRightSidebar
-              installedExtensionIds={installedExtensionIds}
-              onNavigate={(tab) => setActiveTab(tab)}
-            />
-          </div>
-        </ToastProvider>
-      </RepositoryProvider>
-    </WorkspaceProvider>
+    <>
+      <OnboardingModal />
+      <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
+        {/* Main Content */}
+        <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
+          <Header
+            title={config.title}
+            subtitle={config.subtitle}
+            onBack={config.onBack}
+            rightElement={config.rightElement}
+            activeTab={activeTab}
+          />
+          <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 flex flex-col"
+              >
+                {config.element}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+          <BottomNav active={activeTab} onChange={setActiveTab} />
+        </div>
+        <ExtensionsRightSidebar
+          installedExtensionIds={installedExtensionIds}
+          onNavigate={(tab) => setActiveTab(tab)}
+        />
+      </div>
+    </>
   );
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  return <AppContent />;
 }

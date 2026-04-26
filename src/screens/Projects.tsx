@@ -411,7 +411,7 @@ export function Projects({
     }> = [
             { id: 'repository', label: 'Repositório', icon: FileText },
             { id: 'git', label: 'Git', icon: GitBranch },
-            { id: 'context', label: 'Contexto', icon: BookOpen },
+            { id: 'context', label: 'Docs', icon: BookOpen },
             { id: 'decisions', label: 'Decisões', icon: Lightbulb },
         ];
 
@@ -455,7 +455,7 @@ export function Projects({
                 {showWorkspaceHint ? (
                     <p className="text-sm text-text-dim">Nenhum workspace ativo. Use o seletor de repositórios no appbar para importar uma pasta.</p>
                 ) : (
-                    <p className="text-sm text-text-dim">Selecione um repositório real no seletor do appbar para carregar arquivos, Git e contexto.</p>
+                    <p className="text-sm text-text-dim">Selecione um repositório real no seletor do appbar para carregar arquivos, Git e docs.</p>
                 )}
             </div>
         </motion.div>
