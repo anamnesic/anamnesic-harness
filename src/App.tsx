@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
   Shield,
-  Terminal,
   Settings2,
   Bell,
   ArrowLeft,
@@ -13,10 +12,6 @@ import {
   Bot,
   Lightbulb,
   TrendingUp,
-  Trash2,
-  RotateCw,
-  Maximize2,
-  Minimize2,
   FileText,
   BookOpen,
   ServerCog,
@@ -46,17 +41,8 @@ import { Login } from './screens/Login';
 import { Signup } from './screens/Signup';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
-import { TerminalPanel } from './screens/TerminalPanel';
 import { McpScreen } from './components/McpScreen';
 import { InferenceHub } from './screens/InferenceHub';
-
-interface TerminalHeaderState {
-  repoPath: string;
-  isMaximized: boolean;
-  onToggleMaximize: () => void;
-  onRestartAll: () => void;
-  onClearAll: () => void;
-}
 
 const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange }: {
   title: string;
@@ -149,7 +135,6 @@ const TABS = [
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'mcp', label: 'MCP', icon: ServerCog },
-  { id: 'terminal', label: 'Terminal', icon: Terminal },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
 
@@ -188,8 +173,6 @@ function useScreenConfig(
   active: TabId,
   goHome: () => void,
   setActive: (id: TabId) => void,
-  terminalHeaderState: TerminalHeaderState | null,
-  setTerminalHeaderState: (state: TerminalHeaderState | null) => void,
 ) {
   switch (active) {
     case 'dashboard':
@@ -245,40 +228,6 @@ function useScreenConfig(
         element: <McpScreen />,
         onBack: goHome,
         rightElement: undefined,
-      };
-    case 'terminal':
-      return {
-        title: 'Terminal',
-        subtitle: terminalHeaderState?.repoPath
-          ? `terminal real PTY · ${terminalHeaderState.repoPath}`
-          : 'terminal real PTY',
-        element: <TerminalPanel onHeaderStateChange={setTerminalHeaderState} />,
-        onBack: goHome,
-        rightElement: terminalHeaderState ? (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={terminalHeaderState.onToggleMaximize}
-              title={terminalHeaderState.isMaximized ? 'Restaurar tamanho' : 'Maximizar terminal'}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
-            >
-              {terminalHeaderState.isMaximized ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-            </button>
-            <button
-              onClick={terminalHeaderState.onRestartAll}
-              title="Reiniciar todas as sessões"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
-            >
-              <RotateCw className="size-4" />
-            </button>
-            <button
-              onClick={terminalHeaderState.onClearAll}
-              title="Limpar saídas"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </div>
-        ) : undefined,
       };
     case 'tasks':
       return { title: 'Tarefas', subtitle: 'Gerenciamento de tarefas', element: <Tasks />, onBack: goHome, rightElement: undefined };
@@ -339,15 +288,12 @@ function useScreenConfig(
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
-  const [terminalHeaderState, setTerminalHeaderState] = useState<TerminalHeaderState | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
 
   const config = useScreenConfig(
     activeTab,
     () => setActiveTab('dashboard'),
     setActiveTab,
-    terminalHeaderState,
-    setTerminalHeaderState,
   );
 
   if (isLoading) {

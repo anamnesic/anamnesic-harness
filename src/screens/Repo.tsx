@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder, FolderOpen, ChevronRight, ChevronDown, Terminal } from 'lucide-react';
 import { Wiki } from './Wiki';
 import { DecisionsPanel } from './DecisionsPanel';
+import { TerminalPanel } from './TerminalPanel';
 import { FolderBrowser } from '@/src/components/FolderBrowser';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
@@ -67,7 +68,7 @@ interface RepositoryTreeNode {
 }
 
 export type ProjectTabId = 'repository' | 'git' | 'context' | 'decisions';
-type RepoSidebarTab = 'files' | 'git';
+type RepoSidebarTab = 'files' | 'git' | 'terminal';
 
 interface ProjectsProps {
     embedded?: boolean;
@@ -726,6 +727,19 @@ export function Projects({
                                             >
                                                 <GitBranch className="size-4" />
                                             </button>
+                                            <button
+                                                onClick={() => setRepoSidebarTab('terminal')}
+                                                title="Terminal"
+                                                aria-label="Terminal"
+                                                className={cn(
+                                                    'flex flex-1 items-center justify-center rounded-md px-2 py-1.5 transition-colors',
+                                                    repoSidebarTab === 'terminal'
+                                                        ? 'bg-card text-highlight'
+                                                        : 'text-text-dim hover:text-highlight',
+                                                )}
+                                            >
+                                                <Terminal className="size-4" />
+                                            </button>
                                         </div>
 
                                         {repoSidebarTab === 'files' ? (
@@ -852,6 +866,12 @@ export function Projects({
                                     </aside>
 
                                     <section className="min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
+                                        {repoSidebarTab === 'terminal' ? (
+                                            <div className="min-h-0 flex-1 overflow-hidden">
+                                                <TerminalPanel />
+                                            </div>
+                                        ) : (
+                                            <>
                                         <div className="mb-3 overflow-x-auto rounded-lg border border-border/60 bg-bg/90">
                                             <div className="flex items-stretch">
                                                 {openRepoTabs.length ? openRepoTabs.map((filePath) => {
@@ -941,6 +961,8 @@ export function Projects({
                                                     />
                                                 </div>
                                             </div>
+                                        )}
+                                            </>
                                         )}
                                     </section>
                                 </div>
