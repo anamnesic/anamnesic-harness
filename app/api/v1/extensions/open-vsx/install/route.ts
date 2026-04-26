@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { ok, err } from '@/app/api/_lib/response';
 import { OpenVsxService } from '@/src/core/services/OpenVsxService';
 import { upsertInstalledOpenVsxExtension } from '@/app/api/_lib/open-vsx-installed';
+import { OpenVsxHostInstaller } from '@/src/core/services/OpenVsxHostInstaller';
 
 export async function POST(req: NextRequest) {
     try {
@@ -17,6 +18,20 @@ export async function POST(req: NextRequest) {
 
         const service = OpenVsxService.getInstance();
         const detail = await service.getExtension(namespace, name);
+        const installer = OpenVsxHostInstaller.getInstance();
+
+        const status = installer.getStatus();
+        if (!status.available) {
+            return err('HOST_INSTALLER_UNAVAILABLE', status.reason ?? 'Host installer unavailable', 503);
+        }
+
+        const downloadUrl = detail.files?.download;
+        if (!downloadUrl) {
+            return err('OPEN_VSX_INSTALL_FAILED', 'No VSIX download URL available for extension', 400);
+        }
+
+        const vsixPath = await installer.downloadVsix(downloadUrl, `${detail.namespace}.${detail.name}-${detail.version}`);
+        const installExecution = installer.installVsix(vsixPath);
 
         const record = {
             id: detail.id,
@@ -33,7 +48,14 @@ export async function POST(req: NextRequest) {
 
         await upsertInstalledOpenVsxExtension(record);
 
-        return ok({ installed: true, extension: record }, 201);
+        return ok({
+            installed: true,
+            extension: record,
+            hostInstall: {
+                command: installExecution.command,
+                args: installExecution.args,
+            },
+        }, 201);
     } catch (e: any) {
         return err('OPEN_VSX_INSTALL_FAILED', e?.message ?? 'Failed to install extension', 500);
     }
