@@ -16,7 +16,6 @@ import {
   Bot,
   Camera,
   Lightbulb,
-  Key,
   TrendingUp,
 } from 'lucide-react';
 import { cn } from './lib/utils';
@@ -38,7 +37,6 @@ import { ChatPanel } from './screens/ChatPanel';
 import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
-import { ApiKeysHub } from './screens/ApiKeysHub';
 import { ModelBenchmarks } from './screens/ModelBenchmarks';
 import { RedTeaming } from './screens/RedTeaming';
 import { Integrations } from './screens/Integrations';
@@ -104,7 +102,6 @@ const TABS = [
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'decisions', label: 'Decisões', icon: Lightbulb },
-  { id: 'apikeys', label: 'Chaves API', icon: Key },
   { id: 'security', label: 'Auditoria', icon: ShieldCheck },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
 ] as const;
@@ -200,8 +197,6 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
       return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: goHome, rightElement: undefined };
     case 'decisions':
       return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
-    case 'apikeys':
-      return { title: 'Chaves de API', subtitle: 'Credenciais do repositório selecionado', element: <ApiKeysHub />, onBack: goHome, rightElement: undefined };
     case 'security':
       return { title: 'Auditoria', subtitle: 'Auditoria de vulnerabilidades', element: <Security onNavigate={setActive} />, onBack: goHome, rightElement: undefined };
     case 'integrations':
