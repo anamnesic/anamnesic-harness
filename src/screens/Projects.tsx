@@ -380,14 +380,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
         >
             <div className="mb-8 flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Start</h2>
-                <button
-                    onClick={openFolderBrowser}
-                    disabled={submitting}
-                    className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                >
-                    <FolderOpen className="size-3.5" />
-                    {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
-                </button>
             </div>
 
             {repository && (
@@ -437,7 +429,7 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
             {showWorkspaceHint && (
                 <div className="bento-card py-8 text-center space-y-2">
                     <Building2 className="size-8 text-border mx-auto" />
-                    <p className="text-sm text-text-dim">Nenhum workspace ativo. Use "Selecionar pasta do repositório" para começar.</p>
+                    <p className="text-sm text-text-dim">Nenhum workspace ativo. Use o seletor de repositórios no appbar para importar uma pasta.</p>
                 </div>
             )}
         </motion.div>
@@ -613,14 +605,6 @@ export function Projects({ embedded = false, refreshToken = 0 }: { embedded?: bo
                         >
                             <ArrowLeft className="size-4" />
                             Voltar para Repositórios
-                        </button>
-                        <button
-                            onClick={openFolderBrowser}
-                            disabled={submitting}
-                            className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-1.5 text-[11px] font-bold text-accent hover:border-primary/60 transition-colors disabled:opacity-50"
-                        >
-                            <FolderOpen className="size-3.5" />
-                            {submitting ? 'Selecionando…' : 'Selecionar pasta do repositório'}
                         </button>
                     </div>
                     {recentItems.length > 0 && (

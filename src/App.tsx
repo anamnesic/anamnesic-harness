@@ -82,7 +82,7 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
       </div>
     </div>
     <div className="flex items-center gap-3">
-      <RepositorySelector hideWhenEmpty />
+      <RepositorySelector />
       {rightElement ?? (
         <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
           <Bell className="size-5 text-accent group-hover:scale-110 transition-transform" />
