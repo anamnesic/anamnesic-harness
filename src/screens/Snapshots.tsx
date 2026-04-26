@@ -241,6 +241,7 @@ export function Snapshots() {
             <AnimatePresence>
                 {showModal && (
                     <motion.div
+                        key="snapshot-modal"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}

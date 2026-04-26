@@ -414,6 +414,7 @@ export function Workflows() {
             <AnimatePresence>
                 {showModal && (
                     <motion.div
+                        key="workflow-modal"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -426,6 +427,7 @@ export function Workflows() {
                             exit={{ opacity: 0, scale: 0.96, y: 12 }}
                             transition={{ duration: 0.15 }}
                             className="bento-card w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto"
+                            onClick={e => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-base">New Workflow</h3>

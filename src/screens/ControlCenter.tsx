@@ -250,14 +250,14 @@ export function ControlCenter() {
                         { label: 'Total Runs', value: allRuns.length.toString(), status: 'ALL TIME' },
                         { label: 'Running', value: running.length.toString(), status: 'ACTIVE' },
                         { label: 'Violations', value: '0', status: 'TODAY' },
-                    ].map((stat, i) => (
-                        <div key={i} className="bento-card">
+                    ].map((stat, index) => (
+                        <div key={`stat-${stat.label}`} className="bento-card">
                             <span className="label-caps">{stat.label}</span>
                             <div className="flex items-center justify-between mt-auto pt-4">
                                 <span className="text-4xl font-black tracking-tight">{stat.value}</span>
                                 <span className={cn(
                                     'text-[9px] font-black tracking-[0.2em] px-2 py-1 rounded bg-border',
-                                    i === 0 ? 'text-primary' : 'text-text-dim',
+                                    index === 0 ? 'text-primary' : 'text-text-dim',
                                 )}>{stat.status}</span>
                             </div>
                         </div>
@@ -403,8 +403,8 @@ export function ControlCenter() {
                         </div>
                     ) : recent.length > 0 ? (
                         <div className="space-y-3">
-                            {recent.map((run, i) => (
-                                <div key={i} className="flex items-center justify-between p-3 bg-bg border border-border rounded-xl">
+                            {recent.map((run) => (
+                                <div key={run.id} className="flex items-center justify-between p-3 bg-bg border border-border rounded-xl">
                                     <div className="flex items-center gap-3">
                                         <span className="text-[10px] font-mono text-text-dim shrink-0">
                                             {new Date(run.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -464,8 +464,8 @@ export function ControlCenter() {
                     </div>
                 ) : allPlans.length > 0 ? (
                     <div className="space-y-3">
-                        {allPlans.map((plan, i) => (
-                            <div key={i} className="flex items-center justify-between gap-4 p-3 bg-bg border border-border rounded-xl">
+                        {allPlans.map((plan) => (
+                            <div key={plan.id} className="flex items-center justify-between gap-4 p-3 bg-bg border border-border rounded-xl">
                                 <span className="text-xs font-bold tracking-tight truncate flex-1 min-w-0">
                                     {plan.objective}
                                 </span>
@@ -502,6 +502,7 @@ export function ControlCenter() {
             <AnimatePresence>
                 {rollbackRunId && (
                     <motion.div
+                        key="rollback-modal"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -561,6 +562,7 @@ export function ControlCenter() {
             <AnimatePresence>
                 {showPlanForm && (
                     <motion.div
+                        key="plan-form-modal"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -609,7 +611,7 @@ export function ControlCenter() {
                                     </label>
                                     <div className="space-y-2">
                                         {planForm.constraints.map((constraint, index) => (
-                                            <div key={index} className="flex gap-2">
+                                            <div key={`constraint-${index}`} className="flex gap-2">
                                                 <input
                                                     type="text"
                                                     value={constraint}
@@ -752,6 +754,7 @@ export function ControlCenter() {
             <AnimatePresence>
                 {approvalRunId && approvalContext && (
                     <motion.div
+                        key="approval-modal"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -823,7 +826,7 @@ export function ControlCenter() {
                                         </h4>
                                         <div className="space-y-2">
                                             {approvalContext.audits.map((audit: any, index: number) => (
-                                                <div key={index} className="p-3 bg-bg border border-border rounded-lg">
+                                                <div key={`audit-${index}`} className="p-3 bg-bg border border-border rounded-lg">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <span className="text-xs font-medium text-accent">
                                                             {audit.mode === 'controlled-red-team' ? 'Controlled Red Team' : 'Defensive'}
@@ -845,7 +848,7 @@ export function ControlCenter() {
                                                             <p className="text-xs text-text-dim mb-1">Blocked capabilities:</p>
                                                             <div className="flex flex-wrap gap-1">
                                                                 {audit.blockedCapabilities.map((cap: string, i: number) => (
-                                                                    <span key={i} className="text-xs px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded">
+                                                                    <span key={`cap-${i}-${cap}`} className="text-xs px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded">
                                                                         {cap}
                                                                     </span>
                                                                 ))}
@@ -906,6 +909,7 @@ export function ControlCenter() {
             <AnimatePresence>
                 {selectedPlan && (
                     <motion.div
+                        key="plan-detail-modal"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -1021,7 +1025,7 @@ export function ControlCenter() {
                                         <h4 className="text-xs font-medium text-accent mb-3">Checkpoints ({planCheckpoints.length})</h4>
                                         <div className="space-y-2">
                                             {planCheckpoints.map((checkpoint, index) => (
-                                                <div key={index} className="p-3 bg-bg border border-border rounded-lg">
+                                                <div key={`checkpoint-${checkpoint.step}`} className="p-3 bg-bg border border-border rounded-lg">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <span className="text-xs font-medium text-accent">Step {checkpoint.step}</span>
                                                         <span className="text-xs text-text-dim">

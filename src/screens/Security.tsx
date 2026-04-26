@@ -332,6 +332,7 @@ export function Security() {
             <AnimatePresence>
                 {showModal && (
                     <motion.div
+                        key="security-modal"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
