@@ -12,7 +12,6 @@ import {
   Bell,
   ArrowLeft,
   Activity,
-  FolderGit2,
   Bot,
   Camera,
   Lightbulb,
@@ -99,7 +98,6 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab }: {
 
 const TABS = [
   { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
-  { id: 'workspaces', label: 'Repos', icon: FolderGit2 },
   { id: 'control', label: 'Segurança', icon: Shield },
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'decisions', label: 'Decisões', icon: Lightbulb },
@@ -200,7 +198,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'redteaming':
       return { title: 'Red Teaming', subtitle: 'Simulação de ataques', element: <RedTeaming />, onBack: goHome, rightElement: undefined };
     case 'workspaces':
-      return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: goHome, rightElement: undefined };
+      return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: undefined, rightElement: undefined };
     case 'ledger':
       return { title: 'Memória', subtitle: 'Recuperação histórica', element: <MemoryLedger />, onBack: goHome, rightElement: undefined };
     case 'observers':
@@ -233,7 +231,7 @@ function useScreenConfig(active: TabId, goHome: () => void, setActive: (id: TabI
     case 'workflows':
       return { title: 'Workflows', subtitle: 'Pipelines de automação', element: <Workflows />, onBack: goHome, rightElement: undefined };
     case 'projects':
-      return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: goHome, rightElement: undefined };
+      return { title: 'Repositórios', subtitle: 'Seleção global de um único repositório', element: <Workspaces />, onBack: undefined, rightElement: undefined };
     case 'decisions':
       return { title: 'Decisões', subtitle: 'Registro de decisões do projeto', element: <Decisions />, onBack: goHome, rightElement: undefined };
     case 'security':
@@ -288,7 +286,7 @@ function AppContent() {
           <OnboardingModal />
           <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
             {/* Left Sidebar - Repositories */}
-            <aside className="h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto flex flex-col">
+            <aside className="scrollbar-kairos h-screen w-64 shrink-0 border-r border-border bg-card/50 overflow-y-auto flex flex-col">
               <Projects />
             </aside>
 
@@ -301,7 +299,7 @@ function AppContent() {
                 rightElement={config.rightElement}
                 activeTab={activeTab}
               />
-              <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
+              <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
@@ -319,7 +317,7 @@ function AppContent() {
             </div>
 
             {/* Right Sidebar - Chat */}
-            <aside className="h-screen w-80 shrink-0 border-l border-border bg-card/50 overflow-y-auto">
+            <aside className="scrollbar-kairos h-screen w-80 shrink-0 border-l border-border bg-card/50 overflow-y-auto">
               <ChatPanel />
             </aside>
           </div>
