@@ -49,6 +49,28 @@ interface ExtensionDetails {
     iconUrl?: string;
 }
 
+interface ExtensionCompatibilityManifest {
+    id: string;
+    name: string;
+    displayName: string;
+    publisher: string;
+    version: string;
+    description?: string;
+    activationEvents: string[];
+    commands: Array<{
+        command: string;
+        title?: string;
+        category?: string;
+    }>;
+    views: Array<{
+        container: string;
+        id?: string;
+        name?: string;
+        type?: string;
+    }>;
+    settings: string[];
+}
+
 interface McpExtension {
     id: string;
     title: string;
@@ -203,20 +225,22 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
         return null;
     }, [selectedExtension]);
 
-    const hostTabByExtensionId = useMemo(() => {
-        const map = new Map<string, HostTabId>();
-        for (const extension of installedRecords) {
-            const id = extension.id.toLowerCase();
-            if (id.includes('integration')) {
-                map.set(extension.id, 'integrations');
-                continue;
-            }
-            if (id.includes('terminal')) {
-                map.set(extension.id, 'terminal');
-            }
+    const selectedCompatibilityUrl = useMemo(() => {
+        if (!selectedExtension) {
+            return null;
         }
-        return map;
-    }, [installedRecords]);
+        return `/api/v1/extensions/open-vsx/${selectedExtension.namespace}/${selectedExtension.name}/compat`;
+    }, [selectedExtension]);
+
+    const {
+        data: selectedCompatibilityData,
+        loading: selectedCompatibilityLoading,
+    } = useApi<{ data?: { compatibility?: { manifest?: ExtensionCompatibilityManifest } } } | null>(selectedCompatibilityUrl);
+
+    const selectedCompatibilityManifest = useMemo(
+        () => selectedCompatibilityData?.data?.compatibility?.manifest ?? null,
+        [selectedCompatibilityData],
+    );
 
     const selectedReadmeUrl = useMemo(() => {
         if (!selectedMarketExtension) {
@@ -328,17 +352,6 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
     function handleTabClick(tab: SidebarTab) {
         if (tab.id === 'market') {
             setActiveTab('market');
-            return;
-        }
-
-        if (!tab.extensionId) {
-            setActiveTab(tab.id);
-            return;
-        }
-
-        const hostTab = hostTabByExtensionId.get(tab.extensionId);
-        if (hostTab) {
-            onNavigate(hostTab);
             return;
         }
 
@@ -473,214 +486,241 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                             </div>
                         ) : (
                             <>
-                        <div className="rounded-xl border border-border bg-bg/60 p-3">
-                            <div className="flex items-center gap-2">
-                                <div className="relative min-w-0 flex-1">
-                                    <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-text-dim" />
-                                    <input
-                                        value={marketQuery}
-                                        onChange={(event) => setMarketQuery(event.target.value)}
-                                        placeholder="Buscar extensao no Open VSX"
-                                        className="w-full rounded-lg border border-border bg-card/40 py-2 pl-9 pr-3 text-xs text-highlight placeholder:text-text-dim focus:border-primary/50 focus:outline-none"
-                                    />
-                                </div>
-                                <a
-                                    href={openVsxSearchUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
-                                >
-                                    Buscar
-                                    <ExternalLink className="size-3" />
-                                </a>
-                            </div>
-                        </div>
-
-                        <div className="rounded-xl border border-border bg-bg/50">
-                            <button
-                                type="button"
-                                onClick={() => toggleSection('installed')}
-                                className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
-                            >
-                                <span>Instalados ({filteredInstalled.length})</span>
-                                <ChevronDown className={cn('size-4 transition-transform', openSections.installed && 'rotate-180')} />
-                            </button>
-                            {openSections.installed && (
-                                <div className="space-y-2 border-t border-border/60 p-3">
-                                    {installedLoading ? (
-                                        <p className="text-xs text-text-dim">Carregando extensoes instaladas...</p>
-                                    ) : filteredInstalled.length === 0 ? (
-                                        <p className="text-xs text-text-dim">Nenhuma extensao instalada encontrada para esta busca.</p>
-                                    ) : filteredInstalled.map((extension) => (
-                                        <article
-                                            key={extension.id}
-                                            onClick={() => openMarketDetails({
-                                                id: extension.id,
-                                                namespace: extension.namespace,
-                                                name: extension.name,
-                                                displayName: extension.displayName,
-                                                description: extension.description,
-                                                version: extension.version,
-                                                verified: extension.verified,
-                                                iconUrl: extension.iconUrl,
-                                            })}
-                                            className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
+                                <div className="rounded-xl border border-border bg-bg/60 p-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative min-w-0 flex-1">
+                                            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-text-dim" />
+                                            <input
+                                                value={marketQuery}
+                                                onChange={(event) => setMarketQuery(event.target.value)}
+                                                placeholder="Buscar extensao no Open VSX"
+                                                className="w-full rounded-lg border border-border bg-card/40 py-2 pl-9 pr-3 text-xs text-highlight placeholder:text-text-dim focus:border-primary/50 focus:outline-none"
+                                            />
+                                        </div>
+                                        <a
+                                            href={openVsxSearchUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60"
                                         >
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div>
+                                            Buscar
+                                            <ExternalLink className="size-3" />
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border border-border bg-bg/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleSection('installed')}
+                                        className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
+                                    >
+                                        <span>Instalados ({filteredInstalled.length})</span>
+                                        <ChevronDown className={cn('size-4 transition-transform', openSections.installed && 'rotate-180')} />
+                                    </button>
+                                    {openSections.installed && (
+                                        <div className="space-y-2 border-t border-border/60 p-3">
+                                            {installedLoading ? (
+                                                <p className="text-xs text-text-dim">Carregando extensoes instaladas...</p>
+                                            ) : filteredInstalled.length === 0 ? (
+                                                <p className="text-xs text-text-dim">Nenhuma extensao instalada encontrada para esta busca.</p>
+                                            ) : filteredInstalled.map((extension) => (
+                                                <article
+                                                    key={extension.id}
+                                                    onClick={() => openMarketDetails({
+                                                        id: extension.id,
+                                                        namespace: extension.namespace,
+                                                        name: extension.name,
+                                                        displayName: extension.displayName,
+                                                        description: extension.description,
+                                                        version: extension.version,
+                                                        verified: extension.verified,
+                                                        iconUrl: extension.iconUrl,
+                                                    })}
+                                                    className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
+                                                >
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
+                                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.namespace}</p>
+                                                        </div>
+                                                        <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                                                            Instalada
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
+                                                    <div className="mt-3 flex items-center justify-between gap-2">
+                                                        <a
+                                                            href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                                        >
+                                                            Ver no Open VSX
+                                                            <ExternalLink className="size-3" />
+                                                        </a>
+                                                        <button
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                void handleUninstall(extension.id);
+                                                            }}
+                                                            disabled={busyExtensionId === extension.id}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
+                                                        >
+                                                            {busyExtensionId === extension.id ? 'Removendo...' : 'Remover'}
+                                                        </button>
+                                                    </div>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="rounded-xl border border-border bg-bg/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleSection('recommended')}
+                                        className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
+                                    >
+                                        <span>Recomendados ({filteredRecommended.length})</span>
+                                        <ChevronDown className={cn('size-4 transition-transform', openSections.recommended && 'rotate-180')} />
+                                    </button>
+                                    {openSections.recommended && (
+                                        <div className="space-y-2 border-t border-border/60 p-3">
+                                            {searchLoading ? (
+                                                <p className="text-xs text-text-dim">Buscando extensoes no Open VSX...</p>
+                                            ) : filteredRecommended.length === 0 ? (
+                                                <p className="text-xs text-text-dim">Nenhuma recomendacao disponivel para esta busca.</p>
+                                            ) : filteredRecommended.map((extension) => (
+                                                <article
+                                                    key={extension.id}
+                                                    onClick={() => openMarketDetails({
+                                                        id: extension.id,
+                                                        namespace: extension.namespace,
+                                                        name: extension.name,
+                                                        displayName: extension.displayName,
+                                                        description: extension.description,
+                                                        version: extension.version,
+                                                        verified: extension.verified,
+                                                        iconUrl: extension.files?.icon,
+                                                    })}
+                                                    className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
+                                                >
                                                     <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
                                                     <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.namespace}</p>
-                                                </div>
-                                                <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">
-                                                    Instalada
-                                                </span>
-                                            </div>
-                                            <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
-                                            <div className="mt-3 flex items-center justify-between gap-2">
-                                                <a
-                                                    href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                                >
-                                                    Ver no Open VSX
-                                                    <ExternalLink className="size-3" />
-                                                </a>
-                                                <button
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        void handleUninstall(extension.id);
-                                                    }}
-                                                    disabled={busyExtensionId === extension.id}
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:border-rose-400/70 disabled:opacity-60"
-                                                >
-                                                    {busyExtensionId === extension.id ? 'Removendo...' : 'Remover'}
-                                                </button>
-                                            </div>
-                                        </article>
-                                    ))}
+                                                    <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
+                                                    <div className="mt-3 flex items-center justify-between gap-2">
+                                                        <a
+                                                            href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                                        >
+                                                            Ver no Open VSX
+                                                            <ExternalLink className="size-3" />
+                                                        </a>
+                                                        <button
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                void handleInstall(extension.namespace, extension.name, extension.id);
+                                                            }}
+                                                            disabled={busyExtensionId === extension.id}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60 disabled:opacity-60"
+                                                        >
+                                                            {busyExtensionId === extension.id ? 'Instalando...' : 'Instalar'}
+                                                        </button>
+                                                    </div>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
 
-                        <div className="rounded-xl border border-border bg-bg/50">
-                            <button
-                                type="button"
-                                onClick={() => toggleSection('recommended')}
-                                className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
-                            >
-                                <span>Recomendados ({filteredRecommended.length})</span>
-                                <ChevronDown className={cn('size-4 transition-transform', openSections.recommended && 'rotate-180')} />
-                            </button>
-                            {openSections.recommended && (
-                                <div className="space-y-2 border-t border-border/60 p-3">
-                                    {searchLoading ? (
-                                        <p className="text-xs text-text-dim">Buscando extensoes no Open VSX...</p>
-                                    ) : filteredRecommended.length === 0 ? (
-                                        <p className="text-xs text-text-dim">Nenhuma recomendacao disponivel para esta busca.</p>
-                                    ) : filteredRecommended.map((extension) => (
-                                        <article
-                                            key={extension.id}
-                                            onClick={() => openMarketDetails({
-                                                id: extension.id,
-                                                namespace: extension.namespace,
-                                                name: extension.name,
-                                                displayName: extension.displayName,
-                                                description: extension.description,
-                                                version: extension.version,
-                                                verified: extension.verified,
-                                                iconUrl: extension.files?.icon,
-                                            })}
-                                            className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
-                                        >
-                                            <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">{extension.namespace}</p>
-                                            <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
-                                            <div className="mt-3 flex items-center justify-between gap-2">
-                                                <a
-                                                    href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                <div className="rounded-xl border border-border bg-bg/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleSection('mcp')}
+                                        className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
+                                    >
+                                        <span>MCP ({filteredMcp.length})</span>
+                                        <ChevronDown className={cn('size-4 transition-transform', openSections.mcp && 'rotate-180')} />
+                                    </button>
+                                    {openSections.mcp && (
+                                        <div className="space-y-2 border-t border-border/60 p-3">
+                                            {mcpLoading ? (
+                                                <p className="text-xs text-text-dim">Buscando conectores MCP...</p>
+                                            ) : filteredMcp.length === 0 ? (
+                                                <p className="text-xs text-text-dim">Nenhum conector MCP encontrado para esta busca.</p>
+                                            ) : filteredMcp.map((extension) => (
+                                                <article
+                                                    key={extension.id}
+                                                    onClick={() => openMarketDetails({
+                                                        id: extension.id,
+                                                        namespace: extension.namespace,
+                                                        name: extension.name,
+                                                        displayName: extension.displayName,
+                                                        description: extension.description,
+                                                        version: extension.version,
+                                                        verified: extension.verified,
+                                                        iconUrl: extension.files?.icon,
+                                                    })}
+                                                    className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
                                                 >
-                                                    Ver no Open VSX
-                                                    <ExternalLink className="size-3" />
-                                                </a>
-                                                <button
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        void handleInstall(extension.namespace, extension.name, extension.id);
-                                                    }}
-                                                    disabled={busyExtensionId === extension.id}
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary hover:border-primary/60 disabled:opacity-60"
-                                                >
-                                                    {busyExtensionId === extension.id ? 'Instalando...' : 'Instalar'}
-                                                </button>
-                                            </div>
-                                        </article>
-                                    ))}
+                                                    <div className="flex items-center gap-2">
+                                                        <ServerCog className="size-4 text-primary" />
+                                                        <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
+                                                    </div>
+                                                    <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
+                                                    <a
+                                                        href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
+                                                    >
+                                                        Abrir no Open VSX
+                                                        <ExternalLink className="size-3" />
+                                                    </a>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-
-                        <div className="rounded-xl border border-border bg-bg/50">
-                            <button
-                                type="button"
-                                onClick={() => toggleSection('mcp')}
-                                className="flex w-full items-center justify-between px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-highlight"
-                            >
-                                <span>MCP ({filteredMcp.length})</span>
-                                <ChevronDown className={cn('size-4 transition-transform', openSections.mcp && 'rotate-180')} />
-                            </button>
-                            {openSections.mcp && (
-                                <div className="space-y-2 border-t border-border/60 p-3">
-                                    {mcpLoading ? (
-                                        <p className="text-xs text-text-dim">Buscando conectores MCP...</p>
-                                    ) : filteredMcp.length === 0 ? (
-                                        <p className="text-xs text-text-dim">Nenhum conector MCP encontrado para esta busca.</p>
-                                    ) : filteredMcp.map((extension) => (
-                                        <article
-                                            key={extension.id}
-                                            onClick={() => openMarketDetails({
-                                                id: extension.id,
-                                                namespace: extension.namespace,
-                                                name: extension.name,
-                                                displayName: extension.displayName,
-                                                description: extension.description,
-                                                version: extension.version,
-                                                verified: extension.verified,
-                                                iconUrl: extension.files?.icon,
-                                            })}
-                                            className="cursor-pointer rounded-lg border border-border bg-card/40 p-3 hover:border-accent/40"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <ServerCog className="size-4 text-primary" />
-                                                <h4 className="text-sm font-bold text-highlight">{extension.displayName}</h4>
-                                            </div>
-                                            <p className="mt-2 text-xs text-text-dim">{extension.description}</p>
-                                            <a
-                                                href={`https://open-vsx.org/extension/${extension.namespace}/${extension.name}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-card/60 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-accent hover:border-accent/50"
-                                            >
-                                                Abrir no Open VSX
-                                                <ExternalLink className="size-3" />
-                                            </a>
-                                        </article>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
                             </>
                         )}
                     </div>
                 ) : selectedExtension ? (
                     <div className="space-y-3">
                         <div className="rounded-xl border border-border bg-bg/50 p-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Tela da extensao instalada</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Tela real da extensao instalada</p>
                             <h4 className="mt-2 text-sm font-black text-highlight">{selectedExtension.displayName}</h4>
-                            <p className="mt-2 text-xs text-text-dim">Use o card da extensao no Market para ver detalhes, README e acoes de instalacao/remocao.</p>
+                            <p className="mt-2 text-xs text-text-dim">Esta visualizacao e gerada pelo manifesto real da VSIX instalada no Kairos.</p>
+
+                            <div className="mt-3 rounded-lg border border-border/70 bg-card/60 p-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Compatibilidade Kairos</p>
+                                {selectedCompatibilityLoading ? (
+                                    <p className="mt-1 text-xs text-text-dim">Lendo manifesto da extensao instalada...</p>
+                                ) : selectedCompatibilityManifest ? (
+                                    <>
+                                        <p className="mt-1 text-xs text-accent">Manifesto carregado: {selectedCompatibilityManifest.publisher}.{selectedCompatibilityManifest.name}@{selectedCompatibilityManifest.version}</p>
+                                        <div className="mt-3 grid grid-cols-3 gap-2">
+                                            <div className="rounded-md border border-border/70 bg-bg/50 p-2 text-center">
+                                                <p className="text-[9px] uppercase tracking-wider text-text-dim">Comandos</p>
+                                                <p className="text-sm font-black text-highlight">{selectedCompatibilityManifest.commands.length}</p>
+                                            </div>
+                                            <div className="rounded-md border border-border/70 bg-bg/50 p-2 text-center">
+                                                <p className="text-[9px] uppercase tracking-wider text-text-dim">Views</p>
+                                                <p className="text-sm font-black text-highlight">{selectedCompatibilityManifest.views.length}</p>
+                                            </div>
+                                            <div className="rounded-md border border-border/70 bg-bg/50 p-2 text-center">
+                                                <p className="text-[9px] uppercase tracking-wider text-text-dim">Settings</p>
+                                                <p className="text-sm font-black text-highlight">{selectedCompatibilityManifest.settings.length}</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="mt-1 text-xs text-rose-300">Nao foi possivel carregar o manifesto da VSIX instalada.</p>
+                                )}
+                            </div>
 
                             {selectedHostTab ? (
                                 <button
@@ -692,7 +732,7 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                 </button>
                             ) : (
                                 <p className="mt-3 rounded-lg border border-border/70 bg-card/60 p-3 text-xs text-text-dim">
-                                    Esta extensao nao possui tela dedicada mapeada no Kairos ainda.
+                                    Esta extensao nao possui painel nativo mapeado; use os blocos de Comandos, Views e Settings para integrar no Kairos.
                                 </p>
                             )}
 
@@ -715,6 +755,59 @@ export function ExtensionsRightSidebar({ installedExtensionIds, onNavigate }: Ex
                                 Ver detalhes no Market
                             </button>
                         </div>
+
+                        {selectedCompatibilityManifest && (
+                            <>
+                                <div className="rounded-xl border border-border bg-bg/50 p-4">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Comandos da extensao</p>
+                                    {selectedCompatibilityManifest.commands.length === 0 ? (
+                                        <p className="mt-2 text-xs text-text-dim">A extensao nao declara comandos no manifesto.</p>
+                                    ) : (
+                                        <div className="mt-2 space-y-2">
+                                            {selectedCompatibilityManifest.commands.slice(0, 8).map((command) => (
+                                                <div key={command.command} className="rounded-lg border border-border/70 bg-card/60 p-2">
+                                                    <p className="text-xs font-bold text-highlight">{command.title ?? command.command}</p>
+                                                    <p className="text-[10px] text-text-dim">{command.command}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="rounded-xl border border-border bg-bg/50 p-4">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-dim">Views e Configuracoes</p>
+                                    <div className="mt-2 space-y-3">
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Views</p>
+                                            {selectedCompatibilityManifest.views.length === 0 ? (
+                                                <p className="mt-1 text-xs text-text-dim">Nenhuma view declarada.</p>
+                                            ) : (
+                                                <div className="mt-1 space-y-1">
+                                                    {selectedCompatibilityManifest.views.slice(0, 8).map((view) => (
+                                                        <p key={`${view.container}:${view.id ?? view.name ?? 'view'}`} className="text-xs text-highlight">
+                                                            {view.name ?? view.id ?? 'View'} <span className="text-text-dim">({view.container})</span>
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Settings</p>
+                                            {selectedCompatibilityManifest.settings.length === 0 ? (
+                                                <p className="mt-1 text-xs text-text-dim">Nenhuma configuracao declarada.</p>
+                                            ) : (
+                                                <div className="mt-1 space-y-1">
+                                                    {selectedCompatibilityManifest.settings.slice(0, 10).map((setting) => (
+                                                        <p key={setting} className="text-xs text-highlight">{setting}</p>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 ) : (
                     <div className="rounded-xl border border-dashed border-border bg-bg/40 p-4 text-xs text-text-dim">
