@@ -309,7 +309,7 @@ function AppContent() {
       <OnboardingModal />
       <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
         {/* Main Content */}
-        <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <Header
             title={config.title}
             subtitle={config.subtitle}
@@ -318,7 +318,7 @@ function AppContent() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
           />
-          <main className="scrollbar-kairos flex-1 flex flex-col overflow-x-hidden overflow-y-auto">
+          <main className="scrollbar-kairos flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -326,7 +326,7 @@ function AppContent() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.02 }}
                 transition={{ duration: 0.2 }}
-                className="flex-1 flex flex-col"
+                className="flex min-h-0 flex-1 flex-col"
               >
                 {config.element}
               </motion.div>
