@@ -698,7 +698,7 @@ export function Projects({
 
                         <section className="min-w-0">
                             {activeTab === 'repository' ? (
-                                <div className="flex h-[calc(100dvh-9rem)] min-h-0 flex-col gap-4 overflow-hidden lg:flex-row">
+                                <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden lg:flex-row">
                                     <aside className="bento-card flex h-full min-h-0 flex-col overflow-hidden lg:w-72 lg:shrink-0">
                                         <div className="mb-3 flex items-center gap-1 rounded-lg border border-border/60 bg-bg/70 p-1">
                                             <button
