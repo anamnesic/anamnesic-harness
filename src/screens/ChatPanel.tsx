@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Terminal, Trash2, Send, Square } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
@@ -21,11 +21,11 @@ function getAuthHeaders(extra?: Record<string, string>): Record<string, string> 
 
 type CliTab = 'claude' | 'gemini' | 'copilot' | 'codex';
 
-const CLI_TABS: { id: CliTab; label: string; colorClass: string; activeBg: string }[] = [
-  { id: 'claude', label: 'Claude', colorClass: 'text-orange-400', activeBg: 'border-orange-400/40 text-orange-400' },
-  { id: 'gemini', label: 'Gemini', colorClass: 'text-blue-400', activeBg: 'border-blue-400/40 text-blue-400' },
-  { id: 'copilot', label: 'Copilot', colorClass: 'text-purple-400', activeBg: 'border-purple-400/40 text-purple-400' },
-  { id: 'codex', label: 'Codex', colorClass: 'text-green-400', activeBg: 'border-green-400/40 text-green-400' },
+const CLI_TABS: { id: CliTab; label: string; colorClass: string }[] = [
+  { id: 'claude', label: 'Claude', colorClass: 'text-orange-400' },
+  { id: 'gemini', label: 'Gemini', colorClass: 'text-blue-400' },
+  { id: 'copilot', label: 'Copilot', colorClass: 'text-purple-400' },
+  { id: 'codex', label: 'Codex', colorClass: 'text-green-400' },
 ];
 
 interface TerminalLine {
@@ -35,8 +35,13 @@ interface TerminalLine {
 }
 
 type LinesMap = Record<CliTab, TerminalLine[]>;
+type InputsMap = Record<CliTab, string>;
+type RunningMap = Record<CliTab, boolean>;
 
 const EMPTY_LINES: LinesMap = { claude: [], gemini: [], copilot: [], codex: [] };
+const EMPTY_INPUTS: InputsMap = { claude: '', gemini: '', copilot: '', codex: '' };
+const EMPTY_RUNNING: RunningMap = { claude: false, gemini: false, copilot: false, codex: false };
+const MAX_VISIBLE_LINES = 12;
 
 let lineId = 0;
 function mkLine(type: TerminalLine['type'], text: string): TerminalLine {
@@ -45,43 +50,27 @@ function mkLine(type: TerminalLine['type'], text: string): TerminalLine {
 
 export function TerminalPanel() {
   const { repository } = useRepository();
-  const [activeTab, setActiveTab] = useState<CliTab>('claude');
-  const [input, setInput] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
+  const [inputs, setInputs] = useState<InputsMap>(EMPTY_INPUTS);
+  const [isRunning, setIsRunning] = useState<RunningMap>(EMPTY_RUNNING);
   const [lines, setLines] = useState<LinesMap>(EMPTY_LINES);
-  const outputRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  // Auto-scroll on new output
-  useEffect(() => {
-    if (outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
-    }
-  }, [lines[activeTab]]);
-
-  // Focus input on tab switch
-  useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, [activeTab]);
+  const abortRefs = useRef<Partial<Record<CliTab, AbortController>>>({});
 
   const addLine = useCallback((tab: CliTab, line: TerminalLine) => {
     setLines(prev => ({ ...prev, [tab]: [...prev[tab], line] }));
   }, []);
 
-  const handleSubmit = useCallback(async () => {
-    if (!input.trim() || isRunning) return;
+  const handleSubmit = useCallback(async (tab: CliTab) => {
+    const prompt = inputs[tab].trim();
+    if (!prompt || isRunning[tab]) return;
 
-    const prompt = input.trim();
-    const tab = activeTab;
     const cwd = repository?.metadata?.localPath ?? '';
 
     addLine(tab, mkLine('input', `$ ${prompt}`));
-    setInput('');
-    setIsRunning(true);
+    setInputs(prev => ({ ...prev, [tab]: '' }));
+    setIsRunning(prev => ({ ...prev, [tab]: true }));
 
     const controller = new AbortController();
-    abortRef.current = controller;
+    abortRefs.current[tab] = controller;
 
     try {
       const response = await fetch('/api/terminal/stream', {
@@ -123,119 +112,124 @@ export function TerminalPanel() {
         addLine(tab, mkLine('stderr', `Erro: ${e.message}`));
       }
     } finally {
-      setIsRunning(false);
-      abortRef.current = null;
+      setIsRunning(prev => ({ ...prev, [tab]: false }));
+      delete abortRefs.current[tab];
     }
-  }, [input, isRunning, activeTab, repository, addLine]);
+  }, [inputs, isRunning, repository, addLine]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (tab: CliTab, e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      void handleSubmit(tab);
     }
   };
 
-  const stopRunning = () => {
-    abortRef.current?.abort();
-    setIsRunning(false);
+  const stopRunning = (tab: CliTab) => {
+    abortRefs.current[tab]?.abort();
+    setIsRunning(prev => ({ ...prev, [tab]: false }));
   };
 
-  const clearTab = () => setLines(prev => ({ ...prev, [activeTab]: [] }));
+  const clearTab = (tab: CliTab) => setLines(prev => ({ ...prev, [tab]: [] }));
+  const clearAllTabs = () => setLines(EMPTY_LINES);
 
   const repoPath = repository?.metadata?.localPath;
-  const currentLines = lines[activeTab];
-  const activeTabDef = CLI_TABS.find(t => t.id === activeTab)!;
 
   return (
-    <aside className="flex h-screen w-80 shrink-0 flex-col border-l border-border bg-[#0a0a0a]">
+    <aside className="flex h-screen w-[46vw] min-w-xl shrink-0 flex-col border-l border-border bg-[#0a0a0a]">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
         <Terminal className="size-4 text-primary shrink-0" />
-        <span className="text-xs font-black uppercase tracking-widest text-text-dim">Terminal</span>
+        <span className="text-xs font-black uppercase tracking-widest text-text-dim">Terminais</span>
+        {repoPath && <p className="truncate font-mono text-[9px] text-text-dim">{repoPath}</p>}
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={clearTab} title="Limpar" className="text-text-dim transition-colors hover:text-accent">
+          <button onClick={clearAllTabs} title="Limpar todos" className="text-text-dim transition-colors hover:text-accent">
             <Trash2 className="size-3.5" />
           </button>
         </div>
       </div>
 
-      {/* CLI Tabs */}
-      <div className="flex shrink-0 gap-1 border-b border-border px-3 pt-2">
-        {CLI_TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'rounded-t-lg border border-b-0 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
-              activeTab === tab.id
-                ? `border-border bg-bg ${tab.colorClass}`
-                : 'border-transparent text-text-dim hover:text-accent',
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2 p-2">
+        {CLI_TABS.map(tab => {
+          const tabLines = lines[tab.id].slice(-MAX_VISIBLE_LINES);
+          const running = isRunning[tab.id];
+          const value = inputs[tab.id];
 
-      {/* Repo path badge */}
-      {repoPath && (
-        <div className="shrink-0 border-b border-border/40 px-3 py-1.5">
-          <p className="truncate font-mono text-[9px] text-text-dim" title={repoPath}>{repoPath}</p>
-        </div>
-      )}
+          return (
+            <section key={tab.id} className="flex min-h-0 flex-col rounded-md border border-border/70 bg-bg/60">
+              <div className="flex items-center gap-2 border-b border-border/60 px-2 py-1.5">
+                <p className={cn('text-[10px] font-black uppercase tracking-wider', tab.colorClass)}>{tab.label}</p>
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    onClick={() => clearTab(tab.id)}
+                    title={`Limpar ${tab.label}`}
+                    className="text-text-dim transition-colors hover:text-accent"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                  {running && <span className="text-[9px] text-text-dim">rodando</span>}
+                </div>
+              </div>
 
-      {/* Output area */}
-      <div
-        ref={outputRef}
-        className="scrollbar-kairos min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[11px]"
-      >
-        {currentLines.length === 0 && (
-          <p className="italic text-text-dim">
-            {repoPath ? `Pronto — ${activeTabDef.label} CLI` : 'Selecione um repositório para definir o cwd'}
-          </p>
-        )}
-        {currentLines.map(line => (
-          <div
-            key={line.id}
-            className={cn(
-              'whitespace-pre-wrap break-all leading-relaxed',
-              line.type === 'input' ? `font-bold ${activeTabDef.colorClass}` :
-                line.type === 'stderr' ? 'text-red-400' :
-                  line.type === 'exit' ? 'mt-1 text-[9px] text-text-dim' :
-                    'text-green-300',
-            )}
-          >
-            {line.text}
-          </div>
-        ))}
-        {isRunning && <span className="animate-pulse text-text-dim">▋</span>}
-      </div>
+              <div className="min-h-0 flex-1 overflow-hidden px-2 py-1.5 font-mono text-[10px]">
+                {tabLines.length === 0 ? (
+                  <p className="italic text-text-dim">
+                    {repoPath ? `Pronto - ${tab.label} CLI` : 'Selecione um repositório para definir o cwd'}
+                  </p>
+                ) : (
+                  tabLines.map(line => (
+                    <div
+                      key={line.id}
+                      className={cn(
+                        'whitespace-pre-wrap break-all leading-relaxed',
+                        line.type === 'input' ? `font-bold ${tab.colorClass}` :
+                          line.type === 'stderr' ? 'text-red-400' :
+                            line.type === 'exit' ? 'mt-1 text-[9px] text-text-dim' :
+                              'text-green-300',
+                      )}
+                    >
+                      {line.text}
+                    </div>
+                  ))
+                )}
+                {running && <span className="animate-pulse text-text-dim">▋</span>}
+              </div>
 
-      {/* Input area */}
-      <div className="shrink-0 border-t border-border px-3 py-2">
-        <div className="flex items-end gap-2">
-          <span className={cn('shrink-0 font-mono text-xs font-bold leading-[1.6rem]', activeTabDef.colorClass)}>$</span>
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isRunning}
-            rows={2}
-            placeholder={`Prompt para ${activeTabDef.label}…`}
-            className="scrollbar-kairos flex-1 resize-none rounded bg-transparent font-mono text-[11px] text-highlight placeholder:text-text-dim/50 focus:outline-none disabled:opacity-50"
-          />
-          {isRunning ? (
-            <button onClick={stopRunning} title="Parar" className="mb-0.5 shrink-0 text-red-400 transition-colors hover:text-red-300">
-              <Square className="size-3.5" />
-            </button>
-          ) : (
-            <button onClick={handleSubmit} disabled={!input.trim()} title="Enviar (Enter)" className="mb-0.5 shrink-0 text-primary transition-colors hover:text-accent disabled:opacity-30">
-              <Send className="size-3.5" />
-            </button>
-          )}
-        </div>
-        <p className="mt-1 text-[9px] text-text-dim/50">Enter para enviar · Shift+Enter nova linha</p>
+              <div className="border-t border-border/60 px-2 py-1.5">
+                <div className="flex items-end gap-1.5">
+                  <span className={cn('shrink-0 font-mono text-[10px] font-bold leading-[1.3rem]', tab.colorClass)}>$</span>
+                  <textarea
+                    value={value}
+                    onChange={e => setInputs(prev => ({ ...prev, [tab.id]: e.target.value }))}
+                    onKeyDown={e => handleKeyDown(tab.id, e)}
+                    disabled={running}
+                    rows={2}
+                    placeholder={`Prompt para ${tab.label}...`}
+                    className="flex-1 resize-none rounded bg-transparent font-mono text-[10px] text-highlight placeholder:text-text-dim/50 focus:outline-none disabled:opacity-50"
+                  />
+                  {running ? (
+                    <button
+                      onClick={() => stopRunning(tab.id)}
+                      title={`Parar ${tab.label}`}
+                      className="mb-0.5 shrink-0 text-red-400 transition-colors hover:text-red-300"
+                    >
+                      <Square className="size-3" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => void handleSubmit(tab.id)}
+                      disabled={!value.trim()}
+                      title={`Enviar para ${tab.label}`}
+                      className="mb-0.5 shrink-0 text-primary transition-colors hover:text-accent disabled:opacity-30"
+                    >
+                      <Send className="size-3" />
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-[8px] text-text-dim/50">Enter envia - Shift+Enter quebra</p>
+              </div>
+            </section>
+          );
+        })}
       </div>
     </aside>
   );
