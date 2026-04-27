@@ -16,13 +16,13 @@ const taskTypeSchema = z.enum([
     'general',
 ]);
 
-const routingRuleSchema = z.object({
-    taskType: taskTypeSchema,
-    preferredProvider: z.enum(['gemini', 'claude', 'copilot', 'codex']),
-    fallbackProviders: z.array(z.enum(['gemini', 'claude', 'copilot', 'codex'])).max(4),
-    rationale: z.string().min(1),
-    confidence: z.number().min(0).max(1),
-});
+    const routingRuleSchema = z.object({
+        taskType: taskTypeSchema,
+        preferredProvider: z.enum(['gemini', 'claude', 'copilot', 'codex', 'opencode']),
+        fallbackProviders: z.array(z.enum(['gemini', 'claude', 'copilot', 'codex', 'opencode'])).max(4),
+        rationale: z.string().min(1),
+        confidence: z.number().min(0).max(1),
+    });
 
 const interpretationSchema = z.object({
     modelExplanations: z.array(z.object({
@@ -70,7 +70,7 @@ export class BenchmarkInterpretationService {
         options: BenchmarkInterpretationServiceOptions = {},
     ) {
         this.preferredProvider = options.preferredProvider ?? 'gemini';
-        this.fallbackProviders = options.fallbackProviders ?? ['claude', 'copilot', 'codex'];
+        this.fallbackProviders = options.fallbackProviders ?? ['claude', 'copilot', 'codex', 'opencode'];
         this.dataDir = options.dataDir ?? path.join(process.cwd(), 'data', 'benchmark-interpretation');
     }
 

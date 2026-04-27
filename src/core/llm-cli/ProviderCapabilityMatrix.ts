@@ -48,6 +48,14 @@ export const CLI_CAPABILITY_MATRIX: CliCapabilityMatrix = {
         'long-analysis': { supported: true, quality: 'low', notes: 'Optional fallback when installed.' },
         'code-automation': { supported: true, quality: 'medium', notes: 'Optional code automation provider when installed.' },
     },
+    opencode: {
+        summarization: { supported: true, quality: 'medium', notes: 'Optional fallback when installed.' },
+        enrichment: { supported: true, quality: 'medium', notes: 'Optional fallback when installed.' },
+        reranking: { supported: true, quality: 'low', notes: 'Optional fallback when installed.' },
+        'proactive-planning': { supported: true, quality: 'medium', notes: 'Optional fallback when installed.' },
+        'long-analysis': { supported: true, quality: 'medium', notes: 'Optional fallback when installed.' },
+        'code-automation': { supported: true, quality: 'high', notes: 'Preferred provider for repository coding tasks when installed.' },
+    },
 };
 
 export function supportsTask(provider: LlmCliProvider, taskType: CliTaskType): boolean {

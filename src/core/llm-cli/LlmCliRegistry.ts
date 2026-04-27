@@ -3,6 +3,7 @@ import {
     CodexCliAdapter,
     CopilotCliAdapter,
     GeminiCliAdapter,
+    OpenCodeCliAdapter,
 } from './adapters';
 import type { LlmCliAdapter, LlmCliProvider } from './types';
 
@@ -14,6 +15,7 @@ export class LlmCliRegistry {
         this.register(new ClaudeCliAdapter());
         this.register(new CopilotCliAdapter());
         this.register(new CodexCliAdapter());
+        this.register(new OpenCodeCliAdapter());
     }
 
     register(adapter: LlmCliAdapter): void {

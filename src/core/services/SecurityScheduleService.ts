@@ -120,7 +120,7 @@ export class SecurityScheduleService {
         });
 
         for (const webhook of webhooks) {
-            if (!webhook.events.includes(event) continue;
+            if (!webhook.events.includes(event)) continue;
 
             try {
                 const payload = JSON.stringify({

@@ -1,4 +1,4 @@
-export type LlmCliProvider = 'claude' | 'gemini' | 'copilot' | 'codex';
+export type LlmCliProvider = 'claude' | 'gemini' | 'copilot' | 'codex' | 'opencode';
 
 export type LlmCliMode = 'interactive' | 'prompt';
 

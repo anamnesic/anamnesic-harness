@@ -293,6 +293,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                     gemini: { ...prev.gemini, output: '' },
                     copilot: { ...prev.copilot, output: '' },
                     codex: { ...prev.codex, output: '' },
+                    opencode: { ...prev.opencode, output: '' },
                 }));
             },
         });

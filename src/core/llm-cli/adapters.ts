@@ -133,3 +133,19 @@ export class CodexCliAdapter extends BaseCliAdapter {
         return [options.prompt];
     }
 }
+
+export class OpenCodeCliAdapter extends BaseCliAdapter {
+    readonly provider = 'opencode' as const;
+
+    protected getCandidates(): string[] {
+        return ['opencode', 'oc'];
+    }
+
+    protected getInteractiveArgs(): string[] {
+        return [];
+    }
+
+    protected getPromptArgs(_: string, options: LlmCliPromptOptions): string[] {
+        return ['run', options.prompt];
+    }
+}

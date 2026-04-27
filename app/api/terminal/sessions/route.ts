@@ -10,7 +10,7 @@ import type { LlmCliProvider } from '@/src/core/llm-cli';
 
 type CliType = LlmCliProvider;
 
-const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex']);
+const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex', 'opencode']);
 
 export async function POST(req: NextRequest) {
     let body: { cli?: unknown; cwd?: unknown };
