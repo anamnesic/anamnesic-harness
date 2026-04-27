@@ -22,13 +22,14 @@ function getAuthHeaders(extra?: Record<string, string>): Record<string, string> 
     return headers;
 }
 
-type CliTab = 'claude' | 'gemini' | 'copilot' | 'codex';
+type CliTab = 'claude' | 'gemini' | 'copilot' | 'codex' | 'opencode';
 
 const CLI_TABS: { id: CliTab; label: string; colorClass: string }[] = [
     { id: 'claude', label: 'Claude', colorClass: 'text-stone-200' },
     { id: 'gemini', label: 'Gemini', colorClass: 'text-blue-400' },
     { id: 'copilot', label: 'Copilot', colorClass: 'text-purple-400' },
     { id: 'codex', label: 'Codex', colorClass: 'text-green-400' },
+    { id: 'opencode', label: 'OpenCode', colorClass: 'text-amber-400' },
 ];
 
 type SessionStatus = 'disconnected' | 'connecting' | 'running' | 'exited';
@@ -47,6 +48,7 @@ const INITIAL: TabStateMap = {
     gemini: initialTabState(),
     copilot: initialTabState(),
     codex: initialTabState(),
+    opencode: initialTabState(),
 };
 
 interface TerminalPanelProps {
@@ -65,12 +67,12 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     const [isMaximized, setIsMaximized] = useState(false);
     const [activeTab, setActiveTab] = useState<CliTab>('claude');
     const [tabState, setTabState] = useState<TabStateMap>(INITIAL);
-    const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ claude: '', gemini: '', copilot: '', codex: '' });
-    const [promptStreaming, setPromptStreaming] = useState<Record<CliTab, boolean>>({ claude: false, gemini: false, copilot: false, codex: false });
+    const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ claude: '', gemini: '', copilot: '', codex: '', opencode: '' });
+    const [promptStreaming, setPromptStreaming] = useState<Record<CliTab, boolean>>({ claude: false, gemini: false, copilot: false, codex: false, opencode: false });
     const hostRefs = useRef<Partial<Record<CliTab, HTMLDivElement | null>>>({});
     const xtermRefs = useRef<Partial<Record<CliTab, XTermType>>>({});
     const fitRefs = useRef<Partial<Record<CliTab, FitAddonType>>>({});
-    const writtenLengths = useRef<Record<CliTab, number>>({ claude: 0, gemini: 0, copilot: 0, codex: 0 });
+    const writtenLengths = useRef<Record<CliTab, number>>({ claude: 0, gemini: 0, copilot: 0, codex: 0, opencode: 0 });
     const sseAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
     const promptAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
 
