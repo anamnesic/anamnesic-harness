@@ -28,22 +28,15 @@ export async function GET(req: NextRequest) {
         }
         const githubPath = path.join(documentsPath, 'GitHub');
 
-        let defaultPath = documentsPath;
-        try {
-            const docStat = await fs.stat(documentsPath);
-            if (!docStat.isDirectory()) {
-                defaultPath = home;
-            }
-        } catch {
-            defaultPath = home;
+        async function dirExists(p: string) {
+            try { return (await fs.stat(p)).isDirectory(); } catch { return false; }
         }
-        try {
-            const githubStat = await fs.stat(githubPath);
-            if (githubStat.isDirectory()) {
-                defaultPath = githubPath;
-            }
-        } catch {
-            /* GitHub folder doesn't exist */
+
+        let defaultPath = home;
+        if (await dirExists(githubPath)) {
+            defaultPath = githubPath;
+        } else if (await dirExists(documentsPath)) {
+            defaultPath = documentsPath;
         }
 
         const targetPath = requested && requested.trim() ? path.resolve(requested) : defaultPath;
@@ -88,21 +81,15 @@ export async function GET(req: NextRequest) {
         const parent = path.dirname(targetPath);
         const isAtRoot = parent === targetPath;
 
-        const shortcutCandidates = [
+        const allShortcuts = [
             { name: 'Home', path: home },
             { name: 'Documents', path: documentsPath },
             { name: 'Desktop', path: path.join(home, 'Desktop') },
             { name: 'GitHub', path: path.join(documentsPath, 'GitHub') },
         ];
-
-        const shortcuts = await Promise.all(
-            shortcutCandidates.map(async (shortcut) => {
-                try {
-                    const stat = await fs.stat(shortcut.path);
-                    return stat.isDirectory() ? shortcut : null;
-                } catch { return null; }
-            })
-        ).then(results => results.filter(Boolean) as { name: string; path: string }[]);
+        const shortcuts = (await Promise.all(
+            allShortcuts.map(async s => ({ ...s, exists: await dirExists(s.path) }))
+        )).filter(s => s.exists).map(({ exists: _e, ...s }) => s);
 
         return ok({
             currentPath: targetPath,

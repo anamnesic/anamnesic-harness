@@ -47,7 +47,7 @@ export function ModelBenchmarks() {
     }
 
     const report = data;
-    if (!report || report.models.length === 0) {
+    if (!report || !report.models || report.models.length === 0) {
         return (
             <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                 <BarChart3 className="size-16 text-border" />
