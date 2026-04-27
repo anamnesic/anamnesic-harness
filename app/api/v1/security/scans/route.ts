@@ -83,7 +83,48 @@ export async function POST(req: NextRequest) {
             return ok(result, 201);
         }
 
-        // For non-code scans or missing targetId/workspaceId, fall back to stub implementation
+        // For non-code scans, use specialized scanners
+        if (type === 'api' && targetId) {
+            const { ApiSecurityScanner } = await import('@/src/core/services/SecurityScanners');
+            const scanner = new ApiSecurityScanner(db);
+            const result = await scanner.scan(targetId, workspaceId);
+            const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
+            const service = new SecurityAnalysisService(db);
+            const created = await service.create(result);
+            return ok(created, 201);
+        }
+
+        if (type === 'dependency' && targetId) {
+            const { DependencyScanner } = await import('@/src/core/services/SecurityScanners');
+            const scanner = new DependencyScanner(db);
+            const result = await scanner.scan(targetId, workspaceId);
+            const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
+            const service = new SecurityAnalysisService(db);
+            const created = await service.create(result);
+            return ok(created, 201);
+        }
+
+        if (type === 'infrastructure' && targetId) {
+            const { InfrastructureScanner } = await import('@/src/core/services/SecurityScanners');
+            const scanner = new InfrastructureScanner(db);
+            const result = await scanner.scan(targetId, workspaceId);
+            const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
+            const service = new SecurityAnalysisService(db);
+            const created = await service.create(result);
+            return ok(created, 201);
+        }
+
+        if (type === 'system') {
+            const { SystemSecurityScanner } = await import('@/src/core/services/SecurityScanners');
+            const scanner = new SystemSecurityScanner(db);
+            const result = await scanner.scan(workspaceId);
+            const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
+            const service = new SecurityAnalysisService(db);
+            const created = await service.create(result);
+            return ok(created, 201);
+        }
+
+        // Fall back to stub implementation for unknown combinations
         const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
         const service = new SecurityAnalysisService(db);
 

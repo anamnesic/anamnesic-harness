@@ -35,6 +35,7 @@ async function loadEntities() {
   const { Task } = await import('./entities/Task');
   const { Workflow } = await import('./entities/Workflow');
   const { SecurityAnalysis } = await import('./entities/SecurityAnalysis');
+  const { SecuritySchedule, SecurityWebhook } = await import('./entities/SecuritySchedule');
   const { ExecutionLog } = await import('./entities/ExecutionLog');
   const { OrchestratorPlanRecord } = await import('./entities/OrchestratorPlan');
   const { OrchestratorRunRecord } = await import('./entities/OrchestratorRun');
@@ -55,6 +56,8 @@ async function loadEntities() {
     Task,
     Workflow,
     SecurityAnalysis,
+    SecuritySchedule,
+    SecurityWebhook,
     ExecutionLog,
     OrchestratorPlanRecord,
     OrchestratorRunRecord,

@@ -3,25 +3,31 @@ export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
+import AttackSimulationFramework from '@/src/core/services/AttackSimulationFramework';
 
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
+        const simulationId = searchParams.get('simulationId');
         const vulnerabilityId = searchParams.get('vulnerabilityId');
 
-        const { AdvancedFeaturesFactory } = await import('@/src/core/services/AdvancedFeaturesFactory');
-        const factory = new AdvancedFeaturesFactory({ db: await getDb() });
-        const framework = factory.getAttackSimulation();
+        const framework = AttackSimulationFramework.getInstance();
 
-        if (vulnerabilityId) {
-            return ok(framework.getVulnerabilitySimulations(vulnerabilityId));
+        if (simulationId) {
+            const simulation = framework.getSimulation(simulationId);
+            if (!simulation) {
+                return err('NOT_FOUND', `Simulation ${simulationId} not found`, 404);
+            }
+            return ok(simulation);
         }
 
-        // Return all simulations (framework needs a method for this, or we can use local state if it was persistent)
-        // Since it's in-memory in the service instance, and we create a new factory, 
-        // we might need a singleton for the framework.
-        
-        return ok([]); // For now
+        if (vulnerabilityId) {
+            const simulations = framework.getVulnerabilitySimulations(vulnerabilityId);
+            return ok(simulations);
+        }
+
+        const simulations = framework.getAllSimulations();
+        return ok(simulations);
     } catch (e: any) {
         return err('INTERNAL_ERROR', e.message, 500);
     }
@@ -36,9 +42,7 @@ export async function POST(req: NextRequest) {
             return err('VALIDATION_ERROR', 'vulnerabilityId and attackType are required', 400);
         }
 
-        const { AdvancedFeaturesFactory } = await import('@/src/core/services/AdvancedFeaturesFactory');
-        const factory = new AdvancedFeaturesFactory({ db: await getDb() });
-        const framework = factory.getAttackSimulation();
+        const framework = AttackSimulationFramework.getInstance();
 
         const simulation = await framework.simulateAttack(
             vulnerabilityId,
