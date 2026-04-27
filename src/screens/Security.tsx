@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, Play, Plus, X, Eye, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Play, Plus, X, Eye, AlertTriangle, Bug } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -83,6 +83,11 @@ function SeverityBadge({ severity }: { severity: Severity }) {
 function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void }) {
     const { data, loading } = useApi<{ data: SecurityScan } | SecurityScan>(`/api/v1/security/scans/${scanId}`);
     const scan: SecurityScan | null = (data as any)?.data ?? (data as any) ?? null;
+
+    function handleSimulateAttack(v: Vulnerability) {
+        // TODO: implement attack simulation
+        console.log('Simulate attack for:', v);
+    }
 
     return (
         <motion.div
