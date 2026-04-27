@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Folder, FolderGit2, ArrowUp, X, Check, Loader2, Home } from 'lucide-react';
 import { apiFetch } from '@/src/lib/api';
@@ -48,7 +49,7 @@ export function FolderBrowser({ initialPath, onSelect, onClose }: FolderBrowserP
         return () => { cancelled = true; };
     }, [path]);
 
-    return (
+    return createPortal(
         <motion.div
             key="folder-browser-overlay"
             initial={{ opacity: 0 }}
@@ -171,5 +172,5 @@ export function FolderBrowser({ initialPath, onSelect, onClose }: FolderBrowserP
                 </div>
             </motion.div>
         </motion.div>
-    );
+    , document.body);
 }

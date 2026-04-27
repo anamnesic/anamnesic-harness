@@ -81,7 +81,7 @@ export function RepositorySelector({ hideWhenEmpty = false }: RepositorySelector
             </button>
 
             <AnimatePresence>
-                {isOpen && hasRepositories && (
+                {isOpen && (
                     <>
                         <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
                         <motion.div
