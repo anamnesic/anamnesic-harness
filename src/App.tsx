@@ -310,6 +310,18 @@ function AppContent() {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-bg font-sans text-highlight selection:bg-primary/20">
+        {authView === 'login' ? (
+          <Login onNavigateToSignup={() => setAuthView('signup')} />
+        ) : (
+          <Signup onNavigateToLogin={() => setAuthView('login')} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
       <OnboardingModal />

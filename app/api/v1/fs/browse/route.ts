@@ -17,13 +17,14 @@ export async function GET(req: NextRequest) {
         const documentsPath = path.join(home, 'Documents');
         const githubPath = path.join(documentsPath, 'GitHub');
 
-        let defaultPath = documentsPath;
-        try {
-            const githubStat = await fs.stat(githubPath);
-            if (githubStat.isDirectory()) {
-                defaultPath = githubPath;
-            }
-        } catch {
+        async function dirExists(p: string) {
+            try { return (await fs.stat(p)).isDirectory(); } catch { return false; }
+        }
+
+        let defaultPath = home;
+        if (await dirExists(githubPath)) {
+            defaultPath = githubPath;
+        } else if (await dirExists(documentsPath)) {
             defaultPath = documentsPath;
         }
 
@@ -69,12 +70,15 @@ export async function GET(req: NextRequest) {
         const parent = path.dirname(targetPath);
         const isAtRoot = parent === targetPath;
 
-        const shortcuts = [
+        const allShortcuts = [
             { name: 'Home', path: home },
             { name: 'Documents', path: path.join(home, 'Documents') },
             { name: 'Desktop', path: path.join(home, 'Desktop') },
             { name: 'GitHub', path: path.join(home, 'Documents', 'GitHub') },
         ];
+        const shortcuts = (await Promise.all(
+            allShortcuts.map(async s => ({ ...s, exists: await dirExists(s.path) }))
+        )).filter(s => s.exists).map(({ exists: _e, ...s }) => s);
 
         return ok({
             currentPath: targetPath,
