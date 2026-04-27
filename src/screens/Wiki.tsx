@@ -157,7 +157,7 @@ export function Wiki({ projectId }: { projectId: string }) {
     }
 
     return (
-        <div className="grid min-h-128 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
+        <div className="grid min-h-64 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
             <aside className="bento-card min-h-0">
                 <div className="mb-3 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -186,7 +186,7 @@ export function Wiki({ projectId }: { projectId: string }) {
                 ) : !files.length ? (
                     <p className="text-sm text-text-dim">Nenhum arquivo .md encontrado em docs.</p>
                 ) : (
-                    <div className="max-h-96 space-y-1 overflow-y-auto pr-1 lg:max-h-152">
+                    <div className="max-h-72 space-y-0.5 overflow-y-auto pr-1 lg:max-h-[52vh]">
                         {tree.length ? renderTree(tree) : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
                     </div>
                 )}
@@ -205,7 +205,7 @@ export function Wiki({ projectId }: { projectId: string }) {
                 ) : !payload?.selectedFile ? (
                     <p className="text-sm text-text-dim">Selecione um arquivo .md na lateral.</p>
                 ) : (
-                    <article className="max-h-[64vh] overflow-y-auto pr-1 text-sm leading-relaxed text-highlight">
+                    <article className="max-h-[52vh] overflow-y-auto pr-1 text-sm leading-relaxed text-highlight">
                         <div className="space-y-3">
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}

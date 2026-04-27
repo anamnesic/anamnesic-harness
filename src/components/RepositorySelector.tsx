@@ -112,8 +112,10 @@ export function RepositorySelector({ hideWhenEmpty = false }: RepositorySelector
                                             <FolderGit2 className="size-4 shrink-0" />
                                             <div className="flex-1 min-w-0">
                                                 <div className="font-medium truncate">{repo.name}</div>
-                                                {repo.description && (
-                                                    <div className="text-xs text-text-dim truncate">{repo.description}</div>
+                                                {repo.metadata?.localPath && (
+                                                    <div className="text-xs text-text-dim truncate" title={repo.metadata.localPath}>
+                                                        {repo.metadata.localPath}
+                                                    </div>
                                                 )}
                                             </div>
                                             {repository?.id === repo.id && (

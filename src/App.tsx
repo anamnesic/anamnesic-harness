@@ -310,6 +310,12 @@ function AppContent() {
     );
   }
 
+  if (!isAuthenticated) {
+    return authView === 'login'
+      ? <Login onNavigateToSignup={() => setAuthView('signup')} />
+      : <Signup onNavigateToLogin={() => setAuthView('login')} />;
+  }
+
   return (
     <>
       <OnboardingModal />

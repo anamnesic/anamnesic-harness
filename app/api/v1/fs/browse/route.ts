@@ -14,17 +14,36 @@ export async function GET(req: NextRequest) {
         const showHidden = url.searchParams.get('showHidden') === 'true';
 
         const home = os.homedir();
-        const documentsPath = path.join(home, 'Documents');
+        const documentsPathCandidates = ['Documents', 'Documentos', 'Docs'];
+        let documentsPath = path.join(home, 'Documents');
+        for (const candidate of documentsPathCandidates) {
+            const candidatePath = path.join(home, candidate);
+            try {
+                const stat = await fs.stat(candidatePath);
+                if (stat.isDirectory()) {
+                    documentsPath = candidatePath;
+                    break;
+                }
+            } catch { /* not found */ }
+        }
         const githubPath = path.join(documentsPath, 'GitHub');
 
         let defaultPath = documentsPath;
+        try {
+            const docStat = await fs.stat(documentsPath);
+            if (!docStat.isDirectory()) {
+                defaultPath = home;
+            }
+        } catch {
+            defaultPath = home;
+        }
         try {
             const githubStat = await fs.stat(githubPath);
             if (githubStat.isDirectory()) {
                 defaultPath = githubPath;
             }
         } catch {
-            defaultPath = documentsPath;
+            /* GitHub folder doesn't exist */
         }
 
         const targetPath = requested && requested.trim() ? path.resolve(requested) : defaultPath;
@@ -69,12 +88,21 @@ export async function GET(req: NextRequest) {
         const parent = path.dirname(targetPath);
         const isAtRoot = parent === targetPath;
 
-        const shortcuts = [
+        const shortcutCandidates = [
             { name: 'Home', path: home },
-            { name: 'Documents', path: path.join(home, 'Documents') },
+            { name: 'Documents', path: documentsPath },
             { name: 'Desktop', path: path.join(home, 'Desktop') },
-            { name: 'GitHub', path: path.join(home, 'Documents', 'GitHub') },
+            { name: 'GitHub', path: path.join(documentsPath, 'GitHub') },
         ];
+
+        const shortcuts = await Promise.all(
+            shortcutCandidates.map(async (shortcut) => {
+                try {
+                    const stat = await fs.stat(shortcut.path);
+                    return stat.isDirectory() ? shortcut : null;
+                } catch { return null; }
+            })
+        ).then(results => results.filter(Boolean) as { name: string; path: string }[]);
 
         return ok({
             currentPath: targetPath,
