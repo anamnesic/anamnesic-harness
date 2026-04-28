@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { Logger } from '../utils/Logger';
+import { featureFlags } from '../../config/featureFlags';
 import { CliExecutionPolicy } from './CliExecutionPolicy';
 import { CliAuditTrail } from './CliAuditTrail';
 import { CliResultNormalizer, type CliRawExecutionResult } from './CliResultNormalizer';
@@ -40,6 +41,26 @@ export class CliInferenceService {
         request: CliInferenceRequest,
         streamHandlers?: CliStreamHandlers,
     ): Promise<CliNormalizedResult> {
+        if (!featureFlags.enableLlm) {
+            this.logger.warn('[CliInference] LLM disabled via feature flag (KAIROS_FEATURE_LLM=0)');
+            const nowIso = new Date().toISOString();
+            return {
+                provider: (request.preferredProvider ?? 'copilot') as LlmCliProvider,
+                command: 'noop',
+                args: [],
+                stdout: '',
+                stderr: 'LLM disabled via KAIROS_FEATURE_LLM=0',
+                rawText: '',
+                exitCode: null,
+                success: false,
+                durationMs: 0,
+                timedOut: false,
+                retriesUsed: 0,
+                startedAt: nowIso,
+                endedAt: nowIso,
+                error: 'LLM disabled via feature flag',
+            };
+        }
         const promptClass = this.policy.resolvePromptClass(request);
         const persistPromptOutput = this.policy.shouldPersistPromptOutput(request);
         const effectivePrompt = this.policy.shouldRedactSecretsBeforeExecution()

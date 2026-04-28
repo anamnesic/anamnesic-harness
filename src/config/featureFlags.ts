@@ -12,6 +12,12 @@ export interface FeatureFlags {
     enableAutonomousModification: boolean;
     enableDeepRetrieval: boolean;
     enableJitEngine: boolean;
+    /**
+     * Master switch for any LLM usage (vscode.lm + CLI providers).
+     * Defaults to true. Set `KAIROS_FEATURE_LLM=0` (or `KAIROS_LLM_DISABLED=1`)
+     * to temporarily disable all LLM calls.
+     */
+    enableLlm: boolean;
 }
 
 function parseFlag(key: string, defaultValue: boolean): boolean {
@@ -31,6 +37,8 @@ function getFlags(): FeatureFlags {
         enableAutonomousModification: parseFlag('KAIROS_FEATURE_AUTONOMOUS', false),
         enableDeepRetrieval: parseFlag('KAIROS_FEATURE_DEEP_RETRIEVAL', true),
         enableJitEngine: parseFlag('KAIROS_FEATURE_JIT', true),
+        enableLlm: parseFlag('KAIROS_FEATURE_LLM', true)
+            && !parseFlag('KAIROS_LLM_DISABLED', false),
     };
 }
 

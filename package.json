@@ -102,6 +102,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "postinstall": "pnpm rebuild node-pty",
     "build:backend": "tsc --project tsconfig.build.json",
     "build:vscode": "node esbuild.vscode.js",
     "start:api": "node dist/interfaces/api/start-api.js",

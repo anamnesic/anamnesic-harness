@@ -8,12 +8,22 @@ import { sessions, broadcast, type Session } from '../_sessions';
 import { llmCliRegistry } from '@/src/core/llm-cli';
 import type { LlmCliProvider } from '@/src/core/llm-cli';
 
-type CliType = LlmCliProvider;
+type CliType = LlmCliProvider | 'shell';
 
-const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex', 'opencode']);
+const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex', 'opencode', 'shell']);
+
+function getShellSpawn(): { file: string; args: string[] } {
+    if (process.platform === 'win32') {
+        const file = process.env.COMSPEC || 'powershell.exe';
+        return { file, args: [] };
+    }
+    const file = process.env.SHELL || '/bin/bash';
+    // -i = interactive (loads aliases, prompt, etc.) — comporta-se como o terminal real
+    return { file, args: ['-i'] };
+}
 
 export async function POST(req: NextRequest) {
-    let body: { cli?: unknown; cwd?: unknown };
+    let body: { cli?: unknown; cwd?: unknown; cols?: unknown; rows?: unknown };
     try { body = await req.json(); } catch { return new Response('Invalid JSON', { status: 400 }); }
 
     const { cli, cwd } = body;
@@ -21,13 +31,20 @@ export async function POST(req: NextRequest) {
         return new Response('Invalid cli', { status: 400 });
     }
 
+    const colsRaw = Number(body.cols);
+    const rowsRaw = Number(body.rows);
+    const cols = Number.isFinite(colsRaw) && colsRaw >= 20 && colsRaw <= 1000 ? Math.floor(colsRaw) : 120;
+    const rows = Number.isFinite(rowsRaw) && rowsRaw >= 5 && rowsRaw <= 1000 ? Math.floor(rowsRaw) : 30;
+
     const resolvedCwd =
         typeof cwd === 'string' && cwd.trim() && existsSync(cwd.trim())
             ? cwd.trim()
             : process.cwd();
 
-    const adapter = llmCliRegistry.get(cli as CliType);
-    const { file, args } = adapter.getSpawnCommand('interactive');
+    const { file, args } =
+        cli === 'shell'
+            ? getShellSpawn()
+            : llmCliRegistry.get(cli as LlmCliProvider).getSpawnCommand('interactive');
     const sessionId = randomUUID();
 
     let proc: ReturnType<typeof spawn>;
@@ -35,8 +52,8 @@ export async function POST(req: NextRequest) {
         proc = spawn(file, args, {
             name: process.platform === 'win32' ? 'xterm-color' : 'xterm-256color',
             cwd: resolvedCwd,
-            cols: 120,
-            rows: 30,
+            cols,
+            rows,
             env: {
                 ...process.env,
                 TERM: process.env.TERM || 'xterm-256color',

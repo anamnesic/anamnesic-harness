@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { discoverModels } from './ModelRegistry';
+import { featureFlags } from '../../../config/featureFlags';
 
 export type ReasoningDepth = 'standard' | 'deep';
 
@@ -495,6 +496,10 @@ Respond ONLY with a valid JSON object (no markdown fences):
     token?: vscode.CancellationToken,
     systemPrompt?: string,
   ): Promise<string> {
+    if (!featureFlags.enableLlm) {
+      this.output.appendLine('[tryLLMWithModel] LLM disabled via feature flag (KAIROS_FEATURE_LLM=0)');
+      return '';
+    }
     try {
       const allModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
       // Try to find the requested model by family
@@ -861,6 +866,10 @@ Respond ONLY with a valid JSON object (no markdown fences):
     token?: vscode.CancellationToken,
     systemPrompt?: string,
   ): Promise<string> {
+    if (!featureFlags.enableLlm) {
+      this.output.appendLine('[tryLLM] LLM disabled via feature flag (KAIROS_FEATURE_LLM=0)');
+      return '';
+    }
     try {
       // First, check available models via registry
       const discovered = await discoverModels();

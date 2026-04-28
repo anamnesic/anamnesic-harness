@@ -22,9 +22,10 @@ function getAuthHeaders(extra?: Record<string, string>): Record<string, string> 
     return headers;
 }
 
-type CliTab = 'claude' | 'gemini' | 'copilot' | 'codex' | 'opencode';
+type CliTab = 'shell' | 'claude' | 'gemini' | 'copilot' | 'codex' | 'opencode';
 
 const CLI_TABS: { id: CliTab; label: string; colorClass: string }[] = [
+    { id: 'shell', label: 'Shell', colorClass: 'text-emerald-400' },
     { id: 'claude', label: 'Claude', colorClass: 'text-stone-200' },
     { id: 'gemini', label: 'Gemini', colorClass: 'text-blue-400' },
     { id: 'copilot', label: 'Copilot', colorClass: 'text-purple-400' },
@@ -44,6 +45,7 @@ type TabStateMap = Record<CliTab, TabState>;
 
 const initialTabState = (): TabState => ({ sessionId: null, status: 'disconnected', output: '' });
 const INITIAL: TabStateMap = {
+    shell: initialTabState(),
     claude: initialTabState(),
     gemini: initialTabState(),
     copilot: initialTabState(),
@@ -65,14 +67,17 @@ interface TerminalPanelProps {
 export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: TerminalPanelProps) {
     const { repository } = useRepository();
     const [isMaximized, setIsMaximized] = useState(false);
-    const [activeTab, setActiveTab] = useState<CliTab>('claude');
+    const [activeTab, setActiveTab] = useState<CliTab>('shell');
     const [tabState, setTabState] = useState<TabStateMap>(INITIAL);
-    const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ claude: '', gemini: '', copilot: '', codex: '', opencode: '' });
-    const [promptStreaming, setPromptStreaming] = useState<Record<CliTab, boolean>>({ claude: false, gemini: false, copilot: false, codex: false, opencode: false });
+    const tabStateRef = useRef<TabStateMap>(INITIAL);
+    useEffect(() => { tabStateRef.current = tabState; }, [tabState]);
+    const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ shell: '', claude: '', gemini: '', copilot: '', codex: '', opencode: '' });
+    const [promptStreaming, setPromptStreaming] = useState<Record<CliTab, boolean>>({ shell: false, claude: false, gemini: false, copilot: false, codex: false, opencode: false });
     const hostRefs = useRef<Partial<Record<CliTab, HTMLDivElement | null>>>({});
     const xtermRefs = useRef<Partial<Record<CliTab, XTermType>>>({});
     const fitRefs = useRef<Partial<Record<CliTab, FitAddonType>>>({});
-    const writtenLengths = useRef<Record<CliTab, number>>({ claude: 0, gemini: 0, copilot: 0, codex: 0, opencode: 0 });
+    const resizeObservers = useRef<Partial<Record<CliTab, ResizeObserver>>>({});
+    const writtenLengths = useRef<Record<CliTab, number>>({ shell: 0, claude: 0, gemini: 0, copilot: 0, codex: 0, opencode: 0 });
     const sseAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
     const promptAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
 
@@ -134,19 +139,37 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         })();
     }, [appendOutput, setStatus]);
 
+    const sendResize = useCallback(async (tab: CliTab, cols: number, rows: number) => {
+        const sid = tabState[tab].sessionId;
+        if (!sid) return;
+        try {
+            await fetch(`/api/terminal/sessions/${sid}/resize`, {
+                method: 'POST',
+                headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ cols, rows }),
+            });
+        } catch { /* ignore */ }
+    }, [tabState]);
+
     const connect = useCallback(async (tab: CliTab): Promise<string | null> => {
         setStatus(tab, 'connecting');
         setTabState(prev => ({ ...prev, [tab]: { ...prev[tab], output: '', sessionId: null, status: 'connecting' } }));
 
         try {
+            const term = xtermRefs.current[tab];
+            const cols = term?.cols ?? 120;
+            const rows = term?.rows ?? 30;
             const resp = await fetch('/api/terminal/sessions', {
                 method: 'POST',
                 headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ cli: tab, cwd: repoPath }),
+                body: JSON.stringify({ cli: tab, cwd: repoPath, cols, rows }),
             });
             if (!resp.ok) {
-                const body = await resp.text();
-                appendOutput(tab, `[Erro ao iniciar sessão: ${body}]\n`);
+                const raw = await resp.text();
+                // Se o servidor devolver HTML (ex.: página de erro do Next), não polui o xterm com o documento inteiro.
+                const isHtml = /^\s*<(?:!doctype|html|head|body)/i.test(raw);
+                const msg = isHtml ? `HTTP ${resp.status} (resposta HTML do servidor — veja o log do Next)` : raw.slice(0, 1000);
+                appendOutput(tab, `\x1b[31m[Erro ao iniciar sessão: ${msg}]\x1b[0m\n`);
                 setStatus(tab, 'exited');
                 return null;
             }
@@ -174,7 +197,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     }, [tabState]);
 
     const sendInput = useCallback(async (tab: CliTab, data: string) => {
-        const current = tabState[tab];
+        const current = tabStateRef.current[tab];
         let sid = current.sessionId;
         if (!data) return;
 
@@ -194,7 +217,9 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
             const msg = e instanceof Error ? e.message : String(e);
             appendOutput(tab, `[send error: ${msg}]\n`);
         }
-    }, [tabState, appendOutput, connect]);
+    }, [appendOutput, connect]);
+    const sendInputRef = useRef(sendInput);
+    useEffect(() => { sendInputRef.current = sendInput; }, [sendInput]);
 
     const streamPrompt = useCallback(async (tab: CliTab) => {
         const prompt = promptInput[tab]?.trim();
@@ -276,6 +301,21 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         onMaximizeChange?.(isMaximized);
     }, [isMaximized, onMaximizeChange]);
 
+    // Auto-connect: tenta conectar cada aba UMA vez quando há repoPath.
+    // Se a CLI não existir no host, a aba fica 'exited' com a mensagem de erro
+    // e não tenta reconectar sozinha (evita spam de 500). O usuário pode reiniciar
+    // manualmente clicando no ícone ↻ da aba.
+    const autoConnectedRef = useRef<Set<CliTab>>(new Set());
+    useEffect(() => {
+        if (!repoPath) return;
+        for (const tab of CLI_TABS) {
+            if (autoConnectedRef.current.has(tab.id)) continue;
+            if (tabStateRef.current[tab.id].status !== 'disconnected') continue;
+            autoConnectedRef.current.add(tab.id);
+            void connect(tab.id);
+        }
+    }, [repoPath, connect]);
+
     useEffect(() => {
         onHeaderStateChange?.({
             repoPath,
@@ -283,12 +323,18 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
             onToggleMaximize: () => setIsMaximized(prev => !prev),
             onRestartAll: () => {
                 for (const tab of CLI_TABS) {
-                    void killSession(tab.id).then(() => connect(tab.id));
+                    // Só reinicia abas que já foram conectadas alguma vez (running/exited).
+                    // Evita spam de 500 em CLIs cujo binário não existe no host.
+                    const st = tabStateRef.current[tab.id].status;
+                    if (tab.id === 'shell' || st === 'running' || st === 'exited') {
+                        void killSession(tab.id).then(() => connect(tab.id));
+                    }
                 }
             },
             onClearAll: () => {
                 setTabState(prev => ({
                     ...prev,
+                    shell: { ...prev.shell, output: '' },
                     claude: { ...prev.claude, output: '' },
                     gemini: { ...prev.gemini, output: '' },
                     copilot: { ...prev.copilot, output: '' },
@@ -338,20 +384,37 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
 
         term.loadAddon(fitAddon);
         term.open(host);
-        fitAddon.fit();
-        term.write(tabState[tab].output);
-        writtenLengths.current[tab] = tabState[tab].output.length;
+        try { fitAddon.fit(); } catch { /* ignore */ }
+        const initial = tabStateRef.current[tab].output;
+        term.write(initial);
+        writtenLengths.current[tab] = initial.length;
         term.onData((data) => {
-            void sendInput(tab, data);
+            void sendInputRef.current(tab, data);
         });
         xtermRefs.current[tab] = term;
         fitRefs.current[tab] = fitAddon;
-    }, [isMaximized, sendInput, tabState]);
+
+        // Sincroniza o tamanho do PTY com o xterm real assim que ele é medido.
+        // Sem isso o shell desenha em 120 colunas mas o terminal mostra menos → quebra de linha bugada.
+        void sendResize(tab, term.cols, term.rows);
+
+        // ResizeObserver: cada vez que o host mudar de tamanho, refit + resize do PTY.
+        if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(() => {
+                try { fitAddon.fit(); } catch { /* ignore */ }
+                void sendResize(tab, term.cols, term.rows);
+            });
+            ro.observe(host);
+            resizeObservers.current[tab] = ro;
+        }
+    }, [isMaximized, sendResize]);
 
     useEffect(() => {
         const visible = new Set<CliTab>(visibleTabs);
         for (const tab of CLI_TABS.map(item => item.id)) {
             if (!visible.has(tab) && xtermRefs.current[tab]) {
+                resizeObservers.current[tab]?.disconnect();
+                delete resizeObservers.current[tab];
                 xtermRefs.current[tab]?.dispose();
                 delete xtermRefs.current[tab];
                 delete fitRefs.current[tab];
@@ -386,7 +449,11 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     useEffect(() => {
         const fitVisible = () => {
             for (const tab of visibleTabs) {
-                fitRefs.current[tab]?.fit();
+                const fit = fitRefs.current[tab];
+                const term = xtermRefs.current[tab];
+                if (!fit || !term) continue;
+                try { fit.fit(); } catch { /* ignore */ }
+                void sendResize(tab, term.cols, term.rows);
             }
         };
 
@@ -396,7 +463,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
             window.clearTimeout(timer);
             window.removeEventListener('resize', fitVisible);
         };
-    }, [visibleTabs, isMaximized, activeTab]);
+    }, [visibleTabs, isMaximized, activeTab, sendResize, tabState]);
 
     useEffect(() => {
         xtermRefs.current[activeTab]?.focus();
