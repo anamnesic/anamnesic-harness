@@ -155,6 +155,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/cli": "^2.10.1",
     "@types/adm-zip": "^0.5.8",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",
