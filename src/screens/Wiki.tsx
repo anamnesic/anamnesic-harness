@@ -216,7 +216,7 @@ return (
                                         h3: ({ children }) => <h3 className="mt-3 text-lg font-semibold">{children}</h3>,
                                         p: ({ children }) => <p className="text-sm text-text-dim">{children}</p>,
                                         code: ({ children }) => <code className="rounded bg-bg px-1.5 py-0.5 font-mono text-xs text-accent">{children}</code>,
-                                        pre: ({ children }) => <pre className="overflow-x-auto rounded-lg border border-border bg-bg p-3 text-xs">{children}</pre>,
+                                        pre: ({ children }) => <pre className="rounded-lg border border-border bg-bg p-3 text-xs whitespace-pre-wrap break-words">{children}</pre>,
                                         ul: ({ children }) => <ul className="list-disc space-y-1 pl-5 text-sm text-text-dim">{children}</ul>,
                                         ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 text-sm text-text-dim">{children}</ol>,
                                         blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 pl-3 italic text-text-dim">{children}</blockquote>,

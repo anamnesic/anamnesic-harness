@@ -222,13 +222,13 @@ export function AuditTrailModal({
                                             <div className="px-3 pb-3 pt-1 space-y-3 border-t border-border">
                                                 <div>
                                                     <span className="label-caps">Input</span>
-                                                    <pre className="mt-1 text-[11px] font-mono bg-card border border-border rounded-lg p-3 overflow-x-auto whitespace-pre-wrap wrap-break-word">
+                                                    <pre className="mt-1 text-[11px] font-mono bg-card border border-border rounded-lg p-3  whitespace-pre-wrap wrap-break-word">
                                                         {JSON.stringify(entry.input, null, 2)}
                                                     </pre>
                                                 </div>
                                                 <div>
                                                     <span className="label-caps">Output</span>
-                                                    <pre className="mt-1 text-[11px] font-mono bg-card border border-border rounded-lg p-3 overflow-x-auto whitespace-pre-wrap wrap-break-word">
+                                                    <pre className="mt-1 text-[11px] font-mono bg-card border border-border rounded-lg p-3  whitespace-pre-wrap wrap-break-word">
                                                         {JSON.stringify(entry.output, null, 2)}
                                                     </pre>
                                                 </div>
@@ -245,7 +245,7 @@ export function AuditTrailModal({
                                                 {entry.commandDetails !== undefined && entry.commandDetails !== null && (
                                                     <div>
                                                         <span className="label-caps">Command Details</span>
-                                                        <pre className="mt-1 text-[11px] font-mono bg-card border border-border rounded-lg p-3 overflow-x-auto whitespace-pre-wrap wrap-break-word">
+                                                        <pre className="mt-1 text-[11px] font-mono bg-card border border-border rounded-lg p-3 whitespace-pre-wrap break-words">
                                                             {JSON.stringify(entry.commandDetails, null, 2)}
                                                         </pre>
                                                     </div>

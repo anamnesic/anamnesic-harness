@@ -884,7 +884,7 @@ export function Projects({
                                     </aside>
 
                                     <section className="min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
-                                        <div className="mb-3 overflow-x-auto rounded-lg border border-border/60 bg-bg/90">
+                                        <div className="mb-3 rounded-lg border border-border/60 bg-bg/90">
                                             <div className="flex items-stretch">
                                                 {openRepoTabs.length ? openRepoTabs.map((filePath) => {
                                                     const isActive = selectedRepoFile === filePath;

@@ -1205,7 +1205,7 @@ export function ControlCenter() {
                                                     {checkpoint.state && (
                                                         <details className="text-xs">
                                                             <summary className="cursor-pointer text-accent hover:text-highlight">Ver estado</summary>
-                                                            <pre className="mt-2 p-2 bg-card border border-border rounded text-text-dim overflow-x-auto">
+                                                            <pre className="mt-2 p-2 bg-card border border-border rounded text-text-dim whitespace-pre-wrap break-words">
                                                                 {JSON.stringify(checkpoint.state, null, 2)}
                                                             </pre>
                                                         </details>
