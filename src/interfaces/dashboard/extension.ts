@@ -48,16 +48,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const out = runtime.getOutput();
   out.appendLine('[Kairos] Extension activated');
   console.log('[extension] Runtime created:', !!runtime);
-  const chatProvider = new ChatSidebarProvider();
-  console.log('[extension] ChatProvider created');
-
-  console.log('[extension] Registering webview view provider');
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(ChatSidebarProvider.viewType, chatProvider, {
-      webviewOptions: { retainContextWhenHidden: true },
-    }),
-  );
-  console.log('[extension] Webview view provider registered');
+  // Chat provider removido - barra de chat desabilitada
+  const chatProvider = {
+    postStatus: (text?: string) => {},
+    postAssistant: (text?: string) => {},
+    postError: (text?: string) => {},
+    postNewChat: (title?: string, chatId?: string) => {},
+    postLoadHistory: (historyJson?: string) => {},
+    postThinking: (text?: string) => {},
+    postStep: (text?: string) => {},
+    postDone: () => {},
+    postCapabilityResult: (text?: string, meta?: Record<string, unknown>) => {}
+  };
 
   const conversationsProvider = new ConversationsSidebarProvider();
   context.subscriptions.push(

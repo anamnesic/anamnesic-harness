@@ -47,11 +47,13 @@ interface AttackSimulation {
 }
 
 export function RedTeaming() {
-    const { data: simulations, loading, refetch } = useApi<AttackSimulation[]>('/api/v1/security/simulations');
+    const { data: response, loading, refetch } = useApi<{ data?: AttackSimulation[] } | AttackSimulation[]>('/api/v1/security/simulations');
     const { toast } = useToast();
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    const selected = simulations?.find(s => s.simulationId === selectedId);
+    // Handle both direct array and wrapped response formats
+    const simulations = Array.isArray(response) ? response : (response as any)?.data || [];
+    const selected = simulations?.find((s: AttackSimulation) => s.simulationId === selectedId);
 
     if (loading) {
         return (
@@ -94,7 +96,7 @@ export function RedTeaming() {
                             <p className="text-xs text-text-dim">Ainda não há simulações. Inicie uma na tela de Auditoria de Segurança.</p>
                         </div>
                     ) : (
-                        simulations.map(sim => (
+                        simulations.map((sim: AttackSimulation) => (
                             <button
                                 key={sim.simulationId}
                                 onClick={() => setSelectedId(sim.simulationId)}
@@ -105,7 +107,7 @@ export function RedTeaming() {
                             >
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[10px] font-black uppercase tracking-tighter text-red-500/80">
-                                        {sim.attackType}
+                                        {sim.attackTipo}
                                     </span>
                                     <div className={cn(
                                         "size-2 rounded-full",
@@ -147,7 +149,7 @@ export function RedTeaming() {
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <p className="label-caps text-red-500">Simulation Report</p>
-                                            <h3 className="text-2xl font-black tracking-tighter uppercase">{selected.attackType}</h3>
+                                            <h3 className="text-2xl font-black tracking-tighter uppercase">{selected.attackTipo}</h3>
                                         </div>
                                         <div className={cn(
                                             "px-4 py-1.5 rounded-xl border font-black uppercase tracking-widest text-xs",
@@ -197,7 +199,7 @@ export function RedTeaming() {
                             <div className="bento-card">
                                 <h4 className="label-caps mb-4">Attack Vectors & Payloads</h4>
                                 <div className="space-y-3">
-                                    {selected.payloads.map((p, idx) => (
+                                    {selected.payloads.map((p: AttackPayload, idx: number) => (
                                         <div key={p.payloadId} className="p-3 bg-bg border border-border rounded-xl space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-[10px] font-black text-red-500/70 uppercase">{p.vector}</span>

@@ -88,7 +88,7 @@ export function RepositorySelector({ hideWhenEmpty = false }: RepositorySelector
                             initial={{ opacity: 0, scale: 0.95, y: -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                            className="absolute top-full left-0 mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden"
+                            className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden"
                         >
                             <div className="p-2">
                                 <div className="px-3 py-2 text-xs font-bold text-text-dim uppercase tracking-wider">

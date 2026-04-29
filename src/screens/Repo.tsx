@@ -766,7 +766,7 @@ export function Projects({
                                                     value={repoQuery}
                                                     onChange={(e) => setRepoQuery(e.target.value)}
                                                     placeholder="Filtrar arquivos"
-                                                    className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
+                                                    className="mb-3 w-full rounded-lg bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
                                                 />
 
                                                 <div className="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -848,7 +848,7 @@ export function Projects({
                                                                                 disabled={gitBusy || insightsLoading}
                                                                                 className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
                                                                             >
-                                                                                <GitCommitHorizontal className="size-3" />
+                                                                                <GitCommitHorizontal className="size-5" />
                                                                             </button>
                                                                         )}
                                                                         {change.staged && (
@@ -858,7 +858,7 @@ export function Projects({
                                                                                 disabled={gitBusy || insightsLoading}
                                                                                 className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
                                                                             >
-                                                                                <Minus className="size-3" />
+                                                                                <Minus className="size-5" />
                                                                             </button>
                                                                         )}
                                                                         {change.unstaged && (
@@ -868,7 +868,7 @@ export function Projects({
                                                                                 disabled={gitBusy || insightsLoading}
                                                                                 className="rounded border border-border p-1 text-text-dim hover:text-red-400 transition-colors disabled:opacity-50"
                                                                             >
-                                                                                <Undo2 className="size-3" />
+                                                                                <Undo2 className="size-5" />
                                                                             </button>
                                                                         )}
                                                                     </div>
@@ -913,7 +913,7 @@ export function Projects({
                                                                 }}
                                                                 className="rounded p-0.5 text-text-dim opacity-70 transition hover:bg-card hover:opacity-100"
                                                             >
-                                                                <X className="size-3" />
+                                                                <X className="size-4" />
                                                             </span>
                                                         </button>
                                                     );
@@ -1008,7 +1008,7 @@ export function Projects({
                                                 title="Atualizar"
                                                 className="rounded-md border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
                                             >
-                                                <RefreshCw className="size-3.5" />
+                                                <RefreshCw className="size-5" />
                                             </button>
                                         </div>
                                     </div>
@@ -1091,7 +1091,7 @@ export function Projects({
                                                                             disabled={gitBusy || insightsLoading}
                                                                             className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
                                                                         >
-                                                                            <GitCommitHorizontal className="size-3" />
+                                                                            <GitCommitHorizontal className="size-5" />
                                                                         </button>
                                                                     )}
                                                                     {change.staged && (
@@ -1101,7 +1101,7 @@ export function Projects({
                                                                             disabled={gitBusy || insightsLoading}
                                                                             className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
                                                                         >
-                                                                            <Minus className="size-3" />
+                                                                            <Minus className="size-5" />
                                                                         </button>
                                                                     )}
                                                                     {change.unstaged && (
@@ -1111,7 +1111,7 @@ export function Projects({
                                                                             disabled={gitBusy || insightsLoading}
                                                                             className="rounded border border-border p-1 text-text-dim hover:text-red-400 transition-colors disabled:opacity-50"
                                                                         >
-                                                                            <Undo2 className="size-3" />
+                                                                            <Undo2 className="size-5" />
                                                                         </button>
                                                                     )}
                                                                 </div>

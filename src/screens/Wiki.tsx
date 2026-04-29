@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -199,39 +200,72 @@ return (
                         <p className="truncate font-mono text-xs text-text-dim">{payload?.selectedFile ?? selectedFile ?? 'Sem arquivo selecionado'}</p>
                     </div>
 
-                    {loading ? (
-                        <p className="text-sm text-text-dim">Carregando conteudo...</p>
-                    ) : !payload?.exists ? (
-                        <p className="text-sm text-text-dim">Crie a pasta docs no repositorio para visualizar documentacao aqui.</p>
-                    ) : !payload?.selectedFile ? (
-                        <p className="text-sm text-text-dim">Selecione um arquivo .md na lateral.</p>
-                    ) : (
-                        <article className="min-h-0 flex-1 overflow-y-auto pr-1 text-sm leading-relaxed text-highlight">
-                            <div className="space-y-3">
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                        h1: ({ children }) => <h1 className="mt-2 text-2xl font-bold tracking-tight">{children}</h1>,
-                                        h2: ({ children }) => <h2 className="mt-4 text-xl font-bold">{children}</h2>,
-                                        h3: ({ children }) => <h3 className="mt-3 text-lg font-semibold">{children}</h3>,
-                                        p: ({ children }) => <p className="text-sm text-text-dim">{children}</p>,
-                                        code: ({ children }) => <code className="rounded bg-bg px-1.5 py-0.5 font-mono text-xs text-accent">{children}</code>,
-                                        pre: ({ children }) => <pre className="rounded-lg border border-border bg-bg p-3 text-xs whitespace-pre-wrap break-words">{children}</pre>,
-                                        ul: ({ children }) => <ul className="list-disc space-y-1 pl-5 text-sm text-text-dim">{children}</ul>,
-                                        ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 text-sm text-text-dim">{children}</ol>,
-                                        blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 pl-3 italic text-text-dim">{children}</blockquote>,
-                                        a: ({ href, children }) => (
-                                            <a href={href} target="_blank" rel="noreferrer" className="text-accent underline decoration-accent/30 hover:decoration-accent">
-                                                {children}
-                                            </a>
-                                        ),
-                                    }}
-                                >
-                                    {payload.content || '_Arquivo vazio._'}
-                                </ReactMarkdown>
-                            </div>
-                        </article>
-                    )}
+                    <AnimatePresence mode="wait">
+                        {loading ? (
+                            <motion.p
+                                key="loading"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="text-sm text-text-dim"
+                            >
+                                Carregando conteudo...
+                            </motion.p>
+                        ) : !payload?.exists ? (
+                            <motion.p
+                                key="no-exists"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="text-sm text-text-dim"
+                            >
+                                Crie a pasta docs no repositorio para visualizar documentacao aqui.
+                            </motion.p>
+                        ) : !payload?.selectedFile ? (
+                            <motion.p
+                                key="no-selected"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="text-sm text-text-dim"
+                            >
+                                Selecione um arquivo .md na lateral.
+                            </motion.p>
+                        ) : (
+                            <motion.article
+                                key={payload.selectedFile}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="min-h-0 flex-1 overflow-y-auto pr-1 text-sm leading-relaxed text-highlight"
+                            >
+                                <div className="space-y-3">
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            h1: ({ children }) => <h1 className="mt-2 text-2xl font-bold tracking-tight">{children}</h1>,
+                                            h2: ({ children }) => <h2 className="mt-4 text-xl font-bold">{children}</h2>,
+                                            h3: ({ children }) => <h3 className="mt-3 text-lg font-semibold">{children}</h3>,
+                                            p: ({ children }) => <p className="text-sm text-text-dim">{children}</p>,
+                                            code: ({ children }) => <code className="rounded bg-bg px-1.5 py-0.5 font-mono text-xs text-accent">{children}</code>,
+                                            pre: ({ children }) => <pre className="rounded-lg border border-border bg-bg p-3 text-xs whitespace-pre-wrap break-words">{children}</pre>,
+                                            ul: ({ children }) => <ul className="list-disc space-y-1 pl-5 text-sm text-text-dim">{children}</ul>,
+                                            ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 text-sm text-text-dim">{children}</ol>,
+                                            blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 pl-3 italic text-text-dim">{children}</blockquote>,
+                                            a: ({ href, children }) => (
+                                                <a href={href} target="_blank" rel="noreferrer" className="text-accent underline decoration-accent/30 hover:decoration-accent">
+                                                    {children}
+                                                </a>
+                                            ),
+                                        }}
+                                    >
+                                        {payload.content || '_Arquivo vazio._'}
+                                    </ReactMarkdown>
+                                </div>
+                            </motion.article>
+                        )}
+                    </AnimatePresence>
                 </section>
             </div>
         </div>

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, Square, RotateCw, Circle, Maximize2, Minimize2, Send, LayoutGrid } from 'lucide-react';
+import { Trash2, Square, RotateCw, Circle, Maximize2, Minimize2, Send, LayoutGrid, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
+import { useToast } from '@/src/components/Toast';
 
 type XTermType = import('xterm').Terminal;
 type FitAddonType = import('@xterm/addon-fit').FitAddon;
@@ -66,9 +67,29 @@ interface TerminalPanelProps {
 
 export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: TerminalPanelProps) {
     const { repository } = useRepository();
+    const { toast } = useToast();
     const [isMaximized, setIsMaximized] = useState(false);
     const [activeTab, setActiveTab] = useState<CliTab>('shell');
     const [tabState, setTabState] = useState<TabStateMap>(INITIAL);
+    
+    // Estado para múltiplas instâncias por agente
+    const [agentInstances, setAgentInstances] = useState<Record<CliTab, string[]>>({
+        shell: ['inst-1'],
+        claude: ['inst-1'],
+        gemini: ['inst-1'],
+        copilot: ['inst-1'],
+        codex: ['inst-1'],
+        opencode: ['inst-1'],
+    });
+    const [activeInstance, setActiveInstance] = useState<Record<CliTab, string>>({
+        shell: 'inst-1',
+        claude: 'inst-1',
+        gemini: 'inst-1',
+        copilot: 'inst-1',
+        codex: 'inst-1',
+        opencode: 'inst-1',
+    });
+    
     const [gridLayout, setGridLayout] = useState({
         shell: { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
         claude: { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
@@ -82,17 +103,46 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     useEffect(() => { tabStateRef.current = tabState; }, [tabState]);
     const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ shell: '', claude: '', gemini: '', copilot: '', codex: '', opencode: '' });
     const [promptStreaming, setPromptStreaming] = useState<Record<CliTab, boolean>>({ shell: false, claude: false, gemini: false, copilot: false, codex: false, opencode: false });
-    const hostRefs = useRef<Partial<Record<CliTab, HTMLDivElement | null>>>({});
-    const xtermRefs = useRef<Partial<Record<CliTab, XTermType>>>({});
-    const fitRefs = useRef<Partial<Record<CliTab, FitAddonType>>>({});
-    const resizeObservers = useRef<Partial<Record<CliTab, ResizeObserver>>>({});
+    const hostRefs = useRef<Record<CliTab, HTMLDivElement | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
+    const xtermRefs = useRef<Record<CliTab, XTermType | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
+    const fitRefs = useRef<Record<CliTab, FitAddonType | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
+    const resizeObservers = useRef<Record<CliTab, ResizeObserver | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
     const writtenLengths = useRef<Record<CliTab, number>>({ shell: 0, claude: 0, gemini: 0, copilot: 0, codex: 0, opencode: 0 });
-    const sseAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
-    const promptAborts = useRef<Partial<Record<CliTab, AbortController>>>({});
+    const sseAborts = useRef<Record<CliTab, AbortController | undefined>>({ shell: undefined, claude: undefined, gemini: undefined, copilot: undefined, codex: undefined, opencode: undefined });
+    const promptAborts = useRef<Record<CliTab, AbortController | undefined>>({ shell: undefined, claude: undefined, gemini: undefined, copilot: undefined, codex: undefined, opencode: undefined });
 
     const repoPath = repository?.metadata?.localPath ?? '';
 
-    const visibleTabs = isMaximized ? CLI_TABS.map(tab => tab.id) : [activeTab];
+    // Função para criar nova instância do agente atual
+    const addInstance = useCallback(() => {
+        const newInstanceId = `inst-${Date.now()}`;
+        setAgentInstances(prev => ({
+            ...prev,
+            [activeTab]: [...prev[activeTab], newInstanceId],
+        }));
+        setActiveInstance(prev => ({
+            ...prev,
+            [activeTab]: newInstanceId,
+        }));
+    }, [activeTab]);
+
+    // Função para remover uma instância
+    const removeInstance = useCallback((instanceId: string) => {
+        setAgentInstances(prev => ({
+            ...prev,
+            [activeTab]: prev[activeTab].filter(id => id !== instanceId),
+        }));
+        if (activeInstance[activeTab] === instanceId) {
+            const remaining = agentInstances[activeTab].filter(id => id !== instanceId);
+            setActiveInstance(prev => ({
+                ...prev,
+                [activeTab]: remaining[0] || null,
+            }));
+        }
+    }, [activeTab, activeInstance, agentInstances]);
+
+    // Quando maximizado, mostra apenas o agente ativo (para suportar múltiplas instâncias do mesmo agente)
+    const visibleTabs = isMaximized ? [activeTab] : [activeTab];
 
     const appendOutput = useCallback((tab: CliTab, text: string) => {
         setTabState(prev => ({
@@ -242,6 +292,8 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         setPromptInput(prev => ({ ...prev, [tab]: '' }));
         appendOutput(tab, `\x1b[2m[prompt stream: ${prompt}]\x1b[0m\n`);
 
+        let completedSuccessfully = false;
+
         try {
             const resp = await fetch('/api/terminal/stream', {
                 method: 'POST',
@@ -286,6 +338,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                     }
                 }
             }
+            completedSuccessfully = true;
         } catch (e: unknown) {
             if (e instanceof Error && e.name === 'AbortError') return;
             const msg = e instanceof Error ? e.message : String(e);
@@ -293,8 +346,13 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         } finally {
             setPromptStreaming(prev => ({ ...prev, [tab]: false }));
             promptAborts.current[tab] = undefined;
+            // Notificação quando o prompt terminar com sucesso
+            if (completedSuccessfully) {
+                const tabDef = CLI_TABS.find(t => t.id === tab);
+                toast(`${tabDef?.label || tab} - Prompt concluído`, 'success');
+            }
         }
-    }, [appendOutput, promptInput, promptStreaming, repoPath]);
+    }, [appendOutput, promptInput, promptStreaming, repoPath, toast]);
 
     const StatusDot = ({ status }: { status: SessionStatus }) => {
         if (status === 'running') return <Circle className="size-2 fill-green-500 text-green-500" />;
@@ -562,15 +620,6 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         xtermRefs.current[activeTab]?.focus();
     }, [activeTab, isMaximized]);
 
-    useEffect(() => {
-        return () => {
-            for (const tab of CLI_TABS) {
-                sseAborts.current[tab.id]?.abort();
-                promptAborts.current[tab.id]?.abort();
-            }
-        };
-    }, []);
-
     const activeDef = CLI_TABS.find(t => t.id === activeTab)!;
     const activeState = tabState[activeTab];
 
@@ -580,44 +629,59 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                 <>
                     <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-3 py-2 bg-[#0a0a0a]">
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-text-dim">Terminal Layout</span>
-                            <span className="text-[10px] text-text-dim/60">Arraste as bordas para redimensionar</span>
+                            <LayoutGrid className="size-4 text-accent" />
+                            <span className="text-xs font-medium text-highlight">{activeDef.label} - {agentInstances[activeTab].length} instância(s)</span>
+                            <span className="text-[10px] text-text-dim/60">Múltiplos chats do mesmo agente</span>
                         </div>
-                        <button
-                            onClick={resetLayout}
-                            title="Restaurar layout padrão"
-                            className="flex items-center gap-1.5 rounded-md border border-border/40 px-2 py-1 text-[10px] text-text-dim transition-colors hover:border-accent hover:text-accent"
-                        >
-                            <LayoutGrid className="size-3" />
-                            Reset
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={addInstance}
+                                title="Adicionar nova instância"
+                                className="flex items-center gap-1.5 rounded-md border border-border/40 px-2 py-1 text-[10px] text-text-dim transition-colors hover:border-accent hover:text-accent"
+                            >
+                                <span className="text-xs font-bold">+</span>
+                                Nova
+                            </button>
+                            <button
+                                onClick={() => setIsMaximized(false)}
+                                title="Fechar split view"
+                                className="flex items-center gap-1.5 rounded-md border border-border/40 px-2 py-1 text-[10px] text-text-dim transition-colors hover:border-accent hover:text-accent"
+                            >
+                                <Minimize2 className="size-3" />
+                                Fechar
+                            </button>
+                        </div>
                     </div>
-                    <div className="terminal-grid-container grid min-h-0 flex-1 grid-cols-3 grid-rows-2 gap-px bg-border relative">
-                    {CLI_TABS.map(tab => {
-                        const current = tabState[tab.id];
-                        const layout = gridLayout[tab.id];
+                    <div className="terminal-grid-container grid min-h-0 flex-1 gap-px bg-border relative" style={{
+                        gridTemplateColumns: `repeat(${Math.min(agentInstances[activeTab].length, 3)}, 1fr)`,
+                        gridTemplateRows: `repeat(${Math.ceil(agentInstances[activeTab].length / 3)}, 1fr)`,
+                    }}>
+                    {agentInstances[activeTab].map((instanceId, index) => {
+                        const current = tabState[activeTab];
+                        const col = (index % 3) + 1;
+                        const row = Math.floor(index / 3) + 1;
                         return (
                             <section 
-                                key={tab.id} 
+                                key={instanceId} 
                                 className={cn(
                                     "flex min-h-0 flex-col bg-[#0a0a0a relative transition-all duration-200 ease-in-out",
-                                    resizingTab === tab.id && "ring-2 ring-blue-500"
+                                    activeInstance[activeTab] === instanceId && "ring-2 ring-accent"
                                 )}
                                 style={{
-                                    gridColumn: `${layout.col} / span ${layout.colSpan}`,
-                                    gridRow: `${layout.row} / span ${layout.rowSpan}`,
+                                    gridColumn: `${col} / span 1`,
+                                    gridRow: `${row} / span 1`,
                                 }}
                             >
                                 <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-2 py-1.5">
                                     <StatusDot status={current.status} />
-                                    <span className={cn('text-[10px] font-bold uppercase tracking-wider', tab.colorClass)}>{tab.label}</span>
+                                    <span className={cn('text-[10px] font-bold uppercase tracking-wider', activeDef.colorClass)}>{activeDef.label} #{index + 1}</span>
                                     <div className="ml-auto flex items-center gap-1">
                                         <button
                                             onClick={() => {
                                                 if (current.status === 'exited' || current.status === 'disconnected') {
-                                                    void connect(tab.id);
+                                                    void connect(activeTab);
                                                 } else {
-                                                    void killSession(tab.id).then(() => connect(tab.id));
+                                                    void killSession(activeTab).then(() => connect(activeTab));
                                                 }
                                             }}
                                             title="Reiniciar"
@@ -626,7 +690,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                                             <RotateCw className="size-3" />
                                         </button>
                                         <button
-                                            onClick={() => setTabState(prev => ({ ...prev, [tab.id]: { ...prev[tab.id], output: '' } }))}
+                                            onClick={() => setTabState(prev => ({ ...prev, [activeTab]: { ...prev[activeTab], output: '' } }))}
                                             title="Limpar"
                                             className="text-text-dim transition-colors hover:text-accent"
                                         >
@@ -634,11 +698,20 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                                         </button>
                                         {current.status === 'running' && (
                                             <button
-                                                onClick={() => void killSession(tab.id)}
+                                                onClick={() => void killSession(activeTab)}
                                                 title="Encerrar"
                                                 className="text-red-400 transition-colors hover:text-red-300"
                                             >
                                                 <Square className="size-3" />
+                                            </button>
+                                        )}
+                                        {agentInstances[activeTab].length > 1 && (
+                                            <button
+                                                onClick={() => removeInstance(instanceId)}
+                                                title="Remover instância"
+                                                className="text-red-400 transition-colors hover:text-red-300"
+                                            >
+                                                <X className="size-3" />
                                             </button>
                                         )}
                                     </div>
@@ -646,59 +719,10 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
 
                                 <div className="min-h-0 flex-1 p-2 relative">
                                     <div
-                                        ref={el => { hostRefs.current[tab.id] = el; }}
-                                        onClick={() => xtermRefs.current[tab.id]?.focus()}
+                                        ref={el => { hostRefs.current[activeTab] = el; }}
+                                        onClick={() => xtermRefs.current[activeTab]?.focus()}
                                         className="terminal-host h-full w-full overflow-hidden rounded border border-border/20"
                                     />
-                                    
-                                    {/* Resize handles */}
-                                    <div
-                                        className={cn(
-                                            "absolute top-0 right-0 w-3 h-full cursor-ew-resize transition-all duration-150",
-                                            "hover:bg-blue-500/30 hover:w-4",
-                                            resizingTab === tab.id && "bg-blue-500/40 w-4"
-                                        )}
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleResizeStart(tab.id, 'horizontal', e);
-                                        }}
-                                        title="Arraste para redimensionar horizontalmente"
-                                    >
-                                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400/50 rounded-full" />
-                                    </div>
-                                    <div
-                                        className={cn(
-                                            "absolute bottom-0 left-0 w-full h-3 cursor-ns-resize transition-all duration-150",
-                                            "hover:bg-blue-500/30 hover:h-4",
-                                            resizingTab === tab.id && "bg-blue-500/40 h-4"
-                                        )}
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleResizeStart(tab.id, 'vertical', e);
-                                        }}
-                                        title="Arraste para redimensionar verticalmente"
-                                    >
-                                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-1 bg-blue-400/50 rounded-full" />
-                                    </div>
-                                    <div
-                                        className={cn(
-                                            "absolute bottom-0 right-0 w-5 h-5 cursor-nwse-resize transition-all duration-150",
-                                            "hover:bg-blue-500/40 hover:w-6 hover:h-6",
-                                            resizingTab === tab.id && "bg-blue-500/50 w-6 h-6"
-                                        )}
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleResizeStart(tab.id, 'diagonal', e);
-                                        }}
-                                        title="Arraste para redimensionar diagonalmente"
-                                    >
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                                        </div>
-                                    </div>
                                 </div>
                             </section>
                         );
@@ -743,6 +767,16 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                         </span>
                         <div className="ml-auto flex items-center gap-1">
                             <button
+                                onClick={() => setIsMaximized(prev => !prev)}
+                                title={isMaximized ? "Visualização única" : "Dividir tela (ver todos os chats)"}
+                                className={cn(
+                                    "text-text-dim transition-colors hover:text-accent",
+                                    isMaximized && "text-accent"
+                                )}
+                            >
+                                <LayoutGrid className="size-5" />
+                            </button>
+                            <button
                                 onClick={() => {
                                     if (activeState.status === 'disconnected' || activeState.status === 'exited') {
                                         void connect(activeTab);
@@ -753,14 +787,14 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                                 title="Reiniciar"
                                 className="text-text-dim transition-colors hover:text-accent"
                             >
-                                <RotateCw className="size-3" />
+                                <RotateCw className="size-5" />
                             </button>
                             <button
                                 onClick={() => setTabState(prev => ({ ...prev, [activeTab]: { ...prev[activeTab], output: '' } }))}
                                 title="Limpar"
                                 className="text-text-dim transition-colors hover:text-accent"
                             >
-                                <Trash2 className="size-3" />
+                                <Trash2 className="size-5" />
                             </button>
                             {activeState.status === 'running' && (
                                 <button
@@ -768,7 +802,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                                     title="Encerrar"
                                     className="text-red-400 transition-colors hover:text-red-300"
                                 >
-                                    <Square className="size-3" />
+                                    <Square className="size-5" />
                                 </button>
                             )}
                         </div>
@@ -785,48 +819,6 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                 </>
             )}
 
-            <div className="shrink-0 border-t border-border/40 px-3 py-2">
-                <div className="flex items-center gap-2">
-                    {isMaximized && (
-                        <select
-                            value={activeTab}
-                            onChange={e => setActiveTab(e.target.value as CliTab)}
-                            className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-text-dim"
-                        >
-                            {CLI_TABS.map(tab => (
-                                <option key={tab.id} value={tab.id}>{tab.label}</option>
-                            ))}
-                        </select>
-                    )}
-                    <input
-                        type="text"
-                        value={promptInput[activeTab]}
-                        onChange={e => setPromptInput(prev => ({ ...prev, [activeTab]: e.target.value }))}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                void streamPrompt(activeTab);
-                            }
-                        }}
-                        placeholder="Enviar prompt em modo stream para a CLI selecionada..."
-                        disabled={promptStreaming[activeTab]}
-                        className="flex-1 rounded-md border border-border bg-bg px-2.5 py-1.5 text-[11px] text-highlight placeholder:text-text-dim/60 focus:border-primary/50 focus:outline-none disabled:opacity-60"
-                    />
-                    <button
-                        onClick={() => void streamPrompt(activeTab)}
-                        disabled={!promptInput[activeTab]?.trim() || promptStreaming[activeTab]}
-                        className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-dim transition-colors hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-                        title="Enviar prompt em stream"
-                    >
-                        <Send className="size-3.5" />
-                    </button>
-                </div>
-                <p className="mt-1 text-[10px] text-text-dim/60">
-                    {promptStreaming[activeTab]
-                        ? 'Executando prompt em stream...'
-                        : 'Enter envia prompt em stream. O retorno chega ao terminal em tempo real.'}
-                </p>
-            </div>
         </aside>
     );
 }

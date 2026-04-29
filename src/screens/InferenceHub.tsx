@@ -99,15 +99,51 @@ function formatDate(iso?: string): string {
 export function InferenceHub() {
     const { toast } = useToast();
 
-    const { data: jobsData, loading: jobsLoading, refetch: refetchJobs } = useApi<InferenceJobsResponse>('/api/v1/inference/jobs');
-    const { data: summariesData, loading: summariesLoading, refetch: refetchSummaries } = useApi<SemanticSummariesResponse>('/api/v1/summaries/semantic?limit=12');
-    const { data: proactiveData, loading: proactiveLoading, refetch: refetchProactive } = useApi<ProactiveInsightsResponse>('/api/v1/proactive/insights');
+    const { data: jobsResponse, loading: jobsLoading, refetch: refetchJobs } = useApi<InferenceJobsResponse | { data?: InferenceJobsResponse }>('/api/v1/inference/jobs');
+    const { data: summariesResponse, loading: summariesLoading, refetch: refetchSummaries } = useApi<SemanticSummariesResponse | { data?: SemanticSummariesResponse }>('/api/v1/summaries/semantic?limit=12');
+    const { data: proactiveResponse, loading: proactiveLoading, refetch: refetchProactive } = useApi<ProactiveInsightsResponse | { data?: ProactiveInsightsResponse }>('/api/v1/proactive/insights');
 
     const [enqueuePrompt, setEnqueuePrompt] = useState('');
     const [enqueueBusy, setEnqueueBusy] = useState(false);
     const [recallQuery, setRecallQuery] = useState('');
     const [recallBusy, setRecallBusy] = useState(false);
     const [recallData, setRecallData] = useState<RecallResponse | null>(null);
+
+    // Handle both direct array and wrapped response formats
+    const jobsData = useMemo(() => {
+        if (!jobsResponse) return null;
+        // Check if response is wrapped in { data: ... }
+        if ('data' in jobsResponse && jobsResponse.data) {
+            return jobsResponse.data;
+        }
+        // Otherwise assume it's the direct response
+        const response = jobsResponse as InferenceJobsResponse;
+        // Ensure stats object exists with defaults
+        return {
+            ...response,
+            stats: response.stats || { queued: 0, running: 0, completed: 0, failed: 0 }
+        };
+    }, [jobsResponse]);
+
+    const summariesData = useMemo(() => {
+        if (!summariesResponse) return null;
+        // Check if response is wrapped in { data: ... }
+        if ('data' in summariesResponse && summariesResponse.data) {
+            return summariesResponse.data;
+        }
+        // Otherwise assume it's the direct response
+        return summariesResponse as SemanticSummariesResponse;
+    }, [summariesResponse]);
+
+    const proactiveData = useMemo(() => {
+        if (!proactiveResponse) return null;
+        // Check if response is wrapped in { data: ... }
+        if ('data' in proactiveResponse && proactiveResponse.data) {
+            return proactiveResponse.data;
+        }
+        // Otherwise assume it's the direct response
+        return proactiveResponse as ProactiveInsightsResponse;
+    }, [proactiveResponse]);
 
     const sortedTasks = useMemo(() => {
         const tasks = jobsData?.tasks ?? [];
@@ -192,7 +228,7 @@ export function InferenceHub() {
                     <div className="flex items-center justify-between">
                         <span className="label-caps">Jobs de inferência</span>
                         <div className="text-[10px] uppercase tracking-widest text-text-dim font-bold">
-                            {jobsData ? `Q:${jobsData.stats.queued} R:${jobsData.stats.running} C:${jobsData.stats.completed} F:${jobsData.stats.failed}` : '—'}
+                            {jobsData?.stats ? `Q:${jobsData.stats.queued ?? 0} R:${jobsData.stats.running ?? 0} C:${jobsData.stats.completed ?? 0} F:${jobsData.stats.failed ?? 0}` : 'Q:0 R:0 C:0 F:0'}
                         </div>
                     </div>
 
@@ -226,7 +262,7 @@ export function InferenceHub() {
                         <p className="text-xs text-text-dim">Nenhum job registrado ainda.</p>
                     ) : (
                         <div className="space-y-2">
-                            {sortedTasks.map((task) => (
+                            {sortedTasks.map((task: InferenceTask) => (
                                 <div key={task.id} className="rounded-xl border border-border bg-bg p-3">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                         <div className="text-xs font-mono text-accent">{task.id.slice(0, 8)}...</div>
@@ -261,11 +297,11 @@ export function InferenceHub() {
                             <SkeletonCard />
                             <SkeletonCard />
                         </>
-                    ) : (summariesData?.items ?? []).length === 0 ? (
-                        <p className="text-xs text-text-dim">Sem summaries semânticos disponíveis.</p>
+                    ) : !summariesData ? (
+                        <p className="text-xs text-text-dim">Nenhuma memória consolidada disponível.</p>
                     ) : (
                         <div className="space-y-2">
-                            {summariesData?.items.map((item) => (
+                            {(summariesData?.items ?? []).map((item: any) => (
                                 <div key={item.date} className="rounded-xl border border-border bg-bg p-3">
                                     <p className="text-[10px] font-black uppercase tracking-wider text-text-dim">{item.date}</p>
                                     <p className="text-xs text-accent mt-1 line-clamp-3">{item.narrativeSummary || 'Sem narrativa disponível.'}</p>
@@ -297,13 +333,13 @@ export function InferenceHub() {
                     ) : (
                         <>
                             <div className="rounded-xl border border-border bg-bg p-3 text-[11px] text-text-dim grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <p>Provider: <strong className="text-accent">{proactiveData.provider}</strong></p>
-                                <p>Eventos de entrada: <strong className="text-accent">{proactiveData.inputEvents}</strong></p>
-                                <p>Gerado em: <strong className="text-accent">{formatDate(proactiveData.generatedAt)}</strong></p>
-                                <p>Comando: <strong className="text-accent font-mono">{proactiveData.command}</strong></p>
+                                <p>Provider: <strong className="text-accent">{proactiveData?.provider ?? 'N/A'}</strong></p>
+                                <p>Eventos de entrada: <strong className="text-accent">{proactiveData?.inputEvents ?? 0}</strong></p>
+                                <p>Gerado em: <strong className="text-accent">{formatDate(proactiveData?.generatedAt)}</strong></p>
+                                <p>Comando: <strong className="text-accent font-mono">{proactiveData?.command ?? 'N/A'}</strong></p>
                             </div>
                             <div className="space-y-2">
-                                {(proactiveData.plan.recommendations ?? []).slice(0, 4).map((item, idx) => (
+                                {(proactiveData?.plan?.recommendations ?? []).slice(0, 4).map((item: any, idx: number) => (
                                     <div key={`${item.title}-${idx}`} className="rounded-xl border border-border bg-bg p-3">
                                         <p className="text-xs font-bold text-accent">{item.title}</p>
                                         <p className="text-xs text-text-dim mt-1">{item.rationale}</p>

@@ -830,9 +830,9 @@ export function Projects({
                                                     onClick={() => void refetchInsights()}
                                                     disabled={insightsLoading || gitBusy}
                                                     title="Atualizar"
-                                                    className="rounded-md border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                                    className="rounded-md border border-border p-2 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
                                                 >
-                                                    <RefreshCw className="size-3.5" />
+                                                    <RefreshCw className="size-5" />
                                                 </button>
                                             </div>
                                         </div>
@@ -901,9 +901,9 @@ export function Projects({
                                                                         title="Stage arquivo"
                                                                         onClick={() => void runGitAction('stage-file', change.path)}
                                                                         disabled={gitBusy || insightsLoading}
-                                                                        className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                                                        className="rounded border border-border p-2 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
                                                                     >
-                                                                        <GitCommitHorizontal className="size-3" />
+                                                                        <GitCommitHorizontal className="size-5" />
                                                                     </button>
                                                                 )}
                                                                 {change.staged && (
@@ -911,9 +911,9 @@ export function Projects({
                                                                         title="Unstage arquivo"
                                                                         onClick={() => void runGitAction('unstage-file', change.path)}
                                                                         disabled={gitBusy || insightsLoading}
-                                                                        className="rounded border border-border p-1 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
+                                                                        className="rounded border border-border p-2 text-text-dim hover:text-accent transition-colors disabled:opacity-50"
                                                                     >
-                                                                        <Minus className="size-3" />
+                                                                        <Minus className="size-5" />
                                                                     </button>
                                                                 )}
                                                                 {change.unstaged && (
@@ -921,9 +921,9 @@ export function Projects({
                                                                         title="Descartar mudan├ºas"
                                                                         onClick={() => void runGitAction('discard-file', change.path)}
                                                                         disabled={gitBusy || insightsLoading}
-                                                                        className="rounded border border-border p-1 text-text-dim hover:text-red-400 transition-colors disabled:opacity-50"
+                                                                        className="rounded border border-border p-2 text-text-dim hover:text-red-400 transition-colors disabled:opacity-50"
                                                                     >
-                                                                        <Undo2 className="size-3" />
+                                                                        <Undo2 className="size-5" />
                                                                     </button>
                                                                 )}
                                                             </div>
