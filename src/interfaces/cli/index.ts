@@ -10,6 +10,7 @@ import { registerWorkflowCommands } from './commands/workflow';
 import { registerTriggerCommands } from './commands/trigger';
 import { registerMetricsCommands } from './commands/metrics';
 import { registerDiagnosticCommands } from './commands/diagnostic';
+import { registerSweAgentCommands } from './commands/swe-agent';
 
 const program = new Command();
 
@@ -30,5 +31,6 @@ registerWorkflowCommands(program);
 registerTriggerCommands(program);
 registerMetricsCommands(program);
 registerDiagnosticCommands(program);
+registerSweAgentCommands(program);
 
 program.parse();

@@ -68,6 +68,29 @@ pnpm test:unit      # unit tests with coverage
 
 ---
 
+## Mini SWE Agent (CLI)
+
+Run the minimal SWE-style agent with local shell tools:
+
+```bash
+pnpm build:backend
+node dist/interfaces/cli/index.js swe-agent run --objective "Refactor the logging utility" \
+      --provider openai \
+      --model gpt-4o-mini \
+      --api-key $KAIROS_API_KEY
+```
+
+Optional environment variables:
+
+```
+KAIROS_PROVIDER=openai
+KAIROS_MODEL=gpt-4o-mini
+KAIROS_API_KEY=...
+KAIROS_BASE_URL=https://api.openai.com
+```
+
+---
+
 ## Project Structure
 
 ```

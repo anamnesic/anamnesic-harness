@@ -14,6 +14,7 @@ import {
 import type { ApiResponse } from '../../core';
 import { signupSchema, loginSchema, createWorkspaceSchema } from '../../core';
 import { z } from 'zod';
+import { initializeSweAgentRoutes } from './swe-agent-routes';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -429,23 +430,6 @@ app.get(`${BASE_URL}/orchestrator/runs/:runId/checkpoints`, authenticate, async 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ERROR HANDLING
-// ═══════════════════════════════════════════════════════════════════════════════
-
-app.use((_req, res) => {
-  res.status(404).json(errorResponse('NOT_FOUND', 'Route not found'));
-});
-
-app.use((error: any, _req: express.Request, res: Response, _next: NextFunction) => {
-  console.error('Unhandled error:', error);
-  res.status(500).json(errorResponse('INTERNAL_ERROR', 'An unexpected error occurred'));
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SERVER INITIALIZATION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // SERVER INITIALIZATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -463,6 +447,19 @@ async function startServer() {
     projectService = new ProjectService(db);
     orchestratorRuntimeService = new OrchestratorRuntimeService(db);
     console.log('✓ Services initialized');
+
+    // Register swe-agent routes (requires DB)
+    app.use(initializeSweAgentRoutes(db));
+
+    // Error handling (must be last)
+    app.use((_req, res) => {
+      res.status(404).json(errorResponse('NOT_FOUND', 'Route not found'));
+    });
+
+    app.use((error: any, _req: express.Request, res: Response, _next: NextFunction) => {
+      console.error('Unhandled error:', error);
+      res.status(500).json(errorResponse('INTERNAL_ERROR', 'An unexpected error occurred'));
+    });
 
     // Start server
     app.listen(PORT, () => {

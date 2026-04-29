@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "io.kairos.app",
   "build": {
-    "frontendDist": "../.next/standalone/.next/server",
+    "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm dev"
   },

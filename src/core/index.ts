@@ -28,6 +28,11 @@ export * from './agent-config';
 // Agent System
 export * as AgentsV2 from './agents';
 
+// Mini SWE Agent + local runtime
+export * from './environments/LocalEnvironment';
+export * from './models/LitellmModel';
+export * from './agents/implementations/mini-swe-agent';
+
 export {
     type IAgent,
     type IAgentContext,
