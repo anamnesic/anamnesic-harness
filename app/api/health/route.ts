@@ -1,6 +1,6 @@
 export const runtime = 'nodejs';
 
-import { getDb } from '@/app/api/_lib/db';
+import { checkDbConnection } from '@/app/api/_lib/db';
 
 export async function GET() {
     const timestamp = new Date().toISOString();
@@ -9,8 +9,11 @@ export async function GET() {
     let dbError: string | null = null;
 
     try {
-        const db = await getDb();
-        await db.query('SELECT 1');
+        const isConnected = await checkDbConnection();
+        if (!isConnected) {
+            database = 'error';
+            dbError = 'Database connection failed';
+        }
     } catch (error) {
         database = 'error';
         dbError = error instanceof Error ? error.message : 'Unknown database error';

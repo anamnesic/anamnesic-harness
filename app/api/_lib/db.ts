@@ -2,6 +2,7 @@ import type { DataSource } from 'typeorm';
 
 let db: DataSource | null = null;
 let systemBootstrapped = false;
+let dataSeeded = false;
 
 export async function getDb(): Promise<DataSource> {
     if (db && db.isInitialized) return db;
@@ -11,11 +12,31 @@ export async function getDb(): Promise<DataSource> {
     const { getDatabase } = await import('@/src/core/database');
     db = await getDatabase();
 
-    // Seed default data only
-    const { seedDefaultData } = await import('./seed');
-    await seedDefaultData(db);
+    // Seed default data only once
+    if (!dataSeeded) {
+        const { seedDefaultData } = await import('./seed');
+        await seedDefaultData(db);
+        dataSeeded = true;
+    }
 
     return db;
+}
+
+/**
+ * Lightweight database connection check for health endpoints.
+ * Does not trigger seeding or initialization of services.
+ */
+export async function checkDbConnection(): Promise<boolean> {
+    try {
+        await import('reflect-metadata');
+        const { getDatabase } = await import('@/src/core/database');
+        const testDb = await getDatabase();
+        await testDb.query('SELECT 1');
+        return true;
+    } catch (error) {
+        console.error('Database connection check failed:', error);
+        return false;
+    }
 }
 
 /**
