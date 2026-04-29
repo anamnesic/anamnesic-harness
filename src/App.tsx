@@ -93,7 +93,7 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
             )}
           </div>
         </div>
-        <div className="mx-auto min-w-0 flex-1 overflow-x-auto px-1">
+        <div className="mx-auto min-w-0 flex-1 px-1">
           <div className="mx-auto flex w-max items-center gap-1 rounded-xl border border-border bg-card/60 p-0.5">
             {TABS.map(tab => (
               <button

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Building2, FileText, GitCommitHorizontal, GitGraph, GitBranch, BookOpen, Lightbulb, RefreshCw, Minus, Undo2, FileCode2, FileJson, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 import { Wiki } from './Wiki';
@@ -123,6 +123,8 @@ export function Projects({
         folderName: '',
         gitSubfolders: [],
     });
+    const [terminalHeight, setTerminalHeight] = useState(288); // h-72 = 288px
+    const [isResizing, setIsResizing] = useState(false);
 
     const projects = data?.data ?? [];
     const activeTab = controlledActiveTab ?? internalActiveTab;
@@ -135,6 +137,32 @@ export function Projects({
         }
         onTabChange?.(tab);
     }
+
+    const handleResizeStart = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizing(true);
+        const startY = e.clientY;
+        const startHeight = terminalHeight;
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const deltaY = startY - moveEvent.clientY;
+            const newHeight = Math.max(200, Math.min(600, startHeight + deltaY));
+            setTerminalHeight(newHeight);
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }, [terminalHeight]);
 
     useEffect(() => {
         if (!projects.length) {
@@ -856,7 +884,7 @@ export function Projects({
                                     </aside>
 
                                     <section className="min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
-                                        <div className="mb-3 overflow-x-auto rounded-lg border border-border/60 bg-bg/90">
+                                        <div className="mb-3 rounded-lg border border-border/60 bg-bg/90">
                                             <div className="flex items-stretch">
                                                 {openRepoTabs.length ? openRepoTabs.map((filePath) => {
                                                     const isActive = selectedRepoFile === filePath;
@@ -947,8 +975,17 @@ export function Projects({
                                             </div>
                                         )}
 
-                                        <div className="mt-3 h-72 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-[#0a0a0a]">
-                                            <TerminalPanel />
+                                        <div className="mt-3 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-[#0a0a0a] relative">
+                                            <div 
+                                                className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-blue-500/20 transition-colors z-10"
+                                                onMouseDown={handleResizeStart}
+                                                title="Arraste para redimensionar o terminal"
+                                            >
+                                                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-0.5 bg-blue-400/50 rounded-full" />
+                                            </div>
+                                            <div style={{ height: `${terminalHeight}px` }}>
+                                                <TerminalPanel />
+                                            </div>
                                         </div>
                                     </section>
                                 </div>

@@ -155,7 +155,7 @@ function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void 
                                                 </p>
                                             )}
                                             {v.evidence && (
-                                                <pre className="text-[11px] font-mono bg-white/5 rounded p-2 overflow-x-auto whitespace-pre-wrap">
+                                                <pre className="text-[11px] font-mono bg-white/5 rounded p-2 whitespace-pre-wrap break-words">
                                                     {v.evidence}
                                                 </pre>
                                             )}

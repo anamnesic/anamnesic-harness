@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, Square, RotateCw, Circle, Maximize2, Minimize2, Send } from 'lucide-react';
+import { Trash2, Square, RotateCw, Circle, Maximize2, Minimize2, Send, LayoutGrid } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 
@@ -69,6 +69,15 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     const [isMaximized, setIsMaximized] = useState(false);
     const [activeTab, setActiveTab] = useState<CliTab>('shell');
     const [tabState, setTabState] = useState<TabStateMap>(INITIAL);
+    const [gridLayout, setGridLayout] = useState({
+        shell: { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
+        claude: { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
+        gemini: { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+        copilot: { col: 2, row: 2, colSpan: 1, rowSpan: 1 },
+        codex: { col: 3, row: 1, colSpan: 1, rowSpan: 1 },
+        opencode: { col: 3, row: 2, colSpan: 1, rowSpan: 1 },
+    });
+    const [resizingTab, setResizingTab] = useState<CliTab | null>(null);
     const tabStateRef = useRef<TabStateMap>(INITIAL);
     useEffect(() => { tabStateRef.current = tabState; }, [tabState]);
     const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ shell: '', claude: '', gemini: '', copilot: '', codex: '', opencode: '' });
@@ -345,6 +354,90 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         });
     }, [repoPath, isMaximized, killSession, connect, onHeaderStateChange]);
 
+    const handleResizeStart = useCallback((tab: CliTab, direction: 'horizontal' | 'vertical' | 'diagonal', event: React.MouseEvent) => {
+        setResizingTab(tab);
+        const startLayout = { ...gridLayout[tab] };
+        const startMouseX = event.clientX;
+        const startMouseY = event.clientY;
+        const container = document.querySelector('.terminal-grid-container') as HTMLElement;
+        
+        if (!container) return;
+        
+        const rect = container.getBoundingClientRect();
+        const cellWidth = rect.width / 3; // 3 columns
+        const cellHeight = rect.height / 2; // 2 rows
+        
+        // Add visual feedback
+        document.body.style.cursor = direction === 'horizontal' ? 'ew-resize' : 
+                                    direction === 'vertical' ? 'ns-resize' : 'nwse-resize';
+        document.body.style.userSelect = 'none';
+        
+        const handleMouseMove = (e: MouseEvent) => {
+            e.preventDefault();
+            
+            const deltaX = e.clientX - startMouseX;
+            const deltaY = e.clientY - startMouseY;
+            
+            let newColSpan = startLayout.colSpan;
+            let newRowSpan = startLayout.rowSpan;
+            let newCol = startLayout.col;
+            let newRow = startLayout.row;
+            
+            // Calculate new spans based on drag distance
+            if (direction === 'horizontal' || direction === 'diagonal') {
+                const horizontalCells = Math.round(deltaX / cellWidth);
+                newColSpan = Math.max(1, Math.min(3, startLayout.colSpan + horizontalCells));
+            }
+            
+            if (direction === 'vertical' || direction === 'diagonal') {
+                const verticalCells = Math.round(deltaY / cellHeight);
+                newRowSpan = Math.max(1, Math.min(2, startLayout.rowSpan + verticalCells));
+            }
+            
+            // Adjust position if needed to stay within bounds
+            if (newCol + newColSpan - 1 > 3) {
+                newCol = Math.max(1, 3 - newColSpan + 1);
+            }
+            if (newRow + newRowSpan - 1 > 2) {
+                newRow = Math.max(1, 2 - newRowSpan + 1);
+            }
+            
+            // Apply new layout with smooth transition
+            setGridLayout(prev => ({
+                ...prev,
+                [tab]: {
+                    ...prev[tab],
+                    col: newCol,
+                    row: newRow,
+                    colSpan: newColSpan,
+                    rowSpan: newRowSpan,
+                }
+            }));
+        };
+        
+        const handleMouseUp = () => {
+            setResizingTab(null);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }, [gridLayout]);
+
+    const resetLayout = useCallback(() => {
+        setGridLayout({
+            shell: { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
+            claude: { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
+            gemini: { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
+            copilot: { col: 2, row: 2, colSpan: 1, rowSpan: 1 },
+            codex: { col: 3, row: 1, colSpan: 1, rowSpan: 1 },
+            opencode: { col: 3, row: 2, colSpan: 1, rowSpan: 1 },
+        });
+    }, []);
+
     const ensureTerminal = useCallback(async (tab: CliTab) => {
         const host = hostRefs.current[tab];
         if (!host || xtermRefs.current[tab]) return;
@@ -484,11 +577,37 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     return (
         <aside className={asideClass}>
             {isMaximized ? (
-                <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-px bg-border">
+                <>
+                    <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-3 py-2 bg-[#0a0a0a]">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-text-dim">Terminal Layout</span>
+                            <span className="text-[10px] text-text-dim/60">Arraste as bordas para redimensionar</span>
+                        </div>
+                        <button
+                            onClick={resetLayout}
+                            title="Restaurar layout padrão"
+                            className="flex items-center gap-1.5 rounded-md border border-border/40 px-2 py-1 text-[10px] text-text-dim transition-colors hover:border-accent hover:text-accent"
+                        >
+                            <LayoutGrid className="size-3" />
+                            Reset
+                        </button>
+                    </div>
+                    <div className="terminal-grid-container grid min-h-0 flex-1 grid-cols-3 grid-rows-2 gap-px bg-border relative">
                     {CLI_TABS.map(tab => {
                         const current = tabState[tab.id];
+                        const layout = gridLayout[tab.id];
                         return (
-                            <section key={tab.id} className="flex min-h-0 flex-col bg-[#0a0a0a]">
+                            <section 
+                                key={tab.id} 
+                                className={cn(
+                                    "flex min-h-0 flex-col bg-[#0a0a0a relative transition-all duration-200 ease-in-out",
+                                    resizingTab === tab.id && "ring-2 ring-blue-500"
+                                )}
+                                style={{
+                                    gridColumn: `${layout.col} / span ${layout.colSpan}`,
+                                    gridRow: `${layout.row} / span ${layout.rowSpan}`,
+                                }}
+                            >
                                 <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-2 py-1.5">
                                     <StatusDot status={current.status} />
                                     <span className={cn('text-[10px] font-bold uppercase tracking-wider', tab.colorClass)}>{tab.label}</span>
@@ -525,17 +644,67 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                                     </div>
                                 </div>
 
-                                <div className="min-h-0 flex-1 p-2">
+                                <div className="min-h-0 flex-1 p-2 relative">
                                     <div
                                         ref={el => { hostRefs.current[tab.id] = el; }}
                                         onClick={() => xtermRefs.current[tab.id]?.focus()}
                                         className="terminal-host h-full w-full overflow-hidden rounded border border-border/20"
                                     />
+                                    
+                                    {/* Resize handles */}
+                                    <div
+                                        className={cn(
+                                            "absolute top-0 right-0 w-3 h-full cursor-ew-resize transition-all duration-150",
+                                            "hover:bg-blue-500/30 hover:w-4",
+                                            resizingTab === tab.id && "bg-blue-500/40 w-4"
+                                        )}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleResizeStart(tab.id, 'horizontal', e);
+                                        }}
+                                        title="Arraste para redimensionar horizontalmente"
+                                    >
+                                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-blue-400/50 rounded-full" />
+                                    </div>
+                                    <div
+                                        className={cn(
+                                            "absolute bottom-0 left-0 w-full h-3 cursor-ns-resize transition-all duration-150",
+                                            "hover:bg-blue-500/30 hover:h-4",
+                                            resizingTab === tab.id && "bg-blue-500/40 h-4"
+                                        )}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleResizeStart(tab.id, 'vertical', e);
+                                        }}
+                                        title="Arraste para redimensionar verticalmente"
+                                    >
+                                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-1 bg-blue-400/50 rounded-full" />
+                                    </div>
+                                    <div
+                                        className={cn(
+                                            "absolute bottom-0 right-0 w-5 h-5 cursor-nwse-resize transition-all duration-150",
+                                            "hover:bg-blue-500/40 hover:w-6 hover:h-6",
+                                            resizingTab === tab.id && "bg-blue-500/50 w-6 h-6"
+                                        )}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleResizeStart(tab.id, 'diagonal', e);
+                                        }}
+                                        title="Arraste para redimensionar diagonalmente"
+                                    >
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
                         );
                     })}
-                </div>
+                    </div>
+                </>
             ) : (
                 <>
                     <div className="flex shrink-0 gap-1 border-b border-border px-3 pt-2">

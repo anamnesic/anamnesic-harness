@@ -123,7 +123,7 @@
     "package:vscode": "node esbuild.vscode.js && pnpm exec vsce package --no-dependencies"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.12",
+    "@hono/node-server": "^2.0.0",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@xterm/addon-fit": "^0.11.0",
     "adm-zip": "^0.5.17",
@@ -137,7 +137,7 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "helmet": "^7.1.0",
-    "hono": "^4.12.10",
+    "hono": "^4.12.15",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.11.0",
     "motion": "^12.38.0",

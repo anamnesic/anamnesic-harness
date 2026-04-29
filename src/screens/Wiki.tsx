@@ -157,10 +157,10 @@ export function Wiki({ projectId }: { projectId: string }) {
     }
 
 return (
-        <div className="min-h-64 min-w-0 sm:min-h-72">
-            <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
-                <aside className="bento-card min-h-0">
-                    <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="h-full min-h-0">
+            <div className="grid h-full min-h-0 grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
+                <aside className="bento-card flex h-full min-h-0 flex-col">
+                    <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                             <FolderOpen className="size-4 text-primary" />
                             <p className="label-caps">Docs</p>
@@ -177,7 +177,7 @@ return (
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Filtrar arquivos .md"
-                        className="mb-3 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
+                        className="mb-3 shrink-0 w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-xs text-highlight placeholder:text-text-dim focus:border-primary/60 outline-none transition-colors"
                     />
 
                     {loading ? (
@@ -187,14 +187,14 @@ return (
                     ) : !files.length ? (
                         <p className="text-sm text-text-dim">Nenhum arquivo .md encontrado em docs.</p>
                     ) : (
-                        <div className="max-h-[68vh] space-y-0.5 overflow-y-auto pr-1 lg:max-h-[52vh]">
+                        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
                             {tree.length ? renderTree(tree) : <p className="text-sm text-text-dim">Nenhum arquivo corresponde ao filtro.</p>}
                         </div>
                     )}
                 </aside>
 
-                <section className="bento-card min-h-0">
-                    <div className="mb-3 flex items-center gap-2 border-b border-border/60 pb-2">
+                <section className="bento-card flex h-full min-h-0 flex-col">
+                    <div className="mb-3 flex shrink-0 items-center gap-2 border-b border-border/60 pb-2">
                         <FileText className="size-4 text-primary" />
                         <p className="truncate font-mono text-xs text-text-dim">{payload?.selectedFile ?? selectedFile ?? 'Sem arquivo selecionado'}</p>
                     </div>
@@ -206,7 +206,7 @@ return (
                     ) : !payload?.selectedFile ? (
                         <p className="text-sm text-text-dim">Selecione um arquivo .md na lateral.</p>
                     ) : (
-                        <article className="max-h-[52vh] overflow-y-auto pr-1 text-sm leading-relaxed text-highlight">
+                        <article className="min-h-0 flex-1 overflow-y-auto pr-1 text-sm leading-relaxed text-highlight">
                             <div className="space-y-3">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
@@ -216,7 +216,7 @@ return (
                                         h3: ({ children }) => <h3 className="mt-3 text-lg font-semibold">{children}</h3>,
                                         p: ({ children }) => <p className="text-sm text-text-dim">{children}</p>,
                                         code: ({ children }) => <code className="rounded bg-bg px-1.5 py-0.5 font-mono text-xs text-accent">{children}</code>,
-                                        pre: ({ children }) => <pre className="overflow-x-auto rounded-lg border border-border bg-bg p-3 text-xs">{children}</pre>,
+                                        pre: ({ children }) => <pre className="rounded-lg border border-border bg-bg p-3 text-xs whitespace-pre-wrap break-words">{children}</pre>,
                                         ul: ({ children }) => <ul className="list-disc space-y-1 pl-5 text-sm text-text-dim">{children}</ul>,
                                         ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 text-sm text-text-dim">{children}</ol>,
                                         blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 pl-3 italic text-text-dim">{children}</blockquote>,
