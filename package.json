@@ -101,8 +101,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "export": "next build && next export",
-    "tauri:build": "pnpm run export && pnpm tauri build",
+    "export": "next build",
+    "tauri:build": "pnpm run export && node scripts/tauri-prepare-server.mjs && pnpm tauri build",
     "start": "next start",
     "postinstall": "pnpm rebuild node-pty",
     "build:backend": "tsc --project tsconfig.build.json",
