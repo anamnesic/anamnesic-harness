@@ -27,7 +27,6 @@
 
   *::-webkit-scrollbar {
     width: 10px;
-    height: 10px;
   }
 
   *::-webkit-scrollbar-track {
@@ -61,5 +60,32 @@
 @layer utilities {
   .scrollbar-kairos {
     scrollbar-gutter: stable;
+  }
+  
+  /* Prevent horizontal scrollbars globally */
+  * {
+    overflow-x: hidden !important;
+  }
+  
+  html, body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Override overflow-auto to prevent horizontal scroll */
+  [class*="overflow-auto"] {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Hide horizontal scrollbar completely */
+  ::-webkit-scrollbar:horizontal {
+    display: none !important;
+  }
+  
+  /* Hide scrollbar corner */
+  ::-webkit-scrollbar-corner {
+    display: none !important;
   }
 }

@@ -162,7 +162,7 @@ export class ConversationsSidebarProvider implements vscode.WebviewViewProvider 
   .item{display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:3px;
     cursor:pointer;user-select:none}
   .item:hover{background:var(--vscode-list-hoverBackground)}
-  .label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:normal}
   .icon-btn{background:none;border:0;cursor:pointer;opacity:0;font-size:.8em;
     color:var(--vscode-editor-foreground);padding:0 2px}
   .item:hover .icon-btn{opacity:.6}

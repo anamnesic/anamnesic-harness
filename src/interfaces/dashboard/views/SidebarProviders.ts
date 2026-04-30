@@ -147,7 +147,7 @@ body {
 }
 .history-item:hover { background: var(--vscode-list-hoverBackground); opacity: 1; }
 .history-item.active { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); opacity: 1; }
-.history-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: normal; }
 .history-del { background: none; border: none; color: var(--vscode-foreground); opacity: 0; cursor: pointer; font-size: 12px; padding: 0 2px; }
 .history-item:hover .history-del { opacity: 0.6; }
 .history-del:hover { opacity: 1 !important; color: var(--vscode-errorForeground); }
