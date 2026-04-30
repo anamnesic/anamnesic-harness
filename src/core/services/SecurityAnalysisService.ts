@@ -44,6 +44,11 @@ export class SecurityAnalysisService {
     return this.repo.findOne({ where: { id } });
   }
 
+  async delete(id: string): Promise<boolean> {
+    const result = await this.repo.delete({ id });
+    return (result.affected ?? 0) > 0;
+  }
+
   async listByWorkspace(
     workspaceId: string,
     severity?: VulnerabilitySeverity

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, Play, Plus, X, Eye, AlertTriangle, Bug } from 'lucide-react';
+import { ShieldCheck, Play, Plus, X, Eye, AlertTriangle, Bug, Trash2 } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -83,10 +83,30 @@ function SeverityBadge({ severity }: { severity: Severity }) {
 function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void }) {
     const { data, loading } = useApi<{ data: SecurityScan } | SecurityScan>(`/api/v1/security/scans/${scanId}`);
     const scan: SecurityScan | null = (data as any)?.data ?? (data as any) ?? null;
+    const { toast } = useToast();
+    const [simulatingId, setSimulatingId] = useState<string | null>(null);
 
-    function handleSimulateAttack(v: Vulnerability) {
-        // TODO: implement attack simulation
-        console.log('Simulate attack for:', v);
+    async function handleSimulateAttack(v: Vulnerability) {
+        setSimulatingId(v.id);
+        try {
+            const res: any = await apiFetch('/api/v1/security/simulations', {
+                method: 'POST',
+                body: JSON.stringify({
+                    vulnerabilityId: v.id,
+                    attackType: v.type,
+                    targetUrl: scan?.targetName,
+                    pattern: 'sequential',
+                }),
+            });
+            const sim = res?.data ?? res;
+            const blocked = sim?.metrics?.payloadsBlocked ?? 0;
+            const tried = sim?.metrics?.payloadsAttempted ?? 0;
+            toast(`Simulation complete — ${blocked}/${tried} payloads blocked`, 'success');
+        } catch (e: any) {
+            toast(e?.message ?? 'Simulation failed', 'error');
+        } finally {
+            setSimulatingId(null);
+        }
     }
 
     return (
@@ -142,10 +162,11 @@ function DetailModal({ scanId, onClose }: { scanId: string; onClose: () => void 
                                                 </div>
                                                 <button
                                                     onClick={() => handleSimulateAttack(v)}
-                                                    className="flex items-center gap-1 px-2 py-1 rounded bg-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all border border-red-500/20"
+                                                    disabled={simulatingId === v.id}
+                                                    className="flex items-center gap-1 px-2 py-1 rounded bg-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all border border-red-500/20 disabled:opacity-50"
                                                 >
                                                     <Bug className="size-2.5" />
-                                                    Simulate Attack
+                                                    {simulatingId === v.id ? 'Simulating…' : 'Simulate Attack'}
                                                 </button>
                                             </div>
                                             <p className="text-xs text-text-dim leading-relaxed">{v.description}</p>
@@ -216,6 +237,7 @@ export function Security() {
     const [deepScan, setDeepScan] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [openId, setOpenId] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const projects = useMemo(() => {
         const raw = (projectsData as any)?.data ?? projectsData ?? [];
@@ -272,6 +294,20 @@ export function Security() {
         }
     }
 
+    async function handleDelete(scanId: string) {
+        if (!confirm('Excluir esta varredura?')) return;
+        setDeletingId(scanId);
+        try {
+            await apiFetch(`/api/v1/security/scans/${scanId}`, { method: 'DELETE' });
+            toast('Scan removed', 'success');
+            refetch();
+        } catch (e: any) {
+            toast(e?.message ?? 'Falha ao excluir', 'error');
+        } finally {
+            setDeletingId(null);
+        }
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -319,11 +355,13 @@ export function Security() {
             ) : (
                 <div className="space-y-3">
                     {list.map(scan => (
-                        <div key={scan.id} className="bento-card flex items-center gap-3">
-                            <div className="min-w-0 flex-1 space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-accent truncate">{scan.targetName}</span>
-                                    <SeverityBadge severity={scan.severity} />
+                        <div key={scan.id} className="bento-card flex flex-row items-center gap-3 overflow-hidden">
+                            <div className="min-w-0 flex-1 space-y-1 overflow-hidden">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="font-bold text-accent truncate min-w-0 flex-1" title={scan.targetName}>{scan.targetName}</span>
+                                    <span className="shrink-0">
+                                        <SeverityBadge severity={scan.severity} />
+                                    </span>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 text-xs text-text-dim">
                                     <span className="rounded-md bg-white/5 border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
@@ -342,6 +380,14 @@ export function Security() {
                                 aria-label="View details"
                             >
                                 <Eye className="size-4" />
+                            </button>
+                            <button
+                                onClick={() => handleDelete(scan.id)}
+                                disabled={deletingId === scan.id}
+                                className="rounded-lg p-2 text-text-dim hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 disabled:opacity-50"
+                                aria-label="Delete scan"
+                            >
+                                <Trash2 className="size-4" />
                             </button>
                         </div>
                     ))}
