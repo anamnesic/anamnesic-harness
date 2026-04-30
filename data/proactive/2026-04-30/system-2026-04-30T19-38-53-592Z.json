@@ -1,0 +1,21 @@
+{
+  "projectId": "system",
+  "generatedAt": "2026-04-30T19:38:53.592Z",
+  "provider": "copilot",
+  "command": "gh",
+  "exitCode": 1,
+  "inputEvents": 206,
+  "plan": {
+    "risks": [],
+    "opportunities": [],
+    "taskCandidates": [],
+    "recommendations": [
+      {
+        "title": "Manual review required",
+        "rationale": "Model output did not contain JSON",
+        "action": "Inspect recent enriched events and run planner again."
+      }
+    ]
+  },
+  "pendingApprovals": []
+}

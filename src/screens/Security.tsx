@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, Play, Plus, X, Eye, AlertTriangle, Bug, Trash2, Globe, Lock, Zap, Shield, Cloud, Server, Key, Sword, Target, Activity, CheckCircle, FileText, Scale, Radar, Ghost, Link2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Play, Plus, X, Eye, AlertTriangle, Bug, Trash2, Globe, Lock, Zap, Shield, Cloud, Server, Key, Sword, Target, Activity, CheckCircle, FileText, Scale, Radar, Ghost, Link2, ArrowRight, AlertOctagon, FileSearch, Package, ShieldAlert, Brain, TestTube, Cpu, Database, HardDrive } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { SkeletonCard } from '@/src/components/Skeleton';
@@ -146,6 +146,142 @@ interface AttackChainData {
     commonPatterns: string[];
     recommendations: string[];
     analyzedAt: string;
+}
+
+interface DangerousPatternData {
+    patternsAnalyzed: number;
+    matches: any[];
+    summary: {
+        totalMatches: number;
+        criticalMatches: number;
+        highMatches: number;
+        mediumMatches: number;
+        lowMatches: number;
+        filesScanned: number;
+        filesWithMatches: number;
+    };
+    categoryBreakdown: Record<string, number>;
+    topRiskyFiles: { file: string; matchCount: number }[];
+    recommendations: string[];
+    analyzedAt: string;
+    analysisDuration: number;
+}
+
+interface PackageVulnerabilityData {
+    packagesScanned: number;
+    vulnerabilitiesFound: number;
+    criticalVulnerabilities: number;
+    highVulnerabilities: number;
+    mediumVulnerabilities: number;
+    lowVulnerabilities: number;
+    packageVulnerabilities: any[];
+    summary: {
+        totalPackages: number;
+        vulnerablePackages: number;
+        safePackages: number;
+        overallRiskScore: number;
+    };
+    recommendations: string[];
+    scannedAt: string;
+    analysisDuration: number;
+}
+
+interface MLZeroDayData {
+    modelsUsed: string[];
+    patternsAnalyzed: number;
+    anomaliesDetected: number;
+    vulnerabilities: any[];
+    summary: {
+        totalVulnerabilities: number;
+        criticalVulnerabilities: number;
+        highVulnerabilities: number;
+        mediumVulnerabilities: number;
+        lowVulnerabilities: number;
+        averageConfidence: number;
+        anomalyThreshold: number;
+    };
+    modelPerformance: {
+        accuracy: number;
+        precision: number;
+        recall: number;
+        f1Score: number;
+    };
+    recommendations: string[];
+    analyzedAt: string;
+    analysisDuration: number;
+}
+
+interface ExploitationTestData {
+    testsExecuted: number;
+    testsSuccessful: number;
+    testsFailed: number;
+    testsBlocked: number;
+    vulnerabilitiesConfirmed: number;
+    results: any[];
+    summary: {
+        criticalVulnerabilities: number;
+        highVulnerabilities: number;
+        mediumVulnerabilities: number;
+        lowVulnerabilities: number;
+        averageResponseTime: number;
+        successRate: number;
+    };
+    recommendations: string[];
+    testedAt: string;
+    testDuration: number;
+}
+
+interface ComprehensiveComplianceData {
+    overallScore: number;
+    overallStatus: 'compliant' | 'non-compliant' | 'partial';
+    frameworks: {
+        owasp: any;
+        cis: any;
+        nist: any;
+    };
+    summary: {
+        totalControls: number;
+        compliantControls: number;
+        partialControls: number;
+        nonCompliantControls: number;
+        criticalIssues: number;
+        highIssues: number;
+        mediumIssues: number;
+        lowIssues: number;
+    };
+    recommendations: string[];
+    roadmap: {
+        immediate: string[];
+        shortTerm: string[];
+        longTerm: string[];
+    };
+    assessedAt: string;
+    assessmentDuration: number;
+}
+
+interface DetailedInfrastructureData {
+    resourcesAnalyzed: number;
+    resources: any[];
+    configurations: any[];
+    vulnerabilities: any[];
+    metrics: any[];
+    summary: {
+        totalResources: number;
+        secureResources: number;
+        vulnerableResources: number;
+        criticalIssues: number;
+        highIssues: number;
+        mediumIssues: number;
+        lowIssues: number;
+        complianceScore: number;
+        healthScore: number;
+    };
+    resourceBreakdown: Record<string, number>;
+    providerBreakdown: Record<string, number>;
+    topVulnerableResources: { resource: string; vulnerabilityCount: number }[];
+    recommendations: string[];
+    analyzedAt: string;
+    analysisDuration: number;
 }
 
 interface SecurityScan {
@@ -364,9 +500,21 @@ export function Security() {
     const { data: compliance, loading: complianceLoading, refetch: refetchCompliance } = useApi<ComplianceData | null>('/api/v1/security/compliance');
     const { data: zeroDay, loading: zeroDayLoading, refetch: refetchZeroDay } = useApi<ZeroDayData | null>('/api/v1/security/zero-day');
     const { data: attackChains, loading: attackChainsLoading, refetch: refetchAttackChains } = useApi<AttackChainData | null>('/api/v1/security/attack-chains');
+    const { data: dangerousPatterns, loading: dangerousPatternsLoading, refetch: refetchDangerousPatterns } = useApi<DangerousPatternData | null>('/api/v1/security/dangerous-patterns');
+    const { data: packageVulnerabilities, loading: packageVulnerabilitiesLoading, refetch: refetchPackageVulnerabilities } = useApi<PackageVulnerabilityData | null>('/api/v1/security/package-vulnerabilities');
+    const { data: mlZeroDay, loading: mlZeroDayLoading, refetch: refetchMLZeroDay } = useApi<MLZeroDayData | null>('/api/v1/security/ml-zero-day');
+    const { data: exploitationTests, loading: exploitationTestsLoading, refetch: refetchExploitationTests } = useApi<ExploitationTestData | null>('/api/v1/security/exploitation-tests');
+    const { data: comprehensiveCompliance, loading: comprehensiveComplianceLoading, refetch: refetchComprehensiveCompliance } = useApi<ComprehensiveComplianceData | null>('/api/v1/security/comprehensive-compliance');
+    const { data: detailedInfrastructure, loading: detailedInfrastructureLoading, refetch: refetchDetailedInfrastructure } = useApi<DetailedInfrastructureData | null>('/api/v1/security/detailed-infrastructure');
     const [assessingCompliance, setAssessingCompliance] = useState(false);
     const [discoveringZeroDay, setDiscoveringZeroDay] = useState(false);
     const [analyzingChains, setAnalyzingChains] = useState(false);
+    const [detectingPatterns, setDetectingPatterns] = useState(false);
+    const [scanningPackages, setScanningPackages] = useState(false);
+    const [runningMLAnalysis, setRunningMLAnalysis] = useState(false);
+    const [runningExploitationTests, setRunningExploitationTests] = useState(false);
+    const [runningComprehensiveCompliance, setRunningComprehensiveCompliance] = useState(false);
+    const [runningDetailedInfrastructure, setRunningDetailedInfrastructure] = useState(false);
 
     const projects = useMemo(() => {
         const raw = (projectsData as any)?.data ?? projectsData ?? [];
@@ -533,6 +681,84 @@ export function Security() {
             toast(e.message ?? 'Falha ao analisar cadeia de ataques', 'error');
         } finally {
             setAnalyzingChains(false);
+        }
+    }
+
+    async function handleDetectDangerousPatterns() {
+        setDetectingPatterns(true);
+        try {
+            await apiFetch('/api/v1/security/dangerous-patterns');
+            toast('Detecção de padrões perigosos concluída', 'success');
+            refetchDangerousPatterns();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao detectar padrões perigosos', 'error');
+        } finally {
+            setDetectingPatterns(false);
+        }
+    }
+
+    async function handleScanPackageVulnerabilities() {
+        setScanningPackages(true);
+        try {
+            await apiFetch('/api/v1/security/package-vulnerabilities');
+            toast('Verificação de pacotes concluída', 'success');
+            refetchPackageVulnerabilities();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha ao verificar pacotes', 'error');
+        } finally {
+            setScanningPackages(false);
+        }
+    }
+
+    async function handleRunMLAnalysis() {
+        setRunningMLAnalysis(true);
+        try {
+            await apiFetch('/api/v1/security/ml-zero-day');
+            toast('Análise ML/AI concluída', 'success');
+            refetchMLZeroDay();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha na análise ML/AI', 'error');
+        } finally {
+            setRunningMLAnalysis(false);
+        }
+    }
+
+    async function handleRunExploitationTests() {
+        setRunningExploitationTests(true);
+        try {
+            await apiFetch('/api/v1/security/exploitation-tests');
+            toast('Testes de exploração concluídos', 'success');
+            refetchExploitationTests();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha nos testes de exploração', 'error');
+        } finally {
+            setRunningExploitationTests(false);
+        }
+    }
+
+    async function handleComprehensiveCompliance() {
+        setRunningComprehensiveCompliance(true);
+        try {
+            await apiFetch('/api/v1/security/comprehensive-compliance');
+            toast('Verificação completa de compliance concluída', 'success');
+            refetchComprehensiveCompliance();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha na verificação de compliance', 'error');
+        } finally {
+            setRunningComprehensiveCompliance(false);
+        }
+    }
+
+    async function handleDetailedInfrastructure() {
+        setRunningDetailedInfrastructure(true);
+        try {
+            await apiFetch('/api/v1/security/detailed-infrastructure');
+            toast('Análise detalhada de infraestrutura concluída', 'success');
+            refetchDetailedInfrastructure();
+        } catch (e: any) {
+            toast(e.message ?? 'Falha na análise de infraestrutura', 'error');
+        } finally {
+            setRunningDetailedInfrastructure(false);
         }
     }
 
@@ -915,17 +1141,17 @@ export function Security() {
                         {/* Overall Score */}
                         <div className="text-center p-4 rounded-xl bg-bg border border-border">
                             <p className="text-[8px] font-black text-text-dim uppercase mb-1">Pontuação Geral</p>
-                            <p className={cn("text-4xl font-black", compliance.overallScore >= 70 ? "text-green-400" : compliance.overallScore >= 40 ? "text-yellow-400" : "text-red-400")}>
-                                {compliance.overallScore}%
+                            <p className={cn("text-4xl font-black", (compliance?.overallScore || 0) >= 70 ? "text-green-400" : (compliance?.overallScore || 0) >= 40 ? "text-yellow-400" : "text-red-400")}>
+                                {compliance?.overallScore || 0}%
                             </p>
                         </div>
 
                         {/* Standard Scores */}
                         <div className="grid grid-cols-3 gap-3">
                             {[
-                                { name: 'OWASP', score: compliance.owasp.score, summary: compliance.owasp.summary },
-                                { name: 'CIS', score: compliance.cis.score, summary: compliance.cis.summary },
-                                { name: 'NIST', score: compliance.nist.score, summary: compliance.nist.summary },
+                                { name: 'OWASP', score: compliance?.owasp?.score || 0, summary: compliance?.owasp?.summary || { compliant: 0, partial: 0, nonCompliant: 0 } },
+                                { name: 'CIS', score: compliance?.cis?.score || 0, summary: compliance?.cis?.summary || { compliant: 0, partial: 0, nonCompliant: 0 } },
+                                { name: 'NIST', score: compliance?.nist?.score || 0, summary: compliance?.nist?.summary || { compliant: 0, partial: 0, nonCompliant: 0 } },
                             ].map(std => (
                                 <div key={std.name} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className="text-xs font-bold text-accent mb-1">{std.name}</p>
@@ -945,7 +1171,7 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">OWASP Top 10</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {compliance.owasp.checks.slice(0, 5).map((check: any) => (
+                                {compliance?.owasp?.checks?.slice(0, 5).map((check: any) => (
                                     <div key={check.id} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                         <div className="flex items-center gap-2">
                                             <CheckCircle className={cn("size-3", check.status === 'compliant' ? "text-green-500" : check.status === 'partial' ? "text-yellow-500" : "text-red-500")} />
@@ -960,7 +1186,7 @@ export function Security() {
                         </div>
 
                         {/* Recommendations */}
-                        {compliance.recommendations.length > 0 && (
+                        {compliance?.recommendations && compliance.recommendations.length > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
                                 <div className="space-y-2">
@@ -1170,6 +1396,783 @@ export function Security() {
                                     {attackChains.recommendations.slice(0, 3).map((rec, i) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
                                             <AlertTriangle className="size-3 text-blue-400 mt-0.5 shrink-0" />
+                                            <p className="text-xs text-text-dim">{rec}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
+            </div>
+
+            {/* Dangerous Pattern Detection Section */}
+            <div className="bento-card space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <AlertOctagon className="size-5 text-primary" />
+                        <span className="label-caps">Detecção de Padrões Perigosos</span>
+                    </div>
+                    <button
+                        onClick={handleDetectDangerousPatterns}
+                        disabled={detectingPatterns}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-red-500/15 border border-red-500/40 rounded-xl text-[10px] font-bold text-red-400 hover:bg-red-500/25 transition-all disabled:opacity-50"
+                    >
+                        <FileSearch className="size-3" />
+                        {detectingPatterns ? 'Detectando...' : 'Detectar'}
+                    </button>
+                </div>
+
+                {dangerousPatternsLoading ? (
+                    <SkeletonCard />
+                ) : dangerousPatterns ? (
+                    <div className="space-y-4">
+                        {/* Summary Stats */}
+                        <div className="grid grid-cols-4 gap-3">
+                            {[
+                                { label: 'Matches', value: dangerousPatterns.summary.totalMatches, color: 'text-accent' },
+                                { label: 'Críticos', value: dangerousPatterns.summary.criticalMatches, color: 'text-red-400' },
+                                { label: 'Arquivos', value: dangerousPatterns.summary.filesWithMatches, color: dangerousPatterns.summary.filesWithMatches > 0 ? 'text-orange-400' : 'text-green-400' },
+                                { label: 'Padrões', value: dangerousPatterns.patternsAnalyzed, color: 'text-accent' },
+                            ].map(stat => (
+                                <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
+                                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                                    <p className="text-[8px] font-black text-text-dim uppercase mt-1">{stat.label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Category Breakdown */}
+                        {Object.keys(dangerousPatterns.categoryBreakdown).length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Breakdown por Categoria</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {Object.entries(dangerousPatterns.categoryBreakdown).map(([category, count]) => (
+                                        <div key={category} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
+                                            <span className="text-xs font-bold text-accent capitalize">{category}</span>
+                                            <span className="text-[10px] font-bold text-text-dim">{count}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Top Risky Files */}
+                        {dangerousPatterns.topRiskyFiles.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Arquivos de Maior Risco</p>
+                                <div className="space-y-2">
+                                    {dangerousPatterns.topRiskyFiles.slice(0, 5).map((file, i) => (
+                                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-red-500/5 border border-red-500/20">
+                                            <span className="text-xs text-text-dim truncate max-w-[200px]">{file.file}</span>
+                                            <span className="text-[10px] font-bold text-red-400">{file.matchCount} matches</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Pattern Matches */}
+                        {dangerousPatterns.matches.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Matches Recentes</p>
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {dangerousPatterns.matches.slice(0, 5).map((match: any) => (
+                                        <div key={match.id} className="p-3 rounded-xl bg-bg border border-border">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-accent">{match.patternName}</span>
+                                                <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded", match.severity === 'critical' ? "bg-red-500/10 text-red-400" : match.severity === 'high' ? "bg-orange-500/10 text-orange-400" : "bg-yellow-500/10 text-yellow-400")}>
+                                                    {match.severity}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-text-dim mb-1">{match.file}:{match.line}</p>
+                                            <code className="text-[9px] text-text-dim bg-black/20 px-2 py-1 rounded block overflow-x-auto">
+                                                {match.codeSnippet}
+                                            </code>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Recommendations */}
+                        {dangerousPatterns.recommendations.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
+                                <div className="space-y-2">
+                                    {dangerousPatterns.recommendations.slice(0, 3).map((rec, i) => (
+                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-red-500/5 border border-red-500/20">
+                                            <AlertTriangle className="size-3 text-red-400 mt-0.5 shrink-0" />
+                                            <p className="text-xs text-text-dim">{rec}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
+            </div>
+
+            {/* Package Vulnerability Scanning Section */}
+            <div className="bento-card space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Package className="size-5 text-primary" />
+                        <span className="label-caps">Verificação de Pacotes (CVE)</span>
+                    </div>
+                    <button
+                        onClick={handleScanPackageVulnerabilities}
+                        disabled={scanningPackages}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/15 border border-yellow-500/40 rounded-xl text-[10px] font-bold text-yellow-400 hover:bg-yellow-500/25 transition-all disabled:opacity-50"
+                    >
+                        <ShieldAlert className="size-3" />
+                        {scanningPackages ? 'Verificando...' : 'Verificar'}
+                    </button>
+                </div>
+
+                {packageVulnerabilitiesLoading ? (
+                    <SkeletonCard />
+                ) : packageVulnerabilities ? (
+                    <div className="space-y-4">
+                        {/* Summary Stats */}
+                        <div className="grid grid-cols-4 gap-3">
+                            {[
+                                { label: 'Pacotes', value: packageVulnerabilities.packagesScanned, color: 'text-accent' },
+                                { label: 'Vulneráveis', value: packageVulnerabilities.summary.vulnerablePackages, color: packageVulnerabilities.summary.vulnerablePackages > 0 ? 'text-red-400' : 'text-green-400' },
+                                { label: 'CVEs', value: packageVulnerabilities.vulnerabilitiesFound, color: packageVulnerabilities.vulnerabilitiesFound > 0 ? 'text-orange-400' : 'text-green-400' },
+                                { label: 'Risco', value: packageVulnerabilities.summary.overallRiskScore, color: packageVulnerabilities.summary.overallRiskScore >= 70 ? 'text-red-400' : packageVulnerabilities.summary.overallRiskScore >= 40 ? 'text-yellow-400' : 'text-green-400' },
+                            ].map(stat => (
+                                <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
+                                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                                    <p className="text-[8px] font-black text-text-dim uppercase mt-1">{stat.label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Vulnerability Breakdown */}
+                        {packageVulnerabilities.vulnerabilitiesFound > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Breakdown por Severidade</p>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {[
+                                        { label: 'Críticas', value: packageVulnerabilities.criticalVulnerabilities, color: 'text-red-400' },
+                                        { label: 'Altas', value: packageVulnerabilities.highVulnerabilities, color: 'text-orange-400' },
+                                        { label: 'Médias', value: packageVulnerabilities.mediumVulnerabilities, color: 'text-yellow-400' },
+                                        { label: 'Baixas', value: packageVulnerabilities.lowVulnerabilities, color: 'text-blue-400' },
+                                    ].map(stat => (
+                                        <div key={stat.label} className="text-center p-2 rounded-lg bg-bg border border-border">
+                                            <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
+                                            <p className="text-[8px] text-text-dim">{stat.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Vulnerable Packages */}
+                        {packageVulnerabilities.packageVulnerabilities.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Pacotes Vulneráveis</p>
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {packageVulnerabilities.packageVulnerabilities.slice(0, 5).map((vuln: any) => (
+                                        <div key={vuln.id} className="p-3 rounded-xl bg-bg border border-border">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-accent">{vuln.package.name}</span>
+                                                <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded", vuln.vulnerability.severity === 'critical' ? "bg-red-500/10 text-red-400" : vuln.vulnerability.severity === 'high' ? "bg-orange-500/10 text-orange-400" : "bg-yellow-500/10 text-yellow-400")}>
+                                                    {vuln.vulnerability.severity}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-text-dim mb-1">{vuln.vulnerability.title}</p>
+                                            <div className="flex items-center gap-2 text-[9px] text-text-dim">
+                                                <span>Versão: {vuln.affectedVersion}</span>
+                                                {vuln.recommendedVersion && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span className="text-green-400">Recomendado: {vuln.recommendedVersion}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                            {vuln.vulnerability.cveId && (
+                                                <div className="mt-1">
+                                                    <span className="text-[9px] font-mono text-blue-400">{vuln.vulnerability.cveId}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Recommendations */}
+                        {packageVulnerabilities.recommendations.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
+                                <div className="space-y-2">
+                                    {packageVulnerabilities.recommendations.slice(0, 3).map((rec, i) => (
+                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+                                            <AlertTriangle className="size-3 text-yellow-400 mt-0.5 shrink-0" />
+                                            <p className="text-xs text-text-dim">{rec}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
+            </div>
+
+            {/* ML/AI Zero-Day Discovery Section */}
+            <div className="bento-card space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Brain className="size-5 text-primary" />
+                        <span className="label-caps">Descoberta ML/AI Zero-Day</span>
+                    </div>
+                    <button
+                        onClick={handleRunMLAnalysis}
+                        disabled={runningMLAnalysis}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/15 to-pink-500/15 border border-purple-500/40 rounded-xl text-[10px] font-bold text-purple-400 hover:from-purple-500/25 hover:to-pink-500/25 transition-all disabled:opacity-50"
+                    >
+                        <Brain className="size-3" />
+                        {runningMLAnalysis ? 'Analisando...' : 'Analisar'}
+                    </button>
+                </div>
+
+                {mlZeroDayLoading ? (
+                    <SkeletonCard />
+                ) : mlZeroDay ? (
+                    <div className="space-y-4">
+                        {/* Model Performance */}
+                        <div className="grid grid-cols-4 gap-3">
+                            {[
+                                { label: 'Modelos', value: mlZeroDay.modelsUsed.length, color: 'text-accent' },
+                                { label: 'Padrões', value: mlZeroDay.patternsAnalyzed, color: 'text-accent' },
+                                { label: 'Anomalias', value: mlZeroDay.anomaliesDetected, color: mlZeroDay.anomaliesDetected > 0 ? 'text-purple-400' : 'text-green-400' },
+                                { label: 'Confiança', value: `${Math.round(mlZeroDay.summary.averageConfidence * 100)}%`, color: 'text-purple-400' },
+                            ].map(stat => (
+                                <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
+                                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                                    <p className="text-[8px] font-black text-text-dim uppercase mt-1">{stat.label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Model Performance Metrics */}
+                        <div>
+                            <p className="text-[8px] font-black text-text-dim uppercase mb-2">Performance dos Modelos</p>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[
+                                    { label: 'Acurácia', value: `${Math.round(mlZeroDay.modelPerformance.accuracy * 100)}%` },
+                                    { label: 'Precisão', value: `${Math.round(mlZeroDay.modelPerformance.precision * 100)}%` },
+                                    { label: 'Recall', value: `${Math.round(mlZeroDay.modelPerformance.recall * 100)}%` },
+                                    { label: 'F1-Score', value: `${Math.round(mlZeroDay.modelPerformance.f1Score * 100)}%` },
+                                ].map(metric => (
+                                    <div key={metric.label} className="text-center p-2 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                                        <p className="text-lg font-bold text-purple-400">{metric.value}</p>
+                                        <p className="text-[8px] text-text-dim">{metric.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* ML Vulnerabilities */}
+                        {mlZeroDay.vulnerabilities.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Vulnerabilidades Detectadas por ML</p>
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {mlZeroDay.vulnerabilities.slice(0, 5).map((vuln: any) => (
+                                        <div key={vuln.id} className="p-3 rounded-xl bg-bg border border-border">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-accent">{vuln.title}</span>
+                                                <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded", vuln.severity === 'critical' ? "bg-red-500/10 text-red-400" : vuln.severity === 'high' ? "bg-orange-500/10 text-orange-400" : "bg-purple-500/10 text-purple-400")}>
+                                                    {vuln.severity}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-text-dim mb-1">{vuln.description}</p>
+                                            <div className="flex items-center gap-2 text-[9px] text-text-dim">
+                                                <span>Modelo: {vuln.mlModel}</span>
+                                                <span>•</span>
+                                                <span>Confiança: {Math.round(vuln.confidence * 100)}%</span>
+                                                <span>•</span>
+                                                <span>Anomalia: {Math.round(vuln.anomalyScore * 100)}%</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Recommendations */}
+                        {mlZeroDay.recommendations.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações ML</p>
+                                <div className="space-y-2">
+                                    {mlZeroDay.recommendations.slice(0, 3).map((rec, i) => (
+                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                                            <Brain className="size-3 text-purple-400 mt-0.5 shrink-0" />
+                                            <p className="text-xs text-text-dim">{rec}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
+            </div>
+
+            {/* Exploitation Testing Section */}
+            <div className="bento-card space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <TestTube className="size-5 text-primary" />
+                        <span className="label-caps">Testes de Exploração (Simulação)</span>
+                    </div>
+                    <button
+                        onClick={handleRunExploitationTests}
+                        disabled={runningExploitationTests}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-red-500/15 border border-red-500/40 rounded-xl text-[10px] font-bold text-red-400 hover:bg-red-500/25 transition-all disabled:opacity-50"
+                    >
+                        <TestTube className="size-3" />
+                        {runningExploitationTests ? 'Testando...' : 'Testar'}
+                    </button>
+                </div>
+
+                {exploitationTestsLoading ? (
+                    <SkeletonCard />
+                ) : exploitationTests ? (
+                    <div className="space-y-4">
+                        {/* Test Summary */}
+                        <div className="grid grid-cols-4 gap-3">
+                            {[
+                                { label: 'Testes', value: exploitationTests.testsExecuted, color: 'text-accent' },
+                                { label: 'Sucesso', value: exploitationTests.testsSuccessful, color: exploitationTests.testsSuccessful > 0 ? 'text-red-400' : 'text-green-400' },
+                                { label: 'Bloqueados', value: exploitationTests.testsBlocked, color: exploitationTests.testsBlocked > 0 ? 'text-yellow-400' : 'text-green-400' },
+                                { label: 'Taxa', value: `${exploitationTests.summary.successRate}%`, color: exploitationTests.summary.successRate > 20 ? 'text-red-400' : 'text-green-400' },
+                            ].map(stat => (
+                                <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
+                                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                                    <p className="text-[8px] font-black text-text-dim uppercase mt-1">{stat.label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Vulnerability Breakdown */}
+                        {exploitationTests.vulnerabilitiesConfirmed > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Vulnerabilidades Confirmadas</p>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {[
+                                        { label: 'Críticas', value: exploitationTests.summary.criticalVulnerabilities, color: 'text-red-400' },
+                                        { label: 'Altas', value: exploitationTests.summary.highVulnerabilities, color: 'text-orange-400' },
+                                        { label: 'Médias', value: exploitationTests.summary.mediumVulnerabilities, color: 'text-yellow-400' },
+                                        { label: 'Baixas', value: exploitationTests.summary.lowVulnerabilities, color: 'text-blue-400' },
+                                    ].map(stat => (
+                                        <div key={stat.label} className="text-center p-2 rounded-lg bg-red-500/5 border border-red-500/20">
+                                            <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
+                                            <p className="text-[8px] text-text-dim">{stat.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Test Results */}
+                        <div>
+                            <p className="text-[8px] font-black text-text-dim uppercase mb-2">Resultados dos Testes</p>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {exploitationTests.results.slice(0, 5).map((result: any) => (
+                                    <div key={result.id} className="p-3 rounded-xl bg-bg border border-border">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-bold text-accent">{result.testName}</span>
+                                            <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded", 
+                                                result.status === 'success' ? "bg-red-500/10 text-red-400" : 
+                                                result.status === 'blocked' ? "bg-yellow-500/10 text-yellow-400" : 
+                                                "bg-green-500/10 text-green-400")}>
+                                                {result.status === 'success' ? 'Vulnerável' : result.status === 'blocked' ? 'Bloqueado' : 'Seguro'}
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] text-text-dim mb-1">{result.evidence}</p>
+                                        <div className="flex items-center gap-2 text-[9px] text-text-dim">
+                                            <span>Tempo: {result.responseTime}ms</span>
+                                            {result.responseCode && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span>Código: {result.responseCode}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                        {result.vulnerabilityConfirmed && (
+                                            <div className="mt-1">
+                                                <p className="text-[9px] text-red-400">Impacto: {result.impact}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Recommendations */}
+                        {exploitationTests.recommendations.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações de Segurança</p>
+                                <div className="space-y-2">
+                                    {exploitationTests.recommendations.slice(0, 3).map((rec, i) => (
+                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-red-500/5 border border-red-500/20">
+                                            <TestTube className="size-3 text-red-400 mt-0.5 shrink-0" />
+                                            <p className="text-xs text-text-dim">{rec}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
+            </div>
+
+            {/* Comprehensive Compliance Section */}
+            <div className="bento-card space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Scale className="size-5 text-primary" />
+                        <span className="label-caps">Verificação Completa de Compliance</span>
+                    </div>
+                    <button
+                        onClick={handleComprehensiveCompliance}
+                        disabled={runningComprehensiveCompliance}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500/15 to-green-500/15 border border-blue-500/40 rounded-xl text-[10px] font-bold text-blue-400 hover:from-blue-500/25 hover:to-green-500/25 transition-all disabled:opacity-50"
+                    >
+                        <Scale className="size-3" />
+                        {runningComprehensiveCompliance ? 'Verificando...' : 'Verificar'}
+                    </button>
+                </div>
+
+                {comprehensiveComplianceLoading ? (
+                    <SkeletonCard />
+                ) : comprehensiveCompliance ? (
+                    <div className="space-y-4">
+                                {/* Overall Compliance Score */}
+                        <div className="text-center p-4 rounded-xl bg-bg border border-border">
+                            <p className="text-[8px] font-black text-text-dim uppercase mb-1">Score Geral de Compliance</p>
+                            <p className={cn("text-4xl font-black", 
+                                comprehensiveCompliance?.overallScore >= 90 ? "text-green-400" : 
+                                comprehensiveCompliance?.overallScore >= 70 ? "text-yellow-400" : 
+                                "text-red-400")}>
+                                {comprehensiveCompliance?.overallScore || 0}%
+                            </p>
+                            <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded mt-2 inline-block",
+                                comprehensiveCompliance?.overallStatus === 'compliant' ? "bg-green-500/10 text-green-400" :
+                                comprehensiveCompliance?.overallStatus === 'partial' ? "bg-yellow-500/10 text-yellow-400" :
+                                "bg-red-500/10 text-red-400")}>
+                                {comprehensiveCompliance?.overallStatus === 'compliant' ? 'Conforme' :
+                                 comprehensiveCompliance?.overallStatus === 'partial' ? 'Parcial' : 'Não Conforme'}
+                            </span>
+                        </div>
+
+                        {/* Framework Scores */}
+                        <div className="grid grid-cols-3 gap-3">
+                            {[
+                                { name: 'OWASP', score: comprehensiveCompliance?.frameworks?.owasp?.score || 0, version: 'Top 10 2021' },
+                                { name: 'CIS', score: comprehensiveCompliance?.frameworks?.cis?.score || 0, version: 'Controls v8' },
+                                { name: 'NIST', score: comprehensiveCompliance?.frameworks?.nist?.score || 0, version: 'CSF v1.1' },
+                            ].map(framework => (
+                                <div key={framework.name} className="text-center p-3 rounded-xl bg-bg border border-border">
+                                    <p className="text-xs font-bold text-accent">{framework.name}</p>
+                                    <p className={cn("text-2xl font-bold", 
+                                        framework.score >= 90 ? "text-green-400" : 
+                                        framework.score >= 70 ? "text-yellow-400" : 
+                                        "text-red-400")}>
+                                        {framework.score}%
+                                    </p>
+                                    <p className="text-[8px] text-text-dim">{framework.version}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Summary Statistics */}
+                        {comprehensiveCompliance?.summary && (
+                            <div className="grid grid-cols-4 gap-3">
+                                {[
+                                    { label: 'Controles', value: comprehensiveCompliance?.summary?.totalControls || 0, color: 'text-accent' },
+                                    { label: 'Conformes', value: comprehensiveCompliance?.summary?.compliantControls || 0, color: 'text-green-400' },
+                                    { label: 'Não Conformes', value: comprehensiveCompliance?.summary?.nonCompliantControls || 0, color: 'text-red-400' },
+                                    { label: 'Críticos', value: comprehensiveCompliance?.summary?.criticalIssues || 0, color: 'text-red-400' },
+                                ].map(stat => (
+                                    <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
+                                        <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                                        <p className="text-[8px] font-black text-text-dim uppercase mt-1">{stat.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Compliance Roadmap */}
+                        {comprehensiveCompliance?.roadmap && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Roadmap de Compliance</p>
+                                <div className="space-y-3">
+                                    {[
+                                        { title: 'Ações Imediatas', items: comprehensiveCompliance?.roadmap?.immediate || [], color: 'red' },
+                                        { title: 'Curto Prazo', items: comprehensiveCompliance?.roadmap?.shortTerm || [], color: 'yellow' },
+                                        { title: 'Longo Prazo', items: comprehensiveCompliance?.roadmap?.longTerm || [], color: 'green' },
+                                    ].map(phase => (
+                                        <div key={phase.title} className="p-3 rounded-xl bg-bg border border-border">
+                                            <p className="text-xs font-bold text-accent mb-2">{phase.title}</p>
+                                            <div className="space-y-1">
+                                                {phase.items.slice(0, 2).map((item, i) => (
+                                                    <div key={i} className="flex items-start gap-2">
+                                                        <div className={cn("size-1.5 rounded-full mt-1.5 shrink-0",
+                                                            phase.color === 'red' ? "bg-red-400" :
+                                                            phase.color === 'yellow' ? "bg-yellow-400" :
+                                                            "bg-green-400")} />
+                                                        <p className="text-[10px] text-text-dim">{item}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Framework Details */}
+                        {comprehensiveCompliance?.frameworks && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Detalhes dos Frameworks</p>
+                                <div className="space-y-3">
+                                    {Object.entries(comprehensiveCompliance?.frameworks || {}).map(([name, framework]: [string, any]) => (
+                                        <div key={name} className="p-3 rounded-xl bg-bg border border-border">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-accent">{name}</span>
+                                                <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded",
+                                                    framework?.score >= 90 ? "bg-green-500/10 text-green-400" :
+                                                    framework?.score >= 70 ? "bg-yellow-500/10 text-yellow-400" :
+                                                    "bg-red-500/10 text-red-400")}>
+                                                    {framework?.score || 0}%
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-2 text-[9px] text-text-dim">
+                                                <div className="text-center">
+                                                    <p className="font-bold text-green-400">{framework?.compliantControls || 0}</p>
+                                                    <p>Conformes</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="font-bold text-yellow-400">{framework?.partialControls || 0}</p>
+                                                    <p>Parciais</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="font-bold text-red-400">{framework?.nonCompliantControls || 0}</p>
+                                                    <p>Não Conformes</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="font-bold text-red-400">{framework?.criticalIssues || 0}</p>
+                                                    <p>Críticos</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Recommendations */}
+                        {comprehensiveCompliance?.recommendations && comprehensiveCompliance?.recommendations?.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações de Compliance</p>
+                                <div className="space-y-2">
+                                    {comprehensiveCompliance?.recommendations?.slice(0, 3).map((rec, i) => (
+                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                                            <Scale className="size-3 text-blue-400 mt-0.5 shrink-0" />
+                                            <p className="text-xs text-text-dim">{rec}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
+            </div>
+
+            {/* Detailed Infrastructure Analysis Section */}
+            <div className="bento-card space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Server className="size-5 text-primary" />
+                        <span className="label-caps">Análise Detalhada de Infraestrutura</span>
+                    </div>
+                    <button
+                        onClick={handleDetailedInfrastructure}
+                        disabled={runningDetailedInfrastructure}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-500/15 to-blue-500/15 border border-cyan-500/40 rounded-xl text-[10px] font-bold text-cyan-400 hover:from-cyan-500/25 hover:to-blue-500/25 transition-all disabled:opacity-50"
+                    >
+                        <Cpu className="size-3" />
+                        {runningDetailedInfrastructure ? 'Analisando...' : 'Analisar'}
+                    </button>
+                </div>
+
+                {detailedInfrastructureLoading ? (
+                    <SkeletonCard />
+                ) : detailedInfrastructure ? (
+                    <div className="space-y-4">
+                        {/* Infrastructure Overview */}
+                        <div className="grid grid-cols-4 gap-3">
+                            {[
+                                { label: 'Recursos', value: detailedInfrastructure?.summary?.totalResources || 0, color: 'text-accent' },
+                                { label: 'Seguros', value: detailedInfrastructure?.summary?.secureResources || 0, color: 'text-green-400' },
+                                { label: 'Vulneráveis', value: detailedInfrastructure?.summary?.vulnerableResources || 0, color: (detailedInfrastructure?.summary?.vulnerableResources || 0) > 0 ? 'text-red-400' : 'text-green-400' },
+                                { label: 'Saúde', value: `${detailedInfrastructure?.summary?.healthScore || 0}%`, color: (detailedInfrastructure?.summary?.healthScore || 0) >= 90 ? 'text-green-400' : (detailedInfrastructure?.summary?.healthScore || 0) >= 70 ? 'text-yellow-400' : 'text-red-400' },
+                            ].map(stat => (
+                                <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
+                                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                                    <p className="text-[8px] font-black text-text-dim uppercase mt-1">{stat.label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Resource Type Breakdown */}
+                        <div>
+                            <p className="text-[8px] font-black text-text-dim uppercase mb-2">Breakdown por Tipo de Recurso</p>
+                            <div className="grid grid-cols-5 gap-2">
+                                {Object.entries(detailedInfrastructure?.resourceBreakdown || {}).map(([type, count]) => (
+                                    <div key={type} className="text-center p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                                        <p className="text-lg font-bold text-cyan-400">{count}</p>
+                                        <p className="text-[8px] text-text-dim">{type}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Provider Breakdown */}
+                        <div>
+                            <p className="text-[8px] font-black text-text-dim uppercase mb-2">Breakdown por Provedor</p>
+                            <div className="grid grid-cols-3 gap-2">
+                                {Object.entries(detailedInfrastructure?.providerBreakdown || {}).map(([provider, count]) => (
+                                    <div key={provider} className="text-center p-2 rounded-lg bg-bg border border-border">
+                                        <p className="text-lg font-bold text-accent">{count}</p>
+                                        <p className="text-[8px] text-text-dim">{provider}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Infrastructure Vulnerabilities */}
+                        {detailedInfrastructure?.vulnerabilities && detailedInfrastructure.vulnerabilities.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Vulnerabilidades de Infraestrutura</p>
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {detailedInfrastructure.vulnerabilities.slice(0, 5).map((vuln: any) => (
+                                        <div key={vuln.id} className="p-3 rounded-xl bg-bg border border-border">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-accent">{vuln.vulnerability}</span>
+                                                <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded", vuln.severity === 'critical' ? "bg-red-500/10 text-red-400" : vuln.severity === 'high' ? "bg-orange-500/10 text-orange-400" : "bg-yellow-500/10 text-yellow-400")}>
+                                                    {vuln.severity}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-text-dim mb-1">{vuln.description}</p>
+                                            <div className="flex items-center gap-2 text-[9px] text-text-dim">
+                                                <span>Recurso: {vuln.resourceType}</span>
+                                                {vuln.cveId && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span className="font-mono text-blue-400">{vuln.cveId}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Resource Configurations */}
+                        {detailedInfrastructure?.configurations && detailedInfrastructure.configurations.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Configurações de Recursos</p>
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {detailedInfrastructure.configurations.slice(0, 5).map((config: any) => (
+                                        <div key={config.resourceId} className="p-3 rounded-xl bg-bg border border-border">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-accent">{config.setting}</span>
+                                                <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded", 
+                                                    config.isSecure ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400")}>
+                                                    {config.isSecure ? 'Seguro' : 'Inseguro'}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-text-dim mb-1">{config.value}</p>
+                                            <div className="flex items-center gap-2 text-[9px] text-text-dim">
+                                                <span>Risco: {config.riskLevel}</span>
+                                                <span>•</span>
+                                                <span>{config.category}</span>
+                                            </div>
+                                            {!config.isSecure && (
+                                                <div className="mt-1">
+                                                    <p className="text-[9px] text-yellow-400">Recomendação: {config.recommendation}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Top Vulnerable Resources */}
+                        {detailedInfrastructure?.topVulnerableResources && detailedInfrastructure.topVulnerableResources.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recursos Mais Vulneráveis</p>
+                                <div className="space-y-2">
+                                    {detailedInfrastructure.topVulnerableResources.slice(0, 3).map((item, i) => (
+                                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-red-500/5 border border-red-500/20">
+                                            <div className="flex items-center gap-2">
+                                                <HardDrive className="size-3 text-red-400" />
+                                                <span className="text-xs text-text-dim">{item.resource}</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-red-400">{item.vulnerabilityCount} vulnerabilidades</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Infrastructure Metrics */}
+                        {detailedInfrastructure?.metrics && detailedInfrastructure.metrics.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Métricas de Recursos</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {detailedInfrastructure.metrics.slice(0, 3).map((metric: any) => (
+                                        <div key={metric.resourceId} className="p-2 rounded-lg bg-bg border border-border">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[8px] text-text-dim">CPU</span>
+                                                    <span className={cn("text-[9px] font-bold", 
+                                                        metric.cpu > 80 ? "text-red-400" : metric.cpu > 60 ? "text-yellow-400" : "text-green-400")}>
+                                                        {metric.cpu}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[8px] text-text-dim">Memória</span>
+                                                    <span className={cn("text-[9px] font-bold", 
+                                                        metric.memory > 80 ? "text-red-400" : metric.memory > 60 ? "text-yellow-400" : "text-green-400")}>
+                                                        {metric.memory}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[8px] text-text-dim">Uptime</span>
+                                                    <span className="text-[9px] font-bold text-green-400">{metric.uptime}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Recommendations */}
+                        {detailedInfrastructure?.recommendations && detailedInfrastructure.recommendations.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações de Infraestrutura</p>
+                                <div className="space-y-2">
+                                    {detailedInfrastructure.recommendations.slice(0, 3).map((rec, i) => (
+                                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                                            <Server className="size-3 text-cyan-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
                                         </div>
                                     ))}
