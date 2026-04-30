@@ -18,6 +18,15 @@ import {
 type AgentState = 'idle' | 'running' | 'paused' | 'error' | 'stopped';
 type AgentCapability = 'code-generation' | 'code-analysis' | 'security-analysis' | 'reasoning' | 'execution' | 'learning';
 
+const ALL_CAPABILITIES: AgentCapability[] = [
+    'code-generation',
+    'code-analysis',
+    'security-analysis',
+    'reasoning',
+    'execution',
+    'learning',
+];
+
 interface Agent {
     id: string;
     workspaceId: string;

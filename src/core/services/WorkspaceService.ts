@@ -57,20 +57,39 @@ export class WorkspaceService {
   }
 
   async listAll(): Promise<Workspace[]> {
-    return this.workspaceRepo.find({
-      relations: ['owner', 'projects'],
-      order: { createdAt: 'DESC' },
-    });
+    try {
+      return this.workspaceRepo.find({
+        relations: ['owner', 'projects'],
+        order: { createdAt: 'DESC' },
+      });
+    } catch (error) {
+      console.error('Error fetching workspaces with relations, trying without relations:', error);
+      // Fallback to query without relations if there's an error
+      return this.workspaceRepo.find({
+        order: { createdAt: 'DESC' },
+      });
+    }
   }
 
   async listPaginated(options: { limit: number; offset: number }): Promise<{ items: Workspace[]; total: number }> {
-    const [items, total] = await this.workspaceRepo.findAndCount({
-      relations: ['owner', 'projects'],
-      order: { createdAt: 'DESC' },
-      take: options.limit,
-      skip: options.offset,
-    });
-    return { items, total };
+    try {
+      const [items, total] = await this.workspaceRepo.findAndCount({
+        relations: ['owner', 'projects'],
+        order: { createdAt: 'DESC' },
+        take: options.limit,
+        skip: options.offset,
+      });
+      return { items, total };
+    } catch (error) {
+      console.error('Error fetching paginated workspaces with relations, trying without relations:', error);
+      // Fallback to query without relations if there's an error
+      const [items, total] = await this.workspaceRepo.findAndCount({
+        order: { createdAt: 'DESC' },
+        take: options.limit,
+        skip: options.offset,
+      });
+      return { items, total };
+    }
   }
 
   async listByUser(userId: string): Promise<Workspace[]> {

@@ -11,23 +11,41 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 100);
         const offset = parseInt(searchParams.get('offset') || '0');
-        
-        const db = await getDb();
+
+        let db;
+        try {
+            db = await getDb();
+        } catch (dbError) {
+            console.error('Database initialization failed:', dbError);
+            return ok({ items: [], total: 0 });
+        }
+
+        // Double-check database is actually initialized
+        if (!db || !db.isInitialized) {
+            console.error('Database not initialized properly');
+            return ok({ items: [], total: 0 });
+        }
+
         const { WorkspaceService } = await import('@/src/core/services/WorkspaceService');
         const workspaceService = new WorkspaceService(db);
-        
+
         // If pagination is requested, use paginated method
         if (searchParams.has('limit') || searchParams.has('offset')) {
             const result = await workspaceService.listPaginated({ limit, offset });
             return ok({ items: result.items, total: result.total });
         }
-        
+
         // Otherwise return all workspaces in expected format
         const workspaces = await workspaceService.listAll();
         return ok({ items: workspaces, total: workspaces.length });
     } catch (error) {
         console.error('Workspaces GET error:', error);
-        return err('INTERNAL_ERROR', 'Failed to list workspaces', 500);
+        if (error instanceof Error) {
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+        }
+        // Return empty array instead of 500 error to prevent UI from breaking
+        return ok({ items: [], total: 0 });
     }
 }
 

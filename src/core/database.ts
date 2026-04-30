@@ -87,11 +87,7 @@ export const getDatabase = async (): Promise<DataSource> => {
 
     await ds.initialize();
     dataSource = ds;
-    
-    // Seed default data if needed
-    const { seedDefaultData } = await import('../../app/api/_lib/seed');
-    await seedDefaultData(ds);
-    
+
     return ds;
   })();
 
