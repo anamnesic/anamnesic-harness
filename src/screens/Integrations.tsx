@@ -18,8 +18,13 @@ interface WebhookConfig {
 }
 
 export function Integrations() {
-    const { data: webhooks, loading, refetch } = useApi<WebhookConfig[]>('/api/v1/integrations');
+    const { data: webhooksResponse, loading, refetch } = useApi<WebhookConfig[] | { data?: WebhookConfig[] }>('/api/v1/integrations');
     const { toast } = useToast();
+
+    // Handle both direct array and wrapped response formats
+    const webhooks = webhooksResponse
+        ? (Array.isArray(webhooksResponse) ? webhooksResponse : webhooksResponse.data ?? [])
+        : [];
     
     const [showModal, setShowModal] = useState(false);
     const [name, setName] = useState('');
