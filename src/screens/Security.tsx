@@ -526,6 +526,61 @@ export function Security() {
         return Array.isArray(raw) ? raw : [];
     }, [data]);
 
+    const packageVulnerabilitiesData = useMemo(() => {
+        const raw = (packageVulnerabilities as any)?.data ?? packageVulnerabilities;
+        return raw;
+    }, [packageVulnerabilities]);
+
+    const apiAnalysisData = useMemo(() => {
+        const raw = (apiAnalysis as any)?.data ?? apiAnalysis;
+        return raw;
+    }, [apiAnalysis]);
+
+    const infraAnalysisData = useMemo(() => {
+        const raw = (infraAnalysis as any)?.data ?? infraAnalysis;
+        return raw;
+    }, [infraAnalysis]);
+
+    const complianceData = useMemo(() => {
+        const raw = (compliance as any)?.data ?? compliance;
+        return raw;
+    }, [compliance]);
+
+    const zeroDayData = useMemo(() => {
+        const raw = (zeroDay as any)?.data ?? zeroDay;
+        return raw;
+    }, [zeroDay]);
+
+    const attackChainsData = useMemo(() => {
+        const raw = (attackChains as any)?.data ?? attackChains;
+        return raw;
+    }, [attackChains]);
+
+    const dangerousPatternsData = useMemo(() => {
+        const raw = (dangerousPatterns as any)?.data ?? dangerousPatterns;
+        return raw;
+    }, [dangerousPatterns]);
+
+    const mlZeroDayData = useMemo(() => {
+        const raw = (mlZeroDay as any)?.data ?? mlZeroDay;
+        return raw;
+    }, [mlZeroDay]);
+
+    const exploitationTestsData = useMemo(() => {
+        const raw = (exploitationTests as any)?.data ?? exploitationTests;
+        return raw;
+    }, [exploitationTests]);
+
+    const comprehensiveComplianceData = useMemo(() => {
+        const raw = (comprehensiveCompliance as any)?.data ?? comprehensiveCompliance;
+        return raw;
+    }, [comprehensiveCompliance]);
+
+    const detailedInfrastructureData = useMemo(() => {
+        const raw = (detailedInfrastructure as any)?.data ?? detailedInfrastructure;
+        return raw;
+    }, [detailedInfrastructure]);
+
     const stats = useMemo(() => {
         let critical = 0, high = 0;
         for (const s of list) {
@@ -823,15 +878,15 @@ export function Security() {
 
                 {apiAnalysisLoading ? (
                     <SkeletonCard />
-                ) : apiAnalysis ? (
+                ) : apiAnalysisData ? (
                     <div className="space-y-4">
                         {/* Summary Scores */}
                         <div className="grid grid-cols-4 gap-3">
                             {[
-                                { label: 'Pontuação Geral', value: apiAnalysis.summary.overallScore, color: apiAnalysis.summary.overallScore >= 70 ? 'text-green-400' : apiAnalysis.summary.overallScore >= 40 ? 'text-yellow-400' : 'text-red-400' },
-                                { label: 'Autenticação', value: apiAnalysis.summary.authScore, color: apiAnalysis.summary.authScore >= 70 ? 'text-green-400' : apiAnalysis.summary.authScore >= 40 ? 'text-yellow-400' : 'text-red-400' },
-                                { label: 'Rate Limit', value: apiAnalysis.summary.rateLimitScore, color: apiAnalysis.summary.rateLimitScore >= 70 ? 'text-green-400' : apiAnalysis.summary.rateLimitScore >= 40 ? 'text-yellow-400' : 'text-red-400' },
-                                { label: 'Endpoints', value: `${apiAnalysis.summary.secureEndpoints}/${apiAnalysis.summary.totalEndpoints}`, color: 'text-accent' },
+                                { label: 'Pontuação Geral', value: apiAnalysisData?.summary?.overallScore ?? 0, color: (apiAnalysisData?.summary?.overallScore ?? 0) >= 70 ? 'text-green-400' : (apiAnalysisData?.summary?.overallScore ?? 0) >= 40 ? 'text-yellow-400' : 'text-red-400' },
+                                { label: 'Autenticação', value: apiAnalysisData?.summary?.authScore ?? 0, color: (apiAnalysisData?.summary?.authScore ?? 0) >= 70 ? 'text-green-400' : (apiAnalysisData?.summary?.authScore ?? 0) >= 40 ? 'text-yellow-400' : 'text-red-400' },
+                                { label: 'Rate Limit', value: apiAnalysisData?.summary?.rateLimitScore ?? 0, color: (apiAnalysisData?.summary?.rateLimitScore ?? 0) >= 70 ? 'text-green-400' : (apiAnalysisData?.summary?.rateLimitScore ?? 0) >= 40 ? 'text-yellow-400' : 'text-red-400' },
+                                { label: 'Endpoints', value: `${apiAnalysisData?.summary?.secureEndpoints ?? 0}/${apiAnalysisData?.summary?.totalEndpoints ?? 0}`, color: 'text-accent' },
                             ].map(stat => (
                                 <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -843,14 +898,14 @@ export function Security() {
                         {/* Auth Status */}
                         <div className="flex items-center justify-between p-3 rounded-xl bg-bg border border-border">
                             <div className="flex items-center gap-3">
-                                <Lock className={cn("size-4", apiAnalysis.auth.strength === 'strong' ? "text-green-500" : apiAnalysis.auth.strength === 'weak' ? "text-yellow-500" : "text-red-500")} />
+                                <Lock className={cn("size-4", apiAnalysisData?.auth?.strength === 'strong' ? "text-green-500" : apiAnalysisData?.auth?.strength === 'weak' ? "text-yellow-500" : "text-red-500")} />
                                 <div>
                                     <p className="text-xs font-bold text-accent">Autenticação</p>
-                                    <p className="text-[10px] text-text-dim">{apiAnalysis.auth.type} - {apiAnalysis.auth.strength}</p>
+                                    <p className="text-[10px] text-text-dim">{apiAnalysisData?.auth?.type ?? 'N/A'} - {apiAnalysisData?.auth?.strength ?? 'unknown'}</p>
                                 </div>
                             </div>
                             <div className="flex flex-wrap gap-1 max-w-xs">
-                                {apiAnalysis.auth.details.slice(0, 2).map((detail, i) => (
+                                {apiAnalysisData?.auth?.details?.slice(0, 2).map((detail: string, i: number) => (
                                     <span key={i} className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-primary/10 text-primary">
                                         {detail}
                                     </span>
@@ -861,13 +916,13 @@ export function Security() {
                         {/* Rate Limit Status */}
                         <div className="flex items-center justify-between p-3 rounded-xl bg-bg border border-border">
                             <div className="flex items-center gap-3">
-                                <Zap className={cn("size-4", apiAnalysis.rateLimit.enabled ? "text-green-500" : "text-red-500")} />
+                                <Zap className={cn("size-4", apiAnalysisData?.rateLimit?.enabled ? "text-green-500" : "text-red-500")} />
                                 <div>
                                     <p className="text-xs font-bold text-accent">Rate Limiting</p>
-                                    <p className="text-[10px] text-text-dim">{apiAnalysis.rateLimit.enabled ? apiAnalysis.rateLimit.strategy : 'Desabilitado'}</p>
+                                    <p className="text-[10px] text-text-dim">{apiAnalysisData?.rateLimit?.enabled ? apiAnalysisData.rateLimit.strategy : 'Desabilitado'}</p>
                                 </div>
                             </div>
-                            {apiAnalysis.rateLimit.details && apiAnalysis.rateLimit.details.length > 0 && (
+                            {apiAnalysisData?.rateLimit?.details && apiAnalysisData.rateLimit.details.length > 0 && (
                                 <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-green-500/10 text-green-400">
                                     Ativo
                                 </span>
@@ -878,12 +933,12 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Headers de Segurança</p>
                             <div className="flex flex-wrap gap-2">
-                                {apiAnalysis.securityHeaders.present.map((header, i) => (
+                                {apiAnalysisData?.securityHeaders?.present?.map((header: string, i: number) => (
                                     <span key={i} className="text-[9px] font-black uppercase px-2 py-1 rounded bg-green-500/10 text-green-400 border border-green-500/20">
                                         ✓ {header}
                                     </span>
                                 ))}
-                                {apiAnalysis.securityHeaders.missing.slice(0, 3).map((header, i) => (
+                                {apiAnalysisData?.securityHeaders?.missing?.slice(0, 3).map((header: string, i: number) => (
                                     <span key={i} className="text-[9px] font-black uppercase px-2 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20">
                                         ✗ {header}
                                     </span>
@@ -894,15 +949,15 @@ export function Security() {
                         {/* TLS Config */}
                         <div className="flex items-center justify-between p-3 rounded-xl bg-bg border border-border">
                             <div className="flex items-center gap-3">
-                                <Shield className={cn("size-4", apiAnalysis.tlsConfig.enabled ? "text-green-500" : "text-red-500")} />
+                                <Shield className={cn("size-4", apiAnalysisData?.tlsConfig?.enabled ? "text-green-500" : "text-red-500")} />
                                 <div>
                                     <p className="text-xs font-bold text-accent">TLS/SSL</p>
-                                    <p className="text-[10px] text-text-dim">{apiAnalysis.tlsConfig.enabled ? apiAnalysis.tlsConfig.version : 'Não habilitado'}</p>
+                                    <p className="text-[10px] text-text-dim">{apiAnalysisData?.tlsConfig?.enabled ? apiAnalysisData.tlsConfig.version : 'Não habilitado'}</p>
                                 </div>
                             </div>
-                            {apiAnalysis.tlsConfig.issues.length > 0 && (
+                            {(apiAnalysisData?.tlsConfig?.issues?.length ?? 0) > 0 && (
                                 <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-red-500/10 text-red-400">
-                                    {apiAnalysis.tlsConfig.issues.length} problemas
+                                    {apiAnalysisData?.tlsConfig?.issues?.length ?? 0} problemas
                                 </span>
                             )}
                         </div>
@@ -929,15 +984,15 @@ export function Security() {
 
                 {infraAnalysisLoading ? (
                     <SkeletonCard />
-                ) : infraAnalysis ? (
+                ) : infraAnalysisData ? (
                     <div className="space-y-4">
                         {/* Summary */}
                         <div className="grid grid-cols-4 gap-3">
                             {[
-                                { label: 'Pontuação', value: infraAnalysis.summary.overallScore, color: infraAnalysis.summary.overallScore >= 70 ? 'text-green-400' : infraAnalysis.summary.overallScore >= 40 ? 'text-yellow-400' : 'text-red-400' },
-                                { label: 'Security Groups', value: `${infraAnalysis.summary.vulnerableSecurityGroups}/${infraAnalysis.summary.totalSecurityGroups}`, color: 'text-accent' },
-                                { label: 'Políticas IAM', value: `${infraAnalysis.summary.vulnerablePolicies}/${infraAnalysis.summary.totalPolicies}`, color: 'text-accent' },
-                                { label: 'Recursos', value: `${infraAnalysis.summary.resourcesWithIssues}/${infraAnalysis.summary.totalResources}`, color: 'text-accent' },
+                                { label: 'Pontuação', value: infraAnalysisData?.summary?.overallScore ?? 0, color: (infraAnalysisData?.summary?.overallScore ?? 0) >= 70 ? 'text-green-400' : (infraAnalysisData?.summary?.overallScore ?? 0) >= 40 ? 'text-yellow-400' : 'text-red-400' },
+                                { label: 'Security Groups', value: `${infraAnalysisData?.summary?.vulnerableSecurityGroups ?? 0}/${infraAnalysisData?.summary?.totalSecurityGroups ?? 0}`, color: 'text-accent' },
+                                { label: 'Políticas IAM', value: `${infraAnalysisData?.summary?.vulnerablePolicies ?? 0}/${infraAnalysisData?.summary?.totalPolicies ?? 0}`, color: 'text-accent' },
+                                { label: 'Recursos', value: `${infraAnalysisData?.summary?.resourcesWithIssues ?? 0}/${infraAnalysisData?.summary?.totalResources ?? 0}`, color: 'text-accent' },
                             ].map(stat => (
                                 <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -952,7 +1007,7 @@ export function Security() {
                                 <Server className="size-4 text-primary" />
                                 <div>
                                     <p className="text-xs font-bold text-accent">Provider</p>
-                                    <p className="text-[10px] text-text-dim">{infraAnalysis.provider.toUpperCase()} - {infraAnalysis.region}</p>
+                                    <p className="text-[10px] text-text-dim">{infraAnalysisData?.provider?.toUpperCase() ?? 'N/A'} - {infraAnalysisData?.region ?? 'N/A'}</p>
                                 </div>
                             </div>
                         </div>
@@ -961,7 +1016,7 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Security Groups</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {infraAnalysis.securityGroups.slice(0, 5).map((sg: any) => (
+                                {infraAnalysisData?.securityGroups?.slice(0, 5).map((sg: any) => (
                                     <div key={sg.id} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                         <div className="flex items-center gap-2">
                                             <div className={cn("size-2 rounded-full", sg.status === 'secure' ? "bg-green-500" : "bg-red-500")} />
@@ -981,7 +1036,7 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Políticas IAM</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {infraAnalysis.iamPolicies.slice(0, 5).map((policy: any) => (
+                                {infraAnalysisData?.iamPolicies?.slice(0, 5).map((policy: any) => (
                                     <div key={policy.id} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                         <div className="flex items-center gap-2">
                                             <Key className={cn("size-3", policy.status === 'secure' ? "text-green-500" : "text-red-500")} />
@@ -999,7 +1054,7 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recursos Cloud</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {infraAnalysis.resources.slice(0, 5).map((resource: any) => (
+                                {infraAnalysisData?.resources?.slice(0, 5).map((resource: any) => (
                                     <div key={resource.id} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                         <div className="flex items-center gap-2">
                                             <Cloud className="size-3 text-text-dim" />
@@ -1021,11 +1076,11 @@ export function Security() {
                         </div>
 
                         {/* Recommendations */}
-                        {infraAnalysis.recommendations.length > 0 && (
+                        {(infraAnalysisData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
                                 <div className="space-y-2">
-                                    {infraAnalysis.recommendations.slice(0, 3).map((rec, i) => (
+                                    {infraAnalysisData?.recommendations?.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
                                             <AlertTriangle className="size-3 text-yellow-500 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
@@ -1171,7 +1226,7 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">OWASP Top 10</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {compliance?.owasp?.checks?.slice(0, 5).map((check: any) => (
+                                {complianceData?.owasp?.checks?.slice(0, 5).map((check: any) => (
                                     <div key={check.id} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                         <div className="flex items-center gap-2">
                                             <CheckCircle className={cn("size-3", check.status === 'compliant' ? "text-green-500" : check.status === 'partial' ? "text-yellow-500" : "text-red-500")} />
@@ -1186,11 +1241,11 @@ export function Security() {
                         </div>
 
                         {/* Recommendations */}
-                        {compliance?.recommendations && compliance.recommendations.length > 0 && (
+                        {(complianceData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
                                 <div className="space-y-2">
-                                    {compliance.recommendations.slice(0, 3).map((rec, i) => (
+                                    {complianceData?.recommendations?.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
                                             <AlertTriangle className="size-3 text-blue-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
@@ -1227,17 +1282,17 @@ export function Security() {
                         {/* Risk Score */}
                         <div className="text-center p-4 rounded-xl bg-bg border border-border">
                             <p className="text-[8px] font-black text-text-dim uppercase mb-1">Pontuação de Risco</p>
-                            <p className={cn("text-4xl font-black", zeroDay.riskScore >= 70 ? "text-red-400" : zeroDay.riskScore >= 40 ? "text-yellow-400" : "text-green-400")}>
-                                {zeroDay.riskScore}
+                            <p className={cn("text-4xl font-black", (zeroDayData?.riskScore ?? 0) >= 70 ? "text-red-400" : (zeroDayData?.riskScore ?? 0) >= 40 ? "text-yellow-400" : "text-green-400")}>
+                                {zeroDayData?.riskScore ?? 0}
                             </p>
                         </div>
 
                         {/* Stats */}
                         <div className="grid grid-cols-3 gap-3">
                             {[
-                                { label: 'Padrões', value: zeroDay.patternsAnalyzed, color: 'text-accent' },
-                                { label: 'Anomalias', value: zeroDay.anomaliesDetected, color: zeroDay.anomaliesDetected > 0 ? 'text-red-400' : 'text-green-400' },
-                                { label: 'Vulnerabilidades', value: zeroDay.vulnerabilities.length, color: zeroDay.vulnerabilities.length > 0 ? 'text-red-400' : 'text-green-400' },
+                                { label: 'Padrões', value: zeroDayData?.patternsAnalyzed ?? 0, color: 'text-accent' },
+                                { label: 'Anomalias', value: zeroDayData?.anomaliesDetected ?? 0, color: (zeroDayData?.anomaliesDetected ?? 0) > 0 ? 'text-red-400' : 'text-green-400' },
+                                { label: 'Vulnerabilidades', value: zeroDayData?.vulnerabilities?.length ?? 0, color: (zeroDayData?.vulnerabilities?.length ?? 0) > 0 ? 'text-red-400' : 'text-green-400' },
                             ].map(stat => (
                                 <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -1247,11 +1302,11 @@ export function Security() {
                         </div>
 
                         {/* High Risk Patterns */}
-                        {zeroDay.highRiskPatterns.length > 0 && (
+                        {(zeroDayData?.highRiskPatterns?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Padrões de Alto Risco</p>
                                 <div className="flex flex-wrap gap-2">
-                                    {zeroDay.highRiskPatterns.map((pattern, i) => (
+                                    {zeroDayData?.highRiskPatterns?.map((pattern: any, i: number) => (
                                         <span key={i} className="text-[9px] font-black uppercase px-2 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20">
                                             {pattern}
                                         </span>
@@ -1261,11 +1316,11 @@ export function Security() {
                         )}
 
                         {/* Zero-Day Vulnerabilities */}
-                        {zeroDay.vulnerabilities.length > 0 && (
+                        {(zeroDayData?.vulnerabilities?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Vulnerabilidades Detectadas</p>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {zeroDay.vulnerabilities.slice(0, 5).map((vuln: any) => (
+                                    {zeroDayData?.vulnerabilities?.slice(0, 5).map((vuln: any) => (
                                         <div key={vuln.id} className="p-3 rounded-xl bg-bg border border-border">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-accent">{vuln.title}</span>
@@ -1286,11 +1341,11 @@ export function Security() {
                         )}
 
                         {/* Recommendations */}
-                        {zeroDay.recommendations.length > 0 && (
+                        {(zeroDayData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
                                 <div className="space-y-2">
-                                    {zeroDay.recommendations.slice(0, 3).map((rec, i) => (
+                                    {zeroDayData?.recommendations?.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/5 border border-purple-500/20">
                                             <AlertTriangle className="size-3 text-purple-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
@@ -1327,10 +1382,10 @@ export function Security() {
                         {/* Summary Stats */}
                         <div className="grid grid-cols-4 gap-3">
                             {[
-                                { label: 'Cadeias', value: attackChains.summary.totalChains, color: 'text-accent' },
-                                { label: 'Críticas', value: attackChains.summary.criticalChains, color: 'text-red-400' },
-                                { label: 'Alto Risco', value: attackChains.summary.highRiskChains, color: 'text-orange-400' },
-                                { label: 'Máxima', value: attackChains.summary.longestChain, color: 'text-accent' },
+                                { label: 'Cadeias', value: attackChains?.summary?.totalChains || 0, color: 'text-accent' },
+                                { label: 'Críticas', value: attackChains?.summary?.criticalChains || 0, color: 'text-red-400' },
+                                { label: 'Alto Risco', value: attackChains?.summary?.highRiskChains || 0, color: 'text-orange-400' },
+                                { label: 'Máxima', value: attackChains?.summary?.longestChain || 0, color: 'text-accent' },
                             ].map(stat => (
                                 <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -1343,7 +1398,7 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Cadeias de Ataques Detectadas</p>
                             <div className="space-y-3 max-h-64 overflow-y-auto">
-                                {attackChains.chains.slice(0, 4).map((chain: any) => (
+                                {attackChainsData?.chains?.slice(0, 4).map((chain: any) => (
                                     <div key={chain.id} className="p-3 rounded-xl bg-bg border border-border">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-bold text-accent">{chain.name}</span>
@@ -1359,7 +1414,7 @@ export function Security() {
                                         </div>
                                         {/* Chain visualization */}
                                         <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                                            {chain.nodes.map((node: any, i: number) => (
+                                            {chain.nodes?.map((node: any, i: number) => (
                                                 <div key={node.id} className="flex items-center">
                                                     <div className={cn("size-6 rounded-full flex items-center justify-center text-[8px] font-bold", node.severity === 'critical' ? "bg-red-500/20 text-red-400" : node.severity === 'high' ? "bg-orange-500/20 text-orange-400" : "bg-blue-500/20 text-blue-400")}>
                                                         {i + 1}
@@ -1374,11 +1429,11 @@ export function Security() {
                         </div>
 
                         {/* Common Patterns */}
-                        {attackChains.commonPatterns.length > 0 && (
+                        {(attackChainsData?.commonPatterns?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Padrões Comuns</p>
                                 <div className="space-y-2">
-                                    {attackChains.commonPatterns.slice(0, 3).map((pattern, i) => (
+                                    {attackChainsData?.commonPatterns?.slice(0, 3).map((pattern: any, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-orange-500/5 border border-orange-500/20">
                                             <AlertTriangle className="size-3 text-orange-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{pattern}</p>
@@ -1389,11 +1444,11 @@ export function Security() {
                         )}
 
                         {/* Recommendations */}
-                        {attackChains.recommendations.length > 0 && (
+                        {(attackChainsData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
                                 <div className="space-y-2">
-                                    {attackChains.recommendations.slice(0, 3).map((rec, i) => (
+                                    {attackChainsData?.recommendations?.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
                                             <AlertTriangle className="size-3 text-blue-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
@@ -1430,10 +1485,10 @@ export function Security() {
                         {/* Summary Stats */}
                         <div className="grid grid-cols-4 gap-3">
                             {[
-                                { label: 'Matches', value: dangerousPatterns.summary.totalMatches, color: 'text-accent' },
-                                { label: 'Críticos', value: dangerousPatterns.summary.criticalMatches, color: 'text-red-400' },
-                                { label: 'Arquivos', value: dangerousPatterns.summary.filesWithMatches, color: dangerousPatterns.summary.filesWithMatches > 0 ? 'text-orange-400' : 'text-green-400' },
-                                { label: 'Padrões', value: dangerousPatterns.patternsAnalyzed, color: 'text-accent' },
+                                { label: 'Matches', value: dangerousPatternsData?.summary?.totalMatches ?? 0, color: 'text-accent' },
+                                { label: 'Críticos', value: dangerousPatternsData?.summary?.criticalMatches ?? 0, color: 'text-red-400' },
+                                { label: 'Arquivos', value: dangerousPatternsData?.summary?.filesWithMatches ?? 0, color: (dangerousPatternsData?.summary?.filesWithMatches ?? 0) > 0 ? 'text-orange-400' : 'text-green-400' },
+                                { label: 'Padrões', value: dangerousPatternsData?.patternsAnalyzed ?? 0, color: 'text-accent' },
                             ].map(stat => (
                                 <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -1443,11 +1498,11 @@ export function Security() {
                         </div>
 
                         {/* Category Breakdown */}
-                        {Object.keys(dangerousPatterns.categoryBreakdown).length > 0 && (
+                        {Object.keys(dangerousPatternsData?.categoryBreakdown || {}).length > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Breakdown por Categoria</p>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {Object.entries(dangerousPatterns.categoryBreakdown).map(([category, count]) => (
+                                    {Object.entries(dangerousPatternsData?.categoryBreakdown || {}).map(([category, count]) => (
                                         <div key={category} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                             <span className="text-xs font-bold text-accent capitalize">{category}</span>
                                             <span className="text-[10px] font-bold text-text-dim">{count}</span>
@@ -1458,11 +1513,11 @@ export function Security() {
                         )}
 
                         {/* Top Risky Files */}
-                        {dangerousPatterns.topRiskyFiles.length > 0 && (
+                        {(dangerousPatternsData?.topRiskyFiles?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Arquivos de Maior Risco</p>
                                 <div className="space-y-2">
-                                    {dangerousPatterns.topRiskyFiles.slice(0, 5).map((file, i) => (
+                                    {dangerousPatternsData?.topRiskyFiles?.slice(0, 5).map((file: any, i: number) => (
                                         <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-red-500/5 border border-red-500/20">
                                             <span className="text-xs text-text-dim truncate max-w-[200px]">{file.file}</span>
                                             <span className="text-[10px] font-bold text-red-400">{file.matchCount} matches</span>
@@ -1473,11 +1528,11 @@ export function Security() {
                         )}
 
                         {/* Pattern Matches */}
-                        {dangerousPatterns.matches.length > 0 && (
+                        {(dangerousPatternsData?.matches?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Matches Recentes</p>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {dangerousPatterns.matches.slice(0, 5).map((match: any) => (
+                                    {dangerousPatternsData?.matches?.slice(0, 5).map((match: any) => (
                                         <div key={match.id} className="p-3 rounded-xl bg-bg border border-border">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-accent">{match.patternName}</span>
@@ -1496,11 +1551,11 @@ export function Security() {
                         )}
 
                         {/* Recommendations */}
-                        {dangerousPatterns.recommendations.length > 0 && (
+                        {(dangerousPatternsData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
                                 <div className="space-y-2">
-                                    {dangerousPatterns.recommendations.slice(0, 3).map((rec, i) => (
+                                    {dangerousPatternsData?.recommendations?.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-red-500/5 border border-red-500/20">
                                             <AlertTriangle className="size-3 text-red-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
@@ -1532,15 +1587,15 @@ export function Security() {
 
                 {packageVulnerabilitiesLoading ? (
                     <SkeletonCard />
-                ) : packageVulnerabilities ? (
+                ) : packageVulnerabilitiesData ? (
                     <div className="space-y-4">
                         {/* Summary Stats */}
                         <div className="grid grid-cols-4 gap-3">
                             {[
-                                { label: 'Pacotes', value: packageVulnerabilities.packagesScanned, color: 'text-accent' },
-                                { label: 'Vulneráveis', value: packageVulnerabilities.summary.vulnerablePackages, color: packageVulnerabilities.summary.vulnerablePackages > 0 ? 'text-red-400' : 'text-green-400' },
-                                { label: 'CVEs', value: packageVulnerabilities.vulnerabilitiesFound, color: packageVulnerabilities.vulnerabilitiesFound > 0 ? 'text-orange-400' : 'text-green-400' },
-                                { label: 'Risco', value: packageVulnerabilities.summary.overallRiskScore, color: packageVulnerabilities.summary.overallRiskScore >= 70 ? 'text-red-400' : packageVulnerabilities.summary.overallRiskScore >= 40 ? 'text-yellow-400' : 'text-green-400' },
+                                { label: 'Pacotes', value: packageVulnerabilitiesData?.packagesScanned ?? 0, color: 'text-accent' },
+                                { label: 'Vulneráveis', value: packageVulnerabilitiesData?.summary?.vulnerablePackages ?? 0, color: (packageVulnerabilitiesData?.summary?.vulnerablePackages ?? 0) > 0 ? 'text-red-400' : 'text-green-400' },
+                                { label: 'CVEs', value: packageVulnerabilitiesData?.vulnerabilitiesFound ?? 0, color: (packageVulnerabilitiesData?.vulnerabilitiesFound ?? 0) > 0 ? 'text-orange-400' : 'text-green-400' },
+                                { label: 'Risco', value: packageVulnerabilitiesData?.summary?.overallRiskScore ?? 0, color: (packageVulnerabilitiesData?.summary?.overallRiskScore ?? 0) >= 70 ? 'text-red-400' : (packageVulnerabilitiesData?.summary?.overallRiskScore ?? 0) >= 40 ? 'text-yellow-400' : 'text-green-400' },
                             ].map(stat => (
                                 <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -1550,15 +1605,15 @@ export function Security() {
                         </div>
 
                         {/* Vulnerability Breakdown */}
-                        {packageVulnerabilities.vulnerabilitiesFound > 0 && (
+                        {(packageVulnerabilitiesData?.vulnerabilitiesFound ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Breakdown por Severidade</p>
                                 <div className="grid grid-cols-4 gap-2">
                                     {[
-                                        { label: 'Críticas', value: packageVulnerabilities.criticalVulnerabilities, color: 'text-red-400' },
-                                        { label: 'Altas', value: packageVulnerabilities.highVulnerabilities, color: 'text-orange-400' },
-                                        { label: 'Médias', value: packageVulnerabilities.mediumVulnerabilities, color: 'text-yellow-400' },
-                                        { label: 'Baixas', value: packageVulnerabilities.lowVulnerabilities, color: 'text-blue-400' },
+                                        { label: 'Críticas', value: packageVulnerabilitiesData?.criticalVulnerabilities ?? 0, color: 'text-red-400' },
+                                        { label: 'Altas', value: packageVulnerabilitiesData?.highVulnerabilities ?? 0, color: 'text-orange-400' },
+                                        { label: 'Médias', value: packageVulnerabilitiesData?.mediumVulnerabilities ?? 0, color: 'text-yellow-400' },
+                                        { label: 'Baixas', value: packageVulnerabilitiesData?.lowVulnerabilities ?? 0, color: 'text-blue-400' },
                                     ].map(stat => (
                                         <div key={stat.label} className="text-center p-2 rounded-lg bg-bg border border-border">
                                             <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
@@ -1570,11 +1625,11 @@ export function Security() {
                         )}
 
                         {/* Vulnerable Packages */}
-                        {packageVulnerabilities.packageVulnerabilities.length > 0 && (
+                        {(packageVulnerabilitiesData?.packageVulnerabilities?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Pacotes Vulneráveis</p>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {packageVulnerabilities.packageVulnerabilities.slice(0, 5).map((vuln: any) => (
+                                    {packageVulnerabilitiesData.packageVulnerabilities.slice(0, 5).map((vuln: any) => (
                                         <div key={vuln.id} className="p-3 rounded-xl bg-bg border border-border">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-accent">{vuln.package.name}</span>
@@ -1604,11 +1659,11 @@ export function Security() {
                         )}
 
                         {/* Recommendations */}
-                        {packageVulnerabilities.recommendations.length > 0 && (
+                        {(packageVulnerabilitiesData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações</p>
                                 <div className="space-y-2">
-                                    {packageVulnerabilities.recommendations.slice(0, 3).map((rec, i) => (
+                                    {packageVulnerabilitiesData.recommendations.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
                                             <AlertTriangle className="size-3 text-yellow-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
@@ -1645,10 +1700,10 @@ export function Security() {
                         {/* Model Performance */}
                         <div className="grid grid-cols-4 gap-3">
                             {[
-                                { label: 'Modelos', value: mlZeroDay.modelsUsed.length, color: 'text-accent' },
-                                { label: 'Padrões', value: mlZeroDay.patternsAnalyzed, color: 'text-accent' },
-                                { label: 'Anomalias', value: mlZeroDay.anomaliesDetected, color: mlZeroDay.anomaliesDetected > 0 ? 'text-purple-400' : 'text-green-400' },
-                                { label: 'Confiança', value: `${Math.round(mlZeroDay.summary.averageConfidence * 100)}%`, color: 'text-purple-400' },
+                                { label: 'Modelos', value: mlZeroDayData?.modelsUsed?.length ?? 0, color: 'text-accent' },
+                                { label: 'Padrões', value: mlZeroDayData?.patternsAnalyzed ?? 0, color: 'text-accent' },
+                                { label: 'Anomalias', value: mlZeroDayData?.anomaliesDetected ?? 0, color: (mlZeroDayData?.anomaliesDetected ?? 0) > 0 ? 'text-purple-400' : 'text-green-400' },
+                                { label: 'Confiança', value: `${Math.round((mlZeroDayData?.summary?.averageConfidence ?? 0) * 100)}%`, color: 'text-purple-400' },
                             ].map(stat => (
                                 <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -1662,10 +1717,10 @@ export function Security() {
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Performance dos Modelos</p>
                             <div className="grid grid-cols-4 gap-2">
                                 {[
-                                    { label: 'Acurácia', value: `${Math.round(mlZeroDay.modelPerformance.accuracy * 100)}%` },
-                                    { label: 'Precisão', value: `${Math.round(mlZeroDay.modelPerformance.precision * 100)}%` },
-                                    { label: 'Recall', value: `${Math.round(mlZeroDay.modelPerformance.recall * 100)}%` },
-                                    { label: 'F1-Score', value: `${Math.round(mlZeroDay.modelPerformance.f1Score * 100)}%` },
+                                    { label: 'Acurácia', value: `${Math.round((mlZeroDayData?.modelPerformance?.accuracy ?? 0) * 100)}%` },
+                                    { label: 'Precisão', value: `${Math.round((mlZeroDayData?.modelPerformance?.precision ?? 0) * 100)}%` },
+                                    { label: 'Recall', value: `${Math.round((mlZeroDayData?.modelPerformance?.recall ?? 0) * 100)}%` },
+                                    { label: 'F1-Score', value: `${Math.round((mlZeroDayData?.modelPerformance?.f1Score ?? 0) * 100)}%` },
                                 ].map(metric => (
                                     <div key={metric.label} className="text-center p-2 rounded-lg bg-purple-500/5 border border-purple-500/20">
                                         <p className="text-lg font-bold text-purple-400">{metric.value}</p>
@@ -1676,11 +1731,11 @@ export function Security() {
                         </div>
 
                         {/* ML Vulnerabilities */}
-                        {mlZeroDay.vulnerabilities.length > 0 && (
+                        {(mlZeroDayData?.vulnerabilities?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Vulnerabilidades Detectadas por ML</p>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {mlZeroDay.vulnerabilities.slice(0, 5).map((vuln: any) => (
+                                    {mlZeroDayData?.vulnerabilities?.slice(0, 5).map((vuln: any) => (
                                         <div key={vuln.id} className="p-3 rounded-xl bg-bg border border-border">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-accent">{vuln.title}</span>
@@ -1703,11 +1758,11 @@ export function Security() {
                         )}
 
                         {/* Recommendations */}
-                        {mlZeroDay.recommendations.length > 0 && (
+                        {(mlZeroDayData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações ML</p>
                                 <div className="space-y-2">
-                                    {mlZeroDay.recommendations.slice(0, 3).map((rec, i) => (
+                                    {mlZeroDayData?.recommendations?.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/5 border border-purple-500/20">
                                             <Brain className="size-3 text-purple-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
@@ -1744,10 +1799,10 @@ export function Security() {
                         {/* Test Summary */}
                         <div className="grid grid-cols-4 gap-3">
                             {[
-                                { label: 'Testes', value: exploitationTests.testsExecuted, color: 'text-accent' },
-                                { label: 'Sucesso', value: exploitationTests.testsSuccessful, color: exploitationTests.testsSuccessful > 0 ? 'text-red-400' : 'text-green-400' },
-                                { label: 'Bloqueados', value: exploitationTests.testsBlocked, color: exploitationTests.testsBlocked > 0 ? 'text-yellow-400' : 'text-green-400' },
-                                { label: 'Taxa', value: `${exploitationTests.summary.successRate}%`, color: exploitationTests.summary.successRate > 20 ? 'text-red-400' : 'text-green-400' },
+                                { label: 'Testes', value: exploitationTestsData?.testsExecuted ?? 0, color: 'text-accent' },
+                                { label: 'Sucesso', value: exploitationTestsData?.testsSuccessful ?? 0, color: (exploitationTestsData?.testsSuccessful ?? 0) > 0 ? 'text-red-400' : 'text-green-400' },
+                                { label: 'Bloqueados', value: exploitationTestsData?.testsBlocked ?? 0, color: (exploitationTestsData?.testsBlocked ?? 0) > 0 ? 'text-yellow-400' : 'text-green-400' },
+                                { label: 'Taxa', value: `${exploitationTestsData?.summary?.successRate ?? 0}%`, color: (exploitationTestsData?.summary?.successRate ?? 0) > 20 ? 'text-red-400' : 'text-green-400' },
                             ].map(stat => (
                                 <div key={stat.label} className="text-center p-3 rounded-xl bg-bg border border-border">
                                     <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -1757,15 +1812,15 @@ export function Security() {
                         </div>
 
                         {/* Vulnerability Breakdown */}
-                        {exploitationTests.vulnerabilitiesConfirmed > 0 && (
+                        {(exploitationTestsData?.vulnerabilitiesConfirmed ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Vulnerabilidades Confirmadas</p>
                                 <div className="grid grid-cols-4 gap-2">
                                     {[
-                                        { label: 'Críticas', value: exploitationTests.summary.criticalVulnerabilities, color: 'text-red-400' },
-                                        { label: 'Altas', value: exploitationTests.summary.highVulnerabilities, color: 'text-orange-400' },
-                                        { label: 'Médias', value: exploitationTests.summary.mediumVulnerabilities, color: 'text-yellow-400' },
-                                        { label: 'Baixas', value: exploitationTests.summary.lowVulnerabilities, color: 'text-blue-400' },
+                                        { label: 'Críticas', value: exploitationTestsData?.summary?.criticalVulnerabilities ?? 0, color: 'text-red-400' },
+                                        { label: 'Altas', value: exploitationTestsData?.summary?.highVulnerabilities ?? 0, color: 'text-orange-400' },
+                                        { label: 'Médias', value: exploitationTestsData?.summary?.mediumVulnerabilities ?? 0, color: 'text-yellow-400' },
+                                        { label: 'Baixas', value: exploitationTestsData?.summary?.lowVulnerabilities ?? 0, color: 'text-blue-400' },
                                     ].map(stat => (
                                         <div key={stat.label} className="text-center p-2 rounded-lg bg-red-500/5 border border-red-500/20">
                                             <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
@@ -1780,7 +1835,7 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Resultados dos Testes</p>
                             <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {exploitationTests.results.slice(0, 5).map((result: any) => (
+                                {exploitationTestsData?.results?.slice(0, 5).map((result: any) => (
                                     <div key={result.id} className="p-3 rounded-xl bg-bg border border-border">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-bold text-accent">{result.testName}</span>
@@ -1812,11 +1867,11 @@ export function Security() {
                         </div>
 
                         {/* Recommendations */}
-                        {exploitationTests.recommendations.length > 0 && (
+                        {(exploitationTestsData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações de Segurança</p>
                                 <div className="space-y-2">
-                                    {exploitationTests.recommendations.slice(0, 3).map((rec, i) => (
+                                    {exploitationTestsData?.recommendations?.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-red-500/5 border border-red-500/20">
                                             <TestTube className="size-3 text-red-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>
@@ -2055,11 +2110,11 @@ export function Security() {
                         </div>
 
                         {/* Infrastructure Vulnerabilities */}
-                        {detailedInfrastructure?.vulnerabilities && detailedInfrastructure.vulnerabilities.length > 0 && (
+                        {(detailedInfrastructureData?.vulnerabilities?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Vulnerabilidades de Infraestrutura</p>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {detailedInfrastructure.vulnerabilities.slice(0, 5).map((vuln: any) => (
+                                    {detailedInfrastructureData?.vulnerabilities?.slice(0, 5).map((vuln: any) => (
                                         <div key={vuln.id} className="p-3 rounded-xl bg-bg border border-border">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-accent">{vuln.vulnerability}</span>
@@ -2084,11 +2139,11 @@ export function Security() {
                         )}
 
                         {/* Resource Configurations */}
-                        {detailedInfrastructure?.configurations && detailedInfrastructure.configurations.length > 0 && (
+                        {(detailedInfrastructureData?.configurations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Configurações de Recursos</p>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {detailedInfrastructure.configurations.slice(0, 5).map((config: any) => (
+                                    {detailedInfrastructureData?.configurations?.slice(0, 5).map((config: any) => (
                                         <div key={config.resourceId} className="p-3 rounded-xl bg-bg border border-border">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-accent">{config.setting}</span>
@@ -2115,11 +2170,11 @@ export function Security() {
                         )}
 
                         {/* Top Vulnerable Resources */}
-                        {detailedInfrastructure?.topVulnerableResources && detailedInfrastructure.topVulnerableResources.length > 0 && (
+                        {(detailedInfrastructureData?.topVulnerableResources?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recursos Mais Vulneráveis</p>
                                 <div className="space-y-2">
-                                    {detailedInfrastructure.topVulnerableResources.slice(0, 3).map((item, i) => (
+                                    {detailedInfrastructureData?.topVulnerableResources?.slice(0, 3).map((item: any, i: number) => (
                                         <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-red-500/5 border border-red-500/20">
                                             <div className="flex items-center gap-2">
                                                 <HardDrive className="size-3 text-red-400" />
@@ -2133,11 +2188,11 @@ export function Security() {
                         )}
 
                         {/* Infrastructure Metrics */}
-                        {detailedInfrastructure?.metrics && detailedInfrastructure.metrics.length > 0 && (
+                        {(detailedInfrastructureData?.metrics?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Métricas de Recursos</p>
                                 <div className="grid grid-cols-3 gap-2">
-                                    {detailedInfrastructure.metrics.slice(0, 3).map((metric: any) => (
+                                    {detailedInfrastructureData?.metrics?.slice(0, 3).map((metric: any) => (
                                         <div key={metric.resourceId} className="p-2 rounded-lg bg-bg border border-border">
                                             <div className="space-y-1">
                                                 <div className="flex items-center justify-between">
@@ -2166,11 +2221,11 @@ export function Security() {
                         )}
 
                         {/* Recommendations */}
-                        {detailedInfrastructure?.recommendations && detailedInfrastructure.recommendations.length > 0 && (
+                        {(detailedInfrastructureData?.recommendations?.length ?? 0) > 0 && (
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recomendações de Infraestrutura</p>
                                 <div className="space-y-2">
-                                    {detailedInfrastructure.recommendations.slice(0, 3).map((rec, i) => (
+                                    {detailedInfrastructureData?.recommendations?.slice(0, 3).map((rec: string, i: number) => (
                                         <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
                                             <Server className="size-3 text-cyan-400 mt-0.5 shrink-0" />
                                             <p className="text-xs text-text-dim">{rec}</p>

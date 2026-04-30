@@ -130,6 +130,21 @@ export class SystemAnalysisService {
     const packageLockPath = path.join(projectPath, 'package-lock.json');
 
     try {
+      // Check if package.json exists
+      try {
+        await fs.access(packageJsonPath);
+      } catch {
+        this.logger.warn('package.json not found', { path: packageJsonPath });
+        return {
+          total: 0,
+          production: 0,
+          development: 0,
+          vulnerabilities: 0,
+          outdated: 0,
+          details: [],
+        };
+      }
+
       const content = await fs.readFile(packageJsonPath, 'utf-8');
       const pkg = JSON.parse(content);
 
@@ -421,26 +436,27 @@ export class SystemAnalysisService {
         }
       }
 
-      // Get DNS configuration
-      let dns: string[] = [];
-      try {
-        const resolvConf = await fs.readFile('/etc/resolv.conf', 'utf-8');
-        const dnsLines = resolvConf.split('\n')
-          .filter(line => line.trim().startsWith('nameserver'))
-          .map(line => line.trim().split(/\s+/)[1]);
-        dns = dnsLines.filter(Boolean);
-      } catch {
-        // /etc/resolv.conf not available
-      }
     } catch (error) {
       this.logger.warn('Failed to analyze network', { error });
+    }
+
+    // Get DNS configuration
+    let dns: string[] | undefined;
+    try {
+      const resolvConf = await fs.readFile('/etc/resolv.conf', 'utf-8');
+      const dnsLines = resolvConf.split('\n')
+        .filter(line => line.trim().startsWith('nameserver'))
+        .map(line => line.trim().split(/\s+/)[1]);
+      dns = dnsLines.filter(Boolean);
+    } catch {
+      // /etc/resolv.conf not available
     }
 
     return {
       interfaces,
       openPorts,
       hostname: os.hostname(),
-      dns: dns || undefined,
+      dns,
     };
   }
 

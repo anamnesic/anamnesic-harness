@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
         return ok(result);
     } catch (e) {
         console.error('[system/analysis GET]', e);
-        return err('INTERNAL_ERROR', 'Failed to analyze system', 500);
+        const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+        const errorStack = e instanceof Error ? e.stack : undefined;
+        return err('INTERNAL_ERROR', `Failed to analyze system: ${errorMessage}`, 500, errorStack ? { stack: errorStack } : undefined);
     }
 }
