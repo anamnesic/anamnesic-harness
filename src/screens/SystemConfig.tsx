@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Code2, CircleCheck, Share2 } from 'lucide-react';
+import { Code2, CircleCheck, Share2, Package, Network, Server, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useApi, apiFetch } from '@/src/lib/api';
 import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
@@ -33,6 +33,42 @@ interface AvailabilityData {
     availableCli: string[];
     models: Record<string, boolean>;
 }
+interface MetricsData {
+    nodeVersion?: string;
+    platform?: string;
+    uptime?: string;
+    memory?: string;
+    loadAvg?: string;
+    threads?: number;
+}
+
+interface SystemAnalysisData {
+    packages?: {
+        total: number;
+        production: number;
+        development: number;
+        vulnerabilities: number;
+        outdated: number;
+        details: any[];
+    };
+    services?: any[];
+    network?: {
+        interfaces: any[];
+        openPorts: any[];
+        hostname: string;
+        dns?: string[];
+    };
+    system?: {
+        platform: string;
+        arch: string;
+        nodeVersion: string;
+        uptime: string;
+        totalMemory: string;
+        freeMemory: string;
+        cpuCores: number;
+    };
+    analyzedAt: string;
+}
 
 const CLI_MODEL_IDS = new Set(['gpt-5.2-codex', 'gpt-5.3-codex']);
 
@@ -47,12 +83,14 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     // Include repository ID in the URL to trigger refetch when repository changes
     const availabilityUrl = repository ? `/api/v1/system/ai-availability?projectId=${repository.id}` : '/api/v1/system/ai-availability';
     const { data: availability, loading: availabilityLoading, refetch: refetchAvailability } = useApi<{ data?: AvailabilityData } | AvailabilityData>(availabilityUrl);
+    const { data: systemAnalysis, loading: systemAnalysisLoading, refetch: refetchSystemAnalysis } = useApi<SystemAnalysisData>('/api/v1/system/analysis');
     const { toast } = useToast();
 
     const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
     const [localModelStates, setLocalModelStates] = useState<Record<string, boolean>>({});
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [analyzing, setAnalyzing] = useState(false);
 
     const availabilityPayload = (availability as { data?: AvailabilityData } | null)?.data
         ? (availability as { data?: AvailabilityData }).data
@@ -124,6 +162,18 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         setDirty(false);
     }
 
+    async function handleRefreshSystemAnalysis() {
+        setAnalyzing(true);
+        try {
+            await refetchSystemAnalysis();
+            toast('System analysis updated', 'success');
+        } catch (e: any) {
+            toast(e.message ?? 'Failed to refresh system analysis', 'error');
+        } finally {
+            setAnalyzing(false);
+        }
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -132,7 +182,16 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         >
             {/* Runtime Environment */}
             <div className="bento-card">
-                <span className="label-caps">Runtime Environment</span>
+                <div className="flex items-center justify-between">
+                    <span className="label-caps">Runtime Environment</span>
+                    <button
+                        onClick={handleRefreshSystemAnalysis}
+                        disabled={analyzing}
+                        className="p-2 rounded-lg text-text-dim hover:text-accent hover:bg-white/5 transition-colors disabled:opacity-50"
+                    >
+                        <RefreshCw className={cn("size-4", analyzing && "animate-spin")} />
+                    </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     {metricsLoading ? (
                         [0, 1].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)
@@ -230,6 +289,150 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* System Analysis - Packages */}
+            <div className="bento-card">
+                <div className="flex items-center gap-2 mb-4">
+                    <Package className="size-5 text-primary" />
+                    <span className="label-caps">Pacotes</span>
+                </div>
+                {systemAnalysisLoading ? (
+                    <SkeletonCard />
+                ) : systemAnalysis?.packages ? (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-4 gap-3">
+                            {[
+                                { label: 'Total', val: systemAnalysis.packages.total },
+                                { label: 'Prod', val: systemAnalysis.packages.production },
+                                { label: 'Dev', val: systemAnalysis.packages.development },
+                                { label: 'Vulns', val: systemAnalysis.packages.vulnerabilities, alert: systemAnalysis.packages.vulnerabilities > 0 },
+                            ].map(stat => (
+                                <div key={stat.label} className={cn("text-center p-3 rounded-xl border", stat.alert ? "bg-red-500/10 border-red-500/20" : "bg-bg border-border")}>
+                                    <p className="text-2xl font-bold">{stat.val}</p>
+                                    <p className="text-[8px] font-black text-text-dim uppercase mt-1">{stat.label}</p>
+                                </div>
+                            ))}
+                        </div>
+                        {systemAnalysis.packages.vulnerabilities > 0 && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                                <AlertTriangle className="size-4 text-red-500" />
+                                <p className="text-xs text-red-400 font-bold">
+                                    {systemAnalysis.packages.vulnerabilities} vulnerabilidades detectadas
+                                </p>
+                            </div>
+                        )}
+                        <div className="max-h-48 overflow-y-auto space-y-2">
+                            {systemAnalysis.packages.details.slice(0, 10).map((pkg: any) => (
+                                <div key={pkg.name} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-accent">{pkg.name}</span>
+                                        <span className="text-[10px] text-text-dim font-mono">{pkg.version}</span>
+                                        {pkg.vulnerabilities > 0 && (
+                                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+                                                {pkg.vulnerabilities} vuln
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded", pkg.type === 'production' ? "bg-green-500/10 text-green-400" : "bg-blue-500/10 text-blue-400")}>
+                                        {pkg.type === 'production' ? 'prod' : 'dev'}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-xs text-text-dim">Nenhum dado de pacotes disponível</p>
+                )}
+            </div>
+
+            {/* System Analysis - Services */}
+            <div className="bento-card">
+                <div className="flex items-center gap-2 mb-4">
+                    <Server className="size-5 text-primary" />
+                    <span className="label-caps">Serviços</span>
+                </div>
+                {systemAnalysisLoading ? (
+                    <SkeletonCard />
+                ) : systemAnalysis?.services ? (
+                    <div className="space-y-2">
+                        {systemAnalysis.services.length === 0 ? (
+                            <p className="text-xs text-text-dim">Nenhum serviço detectado</p>
+                        ) : (
+                            systemAnalysis.services.map((service: any) => (
+                                <div key={service.name} className="flex items-center justify-between p-3 rounded-xl bg-bg border border-border">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("size-2 rounded-full", service.status === 'running' ? "bg-green-500" : "bg-red-500")} />
+                                        <div>
+                                            <p className="text-xs font-bold text-accent">{service.name}</p>
+                                            {service.pid && <p className="text-[10px] text-text-dim font-mono">PID: {service.pid}</p>}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-xs text-text-dim">
+                                        {service.cpu && <span>CPU: {service.cpu}</span>}
+                                        {service.memory && <span>MEM: {service.memory}</span>}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                ) : (
+                    <p className="text-xs text-text-dim">Nenhum dado de serviços disponível</p>
+                )}
+            </div>
+
+            {/* System Analysis - Network */}
+            <div className="bento-card">
+                <div className="flex items-center gap-2 mb-4">
+                    <Network className="size-5 text-primary" />
+                    <span className="label-caps">Rede</span>
+                </div>
+                {systemAnalysisLoading ? (
+                    <SkeletonCard />
+                ) : systemAnalysis?.network ? (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase">Hostname</p>
+                                <p className="text-sm font-bold font-mono">{systemAnalysis.network.hostname}</p>
+                            </div>
+                            {systemAnalysis.network.dns && systemAnalysis.network.dns.length > 0 && (
+                                <div>
+                                    <p className="text-[8px] font-black text-text-dim uppercase">DNS</p>
+                                    <p className="text-sm font-bold font-mono">{systemAnalysis.network.dns.join(', ')}</p>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <p className="text-[8px] font-black text-text-dim uppercase mb-2">Interfaces</p>
+                            <div className="space-y-2">
+                                {systemAnalysis.network.interfaces.map((iface: any) => (
+                                    <div key={iface.interface} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
+                                        <div className="flex items-center gap-2">
+                                            <div className={cn("size-2 rounded-full", iface.status === 'up' ? "bg-green-500" : "bg-red-500")} />
+                                            <span className="text-xs font-bold text-accent">{iface.interface}</span>
+                                        </div>
+                                        <div className="text-xs text-text-dim font-mono">{iface.ip}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        {systemAnalysis.network.openPorts && systemAnalysis.network.openPorts.length > 0 && (
+                            <div>
+                                <p className="text-[8px] font-black text-text-dim uppercase mb-2">Portas Abertas</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {systemAnalysis.network.openPorts.map((port: any) => (
+                                        <span key={`${port.protocol}-${port.port}`} className="text-[10px] font-black uppercase px-2 py-1 rounded bg-primary/10 text-primary border border-primary/20">
+                                            {port.port}/{port.protocol}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <p className="text-xs text-text-dim">Nenhum dado de rede disponível</p>
+                )}
             </div>
 
             {/* AI Models */}

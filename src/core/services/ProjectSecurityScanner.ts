@@ -255,59 +255,492 @@ export class ProjectSecurityScanner {
     const vulnerabilities: any[] = [];
     const lines = content.split('\n');
 
-    // Common security patterns
-    const securityPatterns = [
-      {
-        name: 'Hardcoded Secret',
-        pattern: /(password|secret|key|token)\s*[:=]\s*['"`][^'"`]+['"`]/i,
-        severity: 'high',
-        description: 'Potential hardcoded secret detected',
-      },
-      {
-        name: 'SQL Injection',
-        pattern: /(execute|query)\s*\(\s*['"`].*\+.*['"`]/i,
-        severity: 'critical',
-        description: 'Potential SQL injection vulnerability',
-      },
-      {
-        name: 'XSS Vulnerability',
-        pattern: /(innerHTML|outerHTML)\s*=.*\+/i,
-        severity: 'high',
-        description: 'Potential cross-site scripting vulnerability',
-      },
-      {
-        name: 'Eval Usage',
-        pattern: /eval\s*\(/i,
-        severity: 'critical',
-        description: 'Use of eval() function is dangerous',
-      },
-      {
-        name: 'Unsafe Regex',
-        pattern: /RegExp\s*\(\s*['"`][^'"`]*['"`]\s*\)/i,
-        severity: 'medium',
-        description: 'Potential unsafe regular expression',
-      },
-    ];
+    // Language-specific security patterns
+    const patterns = this.getLanguagePatterns(language);
 
     lines.forEach((line, index) => {
-      securityPatterns.forEach(pattern => {
+      patterns.forEach(pattern => {
         if (pattern.pattern.test(line)) {
           vulnerabilities.push({
-            id: `basic-${Date.now()}-${index}`,
-            type: 'pattern',
+            id: `${language}-${Date.now()}-${index}`,
+            type: pattern.type || 'pattern',
             severity: pattern.severity,
             title: pattern.name,
             description: pattern.description,
             location: { file: filePath, line: index + 1, column: 0 },
             evidence: line.trim(),
-            remediationSteps: [`Review and fix the security issue in ${filePath} at line ${index + 1}`],
-            references: [],
+            remediationSteps: pattern.remediationSteps || [`Review and fix the security issue in ${filePath} at line ${index + 1}`],
+            references: pattern.references || [],
           });
         }
       });
     });
 
     return vulnerabilities;
+  }
+
+  /**
+   * Get language-specific security patterns
+   */
+  private getLanguagePatterns(language: string): Array<{
+    name: string;
+    pattern: RegExp;
+    severity: 'critical' | 'high' | 'medium' | 'low';
+    description: string;
+    type?: string;
+    remediationSteps?: string[];
+    references?: string[];
+  }> {
+    const commonPatterns = [
+      {
+        name: 'Hardcoded Secret',
+        pattern: /(password|secret|key|token|api_key|apikey|private_key|privatekey)\s*[:=]\s*['"`][^'"`]{8,}['"`]/i,
+        severity: 'high' as const,
+        description: 'Potential hardcoded secret detected',
+        type: 'crypto',
+        remediationSteps: ['Use environment variables or secret management', 'Never commit secrets to version control'],
+        references: ['CWE-798'],
+      },
+      {
+        name: 'Hardcoded IP Address',
+        pattern: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/,
+        severity: 'low' as const,
+        description: 'Hardcoded IP address detected',
+        type: 'configuration',
+        remediationSteps: ['Use configuration files or environment variables'],
+        references: [],
+      },
+    ];
+
+    const jsTsPatterns = [
+      ...commonPatterns,
+      {
+        name: 'SQL Injection',
+        pattern: /(execute|query)\s*\(\s*['"`].*\+.*['"`]|query\s*\(\s*\$\{.*\}\s*\)/i,
+        severity: 'critical' as const,
+        description: 'Potential SQL injection vulnerability via string concatenation',
+        type: 'injection',
+        remediationSteps: ['Use parameterized queries or prepared statements', 'Use ORM with built-in escaping'],
+        references: ['CWE-89', 'OWASP A03'],
+      },
+      {
+        name: 'XSS Vulnerability',
+        pattern: /(innerHTML|outerHTML)\s*=.*(innerHTML|outerHTML|document\.write|dangerouslySetInnerHTML)/i,
+        severity: 'high' as const,
+        description: 'Potential cross-site scripting vulnerability',
+        type: 'xss',
+        remediationSteps: ['Use textContent instead of innerHTML', 'Sanitize user input before rendering', 'Use DOMPurify or similar libraries'],
+        references: ['CWE-79', 'OWASP A03'],
+      },
+      {
+        name: 'Eval Usage',
+        pattern: /eval\s*\(/i,
+        severity: 'critical' as const,
+        description: 'Use of eval() function is dangerous',
+        type: 'injection',
+        remediationSteps: ['Avoid eval() - use alternative approaches', 'Use JSON.parse() for JSON parsing', 'Use Function constructor with caution'],
+        references: ['CWE-95'],
+      },
+      {
+        name: 'Unsafe Regex',
+        pattern: /RegExp\s*\(\s*['"`][^'"`]*['"`]\s*\)|new\s+RegExp\s*\(/i,
+        severity: 'medium' as const,
+        description: 'Potential unsafe regular expression (ReDoS risk)',
+        type: 'logic',
+        remediationSteps: ['Validate regex patterns', 'Use regex libraries with timeout protection', 'Avoid catastrophic backtracking patterns'],
+        references: ['CWE-1333'],
+      },
+      {
+        name: 'document.write Usage',
+        pattern: /document\.write\s*\(/i,
+        severity: 'high' as const,
+        description: 'document.write can overwrite entire document',
+        type: 'xss',
+        remediationSteps: ['Use DOM manipulation methods instead', 'Avoid document.write in modern applications'],
+        references: ['CWE-79'],
+      },
+      {
+        name: 'setTimeout with String',
+        pattern: /setTimeout\s*\(\s*['"`]/i,
+        severity: 'medium' as const,
+        description: 'setTimeout with string argument is equivalent to eval()',
+        type: 'injection',
+        remediationSteps: ['Use function reference instead of string', 'Pass function as first argument'],
+        references: ['CWE-95'],
+      },
+      {
+        name: 'setInterval with String',
+        pattern: /setInterval\s*\(\s*['"`]/i,
+        severity: 'medium' as const,
+        description: 'setInterval with string argument is equivalent to eval()',
+        type: 'injection',
+        remediationSteps: ['Use function reference instead of string', 'Pass function as first argument'],
+        references: ['CWE-95'],
+      },
+      {
+        name: 'Unsafe File Upload',
+        pattern: /(upload|saveFile|writeFile)\s*\([^)]*\.(?:exe|sh|bat|php|jsp|asp)/i,
+        severity: 'high' as const,
+        description: 'Potential unsafe file upload handling',
+        type: 'injection',
+        remediationSteps: ['Validate file types', 'Rename uploaded files', 'Store files outside web root'],
+        references: ['CWE-434', 'OWASP A03'],
+      },
+      {
+        name: 'Direct Object Access',
+        pattern: /req\.(body|query|params)\.[a-zA-Z_][a-zA-Z0-9_]*/i,
+        severity: 'medium' as const,
+        description: 'Direct access to request parameters without validation',
+        type: 'injection',
+        remediationSteps: ['Validate and sanitize all inputs', 'Use input validation libraries', 'Implement schema validation'],
+        references: ['CWE-20', 'OWASP A03'],
+      },
+      {
+        name: 'Missing Content-Type',
+        pattern: /res\.send\s*\([^)]*\)/i,
+        severity: 'low' as const,
+        description: 'Response without explicit Content-Type header',
+        type: 'configuration',
+        remediationSteps: ['Always set Content-Type header', 'Use proper MIME types'],
+        references: ['CWE-987'],
+      },
+      {
+        name: 'Crypto Weak Algorithm',
+        pattern: /(md5|sha1|sha-1)\s*\(/i,
+        severity: 'medium' as const,
+        description: 'Weak cryptographic algorithm detected',
+        type: 'crypto',
+        remediationSteps: ['Use SHA-256 or stronger', 'Use Argon2 or bcrypt for passwords'],
+        references: ['CWE-327'],
+      },
+      {
+        name: 'Random Math.random',
+        pattern: /Math\.random\s*\(\)/i,
+        severity: 'medium' as const,
+        description: 'Math.random() is not cryptographically secure',
+        type: 'crypto',
+        remediationSteps: ['Use crypto.randomBytes() or webcrypto API', 'Use proper CSPRNG for security-critical operations'],
+        references: ['CWE-338'],
+      },
+      {
+        name: 'Prototype Pollution',
+        pattern: /(merge|extend|assign)\s*\([^)]*\.\.\.|Object\.(assign|merge)\s*\([^)]*\.\.\.\)/i,
+        severity: 'high' as const,
+        description: 'Potential prototype pollution vulnerability',
+        type: 'injection',
+        remediationSteps: ['Validate objects before merging', 'Use libraries that prevent prototype pollution', 'Sanitize object keys'],
+        references: ['CWE-1321', 'OWASP A08'],
+      },
+      {
+        name: 'Command Injection',
+        pattern: /(exec|spawn)\s*\(\s*[^)]*\+|child_process\.(exec|spawn)\s*\(\s*[^)]*\+/i,
+        severity: 'critical' as const,
+        description: 'Potential command injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use parameterized commands', 'Validate and sanitize all inputs', 'Use execFile or spawn with array arguments'],
+        references: ['CWE-78', 'OWASP A03'],
+      },
+      {
+        name: 'Debug Mode Enabled',
+        pattern: /(debug|DEBUG)\s*[:=]\s*true/i,
+        severity: 'medium' as const,
+        description: 'Debug mode may expose sensitive information',
+        type: 'configuration',
+        remediationSteps: ['Disable debug in production', 'Use environment-based configuration'],
+        references: ['CWE-489'],
+      },
+    ];
+
+    const pythonPatterns = [
+      ...commonPatterns,
+      {
+        name: 'SQL Injection',
+        pattern: /execute\s*\(\s*['"`].*\+.*['"`]|cursor\.execute\s*\(\s*['"`].*\%|cursor\.execute\s*\(\s*f['"`].*\{/i,
+        severity: 'critical' as const,
+        description: 'Potential SQL injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use parameterized queries with placeholders', 'Use ORM with built-in escaping', 'Never concatenate SQL strings'],
+        references: ['CWE-89', 'OWASP A03'],
+      },
+      {
+        name: 'Eval Usage',
+        pattern: /eval\s*\(/i,
+        severity: 'critical' as const,
+        description: 'Use of eval() function is dangerous',
+        type: 'injection',
+        remediationSteps: ['Avoid eval() - use ast.literal_eval() for literals', 'Use proper parsing libraries'],
+        references: ['CWE-95'],
+      },
+      {
+        name: 'Exec Usage',
+        pattern: /exec\s*\(/i,
+        severity: 'critical' as const,
+        description: 'Use of exec() function is dangerous',
+        type: 'injection',
+        remediationSteps: ['Avoid exec() - use alternative approaches', 'Use function dispatch or class-based approaches'],
+        references: ['CWE-95'],
+      },
+      {
+        name: 'Pickle Unsafe Load',
+        pattern: /pickle\.load\s*\(/i,
+        severity: 'critical' as const,
+        description: 'Pickle deserialization can execute arbitrary code',
+        type: 'injection',
+        remediationSteps: ['Use JSON or other safe serialization formats', 'If pickle is required, validate data first', 'Use hmac signing for pickle data'],
+        references: ['CWE-502', 'OWASP A08'],
+      },
+      {
+        name: 'Shell Command Injection',
+        pattern: /os\.system\s*\(\s*[^)]*\+|subprocess\.(call|run|Popen)\s*\(\s*shell\s*=\s*True/i,
+        severity: 'critical' as const,
+        description: 'Potential command injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use subprocess with list arguments', 'Avoid shell=True', 'Validate and sanitize all inputs'],
+        references: ['CWE-78', 'OWASP A03'],
+      },
+      {
+        name: 'Weak Hash Algorithm',
+        pattern: /(md5|sha1|sha-1)\s*\(/i,
+        severity: 'medium' as const,
+        description: 'Weak cryptographic algorithm detected',
+        type: 'crypto',
+        remediationSteps: ['Use SHA-256 or stronger', 'Use hashlib.sha256 or hashlib.sha3_256'],
+        references: ['CWE-327'],
+      },
+      {
+        name: 'Random Module',
+        pattern: /random\.(random|randint|choice)\s*\(/i,
+        severity: 'medium' as const,
+        description: 'random module is not cryptographically secure',
+        type: 'crypto',
+        remediationSteps: ['Use secrets module for security-critical operations', 'Use secrets.randbelow() or secrets.choice()'],
+        references: ['CWE-338'],
+      },
+      {
+        name: 'YAML Unsafe Load',
+        pattern: /yaml\.load\s*\(/i,
+        severity: 'high' as const,
+        description: 'YAML load can execute arbitrary code',
+        type: 'injection',
+        remediationSteps: ['Use yaml.safe_load() instead', 'Validate YAML structure before loading'],
+        references: ['CWE-502'],
+      },
+      {
+        name: 'Template String Injection',
+        pattern: /Template\s*\(\s*[^)]*\$\{/i,
+        severity: 'medium' as const,
+        description: 'Template strings can lead to injection',
+        type: 'injection',
+        remediationSteps: ['Validate template inputs', 'Use safe template libraries like Jinja2 with autoescape'],
+        references: ['CWE-94'],
+      },
+      {
+        name: 'SSL Verification Disabled',
+        pattern: /verify\s*=\s*False|ssl\.create_default_context\s*\(\s*check_hostname\s*=\s*False/i,
+        severity: 'high' as const,
+        description: 'SSL certificate verification disabled',
+        type: 'configuration',
+        remediationSteps: ['Always verify SSL certificates', 'Use proper certificate bundles', 'Only disable in development'],
+        references: ['CWE-295'],
+      },
+      {
+        name: 'Hardcoded Flask Secret',
+        pattern: /app\.config\[?['"`]SECRET_KEY['"`]\]?\s*=\s*['"`][^'"`]+['"`]/i,
+        severity: 'high' as const,
+        description: 'Hardcoded Flask secret key',
+        type: 'crypto',
+        remediationSteps: ['Use environment variables', 'Generate strong random keys', 'Never commit secrets'],
+        references: ['CWE-798'],
+      },
+      {
+        name: 'Debug Mode Flask',
+        pattern: /app\.run\s*\(\s*debug\s*=\s*True/i,
+        severity: 'medium' as const,
+        description: 'Flask debug mode enabled',
+        type: 'configuration',
+        remediationSteps: ['Disable debug in production', 'Use environment-based configuration'],
+        references: ['CWE-489'],
+      },
+    ];
+
+    const javaPatterns = [
+      ...commonPatterns,
+      {
+        name: 'SQL Injection',
+        pattern: /execute\s*\(\s*['"`].*\+.*['"`]|Statement\.execute\s*\(/i,
+        severity: 'critical' as const,
+        description: 'Potential SQL injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use PreparedStatement with parameterized queries', 'Use ORM frameworks like Hibernate', 'Never concatenate SQL strings'],
+        references: ['CWE-89', 'OWASP A03'],
+      },
+      {
+        name: 'Command Injection',
+        pattern: /Runtime\.getRuntime\(\)\.exec\s*\(/i,
+        severity: 'critical' as const,
+        description: 'Potential command injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use ProcessBuilder with proper input validation', 'Avoid Runtime.exec() with user input', 'Validate and sanitize all inputs'],
+        references: ['CWE-78', 'OWASP A03'],
+      },
+      {
+        name: 'Weak Hash Algorithm',
+        pattern: /MessageDigest\.getInstance\s*\(\s*['"`](MD5|SHA-1|SHA1)['"`]/i,
+        severity: 'medium' as const,
+        description: 'Weak cryptographic algorithm detected',
+        type: 'crypto',
+        remediationSteps: ['Use SHA-256 or stronger', 'Use MessageDigest.getInstance("SHA-256")'],
+        references: ['CWE-327'],
+      },
+      {
+        name: 'Weak Random',
+        pattern: /new\s+Random\s*\(\)|Math\.random\s*\(\)/i,
+        severity: 'medium' as const,
+        description: 'Random class is not cryptographically secure',
+        type: 'crypto',
+        remediationSteps: ['Use SecureRandom for security-critical operations', 'Use java.security.SecureRandom'],
+        references: ['CWE-338'],
+      },
+      {
+        name: 'Unsafe Deserialization',
+        pattern: /ObjectInputStream\s*\(|readObject\s*\(/i,
+        severity: 'critical' as const,
+        description: 'Unsafe deserialization can execute arbitrary code',
+        type: 'injection',
+        remediationSteps: ['Use safe serialization formats like JSON', 'Validate data before deserialization', 'Use digital signatures'],
+        references: ['CWE-502', 'OWASP A08'],
+      },
+      {
+        name: 'XPath Injection',
+        pattern: /XPath\.evaluate\s*\(\s*['"`].*\+.*['"`]/i,
+        severity: 'high' as const,
+        description: 'Potential XPath injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use parameterized XPath queries', 'Validate and sanitize inputs', 'Use XPath compiled expressions'],
+        references: ['CWE-91'],
+      },
+      {
+        name: 'LDAP Injection',
+        pattern: /search\s*\(\s*['"`].*\+.*['"`]/i,
+        severity: 'high' as const,
+        description: 'Potential LDAP injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use parameterized LDAP queries', 'Validate and sanitize inputs', 'Use proper encoding'],
+        references: ['CWE-90'],
+      },
+      {
+        name: 'Path Traversal',
+        pattern: /new\s+File\s*\(\s*[^)]*\+|Paths\.get\s*\(\s*[^)]*\+/i,
+        severity: 'high' as const,
+        description: 'Potential path traversal vulnerability',
+        type: 'injection',
+        remediationSteps: ['Validate and normalize file paths', 'Use allow-lists for file access', 'Never use user input directly in file paths'],
+        references: ['CWE-22', 'OWASP A01'],
+      },
+      {
+        name: 'Weak SSL Context',
+        pattern: /TrustManager|X509TrustManager|SSLContext\.getInstance\s*\(\s*['"`]TLS['"`]/i,
+        severity: 'medium' as const,
+        description: 'Potential weak SSL/TLS configuration',
+        type: 'configuration',
+        remediationSteps: ['Use proper SSL/TLS configuration', 'Implement proper certificate validation', 'Use up-to-date TLS versions'],
+        references: ['CWE-295'],
+      },
+      {
+        name: 'Hardcoded Password',
+        pattern: /password\s*=\s*['"`][^'"`]+['"`]/i,
+        severity: 'high' as const,
+        description: 'Hardcoded password detected',
+        type: 'crypto',
+        remediationSteps: ['Use secure credential storage', 'Use environment variables or secret management', 'Never hardcode passwords'],
+        references: ['CWE-798'],
+      },
+    ];
+
+    const goPatterns = [
+      ...commonPatterns,
+      {
+        name: 'SQL Injection',
+        pattern: /Exec\s*\(\s*[^)]*\+|Query\s*\(\s*[^)]*\+/i,
+        severity: 'critical' as const,
+        description: 'Potential SQL injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use parameterized queries', 'Use prepared statements', 'Use ORM with built-in escaping'],
+        references: ['CWE-89', 'OWASP A03'],
+      },
+      {
+        name: 'Command Injection',
+        pattern: /exec\.Command\s*\(\s*[^)]*\+/i,
+        severity: 'critical' as const,
+        description: 'Potential command injection vulnerability',
+        type: 'injection',
+        remediationSteps: ['Use exec.Command with array arguments', 'Validate and sanitize all inputs', 'Avoid string concatenation in commands'],
+        references: ['CWE-78', 'OWASP A03'],
+      },
+      {
+        name: 'Weak Hash Algorithm',
+        pattern: /md5\.New\(\)|sha1\.New\(\)/i,
+        severity: 'medium' as const,
+        description: 'Weak cryptographic algorithm detected',
+        type: 'crypto',
+        remediationSteps: ['Use SHA-256 or stronger', 'Use crypto/sha256'],
+        references: ['CWE-327'],
+      },
+      {
+        name: 'Weak Random',
+        pattern: /rand\.|math\/rand/i,
+        severity: 'medium' as const,
+        description: 'math/rand is not cryptographically secure',
+        type: 'crypto',
+        remediationSteps: ['Use crypto/rand for security-critical operations', 'Use rand.Read() or rand.Int()'],
+        references: ['CWE-338'],
+      },
+      {
+        name: 'Unsafe Deserialization',
+        pattern: /gob\.Decode|json\.Unmarshal\s*\(/i,
+        severity: 'medium' as const,
+        description: 'Unsafe deserialization can be dangerous',
+        type: 'injection',
+        remediationSteps: ['Validate data before deserialization', 'Use safe serialization formats', 'Implement input validation'],
+        references: ['CWE-502'],
+      },
+    ];
+
+    const genericPatterns = [
+      ...commonPatterns,
+      {
+        name: 'TODO Comment',
+        pattern: /TODO|FIXME|HACK|XXX/i,
+        severity: 'low' as const,
+        description: 'Development comment that may indicate incomplete code',
+        type: 'logic',
+        remediationSteps: ['Review and complete the TODO item', 'Remove or update the comment'],
+        references: [],
+      },
+      {
+        name: 'Commented Code',
+        pattern: /^\s*\/\/.*\w+.*\(|^\s*#.*\w+.*\(/i,
+        severity: 'low' as const,
+        description: 'Commented code may indicate dead code or security bypass',
+        type: 'logic',
+        remediationSteps: ['Remove commented code', 'Ensure it was not a security bypass'],
+        references: [],
+      },
+    ];
+
+    switch (language) {
+      case 'typescript':
+      case 'javascript':
+        return jsTsPatterns;
+      case 'python':
+        return pythonPatterns;
+      case 'java':
+        return javaPatterns;
+      case 'go':
+        return goPatterns;
+      default:
+        return genericPatterns;
+    }
   }
 
   /**

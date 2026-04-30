@@ -5,12 +5,13 @@ export interface CreateSecurityAnalysisInput {
   workspaceId: string;
   targetId: string;
   targetName: string;
-  type: 'code' | 'system' | 'api' | 'dependency' | 'infrastructure';
+  type: 'code' | 'system' | 'api' | 'dependency' | 'infrastructure' | 'comprehensive';
   vulnerabilities: Vulnerability[];
   recommendations: Recommendation[];
   scanMethod?: string;
   durationMs?: number;
   scannerVersion?: string;
+  metadata?: Record<string, any> | null;
 }
 
 export class SecurityAnalysisService {

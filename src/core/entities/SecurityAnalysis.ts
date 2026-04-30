@@ -52,7 +52,7 @@ export class SecurityAnalysis {
   targetName: string;
 
   @Column('text')
-  type: 'code' | 'system' | 'api' | 'dependency' | 'infrastructure';
+  type: 'code' | 'system' | 'api' | 'dependency' | 'infrastructure' | 'comprehensive';
 
   @Column('simple-json')
   vulnerabilities: Vulnerability[];
