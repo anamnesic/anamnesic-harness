@@ -599,7 +599,7 @@ export function Projects({
             key={showWorkspaceHint ? 'projects-start-no-workspace' : 'projects-start-no-open'}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={embedded ? 'w-full' : 'flex-1 w-full max-w-3xl mx-auto p-3 pb-32 sm:p-6'}
+            className={embedded ? 'w-full' : 'flex-1 w-full mx-auto p-3 pb-32 sm:p-6'}
         >
             <div className="bento-card py-8 text-center space-y-3">
                 <Building2 className="size-8 text-border mx-auto" />
@@ -630,7 +630,7 @@ export function Projects({
                             initial={{ opacity: 0, y: 40 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 40 }}
-                            className="bento-card w-full max-w-md space-y-4"
+                            className="bento-card w-full space-y-4"
                         >
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-bold">Nenhum reposit├│rio Git encontrado</h3>
@@ -691,7 +691,7 @@ export function Projects({
                     key="project-detail"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={embedded ? 'h-full w-full' : 'flex-1 w-full max-w-6xl mx-auto p-3 pb-32 sm:p-6'}
+                    className={embedded ? 'h-full w-full' : 'flex-1 w-full mx-auto p-3 pb-32 sm:p-6'}
                 >
                     <div className="flex h-full min-h-0 flex-col gap-3">
                         {!hideTabBar && (
@@ -896,7 +896,7 @@ export function Projects({
                                                             key={filePath}
                                                             onClick={() => setSelectedRepoFile(filePath)}
                                                             className={cn(
-                                                                'group flex max-w-56 shrink-0 items-center gap-2 border-r border-border/60 px-3 py-2 text-xs transition-colors',
+                                                                'group flex shrink-0 items-center gap-2 border-r border-border/60 px-3 py-2 text-xs transition-colors',
                                                                 isActive
                                                                     ? 'bg-card text-highlight'
                                                                     : 'text-text-dim hover:bg-card/40 hover:text-highlight',
