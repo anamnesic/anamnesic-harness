@@ -155,16 +155,12 @@ export class ProjectSecurityScanner {
    */
   private async getProjectPath(projectId: string): Promise<string | null> {
     try {
-      const result = await this.db.query(`
-        SELECT metadata FROM projects 
-        WHERE id = $1
-      `, [projectId]);
-
-      if (result && result.length > 0) {
-        const metadata = result[0].metadata;
-        return metadata?.localPath || null;
-      }
-      return null;
+      const { Project } = await import('../entities/Project');
+      const repo = this.db.getRepository(Project);
+      const project = await repo.findOne({ where: { id: projectId } });
+      if (!project) return null;
+      const metadata = project.metadata as Record<string, any> | null;
+      return metadata?.localPath || metadata?.path || null;
     } catch (error) {
       this.logger.error('Failed to get project path', { error });
       return null;

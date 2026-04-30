@@ -1,7 +1,6 @@
 export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
-import { randomUUID } from 'crypto';
 import { getDb } from '@/app/api/_lib/db';
 import { ok, err } from '@/app/api/_lib/response';
 
@@ -53,95 +52,89 @@ export async function POST(req: NextRequest) {
         ? body.targetId.trim()
         : null;
 
+    // For url-based scanners, fall back to using targetName as the effective target
+    // when no explicit targetId is provided (the UI lets users paste a URL directly).
+    const effectiveTarget = targetId ?? (
+        type === 'api' || type === 'infrastructure' || type === 'dependency'
+            ? targetName
+            : null
+    );
+
+    if ((type === 'api' || type === 'infrastructure' || type === 'dependency' || type === 'code') && !effectiveTarget) {
+        return err(
+            'VALIDATION_ERROR',
+            type === 'code'
+                ? 'targetId (project) is required for code scans'
+                : 'targetId or a URL/path in targetName is required for this scan type',
+            400,
+        );
+    }
+
     try {
         const db = await getDb();
-        
+
         // For code scans, use the real project scanner
-        if (type === 'code' && targetId) {
+        if (type === 'code') {
             const { ProjectSecurityScanner } = await import('@/src/core/services/ProjectSecurityScanner');
             const { OpenAIProvider } = await import('@/src/core/providers/openai-provider');
             const { SettingsService } = await import('@/src/core/services/SettingsService');
-            
+
             const settingsService = new SettingsService(db);
             const aiSettings = await settingsService.getAISettings(workspaceId);
-            
-            // Create an OpenAI provider for security analysis using settings
+
             const aiProvider = new OpenAIProvider({
                 model: aiSettings.reasoningModel || 'gpt-4',
                 temperature: 0.3,
                 maxTokens: 4096,
             }, aiSettings.apiKey || process.env.OPENAI_API_KEY);
-            
+
             const scanner = new ProjectSecurityScanner(db, aiProvider);
-            
-            const result = await scanner.scanProject(targetId, targetName, workspaceId, {
+
+            const result = await scanner.scanProject(effectiveTarget!, targetName, workspaceId, {
                 deepScan,
                 filePatterns: body?.filePatterns || ['**/*.{ts,tsx,js,jsx,json}'],
                 excludePatterns: body?.excludePatterns || ['node_modules', '.git', 'dist'],
             });
-            
+
             return ok(result, 201);
         }
 
-        // For non-code scans, use specialized scanners
-        if (type === 'api' && targetId) {
+        const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
+        const service = new SecurityAnalysisService(db);
+
+        if (type === 'api') {
             const { ApiSecurityScanner } = await import('@/src/core/services/SecurityScanners');
-            const scanner = new ApiSecurityScanner(db);
-            const result = await scanner.scan(targetId, workspaceId);
-            const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
-            const service = new SecurityAnalysisService(db);
+            const result = await new ApiSecurityScanner(db).scan(effectiveTarget!, workspaceId);
+            result.targetName = targetName;
             const created = await service.create(result);
             return ok(created, 201);
         }
 
-        if (type === 'dependency' && targetId) {
+        if (type === 'dependency') {
             const { DependencyScanner } = await import('@/src/core/services/SecurityScanners');
-            const scanner = new DependencyScanner(db);
-            const result = await scanner.scan(targetId, workspaceId);
-            const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
-            const service = new SecurityAnalysisService(db);
+            const result = await new DependencyScanner(db).scan(effectiveTarget!, workspaceId);
+            result.targetName = targetName;
             const created = await service.create(result);
             return ok(created, 201);
         }
 
-        if (type === 'infrastructure' && targetId) {
+        if (type === 'infrastructure') {
             const { InfrastructureScanner } = await import('@/src/core/services/SecurityScanners');
-            const scanner = new InfrastructureScanner(db);
-            const result = await scanner.scan(targetId, workspaceId);
-            const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
-            const service = new SecurityAnalysisService(db);
+            const result = await new InfrastructureScanner(db).scan(effectiveTarget!, workspaceId);
+            result.targetName = targetName;
             const created = await service.create(result);
             return ok(created, 201);
         }
 
         if (type === 'system') {
             const { SystemSecurityScanner } = await import('@/src/core/services/SecurityScanners');
-            const scanner = new SystemSecurityScanner(db);
-            const result = await scanner.scan(workspaceId);
-            const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
-            const service = new SecurityAnalysisService(db);
+            const result = await new SystemSecurityScanner(db).scan(workspaceId);
+            result.targetName = targetName;
             const created = await service.create(result);
             return ok(created, 201);
         }
 
-        // Fall back to stub implementation for unknown combinations
-        const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
-        const service = new SecurityAnalysisService(db);
-
-        const start = Date.now();
-        const created = await service.create({
-            workspaceId: workspaceId || randomUUID(),
-            targetId: targetId || randomUUID(),
-            targetName,
-            type,
-            vulnerabilities: [],
-            recommendations: [],
-            scanMethod: 'baseline',
-            scannerVersion: '0.1.0',
-            durationMs: Date.now() - start,
-        });
-
-        return ok(created, 201);
+        return err('VALIDATION_ERROR', `Unsupported scan type: ${type}`, 400);
     } catch (e) {
         console.error('[security/scans POST]', e);
         const msg = e instanceof Error ? e.message : 'Failed to create scan';
