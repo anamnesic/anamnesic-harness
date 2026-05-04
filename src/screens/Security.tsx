@@ -1016,8 +1016,8 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Security Groups</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {infraAnalysisData?.securityGroups?.slice(0, 5).map((sg: any) => (
-                                    <div key={sg.id} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
+                                {infraAnalysisData?.securityGroups?.slice(0, 5).map((sg: any, index: number) => (
+                                    <div key={`sg-${sg.id}-${index}`} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                         <div className="flex items-center gap-2">
                                             <div className={cn("size-2 rounded-full", sg.status === 'secure' ? "bg-green-500" : "bg-red-500")} />
                                             <span className="text-xs font-bold text-accent">{sg.name}</span>
@@ -1036,8 +1036,8 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Políticas IAM</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {infraAnalysisData?.iamPolicies?.slice(0, 5).map((policy: any) => (
-                                    <div key={policy.id} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
+                                {infraAnalysisData?.iamPolicies?.slice(0, 5).map((policy: any, index: number) => (
+                                    <div key={`policy-${policy.id}-${index}`} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                         <div className="flex items-center gap-2">
                                             <Key className={cn("size-3", policy.status === 'secure' ? "text-green-500" : "text-red-500")} />
                                             <span className="text-xs font-bold text-accent">{policy.name}</span>
@@ -1054,8 +1054,8 @@ export function Security() {
                         <div>
                             <p className="text-[8px] font-black text-text-dim uppercase mb-2">Recursos Cloud</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {infraAnalysisData?.resources?.slice(0, 5).map((resource: any) => (
-                                    <div key={resource.id} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
+                                {infraAnalysisData?.resources?.slice(0, 5).map((resource: any, index: number) => (
+                                    <div key={`resource-${resource.id}-${index}`} className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border">
                                         <div className="flex items-center gap-2">
                                             <Cloud className="size-3 text-text-dim" />
                                             <span className="text-xs font-bold text-accent">{resource.name}</span>
@@ -2143,8 +2143,8 @@ export function Security() {
                             <div>
                                 <p className="text-[8px] font-black text-text-dim uppercase mb-2">Configurações de Recursos</p>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {detailedInfrastructureData?.configurations?.slice(0, 5).map((config: any) => (
-                                        <div key={config.resourceId} className="p-3 rounded-xl bg-bg border border-border">
+                                    {detailedInfrastructureData?.configurations?.slice(0, 5).map((config: any, index: number) => (
+                                        <div key={`${config.resourceId}-${index}`} className="p-3 rounded-xl bg-bg border border-border">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-accent">{config.setting}</span>
                                                 <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded", 
