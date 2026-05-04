@@ -1,7 +1,7 @@
-import type { AgentTool, PermissionKey, Role, ToolContext } from '../tools/types';
-import { hasPermission, requirePermission } from './permissions';
-import { validateCommand, type CommandValidationResult } from './guardrails';
-import { ToolRegistry } from '../tools/registry';
+import type { AgentTool, PermissionKey, Role, ToolContext } from '@/src/core/tools/types';
+import { hasPermission, requirePermission } from '@/src/core/policies/permissions';
+import { validateCommand, type CommandValidationResult } from '@/src/core/policies/guardrails';
+import { ToolRegistry } from '@/src/core/tools/registry';
 
 export interface ToolPermissionCheck {
   tool: string;

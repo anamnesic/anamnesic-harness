@@ -7,6 +7,7 @@
 export type Role = 'admin' | 'developer' | 'viewer' | 'agent';
 
 export type PermissionKey =
+    | 'files:read'
     | 'files:write'
     | 'files:delete'
     | 'commands:run'
@@ -18,6 +19,7 @@ export type PermissionKey =
 
 const ROLE_PERMISSIONS: Record<Role, Set<PermissionKey>> = {
     admin: new Set([
+        'files:read',
         'files:write',
         'files:delete',
         'commands:run',
@@ -28,6 +30,7 @@ const ROLE_PERMISSIONS: Record<Role, Set<PermissionKey>> = {
         'data:export',
     ]),
     developer: new Set([
+        'files:read',
         'files:write',
         'files:delete',
         'commands:run',
@@ -36,11 +39,13 @@ const ROLE_PERMISSIONS: Record<Role, Set<PermissionKey>> = {
         'data:export',
     ]),
     agent: new Set([
+        'files:read',
         'files:write',
         'commands:run',
         'agents:start',
     ]),
     viewer: new Set([
+        'files:read',
         'data:export',
     ]),
 };

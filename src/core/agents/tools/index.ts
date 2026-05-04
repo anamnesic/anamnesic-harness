@@ -1,10 +1,10 @@
 // Re-export from the new tools module
-export type { AgentTool, ToolContext, ToolResult, StreamingToolResult, PermissionKey, Role, IToolRegistry } from '../../tools/types';
-export { ToolRegistry, getToolRegistry, resetToolRegistry } from '../../tools/registry';
-export type { ToolExecutionOptions, ToolExecutionResult } from '../../services/ToolExecutionService';
-export { ToolExecutionService } from '../../services/ToolExecutionService';
-export { streamTextResponse, executeWithStreaming, streamToReadableStream } from '../../tools/streaming';
-export { mapToolToPermissions, checkToolPermissions, validateToolInput } from '../../policies/tool-permissions';
+export type { AgentTool, ToolContext, ToolResult, StreamingToolResult, PermissionKey, Role, IToolRegistry } from '@/src/core/tools/types';
+export { ToolRegistry, getToolRegistry, resetToolRegistry } from '@/src/core/tools/registry';
+export type { ToolExecutionOptions, ToolExecutionResult } from '@/src/core/services/ToolExecutionService';
+export { ToolExecutionService } from '@/src/core/services/ToolExecutionService';
+export { streamTextResponse, executeWithStreaming, streamToReadableStream } from '@/src/core/tools/streaming';
+export { mapToolToPermissions, checkToolPermissions, validateToolInput } from '@/src/core/policies/tool-permissions';
 
 // Tool builder for easy tool creation
 import type { AgentTool } from '../../tools/types';

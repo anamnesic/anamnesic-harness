@@ -8,6 +8,7 @@ export * from './workflows';
 export * from './reasoning';
 export * from './security';
 export * from './multimodal';
+export * from './runtime';
 
 // Advanced implementations are intentionally not exported here because
 // they are currently experimental and not part of the stable core build.

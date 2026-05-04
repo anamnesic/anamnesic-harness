@@ -32,6 +32,7 @@ export interface AgentTool {
 }
 
 export type PermissionKey = 
+  | 'files:read'
   | 'files:write'
   | 'files:delete'
   | 'commands:run'

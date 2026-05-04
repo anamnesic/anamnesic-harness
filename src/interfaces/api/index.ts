@@ -5,6 +5,7 @@ import { registerProjectEndpoints } from './projectEndpoints';
 import { registerResourceEndpoints } from './resourceEndpoints';
 import { registerPromptEndpoints } from './promptEndpoints';
 import { registerEventEndpoints } from './eventEndpoints';
+import { registerSessionEndpoints } from './sessionEndpoints';
 import { getEventBus } from '../../core';
 
 const server = new McpServer({
@@ -17,6 +18,7 @@ registerProjectEndpoints(server);
 registerResourceEndpoints(server);
 registerPromptEndpoints(server);
 registerEventEndpoints(server);
+registerSessionEndpoints(server);
 
 // Start watching for cross-process events and notify MCP clients
 const bus = getEventBus('mcp-server');

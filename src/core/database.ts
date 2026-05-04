@@ -41,6 +41,8 @@ async function loadEntities() {
   const { OrchestratorRunRecord } = await import('./entities/OrchestratorRun');
   const { PolicyDecisionAudit } = await import('./entities/PolicyDecisionAudit');
   const { Settings } = await import('./entities/Settings');
+  const { Session } = await import('./entities/Session');
+  const { SessionMessage } = await import('./entities/SessionMessage');
 
   return [
     User,
@@ -63,6 +65,8 @@ async function loadEntities() {
     OrchestratorRunRecord,
     PolicyDecisionAudit,
     Settings,
+    Session,
+    SessionMessage,
   ];
 }
 
