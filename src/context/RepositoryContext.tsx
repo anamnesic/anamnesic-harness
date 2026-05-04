@@ -61,8 +61,11 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
   const refreshRepositories = async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
     if (!token) {
-      setRepositories([]);
-      setRepository(null);
+      // Only clear if there's no repository currently selected
+      if (!repository) {
+        setRepositories([]);
+        setRepository(null);
+      }
       setIsLoading(false);
       return;
     }
@@ -85,8 +88,9 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
             ? response.items
             : [];
 
-      // Se não houver itens, manter os repositórios atuais (pode ser erro temporário da API)
+      // If no items returned, keep current state (might be temporary API error)
       if (!items.length) {
+        setIsLoading(false);
         return;
       }
 
@@ -99,11 +103,10 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
 
       setRepository(nextRepository);
       setSavedRepositoryId(nextRepository.id);
-     } catch {
-       // Não limpar o estado em caso de erro - manter repositório atual
-       // para evitar que a tela "suma" quando a API falha temporariamente
-       return;
-     } finally {
+    } catch {
+      // Don't clear state on error - keep current repository
+      // to avoid screens "disappearing" when API fails temporarily
+    } finally {
       setIsLoading(false);
     }
   };
