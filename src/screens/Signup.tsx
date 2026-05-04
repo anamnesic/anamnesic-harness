@@ -49,6 +49,7 @@ export function Signup({ onBackToLogin }: SignupProps) {
       if (user && token) {
         login(user, token);
         toast('Conta criada com sucesso', 'success');
+        return;
       } else {
         throw new Error('Signup response is missing user or token');
       }

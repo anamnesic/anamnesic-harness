@@ -38,7 +38,7 @@ export class AuthService {
     tokenExpiry?: string | number
   ) {
     this.userService = new UserService(db);
-    this.jwtSecret = jwtSecret || process.env.JWT_SECRET || 'dev-secret-key';
+    this.jwtSecret = jwtSecret || process.env.JWT_SECRET || 'kairos-production-secret-key-change-me';
     this.tokenExpiry = tokenExpiry || process.env.JWT_EXPIRY || 604800; // 7 days in seconds
   }
 
