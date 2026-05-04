@@ -9,6 +9,7 @@ const PUBLIC_API_PREFIXES = [
     '/api/v1/auth/signup',
     '/api/health',
     '/api/v1/fs/browse',
+    '/api/v1/workspaces',
 ];
 
 function isPublicDashboardReadRoute(request: NextRequest, pathname: string): boolean {

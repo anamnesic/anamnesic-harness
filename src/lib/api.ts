@@ -14,9 +14,69 @@ class ApiError extends Error {
     }
 }
 
+export function clearAuthTokens(): void {
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem('kairos-token');
+        localStorage.removeItem('kairos-refresh-token');
+    }
+}
+
+export function isAuthError(error: unknown): boolean {
+    return error instanceof ApiError && (error.code === 'UNAUTHORIZED' || error.code === 'INVALID_TOKEN');
+}
+
+// Token refresh in progress flag
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshToken(): Promise<string | null> {
+    // If already refreshing, wait for that promise
+    if (refreshPromise) {
+        return refreshPromise;
+    }
+
+    refreshPromise = (async () => {
+        try {
+            const currentToken = localStorage.getItem('kairos-token');
+            if (!currentToken) return null;
+
+            const res = await fetch('/api/v1/auth/refresh', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentToken}`,
+                },
+            });
+
+            if (!res.ok) {
+                // Clear invalid tokens
+                localStorage.removeItem('kairos-token');
+                localStorage.removeItem('kairos-refresh-token');
+                return null;
+            }
+
+            const data = await res.json();
+            if (data.token) {
+                localStorage.setItem('kairos-token', data.token);
+                if (data.refreshToken) {
+                    localStorage.setItem('kairos-refresh-token', data.refreshToken);
+                }
+                return data.token;
+            }
+            return null;
+        } catch {
+            return null;
+        } finally {
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
+}
+
 export async function apiFetch<T = unknown>(
     path: string,
     init?: RequestInit,
+    _retryCount = 0,
 ): Promise<T> {
     // Get workspace ID from localStorage
     const workspaceId = typeof window !== 'undefined'
@@ -32,7 +92,7 @@ export async function apiFetch<T = unknown>(
     };
 
     // Add auth token if available
-    const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
+    let token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -51,6 +111,27 @@ export async function apiFetch<T = unknown>(
         headers,
         ...init,
     });
+
+    // Handle token expiration - try to refresh once
+    if (!res.ok && res.status === 401 && _retryCount === 0) {
+        const body = await res.text().catch(() => '');
+        let parsedBody: any = {};
+        try {
+            parsedBody = JSON.parse(body);
+        } catch {
+            // ignore
+        }
+
+        const errorCode = parsedBody?.error?.code || parsedBody?.code || '';
+        if (errorCode === 'UNAUTHORIZED' || errorCode === 'INVALID_TOKEN' || errorCode === 'TOKEN_EXPIRED') {
+            const newToken = await refreshToken();
+            if (newToken) {
+                // Retry with new token
+                return apiFetch<T>(path, init, 1);
+            }
+        }
+    }
+
     if (!res.ok) {
         const raw = await res.text().catch(() => '');
 
@@ -74,6 +155,23 @@ export async function apiFetch<T = unknown>(
             message,
             details,
         });
+
+        // Clear token on auth errors and redirect to login
+        if (res.status === 401) {
+            clearAuthTokens();
+            
+            // Only redirect if we're in the browser and not already on login/signup
+            if (typeof window !== 'undefined') {
+                const currentPath = window.location.pathname;
+                if (currentPath !== '/login' && currentPath !== '/signup') {
+                    // Use setTimeout to avoid blocking
+                    setTimeout(() => {
+                        window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
+                    }, 100);
+                }
+            }
+        }
+
         throw new ApiError(
             code,
             message,
