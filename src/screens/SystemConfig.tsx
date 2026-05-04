@@ -531,3 +531,4 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         </motion.div>
     );
 }
+

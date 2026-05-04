@@ -176,3 +176,4 @@ export function Login({ onNavigateToSignup }: LoginProps) {
     </div>
   );
 }
+

@@ -446,3 +446,4 @@ export function DecisionsPanel({ projectId }: { projectId: string }) {
         </div>
     );
 }
+

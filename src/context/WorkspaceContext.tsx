@@ -106,3 +106,4 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     </WorkspaceContext.Provider>
   );
 }
+

@@ -823,3 +823,4 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     );
 }
 
+

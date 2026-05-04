@@ -96,3 +96,4 @@ export function Paginator({ total, limit, offset, onPageChange, className }: Pag
         </div>
     );
 }
+

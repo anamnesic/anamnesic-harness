@@ -883,3 +883,4 @@ export function AgentManagementScreen({ onNavigate, defaultView = 'agents', hide
         </motion.div>
     );
 }
+

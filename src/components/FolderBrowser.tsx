@@ -174,3 +174,4 @@ export function FolderBrowser({ initialPath, onSelect, onClose }: FolderBrowserP
         </motion.div>
     , document.body);
 }
+

@@ -335,3 +335,4 @@ export function McpScreen() {
         </section>
     );
 }
+

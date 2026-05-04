@@ -486,3 +486,4 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
         </motion.div>
     );
 }
+

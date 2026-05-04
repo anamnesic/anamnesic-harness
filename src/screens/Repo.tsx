@@ -114,7 +114,7 @@ export function Projects({
     const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
     const [repoSidebarTab, setRepoSidebarTab] = useState<RepoSidebarTab>('files');
     const [gitChangesCollapsed, setGitChangesCollapsed] = useState(false);
-    const [gitGraphCollapsed, setGitGraphCollapsed] = useState(false);
+    const [GitGraphCollapsed, setGitGraphCollapsed] = useState(false);
     const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
         open: false,
         folderPath: '',
@@ -1127,7 +1127,7 @@ export function Projects({
                                             className="flex w-full items-center justify-between px-3 py-2 text-left"
                                         >
                                             <div className="flex items-center gap-2">
-                                                {gitGraphCollapsed ? (
+                                                {GitGraphCollapsed ? (
                                                     <ChevronRight className="size-3.5 text-text-dim" />
                                                 ) : (
                                                     <ChevronDown className="size-3.5 text-text-dim" />
@@ -1136,7 +1136,7 @@ export function Projects({
                                                 <p className="label-caps">Graph</p>
                                             </div>
                                         </button>
-                                        {!gitGraphCollapsed ? (
+                                        {!GitGraphCollapsed ? (
                                             <div className="border-t border-border/60 px-3 py-2">
                                                 {insightsLoading ? (
                                                     <p className="text-sm text-text-dim">Carregando hist├│rico...</p>
@@ -1173,3 +1173,4 @@ export function Projects({
         </div>
     );
 }
+
