@@ -35,7 +35,7 @@ export class AgentRuntime {
 
     this.checkLimits()
 
-    const model = this.selectModel(context)
+    let model = this.selectModel(context)
     let lastError: AgentError | undefined
 
     const maxAttempts = this.config.fallback?.enabled

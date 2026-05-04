@@ -17,7 +17,7 @@ export const gitTool = {
     category: "git",
   },
 
-  handler: async (args, context): Promise<ToolResult> => {
+  handler: async (args: any, context: any): Promise<ToolResult> => {
     const command = args.command as string
     const workdir = (args.workdir as string) ?? context.workingDirectory
 

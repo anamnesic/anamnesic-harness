@@ -1,4 +1,4 @@
-import type { LSPServerConfig, LSPManager, Diagnostic, LSPServer } from "./types"
+import type { LSPServerConfig, Diagnostic, LSPServer } from "./types"
 import { spawn } from "child_process"
 
 class SimpleLSPServer implements LSPServer {

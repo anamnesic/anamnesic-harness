@@ -28,7 +28,7 @@ export const fileReadTool = {
     category: "file",
   },
 
-  handler: async (args, context): Promise<ToolResult> => {
+  handler: async (args: any, context: any): Promise<ToolResult> => {
     try {
       const filePath = sanitizePath(
         args.path as string,
@@ -75,7 +75,7 @@ export const fileWriteTool = {
     category: "file",
   },
 
-  handler: async (args, context): Promise<ToolResult> => {
+  handler: async (args: any, context: any): Promise<ToolResult> => {
     try {
       const filePath = sanitizePath(
         args.path as string,
@@ -124,7 +124,7 @@ export const fileEditTool = {
     category: "file",
   },
 
-  handler: async (args, context): Promise<ToolResult> => {
+  handler: async (args: any, context: any): Promise<ToolResult> => {
     try {
       const filePath = sanitizePath(
         args.path as string,

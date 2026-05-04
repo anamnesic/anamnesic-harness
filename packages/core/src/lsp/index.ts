@@ -3,5 +3,5 @@ export type {
   LSPServerConfig,
   Diagnostic,
   LSPServer,
-  LSPManager,
 } from "./types"
+

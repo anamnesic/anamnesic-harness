@@ -4,9 +4,9 @@ import type {
   MessageRecord,
   ContextWindow,
 } from "./types"
-import { JSONLSessionStorage } from "./jsonl-storage"
-import { SQLiteSessionMetadataStore } from "./metadata-store"
-import { LanceDBEmbeddingStore } from "./embedding-store"
+import { JSONLSessionStorage } from "./jsonl-storage.js"
+import { SQLiteSessionMetadataStore } from "./metadata-store.js"
+import { LanceDBEmbeddingStore } from "./embedding-store.js"
 import { randomUUID } from "crypto"
 
 export class SessionManager {
@@ -118,7 +118,7 @@ export class SessionManager {
   async searchSimilarMessages(
     queryEmbedding: number[],
     limit?: number,
-  ): Promise<MessageEmbedding[]> {
+  ): Promise<import("./types").MessageEmbedding[]> {
     if (!this.embeddingStore) {
       return []
     }

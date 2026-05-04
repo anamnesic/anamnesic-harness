@@ -1,18 +1,30 @@
 {
-  "name": "@monorepo/core",
-  "version": "0.0.0",
-  "private": true,
+  "name": "kairos-core",
+  "version": "0.1.0",
+  "description": "Kairos Core - AI Agent Runtime",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "bin": {
+    "kairos": "./bin/kairos.js",
+    "kairos-core": "./bin/kairos.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "lint": "eslint src",
     "test": "vitest run",
-    "test:e2e": "vitest run src/__tests__/e2e.test.ts"
+    "test:e2e": "vitest run src/__tests__/e2e.test.ts",
+    "prepublishOnly": "pnpm build"
   },
+  "keywords": ["ai", "agent", "cli", "kairos"],
+  "author": "Kairos Team",
+  "license": "MIT",
   "devDependencies": {
     "vitest": "^1.0.0",
-    "@types/ws": "^8.5.0"
+    "@types/ws": "^8.5.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
   }
 }

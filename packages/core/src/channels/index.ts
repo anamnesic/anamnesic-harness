@@ -1,4 +1,4 @@
-export { MessageGateway } from "./gateway"
+export { MessageGateway as ChannelGateway } from "./gateway"
 export type {
   ChannelPlugin,
   ChannelManifest,
@@ -6,3 +6,6 @@ export type {
   OutgoingMessage,
   User,
 } from "./types"
+
+// Re-export for backward compatibility
+export { MessageGateway } from "./gateway"

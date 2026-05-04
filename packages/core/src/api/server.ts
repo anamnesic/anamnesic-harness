@@ -1,7 +1,7 @@
 import { WebSocketServer } from "ws"
 import type { SessionManager } from "../sessions"
 import type { AgentRuntime } from "../agent"
-import type { ChannelGateway } from "../channels"
+import { MessageGateway as ChannelGateway } from "../channels"
 import type { ToolOrchestrator } from "../tools"
 import { WebSocketAPI } from "./websocket"
 

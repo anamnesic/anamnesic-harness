@@ -4,9 +4,9 @@ import type {
   ToolResult,
   ToolRegistryEntry,
 } from "./types"
-import { ToolRegistry } from "./registry"
-import type { PermissionManager } from "./types"
-import { DefaultPermissionManager } from "./permissions"
+import { ToolRegistry } from "./registry.js"
+import type { PermissionManager } from "./types.js"
+import { DefaultPermissionManager } from "./permissions.js"
 
 export class ToolOrchestrator {
   private registry: ToolRegistry

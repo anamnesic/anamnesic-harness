@@ -1,5 +1,5 @@
 import type { SessionManager } from "../sessions"
-import type { ChannelGateway } from "../channels"
+import { MessageGateway as ChannelGateway } from "../channels"
 import { randomUUID } from "crypto"
 
 export interface PairingRequest {
