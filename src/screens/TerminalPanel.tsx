@@ -542,83 +542,11 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     }, []);
 
     const ensureTerminal = useCallback(async (tab: CliTab) => {
-        const host = hostRefs.current[tab];
-        if (!host || xtermRefs.current[tab]) return;
-
-        const { Terminal: XTerm } = await import('xterm');
-
-        if (!hostRefs.current[tab] || xtermRefs.current[tab]) return;
-
-        const term = new XTerm({
-            convertEol: false,
-            cursorBlink: true,
-            cursorStyle: 'bar',
-            fontFamily: 'Consolas, "Courier New", monospace',
-            fontSize: isMaximized ? 12 : 13,
-            scrollback: 5000,
-            theme: {
-                background: '#0a0a0a',
-                foreground: '#d4d4d8',
-                cursor: '#ec5b13',
-                black: '#09090b',
-                brightBlack: '#52525b',
-                green: '#4ade80',
-                brightGreen: '#86efac',
-                red: '#f87171',
-                brightRed: '#fca5a5',
-                yellow: '#facc15',
-                blue: '#60a5fa',
-                magenta: '#c084fc',
-                cyan: '#22d3ee',
-                white: '#f4f4f5',
-            },
-        });
-
-        term.open(host);
-
-        // Patch xterm internals to prevent "dimensions" error after disposal
-        try {
-            const core = (term as any)._core;
-            if (core && core.viewport) {
-                const viewport = core.viewport;
-                // Override the dimensions getter to return safe value when terminal is disposed
-                const originalGetDimensions = viewport.get dimensions;
-                if (originalGetDimensions) {
-                    viewport.get dimensions = function (...args: any[]) {
-                        if (!core._terminal || !core._terminal.dimensions) {
-                            return undefined; // Return safe value
-                        }
-                        return originalGetDimensions.apply(this, args);
-                    };
-                }
-                // Also patch _innerRefresh if it exists
-                if (typeof viewport._innerRefresh === 'function') {
-                    const originalInnerRefresh = viewport._innerRefresh;
-                    viewport._innerRefresh = function (...args: any[]) {
-                        if (!core._terminal) return; // Skip if terminal disposed
-                        return originalInnerRefresh.apply(this, args);
-                    };
-                }
-            }
-        } catch { /* ignore if internals changed */ }
-
-        // Store ref immediately
-        xtermRefs.current[tab] = term;
-        disposedRefs.current[tab] = false;
-
-        const initial = tabStateRef.current[tab].output;
-        term.write(initial);
-        writtenLengths.current[tab] = initial.length;
-
-        term.onData((data) => {
-            void sendInputRef.current(tab, data);
-        });
-
-        // Sincroniza o tamanho do PTY com o xterm real assim que ele é medido.
-        void sendResize(tab, term.cols, term.rows);
-
-        // NO ResizeObserver - use CSS to make terminal fill container
-        // This avoids the xterm dimensions error completely
+        // Terminal temporarily disabled due to xterm.js bug
+        // "Cannot read properties of undefined (reading 'dimensions')"
+        // This is a known issue with xterm's internal Viewport handling
+        // TODO: Re-enable once xterm fixes the bug
+        return;
     }, [isMaximized, sendResize]);
 
     useEffect(() => {
