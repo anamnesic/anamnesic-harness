@@ -60,12 +60,11 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
   const refreshInProgress = useRef(false);
 
   const refreshRepositories = useCallback(async () => {
-    // Prevent concurrent calls
-    if (refreshInProgress.current) {
+    if (refreshInProgress.current || typeof window === 'undefined') {
       return;
     }
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
+    const token = localStorage.getItem('kairos-token');
     if (!token) {
       if (!repository) {
         setRepositories([]);
@@ -83,7 +82,10 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
         ? `/api/v1/projects?workspaceId=${workspace.id}`
         : '/api/v1/projects';
 
-      const response = await apiFetch<{ items?: Repository[]; data?: Repository[] }>(endpoint);
+      const response = await Promise.race([
+        apiFetch<{ items?: Repository[]; data?: Repository[] }>(endpoint),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+      ]);
 
       const items = Array.isArray(response as unknown as Repository[])
         ? (response as unknown as Repository[])
@@ -109,7 +111,7 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
       setRepository(nextRepository);
       setSavedRepositoryId(nextRepository.id);
     } catch {
-      // Keep current repository on error
+      // Keep current state on error - don't clear
     } finally {
       refreshInProgress.current = false;
       setIsLoading(false);
@@ -127,7 +129,7 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
     }
 
     refreshRepositories();
-  }, [workspace?.id, workspaceLoading, isAuthenticated, refreshRepositories]);
+  }, [workspace?.id, workspaceLoading, isAuthenticated]);
 
   const value = useMemo<RepositoryContextValue>(() => ({
     repository,
