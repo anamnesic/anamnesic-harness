@@ -56,10 +56,10 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [repository, setRepository] = useState<Repository | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Start as false to avoid stuck loading
+  const [isLoading, setIsLoading] = useState(false);
   const refreshInProgress = useRef(false);
 
-  const refreshRepositories = async () => {
+  const refreshRepositories = useCallback(async () => {
     // Prevent concurrent calls
     if (refreshInProgress.current) {
       return;
@@ -67,7 +67,6 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
     if (!token) {
-      // Only clear if there's no repository currently selected
       if (!repository) {
         setRepositories([]);
         setRepository(null);
@@ -76,23 +75,15 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    refreshInProgress.current = true;
+    setIsLoading(true);
+
     try {
-      refreshInProgress.current = true;
-      setIsLoading(true);
-
-      // Timeout after 8 seconds to prevent infinite loading
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 8000)
-      );
-
       const endpoint = workspace?.id
         ? `/api/v1/projects?workspaceId=${workspace.id}`
         : '/api/v1/projects';
 
-      const response = await Promise.race([
-        apiFetch<{ items?: Repository[]; data?: Repository[] }>(endpoint),
-        timeoutPromise,
-      ]);
+      const response = await apiFetch<{ items?: Repository[]; data?: Repository[] }>(endpoint);
 
       const items = Array.isArray(response as unknown as Repository[])
         ? (response as unknown as Repository[])
@@ -102,9 +93,9 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
             ? response.items
             : [];
 
-      // If no items returned, keep current state (might be temporary API error)
       if (!items.length) {
         setIsLoading(false);
+        refreshInProgress.current = false;
         return;
       }
 
@@ -118,13 +109,12 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
       setRepository(nextRepository);
       setSavedRepositoryId(nextRepository.id);
     } catch {
-      // Don't clear state on error - keep current repository
-      // to avoid screens "disappearing" when API fails temporarily
+      // Keep current repository on error
     } finally {
       refreshInProgress.current = false;
       setIsLoading(false);
     }
-  };
+  }, [workspace?.id, repository]);
 
   useEffect(() => {
     if (workspaceLoading || !isAuthenticated) {
@@ -137,7 +127,7 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
     }
 
     refreshRepositories();
-  }, [workspace?.id, workspaceLoading, isAuthenticated]);
+  }, [workspace?.id, workspaceLoading, isAuthenticated, refreshRepositories]);
 
   const value = useMemo<RepositoryContextValue>(() => ({
     repository,
