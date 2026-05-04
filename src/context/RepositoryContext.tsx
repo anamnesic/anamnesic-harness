@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { apiFetch } from '@/src/lib/api';
 import { useWorkspace } from './WorkspaceContext';
+import { useAuth } from './AuthContext';
 
 interface Repository {
   id: string;
@@ -52,11 +53,20 @@ export function useRepository() {
 
 export function RepositoryProvider({ children }: { children: ReactNode }) {
   const { workspace, isLoading: workspaceLoading } = useWorkspace();
+  const { isAuthenticated } = useAuth();
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [repository, setRepository] = useState<Repository | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshRepositories = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
+    if (!token) {
+      setRepositories([]);
+      setRepository(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const endpoint = workspace?.id
@@ -75,13 +85,12 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
             ? response.items
             : [];
 
-      setRepositories(items);
-
+      // Se não houver itens, manter os repositórios atuais (pode ser erro temporário da API)
       if (!items.length) {
-        setRepository(null);
-        setSavedRepositoryId(null);
         return;
       }
+
+      setRepositories(items);
 
       const savedId = getSavedRepositoryId();
       const stillExists = savedId ? items.find((item) => item.id === savedId) : null;
@@ -90,22 +99,27 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
 
       setRepository(nextRepository);
       setSavedRepositoryId(nextRepository.id);
-    } catch {
-      setRepositories([]);
-      setRepository(null);
-      setSavedRepositoryId(null);
-    } finally {
+     } catch {
+       // Não limpar o estado em caso de erro - manter repositório atual
+       // para evitar que a tela "suma" quando a API falha temporariamente
+       return;
+     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (workspaceLoading) {
+    if (workspaceLoading || !isAuthenticated) {
+      if (!workspaceLoading && !isAuthenticated) {
+        setRepositories([]);
+        setRepository(null);
+        setIsLoading(false);
+      }
       return;
     }
 
     refreshRepositories();
-  }, [workspace?.id, workspaceLoading]);
+  }, [workspace?.id, workspaceLoading, isAuthenticated]);
 
   const value = useMemo<RepositoryContextValue>(() => ({
     repository,

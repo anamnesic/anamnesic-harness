@@ -8,7 +8,7 @@ import { useToast } from '@/src/components/Toast';
 import { ApiResponse, RepositoryInsights, RepositorySelectionEmptyState, useProjectInsights, useSelectedProjectState } from './repositoryViews/shared';
 
 export function RepositoryGit() {
-    const { workspace, selectedProject } = useSelectedProjectState();
+    const { workspace, selectedProject, isLoading } = useSelectedProjectState();
     const { insights, insightsLoading, refetchInsights } = useProjectInsights(selectedProject?.id);
     const { toast } = useToast();
     const [gitBusy, setGitBusy] = useState(false);
@@ -41,6 +41,10 @@ export function RepositoryGit() {
         } finally {
             setGitBusy(false);
         }
+    }
+
+    if (isLoading) {
+        return <p className="text-sm text-text-dim py-8 text-center">Carregando repositório...</p>;
     }
 
     if (!selectedProject) {

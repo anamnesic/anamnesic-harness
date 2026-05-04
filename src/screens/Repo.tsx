@@ -88,17 +88,15 @@ export function Projects({
     const { workspace } = useWorkspace();
     const {
         repository,
+        repositories,
+        isLoading,
         setRepositoryById,
         refreshRepositories,
     } = useRepository();
-    const projectsQuery = new URLSearchParams();
-    if (workspace?.id) {
-        projectsQuery.set('workspaceId', workspace.id);
-    }
-    projectsQuery.set('refresh', String(refreshToken));
-    const projectsPath = `/api/v1/projects?${projectsQuery.toString()}`;
-    const { data, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
     const { toast } = useToast();
+
+    // Usar repositories do contexto em vez de fetch independente
+    const projects = repositories;
 
     const [internalActiveTab, setInternalActiveTab] = useState<ProjectTabId>('repository');
     const [showBrowser, setShowBrowser] = useState(false);
@@ -125,8 +123,6 @@ export function Projects({
     });
     const [terminalHeight, setTerminalHeight] = useState(288); // h-72 = 288px
     const [isResizing, setIsResizing] = useState(false);
-
-    const projects = data?.data ?? [];
     const activeTab = controlledActiveTab ?? internalActiveTab;
     const repoTextareaRef = useRef<HTMLTextAreaElement | null>(null);
     const repoLineGutterRef = useRef<HTMLDivElement | null>(null);
@@ -193,7 +189,7 @@ export function Projects({
                 localStorage.setItem('kairos-selected-repository', createdProject.id);
             }
             toast(`Reposit├│rio "${base}" importado`, 'success');
-            await Promise.all([refetch(), refreshRepositories()]);
+            await refreshRepositories();
         } catch (e: any) {
             // Check if it's a NO_GIT_REPO error with git subfolders
             if (e?.code === 'NO_GIT_REPO') {
@@ -213,7 +209,7 @@ export function Projects({
                     }
 
                     toast(`A pasta tem 1 reposit├│rio Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
-                    await Promise.all([refetch(), refreshRepositories()]);
+                    await refreshRepositories();
                     return;
                 }
 
@@ -263,7 +259,7 @@ export function Projects({
             });
 
             toast('Pasta adicionada ao reposit├│rio', 'success');
-            await Promise.all([refetch(), refreshRepositories()]);
+            await refreshRepositories();
         } catch (e: any) {
             toast(e.message ?? 'Falha ao adicionar pasta ao reposit├│rio', 'error');
         } finally {

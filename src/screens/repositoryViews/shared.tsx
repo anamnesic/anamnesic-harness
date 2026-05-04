@@ -48,17 +48,10 @@ export interface RepositoryTreeNode {
 
 export function useSelectedProjectState(refreshToken = 0) {
     const { workspace } = useWorkspace();
-    const { repository, setRepositoryById } = useRepository();
+    const { repository, repositories, isLoading, setRepositoryById, refreshRepositories } = useRepository();
 
-    const projectsQuery = new URLSearchParams();
-    if (workspace?.id) {
-        projectsQuery.set('workspaceId', workspace.id);
-    }
-    projectsQuery.set('refresh', String(refreshToken));
-
-    const projectsPath = `/api/v1/projects?${projectsQuery.toString()}`;
-    const { data, refetch } = useApi<ApiResponse<Project[]>>(projectsPath);
-    const projects = data?.data ?? [];
+    // Usar repositories do contexto em vez de fetch independente
+    const projects = repositories;
 
     useEffect(() => {
         if (!projects.length) {
@@ -74,12 +67,20 @@ export function useSelectedProjectState(refreshToken = 0) {
         ? projects.find((project) => project.id === repository.id) ?? null
         : null;
 
+    // Refrescar quando refreshToken muda
+    useEffect(() => {
+        if (refreshToken > 0) {
+            refreshRepositories();
+        }
+    }, [refreshToken, refreshRepositories]);
+
     return {
         workspace,
         repository,
         projects,
         selectedProject,
-        refetchProjects: refetch,
+        isLoading,
+        refetchProjects: refreshRepositories,
     };
 }
 

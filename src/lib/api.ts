@@ -69,11 +69,13 @@ export async function apiFetch<T = unknown>(
         const code = error.code || body?.code || 'UNKNOWN_ERROR';
         const details = error.details || body?.details || { status: res.status, statusText: res.statusText };
 
-        console.error(`[apiFetch Error] ${path} returned ${res.status}:`, {
-            code,
-            message,
-            details,
-        });
+        if (res.status !== 404) {
+            console.error(`[apiFetch Error] ${path} returned ${res.status}:`, {
+                code,
+                message,
+                details,
+            });
+        }
         throw new ApiError(
             code,
             message,

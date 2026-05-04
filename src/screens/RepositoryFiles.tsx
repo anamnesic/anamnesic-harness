@@ -11,11 +11,15 @@ import {
 } from './repositoryViews/shared';
 
 export function RepositoryFiles() {
-    const { workspace, selectedProject } = useSelectedProjectState();
+    const { workspace, selectedProject, isLoading } = useSelectedProjectState();
     const { insights, insightsLoading } = useProjectInsights(selectedProject?.id);
     const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
 
     const repositoryTree = useMemo(() => buildRepositoryTree(insights?.files ?? []), [insights?.files]);
+
+    if (isLoading) {
+        return <p className="text-sm text-text-dim py-8 text-center">Carregando repositório...</p>;
+    }
 
     if (!selectedProject) {
         return <RepositorySelectionEmptyState showWorkspaceHint={!workspace} />;
