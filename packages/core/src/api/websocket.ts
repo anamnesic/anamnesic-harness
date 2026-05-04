@@ -2,13 +2,9 @@ import type { SessionManager } from "../sessions"
 import type { AgentRuntime } from "../agent"
 import type { ChannelGateway } from "../channels"
 import type { ToolOrchestrator } from "../tools"
+import type { WebSocketMessage } from "./websocket-messages"
 
-export interface WebSocketMessage {
-  type: "token" | "tool_event" | "session_update" | "presence" | "error" | "ping" | "pong"
-  payload: unknown
-  timestamp: number
-  sessionId?: string
-}
+export { WebSocketMessage }
 
 export interface TokenPayload {
   token: string
@@ -43,7 +39,7 @@ export class WebSocketAPI {
   private agent: AgentRuntime
   private channels: ChannelGateway
   private tools: ToolOrchestrator
-  private clients: Set<WebSocket> = new Set()
+  private clients: Map<WebSocket, { userId: string; sessionId?: string }> = new Map()
 
   constructor(
     sessions: SessionManager,
@@ -57,8 +53,8 @@ export class WebSocketAPI {
     this.tools = tools
   }
 
-  handleConnection(ws: WebSocket): void {
-    this.clients.add(ws)
+  handleConnection(ws: WebSocket, userId: string = "anonymous"): void {
+    this.clients.set(ws, { userId })
 
     ws.onmessage = (event) => {
       try {
@@ -72,56 +68,118 @@ export class WebSocketAPI {
     ws.onclose = () => {
       this.clients.delete(ws)
     }
+
+    this.sendSyncData(ws)
   }
 
-  broadcastToken(payload: TokenPayload): void {
-    this.broadcast({
-      type: "token",
-      payload,
+  private async sendSyncData(ws: WebSocket): Promise<void> {
+    const sessions = await this.sessions.listSessions()
+    this.send(ws, {
+      type: "session_sync",
+      payload: {
+        sessions: sessions.map((s) => ({
+          id: s.id,
+          title: s.title,
+          messageCount: s.messageCount,
+          updatedAt: s.updatedAt,
+        })),
+      },
       timestamp: Date.now(),
-      sessionId: payload.sessionId,
     })
-  }
 
-  broadcastToolEvent(payload: ToolEventPayload): void {
-    this.broadcast({
-      type: "tool_event",
-      payload,
-      timestamp: Date.now(),
-      sessionId: payload.sessionId,
-    })
-  }
-
-  broadcastSessionUpdate(payload: SessionUpdatePayload): void {
-    this.broadcast({
-      type: "session_update",
-      payload,
-      timestamp: Date.now(),
-      sessionId: payload.sessionId,
-    })
-  }
-
-  broadcastPresence(payload: PresencePayload): void {
-    this.broadcast({
-      type: "presence",
-      payload,
+    const tools = this.tools.getRegistry().list()
+    this.send(ws, {
+      type: "tool_sync",
+      payload: {
+        tools: tools.map((t) => ({
+          name: t.name,
+          description: t.description,
+          category: t.category,
+        })),
+      },
       timestamp: Date.now(),
     })
   }
 
-  private handleMessage(ws: WebSocket, message: WebSocketMessage): void {
+  private async handleMessage(ws: WebSocket, message: WebSocketMessage): Promise<void> {
     switch (message.type) {
       case "ping":
         this.send(ws, { type: "pong", payload: {}, timestamp: Date.now() })
         break
+
+      case "chat":
+        await this.handleChat(ws, message)
+        break
+
+      case "switch_session":
+        this.handleSwitchSession(ws, message)
+        break
+
+      case "presence":
+        this.handlePresence(ws, message)
+        break
+
       default:
         this.sendError(ws, `Unknown message type: ${message.type}`)
     }
   }
 
-  private broadcast(message: WebSocketMessage): void {
+  private async handleChat(ws: WebSocket, message: WebSocketMessage): Promise<void> {
+    const payload = message.payload as any
+    const sessionId = payload.sessionId
+    const chatMessage = payload.message
+
+    const context = {
+      sessionId,
+      messages: [{ role: "user" as const, content: chatMessage, timestamp: Date.now() }],
+      metadata: {},
+      tokenCount: 0,
+    }
+
+    try {
+      const result = await this.agent.execute(context, { stream: true })
+
+      if (result.success && result.message) {
+        const tokens = result.message.content.split("")
+        for (const token of tokens) {
+          this.send(ws, {
+            type: "token",
+            payload: { token, done: false },
+            timestamp: Date.now(),
+            sessionId,
+            requestId: message.requestId,
+          })
+        }
+
+        this.send(ws, {
+          type: "token",
+          payload: { token: "", done: true },
+          timestamp: Date.now(),
+          sessionId,
+          requestId: message.requestId,
+        })
+      }
+    } catch (err) {
+      this.sendError(ws, err instanceof Error ? err.message : "Chat failed")
+    }
+  }
+
+  private handleSwitchSession(ws: WebSocket, message: WebSocketMessage): void {
+    const payload = message.payload as any
+    const clientInfo = this.clients.get(ws)
+    if (clientInfo) {
+      clientInfo.sessionId = payload.sessionId
+      this.clients.set(ws, clientInfo)
+    }
+  }
+
+  private handlePresence(ws: WebSocket, message: WebSocketMessage): void {
+    this.broadcast(message as any)
+  }
+
+  broadcast(message: WebSocketMessage): void {
     const data = JSON.stringify(message)
-    for (const client of this.clients) {
+    for (const client of this.clients.keys()) {
       if (client.readyState === WebSocket.OPEN) {
         client.send(data)
       }
@@ -137,7 +195,7 @@ export class WebSocketAPI {
   private sendError(ws: WebSocket, error: string): void {
     this.send(ws, {
       type: "error",
-      payload: { message: error },
+      payload: { code: "ERROR", message: error, recoverable: false },
       timestamp: Date.now(),
     })
   }

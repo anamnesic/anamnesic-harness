@@ -96,17 +96,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.connected = msg.connected
 		if msg.connected && m.wsClient != nil {
 			m.mode = ModeConnected
+			return m, m.wsClient.SendSyncRequest()
 		}
 	}
 
-	if m.wsClient != nil {
+	if m.wsClient != nil && m.connected {
 		select {
 		case wsMsg := <-m.wsClient.messages:
-			if wsMsg.Type == "token" {
-				return m, func() tea.Msg {
-					return tokenMsg{SessionID: "default", Token: "token"}
-				}
-			}
+			return m.handleWebSocketMessage(wsMsg)
 		default:
 		}
 	}
@@ -168,10 +165,20 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.overlays[OverlayLogs].Toggle()
 	case "ctrl+s":
 		if m.input != "" {
+			if m.wsClient != nil && m.connected {
+				sessionID := "default"
+				if len(m.sessions) > m.currentSession {
+					sessionID = m.sessions[m.currentSession].ID
+				}
+				return m, m.wsClient.SendChatMessage(m.input, sessionID)
+			}
+
 			m.messages = append(m.messages, Message{
 				Role:    "user",
 				Content: m.input,
 			})
+
+			go m.runStandaloneAgent(m.input)
 			m.input = ""
 		}
 	case "ctrl+e":
