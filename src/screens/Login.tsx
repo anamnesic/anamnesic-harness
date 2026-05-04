@@ -42,6 +42,8 @@ export function Login({ onNavigateToSignup }: LoginProps) {
     if (user && token) {
       login(user, token);
       toast('Login realizado com sucesso', 'success');
+      // Recarregar para atualizar o estado de autenticação
+      setTimeout(() => window.location.reload(), 500);
       return;
     }
 
