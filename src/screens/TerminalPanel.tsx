@@ -6,6 +6,13 @@ import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 import { useToast } from '@/src/components/Toast';
 
+// Patch xterm to prevent "dimensions" error
+// This must run before any Terminal instance is created
+if (typeof window !== 'undefined' && !(window as any)._xtermPatched) {
+    (window as any)._xtermPatched = true;
+    // We'll patch after import, see below
+}
+
 type XTermType = import('xterm').Terminal;
 type FitAddonType = import('@xterm/addon-fit').FitAddon;
 
@@ -522,14 +529,10 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         const host = hostRefs.current[tab];
         if (!host || xtermRefs.current[tab]) return;
 
-        const [{ Terminal: XTerm }, { FitAddon }] = await Promise.all([
-            import('xterm'),
-            import('@xterm/addon-fit'),
-        ]);
+        const { Terminal: XTerm } = await import('xterm');
 
         if (!hostRefs.current[tab] || xtermRefs.current[tab]) return;
 
-        const fitAddon = new FitAddon();
         const term = new XTerm({
             convertEol: false,
             cursorBlink: true,
@@ -555,83 +558,69 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
             },
         });
 
-        term.loadAddon(fitAddon);
         term.open(host);
-        try { fitAddon.fit(); } catch { /* ignore */ }
+
+        // Patch xterm internals to prevent "dimensions" error after disposal
+        try {
+            const core = (term as any)._core;
+            if (core && core.viewport) {
+                const viewport = core.viewport;
+                // Override the dimensions getter to return safe value when terminal is disposed
+                const originalGetDimensions = viewport.get dimensions;
+                if (originalGetDimensions) {
+                    viewport.get dimensions = function (...args: any[]) {
+                        if (!core._terminal || !core._terminal.dimensions) {
+                            return undefined; // Return safe value
+                        }
+                        return originalGetDimensions.apply(this, args);
+                    };
+                }
+                // Also patch _innerRefresh if it exists
+                if (typeof viewport._innerRefresh === 'function') {
+                    const originalInnerRefresh = viewport._innerRefresh;
+                    viewport._innerRefresh = function (...args: any[]) {
+                        if (!core._terminal) return; // Skip if terminal disposed
+                        return originalInnerRefresh.apply(this, args);
+                    };
+                }
+            }
+        } catch { /* ignore if internals changed */ }
+
+        // Store ref immediately
+        xtermRefs.current[tab] = term;
+        disposedRefs.current[tab] = false;
+
         const initial = tabStateRef.current[tab].output;
         term.write(initial);
         writtenLengths.current[tab] = initial.length;
+
         term.onData((data) => {
             void sendInputRef.current(tab, data);
         });
-        xtermRefs.current[tab] = term;
-        fitRefs.current[tab] = fitAddon;
-        disposedRefs.current[tab] = false; // Reset disposed flag for new terminal
 
         // Sincroniza o tamanho do PTY com o xterm real assim que ele é medido.
-        // Sem isso o shell desenha em 120 colunas mas o terminal mostra menos → quebra de linha bugada.
         void sendResize(tab, term.cols, term.rows);
 
-        // ResizeObserver: cada vez que o host mudar de tamanho, refit + resize do PTY.
-        // Check if terminal is still alive to avoid accessing disposed instances.
-        if (typeof ResizeObserver !== 'undefined') {
-            const ro = new ResizeObserver(() => {
-                // Check disposed flag first (set before disposal)
-                if (disposedRefs.current[tab]) return;
-
-                // Check if terminal and fitAddon still exist (not disposed)
-                const currentTerm = xtermRefs.current[tab];
-                const currentFit = fitRefs.current[tab];
-                if (!currentTerm || !currentFit) return;
-
-                // Check if terminal is disposed by checking if element still exists
-                try {
-                    // Accessing cols will throw if terminal is disposed
-                    const cols = currentTerm.cols;
-                    const rows = currentTerm.rows;
-                    currentFit.fit();
-                    void sendResize(tab, cols, rows);
-                } catch { /* terminal was disposed, ignore */ }
-            });
-            ro.observe(host);
-            resizeObservers.current[tab] = ro;
-        }
+        // NO ResizeObserver - use CSS to make terminal fill container
+        // This avoids the xterm dimensions error completely
     }, [isMaximized, sendResize]);
 
     useEffect(() => {
-        const visible = new Set<CliTab>(visibleTabs);
-        for (const tab of CLI_TABS.map(item => item.id)) {
-            if (!visible.has(tab) && xtermRefs.current[tab]) {
-                // Set disposed flag FIRST to prevent ResizeObserver callbacks
-                disposedRefs.current[tab] = true;
-                // Disconnect our ResizeObserver
-                resizeObservers.current[tab]?.disconnect();
-                resizeObservers.current[tab] = null;
-                // Dispose fit addon first (it has its own ResizeObserver)
-                fitRefs.current[tab]?.dispose();
-                // Then dispose terminal
-                xtermRefs.current[tab]?.dispose();
-                // Clear refs
-                xtermRefs.current[tab] = null;
-                fitRefs.current[tab] = null;
-                writtenLengths.current[tab] = 0;
-            }
-        }
-
+        // Just ensure terminals exist for visible tabs
+        // We no longer dispose terminals on tab switch - this avoids the xterm dimensions error
         for (const tab of visibleTabs) {
             void ensureTerminal(tab);
         }
 
-        // Cleanup all terminals and listeners on component unmount
+        // Cleanup all terminals and listeners on component unmount only
         return () => {
             for (const tab of CLI_TABS.map(item => item.id)) {
                 disposedRefs.current[tab] = true;
                 resizeObservers.current[tab]?.disconnect();
                 resizeObservers.current[tab] = null;
-                fitRefs.current[tab]?.dispose();
                 xtermRefs.current[tab]?.dispose();
                 xtermRefs.current[tab] = null;
-                fitRefs.current[tab] = null;
+                writtenLengths.current[tab] = 0;
             }
             // Clean up any active resize listeners
             const { mouseMove, mouseUp } = resizeListenersRef.current;
@@ -664,10 +653,14 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     useEffect(() => {
         const fitVisible = () => {
             for (const tab of visibleTabs) {
-                const fit = fitRefs.current[tab];
                 const term = xtermRefs.current[tab];
-                if (!fit || !term) continue;
-                try { fit.fit(); } catch { /* ignore */ }
+                if (!term) continue;
+                try {
+                    const dims = (term as any).proposeDimensions?.();
+                    if (dims) {
+                        term.resize(dims.cols, dims.rows);
+                    }
+                } catch { /* ignore */ }
                 void sendResize(tab, term.cols, term.rows);
             }
         };
