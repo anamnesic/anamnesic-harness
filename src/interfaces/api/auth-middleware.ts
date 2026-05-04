@@ -15,7 +15,7 @@ export interface AuthenticatedRequest {
   email?: string;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'kairos-production-secret-key-change-me';
 
 /**
  * Middleware de autenticação opcional

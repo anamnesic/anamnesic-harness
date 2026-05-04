@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'kairos-production-secret-key-change-me';
 
 const PUBLIC_API_PREFIXES = [
     '/api/v1/auth/login',
     '/api/v1/auth/signup',
     '/api/health',
     '/api/v1/fs/browse',
+    '/api/v1/workspaces',
+    '/api/v1/projects',
 ];
 
 function isPublicDashboardReadRoute(request: NextRequest, pathname: string): boolean {

@@ -35,9 +35,10 @@ export function Login({ onNavigateToSignup }: LoginProps) {
       body: JSON.stringify({ email: loginEmail, password: loginSenha }),
     });
 
-    const payload = res?.data ?? res;
-    const user = payload?.user;
-    const token = payload?.token;
+    // O servidor retorna { success: true, data: { user, token } }
+    // O apiFetch retorna o body completo, então res.data contém user e token
+    const user = res?.data?.user ?? res?.user;
+    const token = res?.data?.token ?? res?.token;
 
     if (user && token) {
       login(user, token);

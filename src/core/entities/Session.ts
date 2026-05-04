@@ -4,9 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
 } from 'typeorm';
-import { SessionMessage } from './SessionMessage';
 
 @Entity()
 export class Session {
@@ -48,9 +46,4 @@ export class Session {
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @OneToMany(() => SessionMessage, (message) => message.session, {
-    cascade: true,
-  })
-  messages: SessionMessage[];
 }

@@ -293,7 +293,6 @@ function useScreenConfig(
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const { isAuthenticated, isLoading } = useAuth();
 
   const config = useScreenConfig(
@@ -311,9 +310,7 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    return authView === 'login'
-      ? <Login onNavigateToSignup={() => setAuthView('signup')} />
-      : <Signup onNavigateToLogin={() => setAuthView('login')} />;
+    return <Login onNavigateToSignup={() => {}} />;
   }
 
   return (
