@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { apiFetch } from '@/src/lib/api';
 import { useWorkspace } from './WorkspaceContext';
 import { useAuth } from './AuthContext';
