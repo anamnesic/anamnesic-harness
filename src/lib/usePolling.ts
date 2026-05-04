@@ -13,7 +13,14 @@ export function usePolling<T>(path: string, intervalMs: number = 5000) {
             const jitter = Math.random() * 500;
             timerRef.current = setTimeout(async () => {
                 if (!document.hidden) {
-                    await result.refetch();
+                    try {
+                        await result.refetch();
+                    } catch (err) {
+                        // Log error but continue polling - don't let errors stop the polling
+                        if (process.env.NODE_ENV === 'development') {
+                            console.error('[usePolling] Polling error:', err);
+                        }
+                    }
                 }
                 schedule();
             }, intervalMs + jitter);

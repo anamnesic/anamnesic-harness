@@ -127,18 +127,26 @@ class EventStreamManager {
         }
 
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.error('[SSE] Max reconnect attempts reached');
-            return;
+            // After max attempts, use exponential backoff with a longer delay
+            // but don't give up completely - the server might come back
+            console.warn(`[SSE] Max reconnect attempts (${this.maxReconnectAttempts}) reached, using longer delay`);
         }
 
         this.reconnectAttempts++;
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
         }
+
+        // Exponential backoff: base delay * 2^(attempts-1), capped at 60 seconds
+        const delay = Math.min(
+            this.reconnectDelay * Math.pow(1.5, Math.min(this.reconnectAttempts - 1, 10)),
+            60000
+        );
+
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
             this.connect();
-        }, this.reconnectDelay);
+        }, delay);
     }
 
     private disconnect() {

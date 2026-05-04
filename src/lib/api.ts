@@ -190,23 +190,55 @@ export function useApi<T>(path: string | null) {
     const [error, setError] = useState<string | null>(null);
     const pathRef = useRef(path);
     pathRef.current = path;
+    const abortRef = useRef<AbortController | null>(null);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     const load = useCallback(async () => {
         const url = pathRef.current;
         if (!url) return;
+
+        // Cancel previous request if still in-flight
+        if (abortRef.current) {
+            abortRef.current.abort();
+        }
+
+        const abortController = new AbortController();
+        abortRef.current = abortController;
+
         setLoading(true);
         setError(null);
         try {
-            setData(await apiFetch<T>(url));
+            const result = await apiFetch<T>(url);
+            if (!abortController.signal.aborted && mountedRef.current) {
+                setData(result);
+            }
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Unknown error');
+            if (!abortController.signal.aborted && mountedRef.current) {
+                setError(e instanceof Error ? e.message : 'Unknown error');
+            }
         } finally {
-            setLoading(false);
+            if (abortRef.current === abortController) {
+                abortRef.current = null;
+            }
+            if (!abortController.signal.aborted && mountedRef.current) {
+                setLoading(false);
+            }
         }
     }, []);
 
     useEffect(() => {
         load();
+        return () => {
+            if (abortRef.current) {
+                abortRef.current.abort();
+                abortRef.current = null;
+            }
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [path]);
 

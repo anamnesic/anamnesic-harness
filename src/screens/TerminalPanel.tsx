@@ -108,6 +108,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     const fitRefs = useRef<Record<CliTab, FitAddonType | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
     const resizeObservers = useRef<Record<CliTab, ResizeObserver | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
     const writtenLengths = useRef<Record<CliTab, number>>({ shell: 0, claude: 0, gemini: 0, copilot: 0, codex: 0, opencode: 0 });
+    const disposedRefs = useRef<Record<CliTab, boolean>>({ shell: false, claude: false, gemini: false, copilot: false, codex: false, opencode: false });
     const sseAborts = useRef<Record<CliTab, AbortController | undefined>>({ shell: undefined, claude: undefined, gemini: undefined, copilot: undefined, codex: undefined, opencode: undefined });
     const promptAborts = useRef<Record<CliTab, AbortController | undefined>>({ shell: undefined, claude: undefined, gemini: undefined, copilot: undefined, codex: undefined, opencode: undefined });
 
@@ -412,6 +413,8 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         });
     }, [repoPath, isMaximized, killSession, connect, onHeaderStateChange]);
 
+    const resizeListenersRef = useRef<{ mouseMove: ((e: MouseEvent) => void) | null; mouseUp: ((e: MouseEvent) => void) | null }>({ mouseMove: null, mouseUp: null });
+    
     const handleResizeStart = useCallback((tab: CliTab, direction: 'horizontal' | 'vertical' | 'diagonal', event: React.MouseEvent) => {
         setResizingTab(tab);
         const startLayout = { ...gridLayout[tab] };
@@ -479,7 +482,11 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
             document.body.style.userSelect = '';
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
+            resizeListenersRef.current = { mouseMove: null, mouseUp: null };
         };
+        
+        // Store references for cleanup on unmount
+        resizeListenersRef.current = { mouseMove: handleMouseMove, mouseUp: handleMouseUp };
         
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
@@ -544,16 +551,32 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         });
         xtermRefs.current[tab] = term;
         fitRefs.current[tab] = fitAddon;
+        disposedRefs.current[tab] = false; // Reset disposed flag for new terminal
 
         // Sincroniza o tamanho do PTY com o xterm real assim que ele é medido.
         // Sem isso o shell desenha em 120 colunas mas o terminal mostra menos → quebra de linha bugada.
         void sendResize(tab, term.cols, term.rows);
 
         // ResizeObserver: cada vez que o host mudar de tamanho, refit + resize do PTY.
+        // Check if terminal is still alive to avoid accessing disposed instances.
         if (typeof ResizeObserver !== 'undefined') {
             const ro = new ResizeObserver(() => {
-                try { fitAddon.fit(); } catch { /* ignore */ }
-                void sendResize(tab, term.cols, term.rows);
+                // Check disposed flag first (set before disposal)
+                if (disposedRefs.current[tab]) return;
+
+                // Check if terminal and fitAddon still exist (not disposed)
+                const currentTerm = xtermRefs.current[tab];
+                const currentFit = fitRefs.current[tab];
+                if (!currentTerm || !currentFit) return;
+
+                // Check if terminal is disposed by checking if element still exists
+                try {
+                    // Accessing cols will throw if terminal is disposed
+                    const cols = currentTerm.cols;
+                    const rows = currentTerm.rows;
+                    currentFit.fit();
+                    void sendResize(tab, cols, rows);
+                } catch { /* terminal was disposed, ignore */ }
             });
             ro.observe(host);
             resizeObservers.current[tab] = ro;
@@ -564,6 +587,8 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         const visible = new Set<CliTab>(visibleTabs);
         for (const tab of CLI_TABS.map(item => item.id)) {
             if (!visible.has(tab) && xtermRefs.current[tab]) {
+                // Set disposed flag FIRST to prevent ResizeObserver callbacks
+                disposedRefs.current[tab] = true;
                 resizeObservers.current[tab]?.disconnect();
                 delete resizeObservers.current[tab];
                 xtermRefs.current[tab]?.dispose();
@@ -576,6 +601,21 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
         for (const tab of visibleTabs) {
             void ensureTerminal(tab);
         }
+
+        // Cleanup all terminals and listeners on component unmount
+        return () => {
+            for (const tab of CLI_TABS.map(item => item.id)) {
+                disposedRefs.current[tab] = true;
+                resizeObservers.current[tab]?.disconnect();
+                xtermRefs.current[tab]?.dispose();
+            }
+            // Clean up any active resize listeners
+            const { mouseMove, mouseUp } = resizeListenersRef.current;
+            if (mouseMove) document.removeEventListener('mousemove', mouseMove);
+            if (mouseUp) document.removeEventListener('mouseup', mouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
     }, [visibleTabs, ensureTerminal]);
 
     useEffect(() => {
