@@ -1,9 +1,6 @@
 package ui
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/charmbracelet/bubbletea"
 )
 

@@ -4,6 +4,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/charmbracelet/bubbletea"
 )
 
 func (m *Model) openExternalEditor() tea.Cmd {

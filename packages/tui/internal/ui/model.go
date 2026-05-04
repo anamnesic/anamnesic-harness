@@ -25,7 +25,7 @@ type Model struct {
 	cursorMode         cursorMode
 	showHelp           bool
 	theme              Theme
-	overlays           map[OverlayType]Overlay
+	overlays           map[OverlayType]*Overlay
 	streamingSessions  map[string]*StreamingSession
 	currentPermission  *PermissionRequest
 	wsClient           *WebSocketClient
@@ -38,7 +38,7 @@ func InitialModel() Model {
 		messages:       []Message{},
 		cursorMode:     cursorBlink,
 		theme:          DefaultTheme(),
-		overlays: map[OverlayType]Overlay{
+		overlays: map[OverlayType]*Overlay{
 			OverlayModelPicker:   NewOverlay(OverlayModelPicker),
 			OverlayAgentSwitcher: NewOverlay(OverlayAgentSwitcher),
 			OverlayPalette:       NewOverlay(OverlayPalette),
@@ -65,16 +65,6 @@ type Message struct {
 	Role      string
 	Content   string
 	Timestamp int64
-}
-
-func InitialModel() Model {
-	return Model{
-		mode:       ModeStandalone,
-		sessions:   []Session{},
-		messages:   []Message{},
-		cursorMode: cursorBlink,
-		theme:      DefaultTheme(),
-	}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -107,7 +97,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 		}
 	}
-}
 	return m, nil
 }
 
@@ -170,7 +159,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if len(m.sessions) > m.currentSession {
 					sessionID = m.sessions[m.currentSession].ID
 				}
-				return m, m.wsClient.SendChatMessage(m.input, sessionID)
+				return m, m.wsClient.SendMessage(m.input, sessionID)
 			}
 
 			m.messages = append(m.messages, Message{
@@ -206,7 +195,7 @@ func (m Model) handleOverlayKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		for k := range m.overlays {
-			m.overlays[k] = Overlay{Type: m.overlays[k].Type, Visible: false}
+			m.overlays[k] = &Overlay{Type: m.overlays[k].Type, Visible: false}
 		}
 	}
 	return m, nil
@@ -239,21 +228,6 @@ func (m Model) renderSidebar() string {
 	}
 
 	return style.Render("Sessions\n" + sessions)
-}
-
-func (m Model) renderMain() string {
-	style := lipgloss.NewStyle().
-		Width(m.width - 32).
-		Height(m.height - 6).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(m.theme.Border))
-
-	var content string
-	for _, msg := range m.messages {
-		content += msg.Role + ": " + msg.Content + "\n"
-	}
-
-	return style.Render(content)
 }
 
 func (m Model) renderInput() string {

@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
 
 func (m *Model) renderMarkdown(content string) string {
@@ -14,9 +16,9 @@ func (m *Model) renderMarkdown(content string) string {
 	}
 
 	r, _ := glamour.NewTermRenderer(
-		glamour.ColorProfile(glamour.ANSI256),
-		glamour.GlamourStyle(glamourStyle),
-		glamour.Width(m.width-34),
+		glamour.WithColorProfile(termenv.ANSI256),
+		glamour.WithStylePath(glamourStyle),
+		glamour.WithWordWrap(m.width-34),
 	)
 
 	out, err := r.Render(content)

@@ -1,5 +1,9 @@
 package ui
 
+import (
+	"github.com/charmbracelet/lipgloss"
+)
+
 type Agent struct {
 	ID          string
 	Name        string

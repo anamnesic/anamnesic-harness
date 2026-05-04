@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -23,8 +22,8 @@ type Overlay struct {
 	Index   int
 }
 
-func NewOverlay(overlayType OverlayType) Overlay {
-	return Overlay{
+func NewOverlay(overlayType OverlayType) *Overlay {
+	return &Overlay{
 		Type:    overlayType,
 		Visible: false,
 		Index:   0,
@@ -38,7 +37,7 @@ func (o *Overlay) Toggle() {
 	}
 }
 
-func (m *Model) renderOverlay(overlay Overlay, width, height int) string {
+func (m *Model) renderOverlay(overlay *Overlay, width, height int) string {
 	if !overlay.Visible {
 		return ""
 	}

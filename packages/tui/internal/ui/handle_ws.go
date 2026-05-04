@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/charmbracelet/bubbletea"
