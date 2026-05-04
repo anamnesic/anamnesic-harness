@@ -8,6 +8,8 @@ import (
 	"github.com/charmbracelet/bubbletea"
 )
 
+var _ = time.Sleep
+
 type StreamingSession struct {
 	SessionID string
 	Buffer    string
@@ -52,6 +54,14 @@ func (m *Model) streamTokens(sessionID string, content string) {
 	}
 
 	ss.Done = true
+
+	if m.wsClient != nil && m.wsClient.connected {
+		m.messages = append(m.messages, Message{
+			Role:    "assistant",
+			Content: ss.Buffer,
+		})
+		delete(m.streamingSessions, sessionID)
+	}
 }
 
 type tokenMsg struct {

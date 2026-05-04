@@ -28,6 +28,7 @@ type Model struct {
 	overlays           map[OverlayType]Overlay
 	streamingSessions  map[string]*StreamingSession
 	currentPermission  *PermissionRequest
+	wsClient           *WebSocketClient
 }
 
 func InitialModel() Model {
@@ -39,6 +40,7 @@ func InitialModel() Model {
 		theme:          DefaultTheme(),
 		overlays: map[OverlayType]Overlay{
 			OverlayModelPicker:   NewOverlay(OverlayModelPicker),
+			OverlayAgentSwitcher: NewOverlay(OverlayAgentSwitcher),
 			OverlayPalette:       NewOverlay(OverlayPalette),
 			OverlayLogs:          NewOverlay(OverlayLogs),
 			OverlayTheme:         NewOverlay(OverlayTheme),
@@ -88,7 +90,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.ready = true
 		return m, nil
+	case tokenMsg:
+		return m.handleStreaming(msg)
+	case connectedMsg:
+		m.connected = msg.connected
+		if msg.connected && m.wsClient != nil {
+			m.mode = ModeConnected
+		}
 	}
+
+	if m.wsClient != nil {
+		select {
+		case wsMsg := <-m.wsClient.messages:
+			if wsMsg.Type == "token" {
+				return m, func() tea.Msg {
+					return tokenMsg{SessionID: "default", Token: "token"}
+				}
+			}
+		default:
+		}
+	}
+}
 	return m, nil
 }
 
@@ -153,6 +175,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.input = ""
 		}
 	case "ctrl+e":
+		return m, m.openExternalEditor()
 	case "i":
 	case "esc":
 		m.showHelp = !m.showHelp

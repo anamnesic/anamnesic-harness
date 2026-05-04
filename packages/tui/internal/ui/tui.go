@@ -26,7 +26,7 @@ func RunWithMode(mode string, wsURL string) error {
 	}
 
 	if wsURL != "" {
-		model.connected = true
+		model.wsClient = NewWebSocketClient(wsURL)
 	}
 
 	p := tea.NewProgram(

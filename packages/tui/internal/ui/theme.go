@@ -82,6 +82,45 @@ func MonokaiTheme() Theme {
 	}
 }
 
+func DefaultThemeLight() Theme {
+	return Theme{
+		Name:          "kairos-light",
+		HeaderBg:      "230",
+		HeaderFg:      "62",
+		Border:        "240",
+		ActiveSession: "86",
+		HelpFg:        "244",
+		Dark:          false,
+	}
+}
+
+func CatppuccinThemeLight() Theme {
+	return Theme{
+		Name:          "catppuccin-light",
+		HeaderBg:      "237",
+		HeaderFg:      "117",
+		Border:        "66",
+		ActiveSession: "117",
+		HelpFg:        "245",
+		Dark:          false,
+	}
+}
+
+func GetThemeWithVariant(name string, dark bool) Theme {
+	theme := GetTheme(name)
+	if !dark {
+		switch name {
+		case "kairos":
+			return DefaultThemeLight()
+		case "catppuccin":
+			return CatppuccinThemeLight()
+		}
+	}
+	theme.Dark = dark
+	return theme
+}
+
+
 func GetTheme(name string) Theme {
 	switch name {
 	case "catppuccin":
