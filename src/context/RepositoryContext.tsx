@@ -56,9 +56,15 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [repository, setRepository] = useState<Repository | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Start as false to avoid stuck loading
+  const refreshInProgress = useRef(false);
 
   const refreshRepositories = async () => {
+    // Prevent concurrent calls
+    if (refreshInProgress.current) {
+      return;
+    }
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
     if (!token) {
       // Only clear if there's no repository currently selected
@@ -71,6 +77,7 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      refreshInProgress.current = true;
       setIsLoading(true);
       const endpoint = workspace?.id
         ? `/api/v1/projects?workspaceId=${workspace.id}`
@@ -107,6 +114,7 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
       // Don't clear state on error - keep current repository
       // to avoid screens "disappearing" when API fails temporarily
     } finally {
+      refreshInProgress.current = false;
       setIsLoading(false);
     }
   };
