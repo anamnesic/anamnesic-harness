@@ -124,6 +124,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.0",
+    "@lancedb/lancedb": "^0.27.2",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@xterm/addon-fit": "^0.11.0",
     "adm-zip": "^0.5.17",
