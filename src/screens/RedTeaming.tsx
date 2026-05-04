@@ -22,7 +22,7 @@ interface SimulationResult {
     confidenceScore: number;
     impact: {
         dataAccess: boolean;
-        codeExecução: boolean;
+        codeExecution: boolean;
         systemCompromise: boolean;
         escalation: boolean;
     };
@@ -31,7 +31,7 @@ interface SimulationResult {
 interface AttackSimulation {
     simulationId: string;
     vulnerabilityId: string;
-    attackTipo: string;
+    attackType: string;
     status: 'pending' | 'running' | 'succeeded' | 'failed' | 'blocked';
     startTime: number;
     endTime?: number;
@@ -47,12 +47,17 @@ interface AttackSimulation {
 }
 
 export function RedTeaming() {
-    const { data: response, loading, refetch } = useApi<{ data?: AttackSimulation[] } | AttackSimulation[]>('/api/v1/security/simulations');
+    const { data: response, loading, error, refetch } = useApi<{ data?: AttackSimulation[] } | AttackSimulation[]>('/api/v1/security/simulations');
     const { toast } = useToast();
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     // Handle both direct array and wrapped response formats
     const simulations = Array.isArray(response) ? response : (response as any)?.data || [];
+
+    // Show error if present
+    if (error) {
+        toast({ message: `Erro ao carregar simulações: ${error}`, type: 'error' });
+    }
     const selected = simulations?.find((s: AttackSimulation) => s.simulationId === selectedId);
 
     if (loading) {
@@ -60,6 +65,25 @@ export function RedTeaming() {
             <div className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[0, 1].map(i => <SkeletonCard key={i} />)}
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="p-6 space-y-6">
+                <div className="bento-card text-center py-12">
+                    <XCircle className="size-8 text-red-500 mx-auto mb-3" />
+                    <p className="text-xs text-text-dim mb-4">Erro ao carregar simulações</p>
+                    <p className="text-[10px] text-red-400 mb-4">{error}</p>
+                    <button
+                        onClick={() => refetch()}
+                        className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 text-xs font-bold text-accent hover:border-red-500/40 transition-colors mx-auto"
+                    >
+                        <Activity className="size-3.5" />
+                        Tentar novamente
+                    </button>
                 </div>
             </div>
         );
@@ -107,7 +131,7 @@ export function RedTeaming() {
                             >
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[10px] font-black uppercase tracking-tighter text-red-500/80">
-                                        {sim.attackTipo}
+                                        {sim.attackType}
                                     </span>
                                     <div className={cn(
                                         "size-2 rounded-full",
@@ -149,7 +173,7 @@ export function RedTeaming() {
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <p className="label-caps text-red-500">Simulation Report</p>
-                                            <h3 className="text-2xl font-black tracking-tighter uppercase">{selected.attackTipo}</h3>
+                                            <h3 className="text-2xl font-black tracking-tighter uppercase">{selected.attackType}</h3>
                                         </div>
                                         <div className={cn(
                                             "px-4 py-1.5 rounded-xl border font-black uppercase tracking-widest text-xs",
