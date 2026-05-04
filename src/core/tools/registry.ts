@@ -1,5 +1,5 @@
 import type { AgentTool, IToolRegistry, PermissionKey, Role } from './types';
-import { hasPermission } from '@/src/core/policies/permissions';
+import { hasPermission } from '../../policies/permissions';
 
 export class ToolRegistry implements IToolRegistry {
   private tools = new Map<string, AgentTool>();

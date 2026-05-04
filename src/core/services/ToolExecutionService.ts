@@ -1,8 +1,8 @@
 import type { AgentTool, ToolContext, ToolResult, Role, StreamingToolResult } from '../tools/types';
 import { getToolRegistry, IToolRegistry } from '../tools/registry';
-import { hasPermission, requirePermission } from '@/src/core/policies/permissions';
-import { validateCommand, type CommandValidationResult } from '@/src/core/policies/guardrails';
-import { ApprovalRequest, ApprovalStatus } from '@/src/core/policies/approvalFlow';
+import { hasPermission, requirePermission } from '../../policies/permissions';
+import { validateCommand, type CommandValidationResult } from '../../policies/guardrails';
+import { ApprovalRequest, ApprovalStatus } from '../../policies/approvalFlow';
 
 export interface ToolExecutionOptions {
   role?: Role;
