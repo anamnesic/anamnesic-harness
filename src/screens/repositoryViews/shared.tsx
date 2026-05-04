@@ -53,12 +53,9 @@ export function useSelectedProjectState(refreshToken = 0) {
     // Usar repositories do contexto em vez de fetch independente
     const projects = repositories;
 
+    // Auto-select first repo if current selection is invalid (only if no repo selected)
     useEffect(() => {
-        if (!projects.length) {
-            return;
-        }
-
-        if (!repository || !projects.some((project) => project.id === repository.id)) {
+        if (projects.length > 0 && !repository) {
             setRepositoryById(projects[0].id);
         }
     }, [projects, repository, setRepositoryById]);
