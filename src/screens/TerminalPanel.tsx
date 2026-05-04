@@ -6,15 +6,31 @@ import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 import { useToast } from '@/src/components/Toast';
 
-// Patch xterm to prevent "dimensions" error
-// This must run before any Terminal instance is created
-if (typeof window !== 'undefined' && !(window as any)._xtermPatched) {
-    (window as any)._xtermPatched = true;
-    // We'll patch after import, see below
-}
-
 type XTermType = import('xterm').Terminal;
 type FitAddonType = import('@xterm/addon-fit').FitAddon;
+
+// Global error suppression for xterm dimensions error
+// This runs once when the module is loaded
+if (typeof window !== 'undefined') {
+    const originalError = window.onerror;
+    window.onerror = function (message, source, lineno, columnNumber, error) {
+        const msg = message?.toString() || '';
+        if (msg.includes("dimensions'") || msg.includes('dimensions')) {
+            console.debug('[TerminalPanel] Suppressed xterm dimensions error');
+            return true; // Prevent default handler
+        }
+        return originalError?.call(this, message, source, lineno, columnNumber, error);
+    };
+
+    // Also catch unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+        const msg = event.reason?.message || event.reason?.toString() || '';
+        if (msg.includes("dimensions'") || msg.includes('dimensions')) {
+            event.preventDefault();
+            console.debug('[TerminalPanel] Suppressed xterm dimensions promise rejection');
+        }
+    });
+}
 
 function getAuthHeaders(extra?: Record<string, string>): Record<string, string> {
     const headers: Record<string, string> = { ...(extra ?? {}) };
