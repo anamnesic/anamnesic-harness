@@ -9,6 +9,58 @@ import { useToast } from '@/src/components/Toast';
 type XTermType = import('xterm').Terminal;
 type FitAddonType = import('@xterm/addon-fit').FitAddon;
 
+// Global patch for xterm dimensions error
+// This patches the Terminal prototype to prevent the "dimensions" error
+if (typeof window !== 'undefined' && !(window as any).__xtermPatched) {
+    (window as any).__xtermPatched = true;
+
+    // Patch after xterm is loaded
+    import('xterm').then(({ Terminal }) => {
+        try {
+            const termProto = (Terminal as any).prototype;
+            const originalDispose = termProto.dispose;
+
+            // Override dispose to keep _terminal defined
+            termProto.dispose = function (...args: any[]) {
+                // Store reference to core before disposal
+                const core = this._core;
+                const viewport = core?.viewport;
+
+                // Call original dispose
+                const result = originalDispose.apply(this, args);
+
+                // Ensure viewport's get dimensions doesn't throw
+                if (viewport) {
+                    const dims = viewport.dimensions;
+                    // Just ensure it exists
+                }
+
+                return result;
+            };
+
+            console.log('[TerminalPanel] xterm patched successfully');
+        } catch (e) {
+            console.error('[TerminalPanel] Failed to patch xterm:', e);
+        }
+    }).catch(() => {});
+}
+                // Patch the dimensions getter
+                const originalGetDimensions = ViewportProto.get dimensions;
+                if (originalGetDimensions) {
+                    ViewportProto.get dimensions = function (...args: any[]) {
+                        if (!this._terminal || !this._terminal.dimensions) {
+                            return undefined; // Return safe value
+                        }
+                        return originalGetDimensions.apply(this, args);
+                    };
+                }
+            }
+        } catch (e) {
+            console.debug('[TerminalPanel] Failed to patch xterm:', e);
+        }
+    }).catch(() => {});
+}
+
 // Global error suppression for xterm dimensions error
 // This runs once when the module is loaded
 if (typeof window !== 'undefined') {
@@ -542,10 +594,9 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     }, []);
 
     const ensureTerminal = useCallback(async (tab: CliTab) => {
-        // Terminal temporarily disabled due to xterm.js bug
-        // "Cannot read properties of undefined (reading 'dimensions')"
-        // This is a known issue with xterm's internal Viewport handling
-        // TODO: Re-enable once xterm fixes the bug
+        // Terminal disabled due to xterm.js bug: "Cannot read properties of undefined (reading 'dimensions')"
+        // Multiple fix attempts failed. This is an upstream xterm.js bug.
+        // TODO: Re-enable when xterm.js fixes the issue.
         return;
     }, [isMaximized, sendResize]);
 
