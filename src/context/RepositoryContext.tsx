@@ -79,13 +79,20 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
     try {
       refreshInProgress.current = true;
       setIsLoading(true);
+
+      // Timeout after 8 seconds to prevent infinite loading
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 8000)
+      );
+
       const endpoint = workspace?.id
         ? `/api/v1/projects?workspaceId=${workspace.id}`
         : '/api/v1/projects';
 
-      const response = await apiFetch<{ items?: Repository[]; data?: Repository[] }>(
-        endpoint,
-      );
+      const response = await Promise.race([
+        apiFetch<{ items?: Repository[]; data?: Repository[] }>(endpoint),
+        timeoutPromise,
+      ]);
 
       const items = Array.isArray(response as unknown as Repository[])
         ? (response as unknown as Repository[])
