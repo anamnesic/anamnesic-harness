@@ -19,7 +19,22 @@ var tuiCmd = &cobra.Command{
 	Use:   "tui",
 	Short: "Launch the TUI",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ui.Run(); err != nil {
+		cfg, err := config.Load()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+		}
+
+		mode := "standalone"
+		wsURL := ""
+		if cfg != nil {
+			mode = cfg.Mode
+			if cfg.WebsocketURL != "" {
+				wsURL = cfg.WebsocketURL
+				mode = "connected"
+			}
+		}
+
+		if err := ui.RunWithMode(mode, wsURL); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -34,8 +49,7 @@ var runCmd = &cobra.Command{
 		if prompt == "" && len(args) > 0 {
 			prompt = args[0]
 		}
-		fmt.Println("Running prompt:", prompt)
-		fmt.Println("Response: Hello from Kairos TUI (non-interactive mode)")
+		ui.RunNonInteractive(prompt)
 	},
 }
 
