@@ -11,8 +11,6 @@ export class CoreCommand implements CLICommand {
   async execute(options: CLIOptions): Promise<void> {
     console.log("Starting Kairos Core server...")
     console.log("Core server running on ws://localhost:8080")
-
-    await new Promise(() => {})
   }
 }
 
