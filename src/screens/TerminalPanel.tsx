@@ -69,6 +69,21 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     const { repository } = useRepository();
     const { toast } = useToast();
     const [isMaximized, setIsMaximized] = useState(false);
+
+    // Suppress xterm.js ResizeObserver errors that occur after terminal disposal
+    useEffect(() => {
+        const handler = (event: ErrorEvent) => {
+            const message = event.message || event.error?.message || '';
+            if (message.includes("Cannot read properties of undefined (reading 'dimensions')") ||
+                message.includes("Cannot read properties of undefined (reading 'dimensions')")) {
+                event.preventDefault();
+                console.debug('[TerminalPanel] Suppressed xterm dimensions error (terminal disposed)');
+                return false;
+            }
+        };
+        window.addEventListener('error', handler);
+        return () => window.removeEventListener('error', handler);
+    }, []);
     const [activeTab, setActiveTab] = useState<CliTab>('shell');
     const [tabState, setTabState] = useState<TabStateMap>(INITIAL);
     
@@ -589,11 +604,16 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
             if (!visible.has(tab) && xtermRefs.current[tab]) {
                 // Set disposed flag FIRST to prevent ResizeObserver callbacks
                 disposedRefs.current[tab] = true;
+                // Disconnect our ResizeObserver
                 resizeObservers.current[tab]?.disconnect();
-                delete resizeObservers.current[tab];
+                resizeObservers.current[tab] = null;
+                // Dispose fit addon first (it has its own ResizeObserver)
+                fitRefs.current[tab]?.dispose();
+                // Then dispose terminal
                 xtermRefs.current[tab]?.dispose();
-                delete xtermRefs.current[tab];
-                delete fitRefs.current[tab];
+                // Clear refs
+                xtermRefs.current[tab] = null;
+                fitRefs.current[tab] = null;
                 writtenLengths.current[tab] = 0;
             }
         }
@@ -607,7 +627,11 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
             for (const tab of CLI_TABS.map(item => item.id)) {
                 disposedRefs.current[tab] = true;
                 resizeObservers.current[tab]?.disconnect();
+                resizeObservers.current[tab] = null;
+                fitRefs.current[tab]?.dispose();
                 xtermRefs.current[tab]?.dispose();
+                xtermRefs.current[tab] = null;
+                fitRefs.current[tab] = null;
             }
             // Clean up any active resize listeners
             const { mouseMove, mouseUp } = resizeListenersRef.current;
