@@ -4,7 +4,7 @@ import { exportProject, getExportFilename, ExportFormat } from '../../../core';
 import fs from 'fs';
 import path from 'path';
 
-const VALID_FORMATS: ExportFormat[] = ['json', 'markdown', 'plain', 'copilot', 'claude', 'cursor'];
+const VALID_FORMATS: ExportFormat[] = ['json', 'markdown', 'plain', 'copilot', 'kairos', 'cursor'];
 
 export function registerExportCommands(program: Command) {
   program
@@ -47,8 +47,8 @@ export function registerExportCommands(program: Command) {
       fs.writeFileSync(fullPath, content, 'utf-8');
       console.log(`\nExported to: ${fullPath}`);
 
-      if (['copilot', 'claude', 'cursor'].includes(format)) {
-        const tool = format === 'copilot' ? 'GitHub Copilot' : format === 'claude' ? 'Claude' : 'Cursor';
+      if (['copilot', 'kairos', 'cursor'].includes(format)) {
+        const tool = format === 'copilot' ? 'GitHub Copilot' : format === 'kairos' ? 'kairos' : 'Cursor';
         console.log(`  ${tool} will automatically pick up this file.\n`);
       }
     });
@@ -67,7 +67,7 @@ export function registerExportCommands(program: Command) {
         process.exit(1);
       }
 
-      const targets: ExportFormat[] = ['copilot', 'claude', 'cursor'];
+      const targets: ExportFormat[] = ['copilot', 'kairos', 'cursor'];
 
       console.log(`\nSyncing context for: ${project.name}\n`);
 

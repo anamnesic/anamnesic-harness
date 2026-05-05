@@ -1,7 +1,7 @@
 /**
  * AI Provider Interface
  * 
- * Abstração para diferentes provedores de IA (Claude, OpenAI, etc)
+ * Abstração para diferentes provedores de IA (kairos, OpenAI, etc)
  * Permite trocar entre modelos sem alterar a lógica de negócio
  */
 

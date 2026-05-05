@@ -3,7 +3,7 @@ export * from './AIProvider';
 export * from './CopilotProvider';
 export * from './OllamaProvider';
 export * from './ai-provider';
-export { ClaudeAIProvider } from './claude-provider';
+export { kairosAIProvider } from './kairos-provider';
 export { OpenAIProvider } from './openai-provider';
 
 // Multi-provider client (Google, Anthropic, OpenAI, Minimax, any OpenAI-compatible)
@@ -27,17 +27,17 @@ import { CopilotProvider } from './CopilotProvider';
 import { OllamaProvider } from './OllamaProvider';
 import { aiProviderRegistry } from './AIProvider';
 import { AIProviderFactory } from './ai-provider';
-import { ClaudeAIProvider } from './claude-provider';
+import { kairosAIProvider } from './kairos-provider';
 import { OpenAIProvider } from './openai-provider';
 import { MockAIProvider } from './ai-provider';
 
 /**
  * Initialize and register all available providers
- * Includes both free providers (Copilot, Ollama, Mock) and paid (Claude, OpenAI)
+ * Includes both free providers (Copilot, Ollama, Mock) and paid (kairos, OpenAI)
  */
 export async function initializeProviders(options: {
   ollamaBaseUrl?: string;
-  claudeApiKey?: string;
+  kairosApiKey?: string;
   openaiApiKey?: string;
 } = {}): Promise<void> {
   // Always register free providers
@@ -48,16 +48,16 @@ export async function initializeProviders(options: {
   const ollama = new OllamaProvider(options.ollamaBaseUrl);
   aiProviderRegistry.register(ollama);
 
-  // Register Claude if API key provided
-  if (options.claudeApiKey || process.env.ANTHROPIC_API_KEY) {
+  // Register kairos if API key provided
+  if (options.kairosApiKey || process.env.ANTHROPIC_API_KEY) {
     try {
-      const claude = new ClaudeAIProvider(
-        { model: 'claude-3-opus-20250219', temperature: 1 },
-        options.claudeApiKey
+      const kairos = new kairosAIProvider(
+        { model: 'kairos-3-apple-20250219', temperature: 1 },
+        options.kairosApiKey
       );
-      AIProviderFactory.register('claude', () => claude);
+      AIProviderFactory.register('kairos', () => kairos);
     } catch (e) {
-      console.warn('Claude provider not available:', e);
+      console.warn('kairos provider not available:', e);
     }
   }
 
@@ -81,7 +81,7 @@ export async function initializeProviders(options: {
 /**
  * Get provider based on preference and availability
  */
-export async function getAIProvider(preference?: 'best' | 'free' | 'paid' | 'claude' | 'openai' | 'local') {
+export async function getAIProvider(preference?: 'best' | 'free' | 'paid' | 'kairos' | 'openai' | 'local') {
   const providers = await aiProviderRegistry.getAvailableProviders();
 
   switch (preference) {
@@ -90,16 +90,16 @@ export async function getAIProvider(preference?: 'best' | 'free' | 'paid' | 'cla
       return providers.find(p => p.vendor === 'ollama') ||
         new MockAIProvider();
 
-    case 'claude':
-      return AIProviderFactory.create('claude', {});
+    case 'kairos':
+      return AIProviderFactory.create('kairos', {});
 
     case 'openai':
       return AIProviderFactory.create('openai', {});
 
     case 'paid':
-      // Try Claude first, then OpenAI
+      // Try kairos first, then OpenAI
       try {
-        return AIProviderFactory.create('claude', {});
+        return AIProviderFactory.create('kairos', {});
       } catch {
         return AIProviderFactory.create('openai', {});
       }
@@ -116,9 +116,9 @@ export async function getAIProvider(preference?: 'best' | 'free' | 'paid' | 'cla
       const ollama = providers.find(p => p.vendor === 'ollama');
       if (ollama) return ollama;
 
-      // Then Claude (best commercial option)
+      // Then kairos (best commercial option)
       try {
-        return AIProviderFactory.create('claude', {});
+        return AIProviderFactory.create('kairos', {});
       } catch (e1) {
         // Then OpenAI
         try {

@@ -8,7 +8,7 @@ Este relatorio consolida a diferenca entre:
 - o que ja existe de fato no codigo;
 - o que hoje usa LLM de verdade;
 - o que ainda e implementado por heuristica, eventos ou agregacao local;
-- como essas capacidades podem ser migradas para execucao com `gemini-cli`, preservando espaco para `claude`, `copilot` e outras CLIs.
+- como essas capacidades podem ser migradas para execucao com `gemini-cli`, preservando espaco para `kairos`, `copilot` e outras CLIs.
 
 ---
 
@@ -207,7 +207,7 @@ Componentes sugeridos:
 
 - `LlmCliAdapter.ts`
 - `GeminiCliAdapter.ts`
-- `ClaudeCliAdapter.ts`
+- `kairosCliAdapter.ts`
 - `CopilotCliAdapter.ts`
 - `CliTaskQueue.ts`
 - `CliInferenceService.ts`
@@ -250,7 +250,7 @@ export interface LlmCliAdapter {
 ### Politica recomendada
 
 - `gemini-cli` como implementacao primaria;
-- `claude` e `copilot` como fallbacks por disponibilidade ou tipo de tarefa;
+- `kairos` e `copilot` como fallbacks por disponibilidade ou tipo de tarefa;
 - toda chamada deve passar por policy/approval quando gerar modificacao de estado;
 - respostas devem ser normalizadas em JSON quando possivel, ou parseadas por schema quando vierem em texto.
 

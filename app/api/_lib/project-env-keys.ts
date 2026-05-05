@@ -1,7 +1,7 @@
 import { getDb } from '@/app/api/_lib/db';
 
 export const PROVIDER_ENV_MAP = {
-    claude: 'ANTHROPIC_API_KEY',
+    kairos: 'ANTHROPIC_API_KEY',
     chatgpt: 'OPENAI_API_KEY',
     gemini: 'GEMINI_API_KEY',
 } as const;
@@ -21,7 +21,7 @@ interface ProjectLike {
 }
 
 function isApiProvider(value: string): value is ApiProvider {
-    return value === 'claude' || value === 'chatgpt' || value === 'gemini';
+    return value === 'kairos' || value === 'chatgpt' || value === 'gemini';
 }
 
 function unquote(value: string): string {
@@ -164,7 +164,7 @@ export async function readProviderKeyStatuses(projectId: string): Promise<{ repo
 
 export async function setProviderKey(projectId: string, provider: string, value: string): Promise<ProviderKeyStatus> {
     if (!isApiProvider(provider)) {
-        throw new Error('Provider invalido. Use: claude, chatgpt ou gemini');
+        throw new Error('Provider invalido. Use: kairos, chatgpt ou gemini');
     }
 
     const normalizedValue = value.trim();
@@ -196,7 +196,7 @@ export async function setProviderKey(projectId: string, provider: string, value:
 
 export async function removeProviderKey(projectId: string, provider: string): Promise<ProviderKeyStatus> {
     if (!isApiProvider(provider)) {
-        throw new Error('Provider invalido. Use: claude, chatgpt ou gemini');
+        throw new Error('Provider invalido. Use: kairos, chatgpt ou gemini');
     }
 
     const fs = await import('node:fs/promises');

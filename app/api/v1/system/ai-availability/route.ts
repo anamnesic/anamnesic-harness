@@ -9,8 +9,8 @@ import { ok, err } from '@/app/api/_lib/response';
 import { AVAILABLE_MODELS } from '@/src/config/models';
 import { readProviderKeyStatuses } from '@/app/api/_lib/project-env-keys';
 
-type CliName = 'copilot' | 'gemini' | 'claude-code' | 'codex' | 'ollama';
-type ProviderName = 'claude' | 'chatgpt' | 'gemini';
+type CliName = 'copilot' | 'gemini' | 'kairos-code' | 'codex' | 'ollama';
+type ProviderName = 'kairos' | 'chatgpt' | 'gemini';
 
 function findCommandInCommonPaths(command: string): string | null {
     const isWindows = process.platform === 'win32';
@@ -139,17 +139,17 @@ function detectCliAvailability(): Record<CliName, boolean> {
     const hasCopilotBinary = commandExists('copilot') && commandWorks('copilot', ['--version']);
     const hasGemini = (commandExists('gemini') || commandExists('gemini-cli')) &&
         (commandWorks('gemini', ['--version']) || commandWorks('gemini-cli', ['--version']));
-    const hasClaudeCode = (
-        (commandExists('claude-code') && commandWorks('claude-code', ['--version']))
-        || (commandExists('claude') && commandWorks('claude', ['--version']))
-        || (commandExists('claude-ai') && commandWorks('claude-ai', ['--version']))
+    const haskairosCode = (
+        (commandExists('kairos-code') && commandWorks('kairos-code', ['--version']))
+        || (commandExists('kairos') && commandWorks('kairos', ['--version']))
+        || (commandExists('kairos-ai') && commandWorks('kairos-ai', ['--version']))
     );
     const hasCodex = commandExists('codex') && commandWorks('codex', ['--version']);
 
     return {
         copilot: hasCopilotBinary || ghCopilotWorks(),
         gemini: hasGemini,
-        'claude-code': hasClaudeCode,
+        'kairos-code': haskairosCode,
         codex: hasCodex,
         ollama: false, // Will be set async
     };
@@ -170,10 +170,10 @@ function isModelAvailable(
 
     // Stricter provider-based checking
     switch (prov) {
-        case 'claude':
-            return cli['claude-code'] && hasProviderKey('claude', keys);
+        case 'kairos':
+            return cli['kairos-code'] && hasProviderKey('kairos', keys);
         case 'anthropic':
-            return cli['claude-code'] && hasProviderKey('claude', keys);
+            return cli['kairos-code'] && hasProviderKey('kairos', keys);
         case 'gemini':
             return cli.gemini && hasProviderKey('gemini', keys);
         case 'google':
@@ -194,8 +194,8 @@ function isModelAvailable(
         case 'vscode':
         default:
             // VSCode provider - check by model ID patterns
-            if (id.includes('claude')) {
-                return cli['claude-code'] && hasProviderKey('claude', keys);
+            if (id.includes('kairos')) {
+                return cli['kairos-code'] && hasProviderKey('kairos', keys);
             }
             if (id.includes('gemini')) {
                 return cli.gemini && hasProviderKey('gemini', keys);
@@ -217,7 +217,7 @@ function isModelAvailable(
                     cli.copilot
                     || (cli.codex && hasProviderKey('chatgpt', keys))
                     || (cli.gemini && hasProviderKey('gemini', keys))
-                    || (cli['claude-code'] && hasProviderKey('claude', keys))
+                    || (cli['kairos-code'] && hasProviderKey('kairos', keys))
                     || cli.ollama
                 );
             }

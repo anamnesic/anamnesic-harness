@@ -44,7 +44,7 @@ export const PROMPT_PROFILES: Record<CliTaskType, PromptProfile> = {
     'long-analysis': {
         taskType: 'long-analysis',
         schemaId: 'analysis.v1',
-        preferredProvider: 'claude',
+        preferredProvider: 'kairos',
         description: 'Deep and long-form reflective analysis tasks.',
     },
     'code-automation': {

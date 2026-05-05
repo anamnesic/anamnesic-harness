@@ -10,7 +10,7 @@ import type { LlmCliProvider } from '@/src/core/llm-cli';
 
 type CliType = LlmCliProvider | 'shell';
 
-const ALLOWED: Set<CliType> = new Set(['claude', 'gemini', 'copilot', 'codex', 'opencode', 'shell']);
+const ALLOWED: Set<CliType> = new Set(['kairos', 'gemini', 'copilot', 'codex', 'opencode', 'shell']);
 
 function getShellSpawn(): { file: string; args: string[] } {
     if (process.platform === 'win32') {

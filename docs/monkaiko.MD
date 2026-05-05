@@ -1,6 +1,6 @@
 # Para que serve o data e como ele se conecta ao código
 
-O Kairos é um **agente autônomo de produtividade/observabilidade para desenvolvimento** (assistente que observa o que você faz, pensa sozinho, propõe ações e executa CLIs de LLM como Copilot/Claude/Gemini). O data é a **memória persistente** desse agente — sem ele, o sistema "esquece" tudo a cada reinício e não consegue raciocinar sobre o passado.
+O Kairos é um **agente autônomo de produtividade/observabilidade para desenvolvimento** (assistente que observa o que você faz, pensa sozinho, propõe ações e executa CLIs de LLM como Copilot/kairos/Gemini). O data é a **memória persistente** desse agente — sem ele, o sistema "esquece" tudo a cada reinício e não consegue raciocinar sobre o passado.
 
 ## A ideia central: ciclo cognitivo "observar → enriquecer → resumir → planejar → otimizar"
 

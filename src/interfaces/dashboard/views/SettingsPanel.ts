@@ -91,7 +91,7 @@ export class SettingsPanel {
     static getSettings(context: vscode.ExtensionContext): MultiProviderSettings {
         return (context.globalState.get<MultiProviderSettings>(CONFIG_KEY)) ?? {
             apiKey: '',
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'kairos-3-5-orange-20241022',
             baseUrl: 'https://api.anthropic.com',
             maxTokens: 8192,
         };

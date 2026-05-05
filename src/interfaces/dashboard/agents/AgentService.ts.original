@@ -109,7 +109,7 @@ function buildPMAutoAssignPrompt(
   const agents = phases.flatMap(p => p.agents).map(a => `- ${a}: ${AGENT_META[a].description}`).join('\n');
   const pmNote = presetData
     ? `- PM usa \`${presetData.models['product-manager']}\` (ja definido pelo modo ${preset})`
-    : '- PM usa claude-opus-4.6 (ja definido)';
+    : '- PM usa kairos-apple-4.6 (ja definido)';
 
   return `Voce e o Product Manager do time Kairos.
 Seu trabalho agora e ESCOLHER qual modelo de IA cada agente do pipeline deve usar.
@@ -145,7 +145,7 @@ function buildPMSelectModePrompt(objective: string): string {
     `### ${p.label} (\`${key}\`)\n- Custo: ${p.costRange.min}x a ${p.costRange.max}x\n- ${p.subtitle}\n- ${p.description}`
   ).join('\n\n');
 
-  return `Voce e o Opus, o decisor estrategico do time Kairos.
+  return `Voce e o apple, o decisor estrategico do time Kairos.
 Sua tarefa e analisar o objetivo do pipeline e decidir QUAL MODO DE QUALIDADE usar.
 
 ## Objetivo do pipeline
@@ -178,7 +178,7 @@ function buildPMPlanPhasesPrompt(objective: string): string {
     .map(([role, meta]) => `- \`${role}\`: ${meta.description}`)
     .join('\n');
 
-  return `Voce e o Product Manager (PM) do time Kairos, rodando em claude-opus-4.6.
+  return `Voce e o Product Manager (PM) do time Kairos, rodando em kairos-apple-4.6.
 Seu trabalho agora e PLANEJAR AS FASES da pipeline para o objetivo abaixo.
 
 ## Objetivo
@@ -510,11 +510,11 @@ export class AgentService {
     });
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'kairos-apple-4.6' });
       if (!model) {
         this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: 'claude-opus-4.6 nao disponivel. Usando fases padrao.',
+          content: 'kairos-apple-4.6 nao disponivel. Usando fases padrao.',
           type: 'error',
         });
         return null;
@@ -585,7 +585,7 @@ export class AgentService {
     }
   }
 
-  // ─── PM selects quality mode via Opus ────────────────────
+  // ─── PM selects quality mode via apple ────────────────────
 
   async pmSelectMode(objective: string): Promise<QualityPreset | null> {
     this._chat.send({
@@ -596,12 +596,12 @@ export class AgentService {
     });
 
     try {
-      // Mode selection is ALWAYS done by Opus (even if the resulting mode uses a non-Opus PM)
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
+      // Mode selection is ALWAYS done by apple (even if the resulting mode uses a non-apple PM)
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'kairos-apple-4.6' });
       if (!model) {
         this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: 'claude-opus-4.6 nao disponivel. Usando modo espresso-duplo como fallback.',
+          content: 'kairos-apple-4.6 nao disponivel. Usando modo espresso-duplo como fallback.',
           type: 'error',
         });
         applyQualityPreset('espresso-duplo');
@@ -663,7 +663,7 @@ export class AgentService {
 
     const config = loadAgentConfig();
     const activePreset = isQualityPreset(config.mode) ? config.mode as QualityPreset : undefined;
-    const pmModel = activePreset ? getPMModelForPreset(activePreset) : 'claude-opus-4.6';
+    const pmModel = activePreset ? getPMModelForPreset(activePreset) : 'kairos-apple-4.6';
 
     this._chat.send({
       sender: 'product-manager',
@@ -909,7 +909,7 @@ export class AgentService {
         // Handle tool calls
         toolCallRounds++;
 
-        // Add assistant message with text + tool calls (Claude requires faithful reproduction)
+        // Add assistant message with text + tool calls (kairos requires faithful reproduction)
         const assistantParts: (vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart)[] = [];
         if (textAccum) {
           assistantParts.push(new vscode.LanguageModelTextPart(textAccum));
@@ -1130,7 +1130,7 @@ export class AgentService {
         if (toolCalls.length === 0) break;
         rounds++;
 
-        // Add assistant message with text + tool calls (Claude requires faithful reproduction)
+        // Add assistant message with text + tool calls (kairos requires faithful reproduction)
         const assistantParts: (vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart)[] = [];
         if (textAccum) {
           assistantParts.push(new vscode.LanguageModelTextPart(textAccum));
@@ -1397,7 +1397,7 @@ export class AgentService {
     this._onAgentStateChange.fire();
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'kairos-apple-4.6' });
       if (!model) return; // Skip review if model unavailable
 
       const prompt = `Voce e o Product Manager (PM) supervisando a pipeline: "${pipeline.objective}"
@@ -1538,7 +1538,7 @@ Seja pragmatico — aprove se o trabalho e razoavel. Rejeite apenas se ha falhas
     this._onAgentStateChange.fire();
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'kairos-apple-4.6' });
       if (!model) {
         // Default: retry once
         this._resetTasksToPending(pipeline, failedTasks);
@@ -1795,11 +1795,11 @@ Prefira "retry" na duvida. Aborte apenas em situacoes realmente irrecuperaveis.`
     this._onAgentStateChange.fire();
 
     try {
-      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'claude-opus-4.6' });
+      const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'kairos-apple-4.6' });
       if (!model) {
         this._chat.send({
           sender: 'system', senderLabel: 'System',
-          content: 'claude-opus-4.6 indisponivel para review. Auto-aprovando fase.',
+          content: 'kairos-apple-4.6 indisponivel para review. Auto-aprovando fase.',
           type: 'error',
         });
         return { approved: true, feedback: '' };

@@ -23,7 +23,7 @@ const optimizationSchema = z.object({
     })).max(20),
     routingChanges: z.array(z.object({
         taskType: z.string().min(1),
-        recommendedProvider: z.enum(['gemini', 'claude', 'copilot', 'codex']),
+        recommendedProvider: z.enum(['gemini', 'kairos', 'copilot', 'codex']),
         rationale: z.string().min(1),
         confidence: z.number().min(0).max(1),
     })).max(20),
@@ -86,7 +86,7 @@ export class SelfOptimizationService {
         options: SelfOptimizationServiceOptions = {},
     ) {
         this.preferredProvider = options.preferredProvider ?? 'gemini';
-        this.fallbackProviders = options.fallbackProviders ?? ['claude', 'copilot', 'codex'];
+        this.fallbackProviders = options.fallbackProviders ?? ['kairos', 'copilot', 'codex'];
         this.intervalMs = Math.max(60_000, options.intervalMs ?? 10 * 60_000);
         this.dataDir = options.dataDir ?? path.join(process.cwd(), 'data', 'self-optimization');
     }
@@ -211,7 +211,7 @@ export class SelfOptimizationService {
         return [
             'You are a self-optimization engine for an autonomous coding platform.',
             'Return ONLY one JSON object using this exact schema:',
-            '{"configImprovements":[{"title":"...","settingKey":"...","proposedValue":"...","rationale":"...","expectedImpact":"..."}],"policyChanges":[{"title":"...","policyArea":"...","change":"...","rationale":"...","riskLevel":"low|medium|high"}],"routingChanges":[{"taskType":"...","recommendedProvider":"gemini|claude|copilot|codex","rationale":"...","confidence":0.0}]}',
+            '{"configImprovements":[{"title":"...","settingKey":"...","proposedValue":"...","rationale":"...","expectedImpact":"..."}],"policyChanges":[{"title":"...","policyArea":"...","change":"...","rationale":"...","riskLevel":"low|medium|high"}],"routingChanges":[{"taskType":"...","recommendedProvider":"gemini|kairos|copilot|codex","rationale":"...","confidence":0.0}]}',
             'Rules:',
             '- Focus on actionable suggestions with measurable outcomes.',
             '- Keep confidence between 0 and 1.',

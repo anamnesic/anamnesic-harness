@@ -64,7 +64,7 @@ export interface AgentConfig {
     backoffMultiplier: number;
     initialDelayMs: number;
   };
-  model?: string; // e.g., 'claude-3-opus', 'gpt-4'
+  model?: string; // e.g., 'kairos-3-apple', 'gpt-4'
   temperature?: number;
   systemPrompt?: string;
   customTools?: string[];

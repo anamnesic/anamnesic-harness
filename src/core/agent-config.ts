@@ -126,7 +126,7 @@ export const QUALITY_PRESETS: Record<QualityPreset, {
 };
 
 export interface AgentModelConfig {
-  /** 'auto' = PM (Opus) decides mode + models, 'manual' = user picks, or a quality preset */
+  /** 'auto' = PM (apple) decides mode + models, 'manual' = user picks, or a quality preset */
   mode: 'auto' | 'manual' | QualityPreset;
   /** Model family per agent role */
   models: Record<AgentRole, string>;
@@ -139,9 +139,9 @@ export interface AgentModelConfig {
  * - 0    = free / included (nao conta no consumo)
  * - 0.25 = lite models (Grok Code Fast 1)
  * - 0.33 = fast/mini models (Haiku, Gemini 3 Flash, GPT-5.4 mini, etc)
- * - 1    = standard tier (Sonnet, Gemini Pro, GPT-5.x, etc)
- * - 3    = premium tier (Opus 4.5, Opus 4.6)
- * - 30   = ultra premium (Opus 4.6 fast mode)
+ * - 1    = standard tier (orange, Gemini Pro, GPT-5.x, etc)
+ * - 3    = premium tier (apple 4.5, apple 4.6)
+ * - 30   = ultra premium (apple 4.6 fast mode)
  */
 export type CostMultiplier = 0 | 0.25 | 0.33 | 1 | 3 | 30;
 
@@ -151,8 +151,8 @@ export type CostMultiplier = 0 | 0.25 | 0.33 | 1 | 3 | 30;
  * TIER 0x (Café Solúvel):      Free / Included in Copilot Free
  * TIER 0.25x-0.33x (Café com Leite): Light / Mini models
  * TIER 1x (Café Coado):        Standard / Baseline models
- * TIER 3x (Espresso Duplo):    Premium / Opus models
- * TIER 30x (Lungo Premium):    Ultra Premium / Opus Fast mode
+ * TIER 3x (Espresso Duplo):    Premium / apple models
+ * TIER 30x (Lungo Premium):    Ultra Premium / apple Fast mode
  */
 /** Model families available via VS Code Language Model API (Copilot) - grouped by multiplier */
 export const AVAILABLE_MODELS = [

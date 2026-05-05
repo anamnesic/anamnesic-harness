@@ -51,7 +51,7 @@ Foi implementado um modo adicional de execucao no terminal para prompts headless
 
 As rotas do terminal foram ajustadas para resolver diferencas reais entre CLIs:
 
-- `Claude`: fallback entre `claude`, `claude-code` e `claude-ai`;
+- `kairos`: fallback entre `kairos`, `kairos-code` e `kairos-ai`;
 - `Gemini`: fallback entre `gemini` e `gemini-cli`;
 - `Copilot`: `copilot -s -p` no modo stream e fallback para `gh copilot -- -s -p ...`;
 - `Codex`: mantido como `codex`, mas dependente de instalacao local.
@@ -177,7 +177,7 @@ Conclusao:
 
 | CLI | Modo interativo PTY | Modo prompt stream | Situacao atual |
 | --- | --- | --- | --- |
-| Claude | Inicializa, mas depende de login local | `--print` suportado, mas ambiente atual esta sem login | Parcial |
+| kairos | Inicializa, mas depende de login local | `--print` suportado, mas ambiente atual esta sem login | Parcial |
 | Gemini | Funciona | Funciona | Estavel |
 | Copilot | Funciona | Funciona melhor com `-s -p` | Estavel |
 | Codex | Nao instalado neste ambiente | Nao instalado neste ambiente | Indisponivel localmente |

@@ -15,7 +15,7 @@ export interface DiscoveredModel {
 // ─── Tier inference from family name ─────────────────────────
 
 const TIER_PATTERNS: { pattern: RegExp; tier: DiscoveredModel['tier'] }[] = [
-  { pattern: /opus/i, tier: 'premium' },
+  { pattern: /apple/i, tier: 'premium' },
   { pattern: /pro\b/i, tier: 'premium' },
   { pattern: /codex/i, tier: 'code' },
   { pattern: /code/i, tier: 'code' },

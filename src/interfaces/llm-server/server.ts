@@ -697,7 +697,7 @@ export function createServer(output: vscode.OutputChannel): http.Server {
                 return;
             }
 
-            // Anthropic-compatible messages endpoint (Claude Code)
+            // Anthropic-compatible messages endpoint (kairos Code)
             if (method === 'POST' && url === '/v1/messages') {
                 await handleAnthropicMessages(req, res, output);
                 return;

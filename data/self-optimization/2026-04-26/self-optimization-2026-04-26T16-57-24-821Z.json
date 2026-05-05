@@ -61,7 +61,7 @@
       },
       {
         "taskType": "security-audit",
-        "recommendedProvider": "claude",
+        "recommendedProvider": "kairos",
         "rationale": "Higher reliability in detecting sophisticated exploit chains and vulnerabilities.",
         "confidence": 0.88
       }
@@ -104,7 +104,7 @@
       "id": "rt-security-audit-5",
       "category": "routing",
       "title": "Routing for security-audit",
-      "summary": "Prefer claude (confidence 88%). Higher reliability in detecting sophisticated exploit chains and vulnerabilities.",
+      "summary": "Prefer kairos (confidence 88%). Higher reliability in detecting sophisticated exploit chains and vulnerabilities.",
       "status": "pending",
       "createdAt": "2026-04-26T16:57:24.821Z"
     }

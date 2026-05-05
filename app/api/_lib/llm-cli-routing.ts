@@ -2,7 +2,7 @@ import { getDb } from '@/app/api/_lib/db';
 import type { CliRoutingConfig } from '@/src/core/llm-cli';
 import type { CliTaskType, LlmCliProvider } from '@/src/core/llm-cli';
 
-const PROVIDERS: LlmCliProvider[] = ['gemini', 'claude', 'copilot', 'codex'];
+const PROVIDERS: LlmCliProvider[] = ['gemini', 'kairos', 'copilot', 'codex'];
 const TASK_TYPES: CliTaskType[] = ['summarization', 'enrichment', 'reranking', 'proactive-planning', 'long-analysis', 'code-automation'];
 
 export async function loadRoutingConfig(workspaceId: string): Promise<CliRoutingConfig> {

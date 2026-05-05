@@ -64,7 +64,7 @@ data/proactive/2026-04-27/system-2026-04-27T19-22-44-903Z.json
 {
   "projectId": "system",
   "generatedAt": "ISO8601",
-  "provider": "copilot|claude|gemini",
+  "provider": "copilot|kairos|gemini",
   "command": "string",
   "exitCode": 0,
   "inputEvents": 42,
@@ -104,7 +104,7 @@ data/self-optimization/2026-04-27/
 ```json
 {
   "generatedAt":"ISO8601",
-  "provider":"copilot|claude|gemini",
+  "provider":"copilot|kairos|gemini",
   "metricsSnapshot":{...},
   "benchmarkReport":{...},
   "plan":{
@@ -127,7 +127,7 @@ data/self-optimization/2026-04-27/
 
 ### 3. `data/audit/llm-cli/`
 
-**Domínio:** Trilha de auditoria de **todas** as chamadas a CLIs LLM (Copilot, Claude, Gemini, Codex).
+**Domínio:** Trilha de auditoria de **todas** as chamadas a CLIs LLM (Copilot, kairos, Gemini, Codex).
 
 **Produtor:**
 - [src/core/llm-cli/CliAuditTrail.ts](src/core/llm-cli/CliAuditTrail.ts#L32) — `append(record)` chamado pelo `CliInferenceService` após cada execução.
@@ -146,7 +146,7 @@ data/audit/llm-cli/2026-04-27/inference.log   # JSON Lines
 {
   "id":"timestamp-random",
   "timestamp":"ISO8601",
-  "provider":"gemini|claude|copilot|codex",
+  "provider":"gemini|kairos|copilot|codex",
   "command":"string",
   "args":["..."],
   "durationMs":1234,

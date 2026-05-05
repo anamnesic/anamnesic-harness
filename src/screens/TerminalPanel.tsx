@@ -98,11 +98,11 @@ function getAuthHeaders(extra?: Record<string, string>): Record<string, string> 
     return headers;
 }
 
-type CliTab = 'shell' | 'claude' | 'gemini' | 'copilot' | 'codex' | 'opencode';
+type CliTab = 'shell' | 'kairos' | 'gemini' | 'copilot' | 'codex' | 'opencode';
 
 const CLI_TABS: { id: CliTab; label: string; colorClass: string }[] = [
     { id: 'shell', label: 'Shell', colorClass: 'text-emerald-400' },
-    { id: 'claude', label: 'Claude', colorClass: 'text-stone-200' },
+    { id: 'kairos', label: 'kairos', colorClass: 'text-stone-200' },
     { id: 'gemini', label: 'Gemini', colorClass: 'text-blue-400' },
     { id: 'copilot', label: 'Copilot', colorClass: 'text-purple-400' },
     { id: 'codex', label: 'Codex', colorClass: 'text-green-400' },
@@ -122,7 +122,7 @@ type TabStateMap = Record<CliTab, TabState>;
 const initialTabState = (): TabState => ({ sessionId: null, status: 'disconnected', output: '' });
 const INITIAL: TabStateMap = {
     shell: initialTabState(),
-    claude: initialTabState(),
+    kairos: initialTabState(),
     gemini: initialTabState(),
     copilot: initialTabState(),
     codex: initialTabState(),
@@ -165,7 +165,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     // Estado para múltiplas instâncias por agente
     const [agentInstances, setAgentInstances] = useState<Record<CliTab, string[]>>({
         shell: ['inst-1'],
-        claude: ['inst-1'],
+        kairos: ['inst-1'],
         gemini: ['inst-1'],
         copilot: ['inst-1'],
         codex: ['inst-1'],
@@ -173,7 +173,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     });
     const [activeInstance, setActiveInstance] = useState<Record<CliTab, string>>({
         shell: 'inst-1',
-        claude: 'inst-1',
+        kairos: 'inst-1',
         gemini: 'inst-1',
         copilot: 'inst-1',
         codex: 'inst-1',
@@ -182,7 +182,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     
     const [gridLayout, setGridLayout] = useState({
         shell: { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
-        claude: { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
+        kairos: { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
         gemini: { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
         copilot: { col: 2, row: 2, colSpan: 1, rowSpan: 1 },
         codex: { col: 3, row: 1, colSpan: 1, rowSpan: 1 },
@@ -191,16 +191,16 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     const [resizingTab, setResizingTab] = useState<CliTab | null>(null);
     const tabStateRef = useRef<TabStateMap>(INITIAL);
     useEffect(() => { tabStateRef.current = tabState; }, [tabState]);
-    const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ shell: '', claude: '', gemini: '', copilot: '', codex: '', opencode: '' });
-    const [promptStreaming, setPromptStreaming] = useState<Record<CliTab, boolean>>({ shell: false, claude: false, gemini: false, copilot: false, codex: false, opencode: false });
-    const hostRefs = useRef<Record<CliTab, HTMLDivElement | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
-    const xtermRefs = useRef<Record<CliTab, XTermType | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
-    const fitRefs = useRef<Record<CliTab, FitAddonType | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
-    const resizeObservers = useRef<Record<CliTab, ResizeObserver | null>>({ shell: null, claude: null, gemini: null, copilot: null, codex: null, opencode: null });
-    const writtenLengths = useRef<Record<CliTab, number>>({ shell: 0, claude: 0, gemini: 0, copilot: 0, codex: 0, opencode: 0 });
-    const disposedRefs = useRef<Record<CliTab, boolean>>({ shell: false, claude: false, gemini: false, copilot: false, codex: false, opencode: false });
-    const sseAborts = useRef<Record<CliTab, AbortController | undefined>>({ shell: undefined, claude: undefined, gemini: undefined, copilot: undefined, codex: undefined, opencode: undefined });
-    const promptAborts = useRef<Record<CliTab, AbortController | undefined>>({ shell: undefined, claude: undefined, gemini: undefined, copilot: undefined, codex: undefined, opencode: undefined });
+    const [promptInput, setPromptInput] = useState<Record<CliTab, string>>({ shell: '', kairos: '', gemini: '', copilot: '', codex: '', opencode: '' });
+    const [promptStreaming, setPromptStreaming] = useState<Record<CliTab, boolean>>({ shell: false, kairos: false, gemini: false, copilot: false, codex: false, opencode: false });
+    const hostRefs = useRef<Record<CliTab, HTMLDivElement | null>>({ shell: null, kairos: null, gemini: null, copilot: null, codex: null, opencode: null });
+    const xtermRefs = useRef<Record<CliTab, XTermType | null>>({ shell: null, kairos: null, gemini: null, copilot: null, codex: null, opencode: null });
+    const fitRefs = useRef<Record<CliTab, FitAddonType | null>>({ shell: null, kairos: null, gemini: null, copilot: null, codex: null, opencode: null });
+    const resizeObservers = useRef<Record<CliTab, ResizeObserver | null>>({ shell: null, kairos: null, gemini: null, copilot: null, codex: null, opencode: null });
+    const writtenLengths = useRef<Record<CliTab, number>>({ shell: 0, kairos: 0, gemini: 0, copilot: 0, codex: 0, opencode: 0 });
+    const disposedRefs = useRef<Record<CliTab, boolean>>({ shell: false, kairos: false, gemini: false, copilot: false, codex: false, opencode: false });
+    const sseAborts = useRef<Record<CliTab, AbortController | undefined>>({ shell: undefined, kairos: undefined, gemini: undefined, copilot: undefined, codex: undefined, opencode: undefined });
+    const promptAborts = useRef<Record<CliTab, AbortController | undefined>>({ shell: undefined, kairos: undefined, gemini: undefined, copilot: undefined, codex: undefined, opencode: undefined });
 
     const repoPath = repository?.metadata?.localPath ?? '';
 
@@ -493,7 +493,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                 setTabState(prev => ({
                     ...prev,
                     shell: { ...prev.shell, output: '' },
-                    claude: { ...prev.claude, output: '' },
+                    kairos: { ...prev.kairos, output: '' },
                     gemini: { ...prev.gemini, output: '' },
                     copilot: { ...prev.copilot, output: '' },
                     codex: { ...prev.codex, output: '' },
@@ -585,7 +585,7 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     const resetLayout = useCallback(() => {
         setGridLayout({
             shell: { col: 1, row: 1, colSpan: 1, rowSpan: 1 },
-            claude: { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
+            kairos: { col: 2, row: 1, colSpan: 1, rowSpan: 1 },
             gemini: { col: 1, row: 2, colSpan: 1, rowSpan: 1 },
             copilot: { col: 2, row: 2, colSpan: 1, rowSpan: 1 },
             codex: { col: 3, row: 1, colSpan: 1, rowSpan: 1 },

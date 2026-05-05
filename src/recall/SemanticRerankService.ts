@@ -34,7 +34,7 @@ export class SemanticRerankService {
             const prompt = this.buildPrompt(query, candidates);
             const result = await this.inference.executePrompt({
                 preferredProvider: options.preferredProvider ?? 'gemini',
-                fallbackProviders: options.fallbackProviders ?? ['claude', 'copilot', 'codex'],
+                fallbackProviders: options.fallbackProviders ?? ['kairos', 'copilot', 'codex'],
                 prompt,
             });
 

@@ -84,7 +84,7 @@ export class SleepInferenceService {
         options: SleepInferenceServiceOptions = {},
     ) {
         this.preferredProvider = options.preferredProvider ?? 'gemini';
-        this.fallbackProviders = options.fallbackProviders ?? ['claude', 'copilot', 'codex'];
+        this.fallbackProviders = options.fallbackProviders ?? ['kairos', 'copilot', 'codex'];
         this.minFactScore = options.minFactScore ?? 0.65;
         this.requireApprovalForSensitiveOverwrite = options.requireApprovalForSensitiveOverwrite ?? true;
         this.approvalRequester = options.approvalRequester ?? 'sleep-inference';

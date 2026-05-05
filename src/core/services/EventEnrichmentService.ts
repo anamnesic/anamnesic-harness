@@ -34,7 +34,7 @@ export class EventEnrichmentService {
         const request: CliInferenceRequest = {
             prompt,
             preferredProvider: options.preferredProvider ?? 'gemini',
-            fallbackProviders: options.fallbackProviders ?? ['claude', 'copilot', 'codex'],
+            fallbackProviders: options.fallbackProviders ?? ['kairos', 'copilot', 'codex'],
         };
 
         const result = await this.inference.executePrompt(request);

@@ -144,7 +144,7 @@ export interface OllamaVersionResponse {
     version: string;
 }
 
-// Anthropic-compatible API types (Claude Code)
+// Anthropic-compatible API types (kairos Code)
 
 export interface AnthropicMessageTextBlock {
     type: 'text';

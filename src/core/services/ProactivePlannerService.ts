@@ -88,7 +88,7 @@ export class ProactivePlannerService {
         options: ProactivePlannerServiceOptions = {},
     ) {
         this.preferredProvider = options.preferredProvider ?? 'gemini';
-        this.fallbackProviders = options.fallbackProviders ?? ['claude', 'copilot', 'codex'];
+        this.fallbackProviders = options.fallbackProviders ?? ['kairos', 'copilot', 'codex'];
         this.intervalMs = Math.max(30_000, options.intervalMs ?? 5 * 60_000);
         this.recentWindowDays = Math.max(1, options.recentWindowDays ?? 2);
         this.maxEvents = Math.max(20, options.maxEvents ?? 200);

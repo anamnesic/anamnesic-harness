@@ -98,12 +98,12 @@ export class CopilotProvider extends AIProvider {
 
       // Map known families to our cost structure
       const costMap: Record<string, number> = {
-        'claude-opus-4.6': 3,
-        'claude-opus-4.5': 3,
-        'claude-sonnet-4.6': 1,
-        'claude-sonnet-4.5': 0.5,
-        'claude-sonnet-4': 0,
-        'claude-haiku-4.5': 0,
+        'kairos-apple-4.6': 3,
+        'kairos-apple-4.5': 3,
+        'kairos-orange-4.6': 1,
+        'kairos-orange-4.5': 0.5,
+        'kairos-orange-4': 0,
+        'kairos-haiku-4.5': 0,
         'gpt-5.4': 3,
         'gpt-5.4-mini': 0,
         'gpt-5.3-codex': 1,

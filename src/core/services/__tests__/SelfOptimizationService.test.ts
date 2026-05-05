@@ -91,7 +91,7 @@ describe.sequential('SelfOptimizationService', () => {
                 routingChanges: [
                     {
                         taskType: 'long-analysis',
-                        recommendedProvider: 'claude',
+                        recommendedProvider: 'kairos',
                         rationale: 'Better consistency for long reasoning tasks',
                         confidence: 0.82,
                     },

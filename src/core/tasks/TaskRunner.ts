@@ -2,7 +2,7 @@
  * Agentic task runner — multi-turn agent loop.
  * Ported from packages/cowork/src-tauri/src/agent/agent_loop.rs
  *
- * Supports Anthropic tool-use messages (Claude) as the primary format.
+ * Supports Anthropic tool-use messages (kairos) as the primary format.
  * Emits strongly-typed events via a callback so callers can stream progress.
  */
 

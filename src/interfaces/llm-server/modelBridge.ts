@@ -8,11 +8,11 @@ import type { OllamaChatMessage, OllamaModelInfo } from './types';
  * Matches VS Code LM API family strings (case-insensitive).
  */
 export const CURATED_FAMILIES: readonly string[] = [
-    'claude-haiku-4.5',
-    'claude-opus-4.7',
-    'claude-sonnet-4',
-    'claude-sonnet-4.5',
-    'claude-sonnet-4.6',
+    'kairos-haiku-4.5',
+    'kairos-apple-4.7',
+    'kairos-orange-4',
+    'kairos-orange-4.5',
+    'kairos-orange-4.6',
     'gemini-2.5-pro',
     'gemini-3-flash',
     'gemini-3.1-pro',
@@ -155,7 +155,7 @@ export interface AutoRouteResult {
  * 1. Improve and clarify the user's prompt.
  * 2. Select the most appropriate model from the curated list.
  *
- * Falls back to claude-sonnet-4.6 if the selected model is unavailable.
+ * Falls back to kairos-orange-4.6 if the selected model is unavailable.
  */
 export async function routeAuto(
     ollamaMessages: OllamaChatMessage[],
@@ -186,10 +186,10 @@ export async function routeAuto(
         `You are a model router for an AI API server. Analyze the user request and return JSON with the best model and an improved prompt.\n\n` +
         `Available models: ${availableList}\n\n` +
         `Model selection guidelines:\n` +
-        `- claude-opus-4.7: complex multi-step reasoning, deep analysis, long documents, high-quality creative writing\n` +
-        `- claude-sonnet-4.6: balanced general tasks, coding assistance, detailed instructions — default choice\n` +
-        `- claude-sonnet-4.5: similar to claude-sonnet-4.6, slightly older\n` +
-        `- claude-haiku-4.5: simple fast tasks, classification, short Q&A, summaries\n` +
+        `- kairos-apple-4.7: complex multi-step reasoning, deep analysis, long documents, high-quality creative writing\n` +
+        `- kairos-orange-4.6: balanced general tasks, coding assistance, detailed instructions — default choice\n` +
+        `- kairos-orange-4.5: similar to kairos-orange-4.6, slightly older\n` +
+        `- kairos-haiku-4.5: simple fast tasks, classification, short Q&A, summaries\n` +
         `- gemini-2.5-pro: multimodal inputs, very large context (173K), data analysis, scientific reasoning\n` +
         `- gemini-3.1-pro: general purpose with strong reasoning\n` +
         `- gemini-3-flash: fast lightweight Gemini responses\n` +
@@ -236,12 +236,12 @@ export async function routeAuto(
     }
 
     const targetModel = await findModel(routing.model);
-    const resolvedModel = targetModel ?? (await findModel('claude-sonnet-4.6'));
+    const resolvedModel = targetModel ?? (await findModel('kairos-orange-4.6'));
     if (!resolvedModel) {
         throw new Error(`Routed model '${routing.model}' not found and fallback unavailable`);
     }
 
-    const selectedModelName = targetModel ? routing.model : 'claude-sonnet-4.6';
+    const selectedModelName = targetModel ? routing.model : 'kairos-orange-4.6';
     const messages = buildImprovedMessages(ollamaMessages, routing.improvedPrompt);
     return { model: resolvedModel, messages, selectedModelName };
 }

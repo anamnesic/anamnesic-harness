@@ -19,7 +19,7 @@ function parseTaskType(value: unknown): CliTaskType | undefined {
 
 function parseProviderList(input: unknown): LlmCliProvider[] | undefined {
     if (!Array.isArray(input)) return undefined;
-    const allowed: LlmCliProvider[] = ['gemini', 'claude', 'copilot', 'codex'];
+    const allowed: LlmCliProvider[] = ['gemini', 'kairos', 'copilot', 'codex'];
     const parsed = input
         .filter((item): item is string => typeof item === 'string')
         .map((item) => item.toLowerCase() as LlmCliProvider)

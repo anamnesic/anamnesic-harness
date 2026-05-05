@@ -3,7 +3,7 @@
 ## Escopo
 Providers suportados:
 - gemini
-- claude
+- kairos
 - copilot
 - codex (opcional)
 
@@ -20,7 +20,7 @@ Task types:
 | Provider | summarization | enrichment | reranking | proactive-planning | long-analysis | code-automation |
 |---|---|---|---|---|---|---|
 | gemini | high | high | high | high | medium | medium |
-| claude | medium | medium | medium | medium | high | medium |
+| kairos | medium | medium | medium | medium | high | medium |
 | copilot | medium | medium | low | medium | medium | high |
 | codex | low | low | low | low | low | medium |
 
@@ -33,7 +33,7 @@ Fonte: src/core/llm-cli/PromptCatalog.ts
 - enrichment -> gemini
 - reranking -> gemini
 - proactive-planning -> gemini
-- long-analysis -> claude
+- long-analysis -> kairos
 - code-automation -> copilot
 
 ## Roteamento efetivo
@@ -66,7 +66,7 @@ Formato esperado em routing.abTests:
 ```
 {
   "summarization": {
-    "providers": ["gemini", "claude"],
+    "providers": ["gemini", "kairos"],
     "ratio": 0.5,
     "seed": "exp-2026-04"
   }

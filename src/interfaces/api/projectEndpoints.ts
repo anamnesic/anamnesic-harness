@@ -334,7 +334,7 @@ export function registerProjectEndpoints(server: any) {
         'Export a project context to a specific format. Returns the file content as text.',
         {
             projectId: z.string().describe('Project ID'),
-            format: z.enum(['markdown', 'json', 'plain', 'copilot', 'claude', 'cursor']).describe('Export format'),
+            format: z.enum(['markdown', 'json', 'plain', 'copilot', 'kairos', 'cursor']).describe('Export format'),
         },
         async ({ projectId, format }: { projectId: string; format: ExportFormat }) => {
             const { projectService } = await services();
@@ -347,7 +347,7 @@ export function registerProjectEndpoints(server: any) {
 
     server.tool(
         'sync_context_files',
-        'Write context export files (copilot-instructions, CLAUDE.md, .cursorrules) to the workspace directory.',
+        'Write context export files (copilot-instructions, kairos.md, .cursorrules) to the workspace directory.',
         {
             projectId: z.string().describe('Project ID'),
             workspaceRoot: z.string().describe('Absolute path to the workspace root directory'),
@@ -357,7 +357,7 @@ export function registerProjectEndpoints(server: any) {
             const project = await projectService.get(projectId);
             if (!project) return { content: [{ type: 'text', text: `Project not found: ${projectId}` }] };
 
-            const formats: ExportFormat[] = ['copilot', 'claude', 'cursor'];
+            const formats: ExportFormat[] = ['copilot', 'kairos', 'cursor'];
             const written: string[] = [];
 
             for (const fmt of formats) {

@@ -29,7 +29,7 @@ export function ApiKeysHub() {
                         Repositório selecionado no app: {repository?.name ?? 'Nenhum'}
                     </p>
                     <p className="text-xs text-text-dim mt-1">
-                        As chaves sao gravadas no arquivo .env do repositório selecionado (Claude, ChatGPT e Gemini).
+                        As chaves sao gravadas no arquivo .env do repositório selecionado (kairos, ChatGPT e Gemini).
                     </p>
                     {!workspace && (
                         <p className="text-xs text-yellow-400 mt-1">

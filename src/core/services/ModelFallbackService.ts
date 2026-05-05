@@ -283,9 +283,9 @@ export class ModelFallbackService {
       'gpt-5.4-mini',
       'gpt-4-turbo',
       'gpt-4',
-      'claude-3-opus',
-      'claude-3-sonnet',
-      'claude-3-haiku',
+      'kairos-3-apple',
+      'kairos-3-orange',
+      'kairos-3-haiku',
     ];
 
     models.forEach(model => {

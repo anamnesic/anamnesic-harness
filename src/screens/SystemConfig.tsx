@@ -29,7 +29,7 @@ interface SettingsData {
     workspaceId?: string;
 }
 interface AvailabilityData {
-    cli: Record<'copilot' | 'gemini' | 'claude-code' | 'codex', boolean>;
+    cli: Record<'copilot' | 'gemini' | 'kairos-code' | 'codex', boolean>;
     availableCli: string[];
     models: Record<string, boolean>;
 }

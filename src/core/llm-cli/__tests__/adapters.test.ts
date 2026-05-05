@@ -16,18 +16,18 @@ describe('llm-cli adapters', () => {
     it('checks availability for every supported provider adapter', async () => {
         const {
             GeminiCliAdapter,
-            ClaudeCliAdapter,
+            kairosCliAdapter,
             CopilotCliAdapter,
             CodexCliAdapter,
         } = await import('../adapters');
 
-        const available = new Set(['gemini', 'claude-code', 'gh', 'codex']);
+        const available = new Set(['gemini', 'kairos-code', 'gh', 'codex']);
         spawnSyncMock.mockImplementation((_: string, args: string[]) => ({
             status: available.has(args[0]) ? 0 : 1,
         }));
 
         expect(new GeminiCliAdapter().isAvailable()).toBe(true);
-        expect(new ClaudeCliAdapter().isAvailable()).toBe(true);
+        expect(new kairosCliAdapter().isAvailable()).toBe(true);
         expect(new CopilotCliAdapter().isAvailable()).toBe(true);
         expect(new CodexCliAdapter().isAvailable()).toBe(true);
     });

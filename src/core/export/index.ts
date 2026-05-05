@@ -1,6 +1,6 @@
 import { Project } from '../entities/Project';
 
-export type ExportFormat = 'json' | 'markdown' | 'plain' | 'copilot' | 'claude' | 'cursor';
+export type ExportFormat = 'json' | 'markdown' | 'plain' | 'copilot' | 'kairos' | 'cursor';
 
 export function exportProject(project: Project, format: ExportFormat): string {
   switch (format) {
@@ -8,7 +8,7 @@ export function exportProject(project: Project, format: ExportFormat): string {
     case 'markdown': return exportMarkdown(project);
     case 'plain': return exportPlain(project);
     case 'copilot': return exportCopilot(project);
-    case 'claude': return exportClaude(project);
+    case 'kairos': return exportkairos(project);
     case 'cursor': return exportCursor(project);
   }
 }
@@ -21,7 +21,7 @@ export function getExportFilename(format: ExportFormat, projectName: string): st
     case 'markdown': return `${slug}-context.md`;
     case 'plain': return `${slug}-context.txt`;
     case 'copilot': return '.github/copilot-instructions.md';
-    case 'claude': return 'CLAUDE.md';
+    case 'kairos': return 'kairos.md';
     case 'cursor': return '.cursorrules';
   }
 }
@@ -138,8 +138,8 @@ function exportCopilot(project: Project): string {
   return lines.join('\n');
 }
 
-// --- Claude (CLAUDE.md) ---
-function exportClaude(project: Project): string {
+// --- kairos (kairos.md) ---
+function exportkairos(project: Project): string {
   const lines: string[] = [
     `# ${project.name}`,
     '',

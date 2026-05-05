@@ -60,11 +60,11 @@ export function registerChatEndpoints(server: McpToolServer) {
 
   server.tool(
     'chat_send_message',
-    'Send a message to the collaborative chat channel. Other AI instances (Claude Desktop, Copilot, Cursor) can read and respond. Use type "response" when replying, "info" for status updates, "code" for code snippets, "error" for error reports.',
+    'Send a message to the collaborative chat channel. Other AI instances (kairos Desktop, Copilot, Cursor) can read and respond. Use type "response" when replying, "info" for status updates, "code" for code snippets, "error" for error reports.',
     {
       content: z.string().describe('The message content to send'),
       type: z.enum(['response', 'info', 'code', 'error']).default('response').describe('Message type'),
-      sender: z.string().default('ai').describe('Sender identifier (e.g. "copilot", "claude-desktop", "cursor")'),
+      sender: z.string().default('ai').describe('Sender identifier (e.g. "copilot", "kairos-desktop", "cursor")'),
       senderLabel: z.string().optional().describe('Human-readable sender name'),
       replyTo: z.string().optional().describe('ID of the message being replied to'),
       mentions: z.array(z.string()).optional().describe('Agent roles to mention/trigger'),

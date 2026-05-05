@@ -1,7 +1,7 @@
 ﻿import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import type { Project } from './Project';
 
-export type SyncTarget = 'copilot' | 'claude' | 'cursor';
+export type SyncTarget = 'copilot' | 'kairos' | 'cursor';
 export type SyncTrigger = 'manual' | 'on-change' | 'scheduled';
 
 /**
@@ -20,7 +20,7 @@ export class SyncConfig {
   @Column('uuid')
   projectId!: string;
 
-  /** Target AI tool: copilot, claude, cursor */
+  /** Target AI tool: copilot, kairos, cursor */
   @Column({ type: 'text' })
   target!: SyncTarget;
 

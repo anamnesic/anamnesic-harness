@@ -130,8 +130,8 @@ Arquivo: src/core/services/BenchmarkInterpretationService.ts
   "routingPolicy": [
     {
       "taskType": "summarization|enrichment|reranking|proactive-planning|sleep-cycle|code-task|deep-analysis|general",
-      "preferredProvider": "gemini|claude|copilot|codex",
-      "fallbackProviders": ["gemini|claude|copilot|codex"],
+      "preferredProvider": "gemini|kairos|copilot|codex",
+      "fallbackProviders": ["gemini|kairos|copilot|codex"],
       "rationale": "string",
       "confidence": 0.0
     }

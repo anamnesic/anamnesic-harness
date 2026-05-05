@@ -1,7 +1,7 @@
 /**
- * Claude AI Provider (Anthropic)
+ * kairos AI Provider (Anthropic)
  * 
- * Integração com Claude 3 (Opus, Sonnet, Haiku)
+ * Integração com kairos 3 (apple, orange, Haiku)
  * Suporte para Extended Thinking e Vision
  */
 
@@ -18,12 +18,12 @@ import {
   AIModelError,
 } from './ai-provider';
 
-interface ClaudeMessage {
+interface kairosMessage {
   role: 'user' | 'assistant';
   content: string | Array<{ type: string; text?: string; source?: any }>;
 }
 
-interface ClaudeResponse {
+interface kairosResponse {
   id: string;
   type: string;
   role: string;
@@ -41,7 +41,7 @@ interface ClaudeResponse {
   };
 }
 
-export class ClaudeAIProvider implements IAIProvider {
+export class kairosAIProvider implements IAIProvider {
   private client: AxiosInstance;
   private config: AIModelConfig;
   private apiKey: string;
@@ -49,8 +49,8 @@ export class ClaudeAIProvider implements IAIProvider {
 
   constructor(config: AIModelConfig, apiKey?: string) {
     this.config = {
-      model: 'claude-3-opus-20250219',
-      temperature: 1, // Claude uses temperature 1 by default
+      model: 'kairos-3-apple-20250219',
+      temperature: 1, // kairos uses temperature 1 by default
       maxTokens: 4096,
       ...config,
     };
@@ -80,24 +80,24 @@ export class ClaudeAIProvider implements IAIProvider {
     options?: AICompletionOptions
   ): Promise<AICompletionResult> {
     try {
-      const claudeMessages: ClaudeMessage[] = messages
+      const kairosMessages: kairosMessage[] = messages
         ? messages.map((m) => ({
             role: m.role === 'user' ? 'user' : 'assistant',
             content: m.content,
           }))
         : [{ role: 'user', content: prompt }];
 
-      if (!claudeMessages.length || claudeMessages[claudeMessages.length - 1].role !== 'user') {
-        claudeMessages.push({ role: 'user', content: prompt });
+      if (!kairosMessages.length || kairosMessages[kairosMessages.length - 1].role !== 'user') {
+        kairosMessages.push({ role: 'user', content: prompt });
       }
 
-      const response = await this.client.post<ClaudeResponse>('/messages', {
+      const response = await this.client.post<kairosResponse>('/messages', {
         model: this.config.model,
         max_tokens: options?.maxTokens || this.config.maxTokens,
         temperature: options?.temperature ?? this.config.temperature,
         top_p: options?.topP ?? this.config.topP ?? 0.95,
         system: this.config.systemPrompt,
-        messages: claudeMessages,
+        messages: kairosMessages,
       });
 
       const data = response.data;
@@ -133,8 +133,8 @@ export class ClaudeAIProvider implements IAIProvider {
         ? `Problem: ${problem}\n\nContext: ${JSON.stringify(context)}\n\nPlease think through this carefully.`
         : `Problem: ${problem}\n\nPlease think through this carefully.`;
 
-      // Claude with extended thinking (thinking_budget in max_tokens)
-      const response = await this.client.post<ClaudeResponse>('/messages', {
+      // kairos with extended thinking (thinking_budget in max_tokens)
+      const response = await this.client.post<kairosResponse>('/messages', {
         model: this.config.model,
         max_tokens: 16000, // Allow extended thinking
         temperature: options?.temperature ?? 1,
@@ -161,7 +161,7 @@ export class ClaudeAIProvider implements IAIProvider {
         content: textContent.text,
         reasoning: thinkingContent?.thinking || 'No explicit reasoning captured',
         thinkingTime,
-        confidenceScore: 0.85, // Claude is generally high confidence
+        confidenceScore: 0.85, // kairos is generally high confidence
         usage: {
           promptTokens: data.usage.input_tokens,
           completionTokens: data.usage.output_tokens,
@@ -258,18 +258,18 @@ export class ClaudeAIProvider implements IAIProvider {
     options?: AICompletionOptions
   ): Promise<AICompletionResult> {
     try {
-      const claudeMessages: ClaudeMessage[] = messages
+      const kairosMessages: kairosMessage[] = messages
         ? messages.map((m) => ({
             role: m.role === 'user' ? 'user' : 'assistant',
             content: m.content,
           }))
         : [{ role: 'user', content: prompt }];
 
-      if (!claudeMessages.length || claudeMessages[claudeMessages.length - 1].role !== 'user') {
-        claudeMessages.push({ role: 'user', content: prompt });
+      if (!kairosMessages.length || kairosMessages[kairosMessages.length - 1].role !== 'user') {
+        kairosMessages.push({ role: 'user', content: prompt });
       }
 
-      const response = await this.client.post<ClaudeResponse>(
+      const response = await this.client.post<kairosResponse>(
         '/messages',
         {
           model: this.config.model,
@@ -277,7 +277,7 @@ export class ClaudeAIProvider implements IAIProvider {
           temperature: options?.temperature ?? this.config.temperature,
           stream: true,
           system: this.config.systemPrompt,
-          messages: claudeMessages,
+          messages: kairosMessages,
         },
         {
           responseType: 'stream',
@@ -336,7 +336,7 @@ export class ClaudeAIProvider implements IAIProvider {
   async healthCheck(): Promise<boolean> {
     try {
       // Try a simple completion to verify API key works
-      const response = await this.client.post<ClaudeResponse>('/messages', {
+      const response = await this.client.post<kairosResponse>('/messages', {
         model: this.config.model,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Say "ok".' }],
@@ -349,7 +349,7 @@ export class ClaudeAIProvider implements IAIProvider {
   }
 
   async getQuota(): Promise<{ remaining: number; limit: number; resetAt?: Date }> {
-    // Claude doesn't expose quota via API, return approximation
+    // kairos doesn't expose quota via API, return approximation
     return {
       remaining: -1, // Unknown
       limit: -1,
@@ -357,7 +357,7 @@ export class ClaudeAIProvider implements IAIProvider {
   }
 
   private mapStopReason(
-    claudeStopReason: string
+    kairosStopReason: string
   ): 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use' | string {
     const mapping: Record<string, any> = {
       end_turn: 'end_turn',
@@ -365,7 +365,7 @@ export class ClaudeAIProvider implements IAIProvider {
       stop_sequence: 'stop_sequence',
       tool_use: 'tool_use',
     };
-    return mapping[claudeStopReason] || claudeStopReason;
+    return mapping[kairosStopReason] || kairosStopReason;
   }
 
   private handleError(error: any): Error {
@@ -374,19 +374,19 @@ export class ClaudeAIProvider implements IAIProvider {
       const data = error.response?.data as any;
 
       if (status === 401 || status === 403) {
-        return new AIAuthError(`Claude API authentication failed: ${data?.error?.message}`);
+        return new AIAuthError(`kairos API authentication failed: ${data?.error?.message}`);
       }
 
       if (status === 429) {
-        return new AIRateLimitError(`Claude API rate limit exceeded: ${data?.error?.message}`);
+        return new AIRateLimitError(`kairos API rate limit exceeded: ${data?.error?.message}`);
       }
 
       if (status === 400 || status === 422) {
-        return new AIModelError(`Claude API validation error: ${data?.error?.message}`);
+        return new AIModelError(`kairos API validation error: ${data?.error?.message}`);
       }
 
       return new AIModelError(
-        `Claude API error (${status}): ${data?.error?.message || error.message}`
+        `kairos API error (${status}): ${data?.error?.message || error.message}`
       );
     }
 
@@ -394,6 +394,6 @@ export class ClaudeAIProvider implements IAIProvider {
   }
 }
 
-// Register Claude provider
+// Register kairos provider
 import { AIProviderFactory } from './ai-provider';
-AIProviderFactory.register('claude', (config: AIModelConfig) => new ClaudeAIProvider(config));
+AIProviderFactory.register('kairos', (config: AIModelConfig) => new kairosAIProvider(config));

@@ -64,7 +64,7 @@ describe.sequential('BenchmarkInterpretationService', () => {
                 routingPolicy: [
                     {
                         taskType: 'deep-analysis',
-                        preferredProvider: 'claude',
+                        preferredProvider: 'kairos',
                         fallbackProviders: ['gemini', 'copilot'],
                         rationale: 'Long-form reasoning quality is stronger',
                         confidence: 0.81,
@@ -72,12 +72,12 @@ describe.sequential('BenchmarkInterpretationService', () => {
                     {
                         taskType: 'general',
                         preferredProvider: 'gemini',
-                        fallbackProviders: ['claude', 'copilot', 'codex'],
+                        fallbackProviders: ['kairos', 'copilot', 'codex'],
                         rationale: 'Best overall score',
                         confidence: 0.74,
                     },
                 ],
-                summary: 'Use claude for deep-analysis and gemini for general tasks.',
+                summary: 'Use kairos for deep-analysis and gemini for general tasks.',
             }),
             exitCode: 0,
             success: true,
@@ -99,7 +99,7 @@ describe.sequential('BenchmarkInterpretationService', () => {
         expect(result.interpretation.routingPolicy).toHaveLength(2);
 
         const recommendation = await service.recommendForObjective('deep analysis of production incidents');
-        expect(recommendation?.preferredProvider).toBe('claude');
+        expect(recommendation?.preferredProvider).toBe('kairos');
 
         const persisted = JSON.parse(await fs.readFile(result.outputFile, 'utf8'));
         expect(persisted.period).toBe('day');

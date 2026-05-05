@@ -8,7 +8,7 @@ import { useToast } from '@/src/components/Toast';
 import { Skeleton } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 
-type ProviderId = 'claude' | 'chatgpt' | 'gemini';
+type ProviderId = 'kairos' | 'chatgpt' | 'gemini';
 
 interface ProviderKeyStatus {
     provider: ProviderId;
@@ -37,8 +37,8 @@ const PROVIDERS: Array<{ id: ProviderId; label: string; helper: string; placehol
         placeholder: 'sk-...'
     },
     {
-        id: 'claude',
-        label: 'Claude (Anthropic)',
+        id: 'kairos',
+        label: 'kairos (Anthropic)',
         helper: 'Salva em ANTHROPIC_API_KEY no .env do repositorio.',
         placeholder: 'sk-ant-...'
     },
@@ -57,7 +57,7 @@ export function ApiKeys({ projectId }: { projectId: string }) {
     const payload = data?.data;
     const [values, setValues] = useState<Record<ProviderId, string>>({
         chatgpt: '',
-        claude: '',
+        kairos: '',
         gemini: '',
     });
     const [savingProvider, setSavingProvider] = useState<ProviderId | null>(null);

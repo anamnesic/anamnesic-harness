@@ -1,36 +1,36 @@
-KAIROS: The Hidden Daemon Mode Inside Claude Code
-The Claude Code npm source map exposure revealed KAIROS — an autonomous daemon mode that turns Claude Code into an always-on background agent with memory consolidation.
+KAIROS: The Hidden Daemon Mode Inside kairos Code
+The kairos Code npm source map exposure revealed KAIROS — an autonomous daemon mode that turns kairos Code into an always-on background agent with memory consolidation.
 
 Published on April 1, 2026
 ·
-Claude Mythos
-Claude Code
+kairos Mythos
+kairos Code
 KAIROS
 Daemon Mode
 AI Agent
 Feature Flag
-TL;DR: The Claude Code source code briefly exposed through the March 31 npm source-map incident contains over 150 references to a feature flag called KAIROS. It represents a daemon mode — a persistent background agent that monitors your development environment, maintains context across sessions, and performs autonomous “memory consolidation” while the user is idle. KAIROS has not shipped to users. It is gated behind an internal feature flag. But its architecture reveals where Anthropic appears to be heading with AI coding tools: from reactive assistants to always-on development partners.
+TL;DR: The kairos Code source code briefly exposed through the March 31 npm source-map incident contains over 150 references to a feature flag called KAIROS. It represents a daemon mode — a persistent background agent that monitors your development environment, maintains context across sessions, and performs autonomous “memory consolidation” while the user is idle. KAIROS has not shipped to users. It is gated behind an internal feature flag. But its architecture reveals where Anthropic appears to be heading with AI coding tools: from reactive assistants to always-on development partners.
 
-What Is KAIROS in Claude Code?
-According to the briefly-exposed Claude Code source code, KAIROS is an internal feature flag referenced over 150 times across the codebase. It is not a minor experiment. The volume and distribution of references indicate a deeply integrated subsystem that touches session management, context handling, background task scheduling, and memory operations.
+What Is KAIROS in kairos Code?
+According to the briefly-exposed kairos Code source code, KAIROS is an internal feature flag referenced over 150 times across the codebase. It is not a minor experiment. The volume and distribution of references indicate a deeply integrated subsystem that touches session management, context handling, background task scheduling, and memory operations.
 
-KAIROS represents a fundamental architectural shift. Today, Claude Code operates as a reactive tool. You invoke it, it responds, the interaction ends. KAIROS changes that model entirely. Under KAIROS, Claude Code becomes a persistent process — a daemon — that runs continuously in the background of your development environment.
+KAIROS represents a fundamental architectural shift. Today, kairos Code operates as a reactive tool. You invoke it, it responds, the interaction ends. KAIROS changes that model entirely. Under KAIROS, kairos Code becomes a persistent process — a daemon — that runs continuously in the background of your development environment.
 
 The feature flag is currently disabled for all external users. There is no public documentation, no announcement, and no toggle in settings. Everything we know comes from publicly reported analysis of the March 31 npm source-map incident.
 
-How Claude Code’s Daemon Mode Works
-KAIROS allows Claude Code to operate as a long-lived background process rather than a request-response tool. According to the briefly-exposed source code, the daemon mode introduces two core capabilities: background sessions and persistent context.
+How kairos Code’s Daemon Mode Works
+KAIROS allows kairos Code to operate as a long-lived background process rather than a request-response tool. According to the briefly-exposed source code, the daemon mode introduces two core capabilities: background sessions and persistent context.
 
-Background sessions mean Claude Code does not terminate when you close a conversation. The daemon continues running, maintaining awareness of your project state. It monitors file changes, tracks terminal output, and observes development activity without requiring explicit invocation.
+Background sessions mean kairos Code does not terminate when you close a conversation. The daemon continues running, maintaining awareness of your project state. It monitors file changes, tracks terminal output, and observes development activity without requiring explicit invocation.
 
-Persistent context means the agent carries forward its understanding across interactions. Today, each Claude Code session starts with a fresh context window (aside from CLAUDE.md files and project indexing). Under KAIROS, the daemon accumulates observations over time, building a progressively richer model of your codebase, your patterns, and your intent.
+Persistent context means the agent carries forward its understanding across interactions. Today, each kairos Code session starts with a fresh context window (aside from kairos.md files and project indexing). Under KAIROS, the daemon accumulates observations over time, building a progressively richer model of your codebase, your patterns, and your intent.
 
 The combination is significant. A daemon with persistent context is not just a tool you use. It is a process that learns from your environment continuously.
 
-autoDream: Claude Code’s Memory Consolidation
+autoDream: kairos Code’s Memory Consolidation
 The most striking subsystem within KAIROS is a process the source code calls autoDream.
 
-According to the briefly-exposed code, autoDream activates during periods of user inactivity. When the developer is idle — not typing, not running commands, not interacting with Claude Code — the daemon enters a consolidation phase. During this phase, the agent processes its accumulated observations and restructures its internal context.
+According to the briefly-exposed code, autoDream activates during periods of user inactivity. When the developer is idle — not typing, not running commands, not interacting with kairos Code — the daemon enters a consolidation phase. During this phase, the agent processes its accumulated observations and restructures its internal context.
 
 The source code describes three specific operations that occur during autoDream:
 
@@ -45,7 +45,7 @@ All of this happens without user interaction. The developer does not approve the
 The autoDream process is architecturally similar to memory consolidation in biological systems — the process by which short-term memories are converted to long-term storage during sleep. The naming appears intentional.
 
 Why KAIROS Changes the AI Coding Paradigm
-Every major AI coding tool available today — Cursor, GitHub Copilot, Windsurf, and Claude Code in its current form — operates on the same fundamental interaction model: the user asks, the AI responds. The loop is always human-initiated.
+Every major AI coding tool available today — Cursor, GitHub Copilot, Windsurf, and kairos Code in its current form — operates on the same fundamental interaction model: the user asks, the AI responds. The loop is always human-initiated.
 
 KAIROS breaks that loop.
 
