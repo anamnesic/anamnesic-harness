@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, Send, Plus, Trash2, RefreshCw, CheckCircle, AlertCircle, Inbox, Star, MailOpen, Clock, Menu, Sun, Moon, Monitor } from 'lucide-react';
+import { Mail, Send, Plus, Trash2, RefreshCw, CheckCircle, AlertCircle, Inbox, Star, MailOpen, Clock, Menu, Sun, Moon, Monitor, LayoutTemplate, Pencil, Copy, X } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { cn } from '../lib/utils';
 
@@ -27,7 +27,16 @@ interface Label {
   color: string;
 }
 
-type FolderType = 'inbox' | 'sent' | 'important' | 'label';
+type FolderType = 'inbox' | 'sent' | 'important' | 'label' | 'templates';
+
+interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const DARK_CSS = `
   html, body {
@@ -74,8 +83,50 @@ const BASE_CSS = `
   pre, code { white-space: pre-wrap; word-break: break-all; }
 `;
 
-function injectEmailTheme(html: string, theme: 'dark' | 'light' | 'auto'): string {
-  const themeCSS = theme === 'dark' ? DARK_CSS : theme === 'light' ? LIGHT_CSS : AUTO_CSS;
+const DEFAULT_TEMPLATES: EmailTemplate[] = [
+  {
+    id: 'tpl-welcome',
+    name: 'Boas-vindas',
+    subject: 'Bem-vindo(a) ao {{nome}}!',
+    body: `<h1 style="font-family:Inter,sans-serif;color:#ec5b13">Olá, {{nome}}! 👋</h1>
+<p>Seja muito bem-vindo(a). Estamos felizes em tê-lo(a) conosco.</p>
+<p>Qualquer dúvida, é só responder este email.</p>
+<p>Abraços,<br/><strong>Equipe Chronokairo</strong></p>`,
+    createdAt: new Date('2026-01-01'),
+    updatedAt: new Date('2026-01-01'),
+  },
+  {
+    id: 'tpl-followup',
+    name: 'Follow-up',
+    subject: 'Seguimento — {{assunto}}',
+    body: `<p>Olá, {{nome}},</p>
+<p>Estou entrando em contato para dar seguimento à nossa conversa sobre <strong>{{assunto}}</strong>.</p>
+<p>Poderia me dar um retorno até <strong>{{data}}</strong>?</p>
+<p>Agradeço desde já.</p>
+<p>Atenciosamente,<br/><strong>{{remetente}}</strong></p>`,
+    createdAt: new Date('2026-01-01'),
+    updatedAt: new Date('2026-01-01'),
+  },
+  {
+    id: 'tpl-proposta',
+    name: 'Proposta comercial',
+    subject: 'Proposta — {{projeto}}',
+    body: `<h2 style="font-family:Inter,sans-serif">Proposta Comercial</h2>
+<p>Olá, {{nome}},</p>
+<p>Segue abaixo nossa proposta para o projeto <strong>{{projeto}}</strong>:</p>
+<ul>
+  <li>Escopo: {{escopo}}</li>
+  <li>Prazo: {{prazo}}</li>
+  <li>Investimento: {{valor}}</li>
+</ul>
+<p>Ficamos à disposição para alinhar os detalhes.</p>
+<p>Atenciosamente,<br/><strong>{{remetente}}</strong></p>`,
+    createdAt: new Date('2026-01-01'),
+    updatedAt: new Date('2026-01-01'),
+  },
+];
+
+function injectEmailTheme(html: string, theme: 'dark' | 'light' | 'auto'): string {  const themeCSS = theme === 'dark' ? DARK_CSS : theme === 'light' ? LIGHT_CSS : AUTO_CSS;
   const styleTag = `<style>${BASE_CSS}${themeCSS}</style>`;
 
   // If there's a <head>, inject before </head>; otherwise prepend
@@ -103,6 +154,17 @@ export function EmailScreen() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [newLabel, setNewLabel] = useState({ name: '', color: '#3b82f6' });
+
+  // Templates state
+  const [templates, setTemplates] = useState<EmailTemplate[]>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('kairos-email-templates') : null;
+      if (!raw) return DEFAULT_TEMPLATES;
+      return JSON.parse(raw) as EmailTemplate[];
+    } catch { return DEFAULT_TEMPLATES; }
+  });
+  const [templateView, setTemplateView] = useState<'list' | 'edit'>('list');
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
 
   type ApiEmailRecord = {
     id: string; resendId?: string; to: string; from: string;
@@ -230,6 +292,31 @@ export function EmailScreen() {
     }));
   };
 
+  const saveTemplates = (updated: EmailTemplate[]) => {
+    setTemplates(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kairos-email-templates', JSON.stringify(updated));
+    }
+  };
+
+  const saveTemplate = (tpl: EmailTemplate) => {
+    const now = new Date();
+    const updated = templates.find(t => t.id === tpl.id)
+      ? templates.map(t => t.id === tpl.id ? { ...tpl, updatedAt: now } : t)
+      : [...templates, { ...tpl, createdAt: now, updatedAt: now }];
+    saveTemplates(updated);
+    setTemplateView('list');
+    setEditingTemplate(null);
+  };
+
+  const deleteTemplate = (id: string) => saveTemplates(templates.filter(t => t.id !== id));
+
+  const useTemplate = (tpl: EmailTemplate) => {
+    setComposer({ to: '', subject: tpl.subject, body: tpl.body });
+    setActiveFolder('inbox');
+    setShowComposer(true);
+  };
+
   const addLabel = () => {
     if (!newLabel.name) return;
     const id = newLabel.name.toLowerCase().replace(/\s+/g, '-');
@@ -260,6 +347,25 @@ export function EmailScreen() {
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {/* Templates shortcut */}
+          <button
+            onClick={() => { setActiveFolder('templates'); setSelectedEmail(null); setTemplateView('list'); setEditingTemplate(null); }}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors',
+              activeFolder === 'templates'
+                ? 'bg-primary/10 text-primary border border-primary/20'
+                : 'text-text-dim hover:text-accent hover:bg-card/50'
+            )}
+          >
+            <LayoutTemplate className="size-4" />
+            <span className="flex-1 text-left">Templates</span>
+            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', activeFolder === 'templates' ? 'bg-primary text-white' : 'bg-card text-text-dim')}>
+              {templates.length}
+            </span>
+          </button>
+
+          <div className="my-2 border-t border-border/40" />
+
           {folders.map((folder) => (
             <button
               key={folder.id}
@@ -351,12 +457,16 @@ export function EmailScreen() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold">
-                {activeFolder === 'label' && activeLabel
+                {activeFolder === 'templates'
+                  ? 'Templates'
+                  : activeFolder === 'label' && activeLabel
                   ? labels.find(l => l.id === activeLabel)?.name || 'Marcador'
                   : folders.find(f => f.id === activeFolder)?.label || 'Email'}
               </h2>
               <p className="text-sm text-text-dim">
-                {filteredEmails.length} {filteredEmails.length === 1 ? 'email' : 'emails'}
+                {activeFolder === 'templates'
+                  ? `${templates.length} ${templates.length === 1 ? 'template' : 'templates'}`
+                  : `${filteredEmails.length} ${filteredEmails.length === 1 ? 'email' : 'emails'}`}
               </p>
             </div>
             <button
@@ -383,7 +493,140 @@ export function EmailScreen() {
 
         {/* Email List / Composer / Detail View */}
         <div className="flex-1 overflow-y-auto">
-          {showComposer ? (
+          {activeFolder === 'templates' ? (
+            <div className="p-6">
+              {templateView === 'edit' && editingTemplate ? (
+                /* ── Template editor ── */
+                <div className="max-w-2xl">
+                  <div className="mb-4 flex items-center gap-3">
+                    <button onClick={() => { setTemplateView('list'); setEditingTemplate(null); }} className="text-xs text-text-dim hover:text-accent">← Voltar</button>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-text-dim flex-1">
+                      {templates.find(t => t.id === editingTemplate.id) ? 'Editar Template' : 'Novo Template'}
+                    </h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Nome do template</label>
+                      <input
+                        type="text"
+                        value={editingTemplate.name}
+                        onChange={e => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                        placeholder="Ex: Boas-vindas"
+                        className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Assunto</label>
+                      <input
+                        type="text"
+                        value={editingTemplate.subject}
+                        onChange={e => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
+                        placeholder="Assunto do email (use {{variavel}} para placeholders)"
+                        className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Corpo (HTML)</label>
+                      <textarea
+                        value={editingTemplate.body}
+                        onChange={e => setEditingTemplate({ ...editingTemplate, body: e.target.value })}
+                        placeholder="<p>Olá, {{nome}}!</p>"
+                        rows={14}
+                        className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm font-mono focus:border-primary focus:outline-none resize-none"
+                      />
+                      <p className="mt-1 text-[10px] text-text-dim">Use <code className="bg-card px-1 rounded">{'{{variavel}}'}</code> como placeholders que serão substituídos ao usar o template.</p>
+                    </div>
+                    {editingTemplate.body && (
+                      <div>
+                        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Pré-visualização</label>
+                        <div className="rounded-lg overflow-hidden border border-border">
+                          <iframe
+                            srcDoc={injectEmailTheme(editingTemplate.body, 'dark')}
+                            className="w-full border-0"
+                            style={{ minHeight: 200 }}
+                            sandbox="allow-same-origin"
+                            title="preview"
+                            onLoad={e => {
+                              const f = e.currentTarget;
+                              if (f.contentDocument?.body) f.style.height = f.contentDocument.body.scrollHeight + 24 + 'px';
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex gap-2 pt-2">
+                      <button onClick={() => { setTemplateView('list'); setEditingTemplate(null); }} className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-card transition-colors">Cancelar</button>
+                      <button
+                        onClick={() => saveTemplate(editingTemplate)}
+                        disabled={!editingTemplate.name || !editingTemplate.subject}
+                        className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                      >
+                        Salvar Template
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ── Template list ── */
+                <>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-text-dim">Templates de Email</h3>
+                    <button
+                      onClick={() => {
+                        setEditingTemplate({ id: crypto.randomUUID(), name: '', subject: '', body: '', createdAt: new Date(), updatedAt: new Date() });
+                        setTemplateView('edit');
+                      }}
+                      className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white hover:bg-primary/90 transition-colors"
+                    >
+                      <Plus className="size-3.5" />
+                      Novo template
+                    </button>
+                  </div>
+                  {templates.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-text-dim">
+                      <LayoutTemplate className="mb-3 size-12 opacity-30" />
+                      <p className="text-sm">Nenhum template criado</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {templates.map(tpl => (
+                        <div key={tpl.id} className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:border-primary/30 transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm truncate">{tpl.name}</p>
+                              <p className="text-xs text-text-dim truncate">{tpl.subject}</p>
+                            </div>
+                            <div className="flex shrink-0 gap-1">
+                              <button onClick={() => { setEditingTemplate({ ...tpl }); setTemplateView('edit'); }} title="Editar" className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-accent transition-colors"><Pencil className="size-3.5" /></button>
+                              <button onClick={() => { const c = { ...tpl, id: crypto.randomUUID(), name: tpl.name + ' (cópia)', createdAt: new Date(), updatedAt: new Date() }; saveTemplates([...templates, c]); }} title="Duplicar" className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-accent transition-colors"><Copy className="size-3.5" /></button>
+                              <button onClick={() => deleteTemplate(tpl.id)} title="Excluir" className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-red-500 transition-colors"><Trash2 className="size-3.5" /></button>
+                            </div>
+                          </div>
+                          {tpl.body && (
+                            <div className="rounded-lg overflow-hidden border border-border/50 bg-bg mt-1">
+                              <iframe
+                                srcDoc={injectEmailTheme(tpl.body, 'dark')}
+                                className="w-full border-0 pointer-events-none"
+                                style={{ height: 120 }}
+                                sandbox="allow-same-origin"
+                                title={tpl.name}
+                              />
+                            </div>
+                          )}
+                          <button
+                            onClick={() => useTemplate(tpl)}
+                            className="mt-auto w-full rounded-lg border border-primary/30 bg-primary/10 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            Usar template
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ) : showComposer ? (
             <div className="p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-text-dim">Compor Email</h3>
@@ -677,8 +920,6 @@ export function EmailScreen() {
           )}
         </div>
       </div>
-
-      {/* Label Creation Modal */}
       {showLabelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-96 rounded-xl border border-border bg-bg p-6 shadow-2xl">
