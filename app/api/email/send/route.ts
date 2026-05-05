@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { saveEmail } from '@/app/api/_lib/email-store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,7 +47,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, data });
+    // Persist the sent email record
+    const record = saveEmail({
+      resendId: data.id,
+      to,
+      from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+      subject,
+      html,
+      status: 'sent',
+    });
+
+    return NextResponse.json({ success: true, data: { ...data, record } });
   } catch (error) {
     console.error('Erro no envio de email:', error);
     return NextResponse.json(

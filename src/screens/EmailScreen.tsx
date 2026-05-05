@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Send, Plus, Trash2, RefreshCw, CheckCircle, AlertCircle, Inbox, Star, MailOpen, Clock, Menu } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 import { cn } from '../lib/utils';
 
 interface Email {
   id: string;
+  resendId?: string;
+  lastEvent?: string;
   to?: string;
   from: string;
   subject: string;
@@ -34,9 +37,57 @@ export function EmailScreen() {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [composer, setComposer] = useState({ to: '', subject: '', body: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [newLabel, setNewLabel] = useState({ name: '', color: '#3b82f6' });
+
+  type ApiEmailRecord = {
+    id: string; resendId?: string; to: string; from: string;
+    subject: string; html: string; status: string; lastEvent?: string; createdAt: string;
+  };
+
+  const mapRecord = (r: ApiEmailRecord): Email => ({
+    id: r.id,
+    resendId: r.resendId,
+    lastEvent: r.lastEvent,
+    to: r.to,
+    from: r.from,
+    subject: r.subject,
+    body: r.html,
+    status: r.status as Email['status'],
+    createdAt: new Date(r.createdAt),
+    read: r.status !== 'received',
+  });
+
+  const loadEmails = async () => {
+    try {
+      const res = await apiFetch<{ success: boolean; data: ApiEmailRecord[] }>('/api/email/list');
+      if (res.success && res.data) setEmails(res.data.map(mapRecord));
+    } catch {
+      // silently fail – offline or unauthenticated
+    }
+  };
+
+  const syncEmails = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await apiFetch<{ success: boolean; synced: { sent: number; received: number }; data: ApiEmailRecord[] }>('/api/email/sync');
+      if (res.success && res.data) {
+        setEmails(res.data.map(mapRecord));
+        setMessage({ type: 'success', text: `Sincronizado: ${res.synced.sent} enviados · ${res.synced.received} recebidos` });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Erro ao sincronizar com o Resend.' });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    syncEmails();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const folders = [
     { id: 'inbox' as FolderType, label: 'Caixa de Entrada', icon: Inbox, count: emails.filter(e => e.status === 'received' && !e.read).length },
@@ -62,9 +113,8 @@ export function EmailScreen() {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/email/send', {
+      const res = await apiFetch<{ success: boolean; data: { id: string; record: { id: string; resendId?: string; to: string; from: string; createdAt: string } } }>('/api/email/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: composer.to,
           subject: composer.subject,
@@ -72,23 +122,24 @@ export function EmailScreen() {
         }),
       });
 
-      if (!response.ok) throw new Error('Falha ao enviar email');
-
+      const record = res.data?.record;
       const newEmail: Email = {
-        id: Date.now().toString(),
+        id: record?.id ?? Date.now().toString(),
+        resendId: record?.resendId ?? res.data?.id,
         to: composer.to,
-        from: 'noreply@kairos.ai',
+        from: record?.from ?? 'agent@chronokairo.com.br',
         subject: composer.subject,
         body: composer.body,
         status: 'sent',
-        createdAt: new Date(),
+        createdAt: record?.createdAt ? new Date(record.createdAt) : new Date(),
         read: true,
       };
 
-      setEmails([newEmail, ...emails]);
+      setEmails((prev) => [newEmail, ...prev.filter((e) => e.id !== newEmail.id)]);
+      setActiveFolder('sent');
       setComposer({ to: '', subject: '', body: '' });
       setShowComposer(false);
-      setMessage({ type: 'success', text: 'Email enviado com sucesso!' });
+      setMessage({ type: 'success', text: `Email enviado! ID Resend: ${record?.resendId ?? res.data?.id ?? '—'}` });
     } catch {
       setMessage({ type: 'error', text: 'Erro ao enviar email. Verifique a API key do Resend.' });
     } finally {
@@ -247,11 +298,12 @@ export function EmailScreen() {
               </p>
             </div>
             <button
-              onClick={() => window.location.reload()}
-              className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-card transition-colors"
+              onClick={syncEmails}
+              disabled={isSyncing}
+              className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-card transition-colors disabled:opacity-50"
             >
-              <RefreshCw className="size-3.5" />
-              Atualizar
+              <RefreshCw className={cn('size-3.5', isSyncing && 'animate-spin')} />
+              {isSyncing ? 'Sincronizando…' : 'Sincronizar'}
             </button>
           </div>
         </div>
@@ -381,6 +433,11 @@ export function EmailScreen() {
                 <span>De: {selectedEmail.from}</span>
                 {selectedEmail.to && <span>Para: {selectedEmail.to}</span>}
                 <span>{selectedEmail.createdAt.toLocaleString('pt-BR')}</span>
+                {selectedEmail.resendId && (
+                  <span className="ml-auto font-mono bg-card px-2 py-0.5 rounded text-[10px]" title="Resend ID">
+                    ID: {selectedEmail.resendId}
+                  </span>
+                )}
               </div>
               {selectedEmail.labels && selectedEmail.labels.length > 0 && (
                 <div className="flex items-center gap-2 mb-4">
@@ -442,6 +499,18 @@ export function EmailScreen() {
                         {!email.read && (
                           <span className="rounded-full bg-primary h-2 w-2" />
                         )}
+                        {email.lastEvent && (
+                          <span className={cn(
+                            'rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide',
+                            email.lastEvent === 'delivered' || email.lastEvent === 'opened'
+                              ? 'bg-green-500/10 text-green-500'
+                              : email.lastEvent === 'bounced' || email.lastEvent === 'complained'
+                              ? 'bg-red-500/10 text-red-500'
+                              : 'bg-card text-text-dim',
+                          )}>
+                            {email.lastEvent}
+                          </span>
+                        )}
                       </div>
                       <p className={cn('truncate text-sm', !email.read && 'font-bold')}>
                         {email.subject}
@@ -472,6 +541,11 @@ export function EmailScreen() {
                     <span className="shrink-0 text-[10px] text-text-dim">
                       {email.createdAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     </span>
+                    {email.resendId && (
+                      <span className="shrink-0 font-mono text-[9px] text-text-dim/60 hidden sm:block" title={`Resend ID: ${email.resendId}`}>
+                        #{email.resendId.slice(0, 8)}
+                      </span>
+                    )}
                   </div>
                 ))
               )}
