@@ -28,46 +28,8 @@ type FolderType = 'inbox' | 'sent' | 'important' | 'label';
 export function EmailScreen() {
   const [activeFolder, setActiveFolder] = useState<FolderType>('inbox');
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
-  const [emails, setEmails] = useState<Email[]>([
-    {
-      id: '1',
-      from: 'contato@exemplo.com',
-      subject: 'Teste de recebimento',
-      body: 'Este é um email de teste recebido na sua caixa de entrada.',
-      status: 'received',
-      createdAt: new Date(),
-      read: false,
-      important: false,
-      labels: ['trabalho'],
-    },
-    {
-      id: '2',
-      from: 'suporte@kairos.ai',
-      subject: 'Atualização do sistema',
-      body: 'Informamos que o sistema Kairos passará por manutenção hoje às 22h.',
-      status: 'received',
-      createdAt: new Date(Date.now() - 3600000),
-      read: true,
-      important: true,
-      labels: ['sistema'],
-    },
-    {
-      id: '3',
-      to: 'user@example.com',
-      from: 'noreply@kairos.ai',
-      subject: 'Bem-vindo ao Kairos',
-      body: 'Olá! Bem-vindo ao sistema Kairos. Aproveite todos os recursos.',
-      status: 'sent',
-      createdAt: new Date(Date.now() - 86400000),
-      read: true,
-      labels: ['trabalho'],
-    },
-  ]);
-  const [labels, setLabels] = useState<Label[]>([
-    { id: 'trabalho', name: 'Trabalho', color: '#3b82f6' },
-    { id: 'sistema', name: 'Sistema', color: '#10b981' },
-    { id: 'pessoal', name: 'Pessoal', color: '#f59e0b' },
-  ]);
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [labels, setLabels] = useState<Label[]>([]);
   const [showComposer, setShowComposer] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [composer, setComposer] = useState({ to: '', subject: '', body: '' });

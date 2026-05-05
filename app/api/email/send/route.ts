@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL || 'noreply@kairos.ai',
+        from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
         to,
         subject,
         html,
