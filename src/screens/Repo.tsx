@@ -182,7 +182,7 @@ export function Projects({
         try {
             const created = await apiFetch<ApiResponse<Project>>('/api/v1/projects', {
                 method: 'POST',
-                body: JSON.stringify({ name: base, localPath: folderPath }),
+                body: JSON.stringify({ name: base, metadata: { localPath: folderPath } }),
             });
             const createdProject = created?.data;
             if (createdProject?.id && typeof window !== 'undefined') {
@@ -201,7 +201,7 @@ export function Projects({
 
                     const created = await apiFetch<ApiResponse<Project>>('/api/v1/projects', {
                         method: 'POST',
-                        body: JSON.stringify({ name: singleRepoName, localPath: singleRepoPath }),
+                        body: JSON.stringify({ name: singleRepoName, metadata: { localPath: singleRepoPath } }),
                     });
                     const createdProject = created?.data;
                     if (createdProject?.id && typeof window !== 'undefined') {

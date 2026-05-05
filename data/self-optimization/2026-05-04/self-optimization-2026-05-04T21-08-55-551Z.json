@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-05-04T21:08:55.551Z",
+  "provider": "copilot",
+  "command": "copilot",
+  "exitCode": 0,
+  "metricsSnapshot": {
+    "timestamp": "2026-05-04T21:08:48.793Z",
+    "period": "day",
+    "totalTasks": 0,
+    "successCount": 0,
+    "failureCount": 0,
+    "avgDuration": 0,
+    "avgTokensUsed": 0,
+    "successRate": 0,
+    "errorRate": 0,
+    "byAgent": {},
+    "byModel": {}
+  },
+  "benchmarkReport": {
+    "timestamp": "2026-05-04T21:08:48.793Z",
+    "summary": "No data available for benchmarking.",
+    "bestModel": {
+      "bySuccessRate": "N/A",
+      "byLatency": "N/A",
+      "byCostEfficiency": "N/A"
+    },
+    "models": []
+  },
+  "plan": {
+    "configImprovements": [
+      {
+        "title": "Conservative monitoring mode",
+        "settingKey": "selfOptimization.intervalMs",
+        "proposedValue": "900000",
+        "rationale": "Model output did not contain valid JSON",
+        "expectedImpact": "Safer periodic analysis while data quality improves."
+      }
+    ],
+    "policyChanges": [],
+    "routingChanges": []
+  },
+  "suggestions": [
+    {
+      "id": "cfg-selfoptimization-intervalms-1",
+      "category": "config",
+      "title": "Conservative monitoring mode",
+      "summary": "selfOptimization.intervalMs -> 900000. Safer periodic analysis while data quality improves.",
+      "status": "pending",
+      "createdAt": "2026-05-04T21:08:55.551Z"
+    }
+  ]
+}
