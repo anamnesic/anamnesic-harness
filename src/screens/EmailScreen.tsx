@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, Send, Plus, Trash2, RefreshCw, CheckCircle, AlertCircle, Inbox, Star, MailOpen, Clock, Menu } from 'lucide-react';
+import { Mail, Send, Plus, Trash2, RefreshCw, CheckCircle, AlertCircle, Inbox, Star, MailOpen, Clock, Menu, Sun, Moon, Monitor } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { cn } from '../lib/utils';
 
@@ -29,6 +29,65 @@ interface Label {
 
 type FolderType = 'inbox' | 'sent' | 'important' | 'label';
 
+const DARK_CSS = `
+  html, body {
+    background: #09090b !important;
+    color: #e4e4e7 !important;
+  }
+  a { color: #ec5b13 !important; }
+  * { border-color: #27272a !important; }
+  img { opacity: .92; }
+`;
+
+const LIGHT_CSS = `
+  html, body {
+    background: #ffffff !important;
+    color: #18181b !important;
+  }
+  a { color: #c44b0e !important; }
+`;
+
+const AUTO_CSS = `
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #09090b !important; color: #e4e4e7 !important; }
+    a { color: #ec5b13 !important; }
+    * { border-color: #27272a !important; }
+    img { opacity: .92; }
+  }
+  @media (prefers-color-scheme: light) {
+    html, body { background: #ffffff !important; color: #18181b !important; }
+    a { color: #c44b0e !important; }
+  }
+`;
+
+const BASE_CSS = `
+  html, body {
+    font-family: Inter, "Public Sans", ui-sans-serif, system-ui, sans-serif !important;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 12px 16px;
+    word-break: break-word;
+  }
+  img { max-width: 100% !important; height: auto !important; border-radius: 6px; }
+  table { max-width: 100% !important; }
+  pre, code { white-space: pre-wrap; word-break: break-all; }
+`;
+
+function injectEmailTheme(html: string, theme: 'dark' | 'light' | 'auto'): string {
+  const themeCSS = theme === 'dark' ? DARK_CSS : theme === 'light' ? LIGHT_CSS : AUTO_CSS;
+  const styleTag = `<style>${BASE_CSS}${themeCSS}</style>`;
+
+  // If there's a <head>, inject before </head>; otherwise prepend
+  if (/<\/head>/i.test(html)) {
+    return html.replace(/<\/head>/i, `${styleTag}</head>`);
+  }
+  if (/<head>/i.test(html)) {
+    return html.replace(/<head>/i, `<head>${styleTag}`);
+  }
+  return `<html><head>${styleTag}</head><body>${html}</body></html>`;
+}
+
 export function EmailScreen() {
   const [activeFolder, setActiveFolder] = useState<FolderType>('inbox');
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
@@ -37,6 +96,7 @@ export function EmailScreen() {
   const [showComposer, setShowComposer] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [isLoadingBody, setIsLoadingBody] = useState(false);
+  const [emailTheme, setEmailTheme] = useState<'dark' | 'light' | 'auto'>('auto');
   const [composer, setComposer] = useState({ to: '', subject: '', body: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -457,8 +517,50 @@ export function EmailScreen() {
                   })}
                 </div>
               )}
-              <div className="prose prose-sm max-w-none text-highlight">
-                {selectedEmail.body}
+              {/* Theme toggle */}
+              <div className="flex items-center gap-1 mb-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-text-dim mr-2">Tema do email</span>
+                {([['dark', Moon], ['light', Sun], ['auto', Monitor]] as const).map(([t, Icon]) => (
+                  <button
+                    key={t}
+                    onClick={() => setEmailTheme(t)}
+                    title={t === 'dark' ? 'Escuro' : t === 'light' ? 'Claro' : 'Automático'}
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors',
+                      emailTheme === t
+                        ? 'bg-primary/15 text-primary border border-primary/30'
+                        : 'text-text-dim hover:bg-card border border-transparent',
+                    )}
+                  >
+                    <Icon className="size-3" />
+                    {t === 'dark' ? 'Escuro' : t === 'light' ? 'Claro' : 'Auto'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="rounded-lg overflow-hidden border border-border">
+                {isLoadingBody ? (
+                  <div className="flex items-center gap-2 text-text-dim text-sm py-8 px-4">
+                    <RefreshCw className="size-4 animate-spin" />
+                    Carregando conteúdo…
+                  </div>
+                ) : selectedEmail.body ? (
+                  <iframe
+                    key={`${selectedEmail.id}-${emailTheme}`}
+                    srcDoc={injectEmailTheme(selectedEmail.body, emailTheme)}
+                    className="w-full min-h-[400px] border-0"
+                    sandbox="allow-same-origin"
+                    title={selectedEmail.subject}
+                    onLoad={(e) => {
+                      const iframe = e.currentTarget;
+                      if (iframe.contentDocument?.body) {
+                        iframe.style.height = iframe.contentDocument.body.scrollHeight + 32 + 'px';
+                      }
+                    }}
+                  />
+                ) : (
+                  <p className="text-text-dim text-sm italic p-4">Sem conteúdo disponível</p>
+                )}
               </div>
             </div>
           ) : (
@@ -475,6 +577,26 @@ export function EmailScreen() {
                     onClick={() => {
                       setSelectedEmail(email);
                       if (!email.read) markAsRead(email.id);
+                      // Lazy-load HTML body if not yet fetched
+                      if (!email.bodyLoaded && email.resendId) {
+                        setIsLoadingBody(true);
+                        apiFetch<{ success: boolean; data: { html?: string; text?: string } }>(
+                          `/api/email/${email.resendId}`,
+                        )
+                          .then((res) => {
+                            const html = res.data?.html ?? res.data?.text ?? '';
+                            setEmails((prev) =>
+                              prev.map((e) =>
+                                e.id === email.id ? { ...e, body: html, bodyLoaded: true } : e,
+                              ),
+                            );
+                            setSelectedEmail((prev) =>
+                              prev?.id === email.id ? { ...prev, body: html, bodyLoaded: true } : prev,
+                            );
+                          })
+                          .catch(() => {/* silently ignore */})
+                          .finally(() => setIsLoadingBody(false));
+                      }
                     }}
                     className={cn(
                       'flex items-center gap-4 px-6 py-3 cursor-pointer transition-colors hover:bg-card/50',
