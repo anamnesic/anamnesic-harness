@@ -44,22 +44,6 @@ if (typeof window !== 'undefined' && !(window as any).__xtermPatched) {
         }
     }).catch(() => {});
 }
-                // Patch the dimensions getter
-                const originalGetDimensions = ViewportProto.get dimensions;
-                if (originalGetDimensions) {
-                    ViewportProto.get dimensions = function (...args: any[]) {
-                        if (!this._terminal || !this._terminal.dimensions) {
-                            return undefined; // Return safe value
-                        }
-                        return originalGetDimensions.apply(this, args);
-                    };
-                }
-            }
-        } catch (e) {
-            console.debug('[TerminalPanel] Failed to patch xterm:', e);
-        }
-    }).catch(() => {});
-}
 
 // Global error suppression for xterm dimensions error
 // This runs once when the module is loaded
