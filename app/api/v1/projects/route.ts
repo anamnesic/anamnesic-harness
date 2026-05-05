@@ -72,11 +72,16 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         if (!body.name) return err('VALIDATION_ERROR', 'name is required', 400);
 
-        const localPath: string | undefined = typeof body.localPath === 'string' && body.localPath.trim()
-            ? body.localPath.trim()
-            : undefined;
+        // Accept localPath from both top-level and nested in metadata
+        const localPath: string | undefined =
+            (typeof body.localPath === 'string' && body.localPath.trim())
+                ? body.localPath.trim()
+                : (typeof body.metadata?.localPath === 'string' && body.metadata.localPath.trim())
+                ? body.metadata.localPath.trim()
+                : undefined;
 
         // Validate the path exists and is a directory before creating the project
+        let gitSubfolders: string[] = [];
         if (localPath) {
             const fs = await import('node:fs/promises');
             try {
@@ -88,15 +93,10 @@ export async function POST(req: NextRequest) {
                 return err('VALIDATION_ERROR', `localPath does not exist: ${localPath}`, 400);
             }
 
-            // Check if folder has git
+            // Check if folder has git (informational only, not a rejection)
             const hasGit = await hasGitRepository(localPath);
             if (!hasGit) {
-                // Check if there are git subfolders
-                const gitSubfolders = await findGitSubfolders(localPath);
-                if (gitSubfolders.length > 0) {
-                    return err('NO_GIT_REPO', `This folder has no git repository. Found ${gitSubfolders.length} git repositor${gitSubfolders.length === 1 ? 'y' : 'ies'} in subfolders. Consider opening this as a Workspace instead.`, 400, { gitSubfolders });
-                }
-                return err('NO_GIT_REPO', 'This folder does not have a git repository', 400);
+                gitSubfolders = await findGitSubfolders(localPath);
             }
         }
 
@@ -137,6 +137,13 @@ export async function POST(req: NextRequest) {
             }
 
             await repo.save(existing);
+
+            // Return gitSubfolders as informational data when no .git found
+            if (gitSubfolders.length > 0) {
+                const result = { ...existing, gitSubfolders };
+                return ok(result, 201);
+            }
+
             return ok(existing, 201);
         }
 

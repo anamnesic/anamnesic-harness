@@ -36,11 +36,10 @@ export function RepositorySelector({ hideWhenEmpty = false }: RepositorySelector
         setSubmitting(true);
 
         try {
-            console.log('Enviando para API:', { name: base, localPath: folderPath });
             // O apiFetch já adiciona o header X-Workspace-Id automaticamente
             const created = await apiFetch<{ data?: { id?: string } }>('/api/v1/projects', {
                 method: 'POST',
-                body: JSON.stringify({ name: base, localPath: folderPath }),
+                body: JSON.stringify({ name: base, metadata: { localPath: folderPath } }),
             });
 
             const createdProjectId = created?.data?.id;
@@ -56,29 +55,16 @@ export function RepositorySelector({ hideWhenEmpty = false }: RepositorySelector
 
             toast(`Repositório "${base}" importado`, 'success');
         } catch (e: any) {
-            // Tratar erro específico de pasta sem repositório Git
-            if (e?.code === 'NO_GIT_REPO') {
-                toast('A pasta selecionada não é um repositório Git. Selecione uma pasta com .git', 'error');
-                return;
-            }
             // Log detalhado para debug de erro 400
-            // Evitar logar objetos complexos que podem causar erro
             try {
-                // Log seguro convertendo para string JSON primeiro
                 const safeMessage = e?.message || 'Unknown error';
                 const safeCode = e?.code || null;
-                const safeDetails = e?.details ? String(e?.details).substring(0, 200) : null;
                 console.error('Erro ao importar repositório:', JSON.stringify({
                     message: safeMessage,
                     code: safeCode,
-                    details: safeDetails,
                     folderPath
                 }, null, 2));
-                
-                // Também logar o que estamos enviando para debug
-                console.log('Dados enviados para API:', { name: base, localPath: folderPath });
             } catch (logError) {
-                // Falha última no logging - log mínimo
                 console.error('Erro ao importar repositório (logging failed):', {
                     message: e?.message || 'Unknown error',
                     folderPath

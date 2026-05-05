@@ -115,12 +115,6 @@ export function Projects({
     const [repoSidebarTab, setRepoSidebarTab] = useState<RepoSidebarTab>('files');
     const [gitChangesCollapsed, setGitChangesCollapsed] = useState(false);
     const [GitGraphCollapsed, setGitGraphCollapsed] = useState(false);
-    const [noGitDialog, setNoGitDialog] = useState<{ open: boolean; folderPath: string; folderName: string; gitSubfolders: string[] }>({
-        open: false,
-        folderPath: '',
-        folderName: '',
-        gitSubfolders: [],
-    });
     const [terminalHeight, setTerminalHeight] = useState(288); // h-72 = 288px
     const [isResizing, setIsResizing] = useState(false);
     const activeTab = controlledActiveTab ?? internalActiveTab;
@@ -170,11 +164,6 @@ export function Projects({
         }
     }, [projects, repository, setRepositoryById]);
 
-    function joinSubfolder(basePath: string, subfolder: string) {
-        const separator = basePath.includes('\\') ? '\\' : '/';
-        return `${basePath.replace(/[\\/]$/, '')}${separator}${subfolder}`;
-    }
-
     async function handleFolderSelected(folderPath: string) {
         const base = folderPath.split(/[\\/]/).filter(Boolean).pop() || 'Project';
         setShowBrowser(false);
@@ -191,42 +180,6 @@ export function Projects({
             toast(`Reposit├│rio "${base}" importado`, 'success');
             await refreshRepositories();
         } catch (e: any) {
-            // Check if it's a NO_GIT_REPO error with git subfolders
-            if (e?.code === 'NO_GIT_REPO') {
-                const gitSubfolders: string[] = e?.details?.gitSubfolders ?? [];
-
-                if (gitSubfolders.length === 1) {
-                    const singleRepoName = gitSubfolders[0];
-                    const singleRepoPath = joinSubfolder(folderPath, singleRepoName);
-
-                    const created = await apiFetch<ApiResponse<Project>>('/api/v1/projects', {
-                        method: 'POST',
-                        body: JSON.stringify({ name: singleRepoName, metadata: { localPath: singleRepoPath } }),
-                    });
-                    const createdProject = created?.data;
-                    if (createdProject?.id && typeof window !== 'undefined') {
-                        localStorage.setItem('kairos-selected-repository', createdProject.id);
-                    }
-
-                    toast(`A pasta tem 1 reposit├│rio Git. "${singleRepoName}" foi importado automaticamente.`, 'success');
-                    await refreshRepositories();
-                    return;
-                }
-
-                if (gitSubfolders.length === 0) {
-                    toast('Esta pasta n├úo tem reposit├│rio Git e n├úo pode ser selecionada.', 'error');
-                    return;
-                }
-
-                setNoGitDialog({
-                    open: true,
-                    folderPath,
-                    folderName: base,
-                    gitSubfolders,
-                });
-                setSubmitting(false);
-                return;
-            }
             toast(e.message ?? 'Falha ao importar pasta', 'error');
         } finally {
             setSubmitting(false);
@@ -277,28 +230,6 @@ export function Projects({
         }
 
         await handleFolderSelected(path);
-    }
-
-    async function handleOpenAsWorkspace() {
-        const { folderPath, folderName } = noGitDialog;
-        setNoGitDialog({ open: false, folderPath: '', folderName: '', gitSubfolders: [] });
-        setSubmitting(true);
-        try {
-            await apiFetch('/api/v1/workspaces', {
-                method: 'POST',
-                body: JSON.stringify({
-                    name: folderName,
-                    slug: folderName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-                    description: `Workspace with git repositories`,
-                }),
-            });
-            toast(`Criado workspace "${folderName}"`, 'success');
-            // Note: In a real app, you might want to navigate to the workspace
-        } catch (e: any) {
-            toast(e.message ?? 'Falha ao criar workspace', 'error');
-        } finally {
-            setSubmitting(false);
-        }
     }
 
     const selectedProject = repository && projects.some((p) => p.id === repository.id)
@@ -611,64 +542,6 @@ export function Projects({
 
     const renderSharedModals = () => (
         <>
-            <AnimatePresence>
-                {noGitDialog.open && (
-                    <motion.div
-                        key="no-git-dialog-overlay"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 backdrop-blur-sm p-4"
-                        onClick={(e) => { if (e.target === e.currentTarget) setNoGitDialog({ ...noGitDialog, open: false }); }}
-                    >
-                        <motion.div
-                            key="no-git-dialog"
-                            initial={{ opacity: 0, y: 40 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 40 }}
-                            className="bento-card w-full space-y-4"
-                        >
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-bold">Nenhum reposit├│rio Git encontrado</h3>
-                                <button
-                                    onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
-                                    className="rounded-lg p-1.5 text-text-dim hover:text-accent transition-colors"
-                                >
-                                    <X className="size-4" />
-                                </button>
-                            </div>
-
-                            <div className="space-y-2 text-sm text-text-dim">
-                                <p>
-                                    <span className="font-semibold text-text">{noGitDialog.folderName}</span> doesn't have a git repository, but found {noGitDialog.gitSubfolders.length} git repositor{noGitDialog.gitSubfolders.length === 1 ? 'y' : 'ies'} in subfolders:
-                                </p>
-                                <ul className="list-disc list-inside space-y-1 text-xs font-mono">
-                                    {noGitDialog.gitSubfolders.map((folder, i) => (
-                                        <li key={i}>{folder}</li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => setNoGitDialog({ ...noGitDialog, open: false })}
-                                    className="flex-1 rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dim hover:text-text transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleOpenAsWorkspace}
-                                    disabled={submitting}
-                                    className="flex-1 rounded-lg bg-accent/20 border border-accent/40 px-4 py-2 text-xs font-bold text-accent hover:bg-accent/30 transition-colors disabled:opacity-50"
-                                >
-                                    {submitting ? 'CreatingÔÇª' : 'Open as Workspace'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             <AnimatePresence>
                 {showBrowser && (
                     <FolderBrowser
