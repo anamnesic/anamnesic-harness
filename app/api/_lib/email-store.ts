@@ -14,7 +14,15 @@ export interface EmailRecord {
   createdAt: string;
 }
 
+interface SyncMeta {
+  firstSyncDone: boolean;
+  sentNewestId?: string;
+  receivedNewestId?: string;
+  lastSyncedAt?: string;
+}
+
 const STORE_PATH = path.join(process.cwd(), 'data', 'emails.json');
+const META_PATH  = path.join(process.cwd(), 'data', 'email-sync-meta.json');
 
 function readStore(): EmailRecord[] {
   try {
@@ -29,6 +37,20 @@ function readStore(): EmailRecord[] {
 function writeStore(records: EmailRecord[]): void {
   fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
   fs.writeFileSync(STORE_PATH, JSON.stringify(records, null, 2), 'utf-8');
+}
+
+export function readSyncMeta(): SyncMeta {
+  try {
+    if (!fs.existsSync(META_PATH)) return { firstSyncDone: false };
+    return JSON.parse(fs.readFileSync(META_PATH, 'utf-8')) as SyncMeta;
+  } catch {
+    return { firstSyncDone: false };
+  }
+}
+
+export function writeSyncMeta(meta: SyncMeta): void {
+  fs.mkdirSync(path.dirname(META_PATH), { recursive: true });
+  fs.writeFileSync(META_PATH, JSON.stringify(meta, null, 2), 'utf-8');
 }
 
 export function listEmails(): EmailRecord[] {
@@ -59,7 +81,6 @@ export function upsertEmailsByResendId(incoming: Omit<EmailRecord, 'id'>[]): Ema
 
   for (const item of incoming) {
     if (item.resendId && byResendId.has(item.resendId)) {
-      // Merge — update status/lastEvent but keep existing id and createdAt
       const existing = byResendId.get(item.resendId)!;
       Object.assign(existing, { lastEvent: item.lastEvent, status: item.status });
     } else {

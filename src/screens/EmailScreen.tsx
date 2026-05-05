@@ -9,6 +9,7 @@ interface Email {
   id: string;
   resendId?: string;
   lastEvent?: string;
+  bodyLoaded?: boolean;
   to?: string;
   from: string;
   subject: string;
@@ -35,6 +36,7 @@ export function EmailScreen() {
   const [labels, setLabels] = useState<Label[]>([]);
   const [showComposer, setShowComposer] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [isLoadingBody, setIsLoadingBody] = useState(false);
   const [composer, setComposer] = useState({ to: '', subject: '', body: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);

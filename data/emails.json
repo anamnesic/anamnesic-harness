@@ -328,5 +328,38 @@
     "messageId": "<CAMtQi+8-y6uNgWirXsCy7=sN_ArjSrBFGoi8WaqFSWSHdik7Lg@mail.gmail.com>",
     "createdAt": "2026-05-02 17:38:17.149237+00",
     "id": "9fd838bf-e9d5-4077-b37b-37f7c243df31"
+  },
+  {
+    "resendId": "5f80a1a8-8887-4da6-bc33-1c8b2f40fb9e",
+    "to": "jordancunha88@gmail.com",
+    "from": "agent@chronokairo.com.br",
+    "subject": "asdasd",
+    "html": "asdasdasd",
+    "status": "sent",
+    "id": "8b12d973-c5b7-45db-8824-56617c8827d1",
+    "createdAt": "2026-05-05T20:09:45.042Z",
+    "lastEvent": "opened"
+  },
+  {
+    "resendId": "96054b86-14f3-4e8d-ad8e-bc3eca548a11",
+    "to": "lu4nn3ry@gmail.com",
+    "from": "agent@chronokairo.com.br",
+    "subject": "annie",
+    "html": "annie, are you ok?",
+    "status": "sent",
+    "id": "d43e0219-2738-4069-966c-62708ed9a4a8",
+    "createdAt": "2026-05-05T20:14:16.991Z",
+    "lastEvent": "delivered"
+  },
+  {
+    "resendId": "18ec92f3-de47-4a25-b8ea-7c487323fbba",
+    "to": "riad.makarem@gmail.com",
+    "from": "agent@chronokairo.com.br",
+    "subject": "Atraso no pagamento do Agiota",
+    "html": "pague",
+    "status": "sent",
+    "id": "3842f167-7e2d-411e-a7a9-7aba5268b098",
+    "createdAt": "2026-05-05T20:16:55.119Z",
+    "lastEvent": "opened"
   }
 ]
