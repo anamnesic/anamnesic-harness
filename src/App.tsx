@@ -16,6 +16,7 @@ import {
   FileText,
   BookOpen,
   ServerCog,
+  Mail,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
@@ -45,6 +46,7 @@ import { Breadcrumbs } from './components/Breadcrumbs';
 import { OnboardingModal } from './components/OnboardingModal';
 import { McpScreen } from './components/McpScreen';
 import { InferenceHub } from './screens/InferenceHub';
+import { EmailScreen } from './screens/EmailScreen';
 
 const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange }: {
   title: string;
@@ -139,6 +141,7 @@ const TABS = [
   { id: 'skills', label: 'Skills', icon: Pencil },
   { id: 'mcp', label: 'MCP', icon: ServerCog },
   { id: 'system', label: 'Núcleo', icon: Settings2 },
+  { id: 'email', label: 'Email', icon: Mail },
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
@@ -279,6 +282,14 @@ function useScreenConfig(
             <span className="text-green-500 text-[10px] font-bold uppercase tracking-wider">Ao vivo</span>
           </div>
         ),
+      };
+    case 'email':
+      return {
+        title: 'Email',
+        subtitle: 'Gerenciador de emails via Resend',
+        element: <EmailScreen />,
+        onBack: goHome,
+        rightElement: undefined,
       };
     default:
       return {
