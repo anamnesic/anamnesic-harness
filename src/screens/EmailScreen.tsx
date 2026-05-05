@@ -124,6 +124,89 @@ const DEFAULT_TEMPLATES: EmailTemplate[] = [
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
   },
+  {
+    id: 'tpl-chronokairo',
+    name: 'Chronokairo · Agent',
+    subject: '{{titulo}}',
+    body: `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>{{titulo}}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0d0d0d;-webkit-font-smoothing:antialiased;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="background-color:#0d0d0d;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+          style="max-width:620px;background-color:#111111;border:1px solid #222;border-radius:6px;overflow:hidden;">
+
+          <!-- header bar -->
+          <tr>
+            <td style="padding:20px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:0.15em;color:#555;text-transform:uppercase;">
+                    CHRONOKAIRO &nbsp;·&nbsp; AGENT
+                  </td>
+                  <td align="right" style="font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:0.08em;color:#444;">
+                    {{data}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- divider -->
+          <tr><td style="padding:0 32px;"><div style="height:1px;background-color:#222;"></div></td></tr>
+
+          <!-- title block -->
+          <tr>
+            <td style="padding:36px 32px 28px 32px;">
+              <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:26px;font-weight:700;color:#f0f0f0;margin:0 0 8px 0;letter-spacing:-0.02em;">{{titulo}}</h1>
+              <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#666;margin:0;">{{subtitulo}}</p>
+            </td>
+          </tr>
+
+          <!-- section label -->
+          <tr>
+            <td style="padding:0 32px 12px 32px;">
+              <p style="font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:0.18em;color:#555;text-transform:uppercase;margin:0 0 16px 0;">{{secao}}</p>
+              <ul style="list-style:none;margin:0;padding:0;">
+                <li style="margin-bottom:14px;padding-left:12px;border-left:2px solid #333;line-height:1.6;">
+                  <code style="display:inline-block;background:#1a1a1a;border:1px solid #333;color:#e2e2e2;font-family:'Courier New',Courier,monospace;font-size:12px;padding:2px 7px;border-radius:4px;margin-right:8px;">{{badge1}}</code>
+                  <span style="color:#b0b0b0;">{{item1}}</span>
+                </li>
+                <li style="margin-bottom:14px;padding-left:12px;border-left:2px solid #333;line-height:1.6;">
+                  <code style="display:inline-block;background:#1a1a1a;border:1px solid #333;color:#e2e2e2;font-family:'Courier New',Courier,monospace;font-size:12px;padding:2px 7px;border-radius:4px;margin-right:8px;">{{badge2}}</code>
+                  <span style="color:#b0b0b0;">{{item2}}</span>
+                </li>
+              </ul>
+            </td>
+          </tr>
+
+          <!-- divider -->
+          <tr><td style="padding:0 32px;"><div style="height:1px;background-color:#1e1e1e;"></div></td></tr>
+
+          <!-- footer -->
+          <tr>
+            <td style="padding:20px 32px;">
+              <p style="font-family:'Courier New',Courier,monospace;font-size:12px;color:#444;margin:0;">Chronokairo :&gt;</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    createdAt: new Date('2026-05-05'),
+    updatedAt: new Date('2026-05-05'),
+  },
 ];
 
 function injectEmailTheme(html: string, theme: 'dark' | 'light' | 'auto'): string {  const themeCSS = theme === 'dark' ? DARK_CSS : theme === 'light' ? LIGHT_CSS : AUTO_CSS;
@@ -139,7 +222,7 @@ function injectEmailTheme(html: string, theme: 'dark' | 'light' | 'auto'): strin
   return `<html><head>${styleTag}</head><body>${html}</body></html>`;
 }
 
-export function EmailScreen() {
+export function EmailScreen({ onUnreadCountChange }: { onUnreadCountChange?: (count: number) => void } = {}) {
   const [activeFolder, setActiveFolder] = useState<FolderType>('inbox');
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
   const [emails, setEmails] = useState<Email[]>([]);
@@ -276,6 +359,12 @@ export function EmailScreen() {
   const toggleImportant = (id: string) => {
     setEmails(emails.map(e => e.id === id ? { ...e, important: !e.important } : e));
   };
+
+  useEffect(() => {
+    const count = emails.filter(e => e.status === 'received' && !e.read).length;
+    onUnreadCountChange?.(count);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emails]);
 
   const markAsRead = (id: string) => {
     setEmails(emails.map(e => e.id === id ? { ...e, read: true } : e));
@@ -482,13 +571,10 @@ export function EmailScreen() {
           </div>
         </div>
 
-        {/* Message Display */}
-        {message && (
-          <div className={cn(
-            'm-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm',
-            message.type === 'success' ? 'border-green-500/20 bg-green-500/10 text-green-500' : 'border-red-500/20 bg-red-500/10 text-red-500'
-          )}>
-            {message.type === 'success' ? <CheckCircle className="size-4" /> : <AlertCircle className="size-4" />}
+        {/* Message Display — errors only */}
+        {message?.type === 'error' && (
+          <div className="m-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+            <AlertCircle className="size-4" />
             {message.text}
           </div>
         )}
@@ -499,72 +585,74 @@ export function EmailScreen() {
             <div className="p-6">
               {templateView === 'edit' && editingTemplate ? (
                 /* ── Template editor ── */
-                <div className="max-w-2xl">
+                <div className="w-full">
                   <div className="mb-4 flex items-center gap-3">
                     <button onClick={() => { setTemplateView('list'); setEditingTemplate(null); }} className="text-xs text-text-dim hover:text-accent">← Voltar</button>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-text-dim flex-1">
                       {templates.find(t => t.id === editingTemplate.id) ? 'Editar Template' : 'Novo Template'}
                     </h3>
                   </div>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Nome do template</label>
-                      <input
-                        type="text"
-                        value={editingTemplate.name}
-                        onChange={e => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
-                        placeholder="Ex: Boas-vindas"
-                        className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Assunto</label>
-                      <input
-                        type="text"
-                        value={editingTemplate.subject}
-                        onChange={e => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
-                        placeholder="Assunto do email (use {{variavel}} para placeholders)"
-                        className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Corpo (HTML)</label>
-                      <textarea
-                        value={editingTemplate.body}
-                        onChange={e => setEditingTemplate({ ...editingTemplate, body: e.target.value })}
-                        placeholder="<p>Olá, {{nome}}!</p>"
-                        rows={14}
-                        className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm font-mono focus:border-primary focus:outline-none resize-none"
-                      />
-                      <p className="mt-1 text-[10px] text-text-dim">Use <code className="bg-card px-1 rounded">{'{{variavel}}'}</code> como placeholders que serão substituídos ao usar o template.</p>
-                    </div>
-                    {editingTemplate.body && (
+                  <div className="flex gap-6 items-stretch">
+                    {/* left: form */}
+                    <div className="flex-1 min-w-0 space-y-3">
                       <div>
-                        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Pré-visualização</label>
-                        <div className="rounded-lg overflow-hidden border border-border">
+                        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Nome do template</label>
+                        <input
+                          type="text"
+                          value={editingTemplate.name}
+                          onChange={e => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                          placeholder="Ex: Boas-vindas"
+                          className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Assunto</label>
+                        <input
+                          type="text"
+                          value={editingTemplate.subject}
+                          onChange={e => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
+                          placeholder="Assunto do email (use {{variavel}} para placeholders)"
+                          className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Corpo (HTML)</label>
+                        <textarea
+                          value={editingTemplate.body}
+                          onChange={e => setEditingTemplate({ ...editingTemplate, body: e.target.value })}
+                          placeholder="<p>Olá, {{nome}}!</p>"
+                          rows={18}
+                          className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm font-mono focus:border-primary focus:outline-none resize-none"
+                        />
+                        <p className="mt-1 text-[10px] text-text-dim">Use <code className="bg-card px-1 rounded">{'{{variavel}}'}</code> como placeholders que serão substituídos ao usar o template.</p>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button onClick={() => { setTemplateView('list'); setEditingTemplate(null); }} className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-card transition-colors">Cancelar</button>
+                        <button
+                          onClick={() => saveTemplate(editingTemplate)}
+                          disabled={!editingTemplate.name || !editingTemplate.subject}
+                          className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                        >
+                          Salvar Template
+                        </button>
+                      </div>
+                    </div>
+                    {/* right: preview */}
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-text-dim">Pré-visualização</label>
+                      <div className="flex-1 rounded-lg overflow-hidden border border-border">
+                        {editingTemplate.body ? (
                           <iframe
                             srcDoc={injectEmailTheme(editingTemplate.body, 'dark')}
-                            className="w-full border-0"
-                            style={{ minHeight: 200 }}
+                            className="w-full h-full border-0"
+                            style={{ minHeight: 400 }}
                             sandbox="allow-same-origin"
                             title="preview"
-                            onLoad={e => {
-                              const f = e.currentTarget;
-                              if (f.contentDocument?.body) f.style.height = f.contentDocument.body.scrollHeight + 24 + 'px';
-                            }}
                           />
-                        </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full min-h-[400px] text-xs text-text-dim">Escreva o corpo para ver a prévia</div>
+                        )}
                       </div>
-                    )}
-                    <div className="flex gap-2 pt-2">
-                      <button onClick={() => { setTemplateView('list'); setEditingTemplate(null); }} className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-card transition-colors">Cancelar</button>
-                      <button
-                        onClick={() => saveTemplate(editingTemplate)}
-                        disabled={!editingTemplate.name || !editingTemplate.subject}
-                        className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
-                      >
-                        Salvar Template
-                      </button>
                     </div>
                   </div>
                 </div>

@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveEmail } from '@/app/api/_lib/email-store';
+import { buildEmailHtml, type EmailTemplateParams } from '@/app/api/_lib/email-template';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { to, subject, html } = body;
+    const { to, subject, template } = body;
+    let { html } = body as { html?: string };
+
+    // If no raw html is provided, build it from structured template params
+    if (!html && template) {
+      html = buildEmailHtml(template as EmailTemplateParams);
+    }
 
     const apiKey = process.env.RESEND_API_KEY;
 
@@ -17,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     if (!to || !subject || !html) {
       return NextResponse.json(
-        { error: 'Campos obrigatórios: to, subject, html' },
+        { error: 'Campos obrigatórios: to, subject, e html ou template' },
         { status: 400 }
       );
     }

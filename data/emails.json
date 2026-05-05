@@ -361,5 +361,16 @@
     "id": "3842f167-7e2d-411e-a7a9-7aba5268b098",
     "createdAt": "2026-05-05T20:16:55.119Z",
     "lastEvent": "opened"
+  },
+  {
+    "resendId": "d1e91446-79d4-47a8-80fc-8240afa1be77",
+    "to": "agent@chronokairo.com.br",
+    "from": "lu4nn3ry@gmail.com",
+    "subject": "Re: annie",
+    "html": "",
+    "status": "received",
+    "messageId": "<CAMtQi+89VhaVD-QdyD59AP6NJ9iNAmvjP_dE+mfoMjDrwU0p2g@mail.gmail.com>",
+    "createdAt": "2026-05-05 21:18:04.210231+00",
+    "id": "ae2c8673-2c6a-4de7-8350-6b5199eca0ec"
   }
 ]

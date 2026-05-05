@@ -2,6 +2,165 @@ export const runtime = 'nodejs';
 
 import { NextRequest } from 'next/server';
 import { getDb } from '@/app/api/_lib/db';
+import { getCliInferenceService } from '@/app/api/_lib/llm-cli-runtime';
+import type { LlmCliProvider } from '@/src/core/llm-cli/types';
+
+type InteractionMode = 'ask' | 'coding';
+
+function createSseResponse(content: string): Response {
+    const stream = new ReadableStream({
+        start(controller) {
+            const emit = (payload: unknown) => {
+                controller.enqueue(`data: ${JSON.stringify(payload)}\n\n`);
+            };
+            emit({ type: 'start', timestamp: new Date().toISOString() });
+            emit({ type: 'chunk', content, timestamp: new Date().toISOString() });
+            emit({ type: 'end', timestamp: new Date().toISOString() });
+            controller.close();
+        },
+    });
+
+    return new Response(stream, {
+        headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Cache-Control',
+        },
+    });
+}
+
+/**
+ * Map a model ID from the catalog to the best LlmCliProvider to handle it.
+ */
+function modelToCliProvider(modelId: string): LlmCliProvider {
+    const id = (modelId ?? '').toLowerCase();
+    if (id.includes('kairos')) return 'kairos';
+    if (id.includes('gemini')) return 'gemini';
+    if (id.includes('gpt') || id.includes('grok') || id.includes('raptor')) return 'copilot';
+    if (id.includes('codex')) return 'codex';
+    if (id.includes('ollama') || id.includes('mistral') || id.includes('llama') || id.includes('neural') || id.includes('dolphin')) return 'ollama';
+    return 'copilot'; // default to copilot
+}
+
+/**
+ * Build a conversational prompt from history + current message + optional system prompt.
+ */
+function buildPrompt(
+    history: { sender: string; message: string }[],
+    newMessage: string,
+    systemPrompt?: string,
+): string {
+    const parts: string[] = [];
+
+    if (systemPrompt) {
+        parts.push(`[System]\n${systemPrompt}\n`);
+    }
+
+    for (const h of history) {
+        const role = h.sender === 'user' ? 'User' : 'Assistant';
+        parts.push(`${role}: ${h.message}`);
+    }
+
+    parts.push(`User: ${newMessage}`);
+    parts.push('Assistant:');
+
+    return parts.join('\n\n');
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const body = await req.json();
+        const {
+            message,
+            channelId,
+            modelIds = [],
+            interactionMode = 'ask',
+            systemPrompt,
+        } = body as {
+            message?: string;
+            channelId?: string;
+            modelIds?: string[];
+            interactionMode?: InteractionMode;
+            systemPrompt?: string;
+        };
+
+        if (!message || !channelId) {
+            return new Response('message and channelId are required', { status: 400 });
+        }
+
+        const db = await getDb();
+        const { ChatHistoryService } = await import('@/src/core/services/ChatHistoryService');
+        const chatService = new ChatHistoryService(db);
+
+        await chatService.saveHistory({
+            channelId,
+            message,
+            sender: 'user',
+            metadata: { type: 'request' },
+        });
+
+        const history = await chatService.getHistoryByChannel(channelId, 10);
+
+        // Determine provider from selected model
+        const selectedModelId = Array.isArray(modelIds) && modelIds.length > 0 ? modelIds[0] : 'auto';
+        const preferredProvider = modelToCliProvider(selectedModelId);
+        const fallbackProviders: LlmCliProvider[] = ['copilot', 'gemini', 'kairos', 'codex'].filter(
+            (p) => p !== preferredProvider
+        ) as LlmCliProvider[];
+
+        const prompt = buildPrompt(
+            history.slice().reverse().map((e) => ({ sender: e.sender, message: e.message })),
+            message,
+            systemPrompt,
+        );
+
+        const inferenceService = getCliInferenceService();
+
+        const result = await inferenceService.executePrompt({
+            prompt,
+            preferredProvider,
+            fallbackProviders,
+            timeoutMs: 60_000,
+            maxRetries: 2,
+            metadata: {
+                channelId,
+                modelId: selectedModelId,
+                interactionMode: interactionMode === 'coding' ? 'coding' : 'ask',
+            },
+        });
+
+        const finalContent = result.success && result.rawText
+            ? result.rawText.trim()
+            : result.error ?? 'Sem resposta do modelo. Verifique se o CLI do provedor está instalado e autenticado.';
+
+        await chatService.saveHistory({
+            channelId,
+            message: finalContent,
+            sender: 'assistant',
+            metadata: {
+                type: 'response',
+                provider: result.provider,
+                modelId: selectedModelId,
+                success: result.success,
+            },
+        });
+
+        return createSseResponse(finalContent);
+    } catch (error) {
+        console.error('[Chat Stream API] Error:', error);
+        return new Response('Internal server error', { status: 500 });
+    }
+}
+
+export async function GET() {
+    return new Response('Use POST to chat', { status: 405 });
+}
+
+
+import { NextRequest } from 'next/server';
+import { getDb } from '@/app/api/_lib/db';
 import { aiProviderRegistry, type AIProvider as Provider } from '@/src/core/providers/AIProvider';
 
 type InteractionMode = 'ask' | 'coding';
@@ -166,12 +325,14 @@ export async function POST(req: NextRequest) {
             userId = 'anonymous',
             modelIds = [],
             interactionMode = 'ask',
+            systemPrompt,
         } = body as {
             message?: string;
             channelId?: string;
             userId?: string;
             modelIds?: string[];
             interactionMode?: InteractionMode;
+            systemPrompt?: string;
         };
 
         if (!message || !channelId) {
@@ -206,6 +367,10 @@ export async function POST(req: NextRequest) {
                 content: entry.message,
             }));
 
+        const systemMessages: { role: 'system'; content: string }[] = systemPrompt
+            ? [{ role: 'system', content: systemPrompt }]
+            : [];
+
         const selection = await resolveModelSelection(provider, Array.isArray(modelIds) ? modelIds : []);
 
         const safeMode: InteractionMode = interactionMode === 'coding' ? 'coding' : 'ask';
@@ -226,6 +391,7 @@ export async function POST(req: NextRequest) {
                                     role: 'system',
                                     content: getCodingRolePrompt(index, usedModels.length, modelId),
                                 },
+                                ...systemMessages,
                                 ...conversationMessages,
                             ],
                             maxTokens: 2200,
@@ -253,7 +419,7 @@ export async function POST(req: NextRequest) {
 
             const response = await provider.chat(
                 {
-                    messages: conversationMessages,
+                    messages: [...systemMessages, ...conversationMessages],
                     maxTokens: 2000,
                     temperature: 0.7,
                 },

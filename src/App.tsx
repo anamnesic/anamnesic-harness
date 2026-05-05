@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
@@ -12,12 +12,16 @@ import {
   Bot,
   Pencil,
   Lightbulb,
-  TrendingUp,
   FileText,
   BookOpen,
   ServerCog,
   Mail,
+  MailOpen,
+  X,
+  MessageSquare,
 } from 'lucide-react';
+import { apiFetch } from './lib/api';
+import { ContextualChat } from './components/ContextualChat';
 import { cn } from './lib/utils';
 import { ToastProvider } from './components/Toast';
 import { WorkspaceProvider } from './context/WorkspaceContext';
@@ -37,7 +41,6 @@ import { Decisions } from './screens/Decisions';
 import { Tasks } from './screens/Tasks';
 import { Workspaces } from './screens/Workspaces';
 import { Projects, type ProjectTabId } from './screens/Repo';
-import { ModelBenchmarks } from './screens/ModelBenchmarks';
 import { RedTeaming } from './screens/RedTeaming';
 import { Integrations } from './screens/Integrations';
 import { Login } from './screens/Login';
@@ -48,14 +51,91 @@ import { McpScreen } from './components/McpScreen';
 import { InferenceHub } from './screens/InferenceHub';
 import { EmailScreen } from './screens/EmailScreen';
 
-const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange }: {
+type NotifEmail = { id: string; from: string; subject: string; createdAt: string };
+
+function NotificationPopup({ onClose, onNavigate }: { onClose: () => void; onNavigate: () => void }) {
+  const [emails, setEmails] = useState<NotifEmail[]>([]);
+  const [loading, setLoading] = useState(true);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    apiFetch<{ success: boolean; data: NotifEmail[] }>('/api/email/list')
+      .then(res => {
+        if (res.success && res.data) setEmails(res.data.slice(0, 8));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-11 z-50 w-80 rounded-xl border border-border bg-bg shadow-2xl overflow-hidden"
+    >
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <span className="text-xs font-bold uppercase tracking-widest text-text-dim">Notificações</span>
+        <button onClick={onClose} className="text-text-dim hover:text-highlight transition-colors">
+          <X className="size-3.5" />
+        </button>
+      </div>
+      <div className="max-h-72 overflow-y-auto">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Mail className="size-5 text-text-dim animate-pulse" />
+          </div>
+        ) : emails.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-text-dim">
+            <MailOpen className="size-7" />
+            <span className="text-xs">Nenhum email</span>
+          </div>
+        ) : (
+          emails.map(email => (
+            <button
+              key={email.id}
+              onClick={() => { onNavigate(); onClose(); }}
+              className="w-full flex items-start gap-3 px-4 py-3 hover:bg-card/60 transition-colors text-left border-b border-border/40 last:border-0"
+            >
+              <Mail className="size-3.5 mt-0.5 shrink-0 text-accent" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium text-highlight">{email.subject || '(sem assunto)'}</p>
+                <p className="truncate text-[10px] text-text-dim">{email.from}</p>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+      <div className="border-t border-border px-4 py-2">
+        <button
+          onClick={() => { onNavigate(); onClose(); }}
+          className="text-[10px] font-bold uppercase tracking-widest text-accent hover:text-primary transition-colors"
+        >
+          Ver todos os emails →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange, unreadEmailCount, chatOpen, onChatToggle }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
   rightElement?: React.ReactNode;
   activeTab: string;
   onTabChange: (id: TabId) => void;
+  unreadEmailCount?: number;
+  chatOpen?: boolean;
+  onChatToggle?: () => void;
 }) => {
+  const [showPopup, setShowPopup] = useState(false);
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg/80 px-3 py-2 backdrop-blur-xl text-highlight sm:px-5 sm:py-3">
       <div className="flex items-center gap-2">
@@ -116,14 +196,40 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange 
         </div>
         <div className="flex items-center gap-2">
           <RepositorySelector />
-          {rightElement ?? (
-            <button className="flex h-9 w-9 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group">
-              <Bell className="size-4 text-accent group-hover:scale-110 transition-transform" />
-              <span className="absolute right-3 top-3 flex size-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
-              </span>
+          {onChatToggle && (
+            <button
+              onClick={onChatToggle}
+              title="Assistente"
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-xl border transition-colors',
+                chatOpen
+                  ? 'bg-primary/10 border-primary/40 text-primary'
+                  : 'bg-card border-border text-text-dim hover:border-accent/40 hover:text-accent',
+              )}
+            >
+              <MessageSquare className="size-4" />
             </button>
+          )}
+          {rightElement ?? (
+            <div className="relative">
+              <button
+                onClick={() => setShowPopup(v => !v)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group"
+              >
+                <Bell className="size-4 text-accent group-hover:scale-110 transition-transform" />
+                {(unreadEmailCount ?? 0) > 0 && (
+                  <span className="absolute -right-1 -top-1 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white px-1 shadow">
+                    {(unreadEmailCount ?? 0) > 99 ? '99+' : unreadEmailCount}
+                  </span>
+                )}
+              </button>
+              {showPopup && (
+                <NotificationPopup
+                  onClose={() => setShowPopup(false)}
+                  onNavigate={() => onTabChange('email' as TabId)}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -145,7 +251,7 @@ const TABS = [
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'benchmarks' | 'redteaming' | 'integrations' | 'inference';
+type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'redteaming' | 'integrations' | 'inference';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
@@ -180,6 +286,7 @@ function useScreenConfig(
   active: TabId,
   goHome: () => void,
   setActive: (id: TabId) => void,
+  setUnreadEmailCount: (count: number) => void,
 ) {
   switch (active) {
     case 'dashboard':
@@ -190,13 +297,6 @@ function useScreenConfig(
         onBack: undefined,
         rightElement: (
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActive('benchmarks')}
-              className="flex items-center gap-2 rounded-xl bg-card border border-border px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-primary hover:border-primary/60 transition-colors mr-2"
-            >
-              <TrendingUp className="size-4" />
-              Benchmarks
-            </button>
             <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
               <div className="size-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
               <span className="text-primary text-[10px] font-bold uppercase tracking-wider">Online</span>
@@ -204,8 +304,6 @@ function useScreenConfig(
           </div>
         ),
       };
-    case 'benchmarks':
-      return { title: 'Benchmarks', subtitle: 'Comparação de desempenho de LLM', element: <ModelBenchmarks />, onBack: goHome, rightElement: undefined };
     case 'inference':
       return { title: 'Inference Hub', subtitle: 'Jobs em background e memória semântica', element: <InferenceHub />, onBack: goHome, rightElement: undefined };
     case 'redteaming':
@@ -287,7 +385,7 @@ function useScreenConfig(
       return {
         title: 'Email',
         subtitle: 'Gerenciador de emails via Resend',
-        element: <EmailScreen />,
+        element: <EmailScreen onUnreadCountChange={setUnreadEmailCount} />,
         onBack: goHome,
         rightElement: undefined,
       };
@@ -304,12 +402,15 @@ function useScreenConfig(
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [unreadEmailCount, setUnreadEmailCount] = useState(0);
+  const [chatOpen, setChatOpen] = useState(false);
   const { isAuthenticated, isLoading } = useAuth();
 
   const config = useScreenConfig(
     activeTab,
     () => setActiveTab('dashboard'),
     setActiveTab,
+    setUnreadEmailCount,
   );
 
   if (isLoading) {
@@ -337,21 +438,32 @@ function AppContent() {
             rightElement={config.rightElement}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            unreadEmailCount={unreadEmailCount}
+            chatOpen={chatOpen}
+            onChatToggle={() => setChatOpen(v => !v)}
           />
-          <main className="scrollbar-kairos flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.02 }}
-                transition={{ duration: 0.2 }}
-                className="flex min-h-0 flex-1 flex-col"
-              >
-                {config.element}
-              </motion.div>
-            </AnimatePresence>
-          </main>
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <main className="scrollbar-kairos flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex min-h-0 flex-1 flex-col"
+                >
+                  {config.element}
+                </motion.div>
+              </AnimatePresence>
+            </main>
+            <ContextualChat
+              activeTab={activeTab}
+              screenTitle={config.title}
+              open={chatOpen}
+              onClose={() => setChatOpen(false)}
+            />
+          </div>
         </div>
       </div>
     </>
