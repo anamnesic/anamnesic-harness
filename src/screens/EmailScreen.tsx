@@ -165,6 +165,8 @@ export function EmailScreen() {
   });
   const [templateView, setTemplateView] = useState<'list' | 'edit'>('list');
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
+  const [previewingTemplate, setPreviewingTemplate] = useState<EmailTemplate | null>(null);
+  const [templatePreviewTheme, setTemplatePreviewTheme] = useState<'dark' | 'light'>('dark');
 
   type ApiEmailRecord = {
     id: string; resendId?: string; to: string; from: string;
@@ -569,18 +571,35 @@ export function EmailScreen() {
               ) : (
                 /* ── Template list ── */
                 <>
-                  <div className="mb-4 flex items-center justify-between">
+                  <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-text-dim">Templates de Email</h3>
-                    <button
-                      onClick={() => {
-                        setEditingTemplate({ id: crypto.randomUUID(), name: '', subject: '', body: '', createdAt: new Date(), updatedAt: new Date() });
-                        setTemplateView('edit');
-                      }}
-                      className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white hover:bg-primary/90 transition-colors"
-                    >
-                      <Plus className="size-3.5" />
-                      Novo template
-                    </button>
+                    <div className="flex items-center gap-2 ml-auto">
+                      {/* thumbnail theme toggle */}
+                      <div className="flex items-center rounded-lg border border-border overflow-hidden">
+                        <button
+                          onClick={() => setTemplatePreviewTheme('dark')}
+                          className={cn('px-2.5 py-1 text-[11px] flex items-center gap-1 transition-colors', templatePreviewTheme === 'dark' ? 'bg-card text-accent' : 'text-text-dim hover:bg-card/50')}
+                        >
+                          <Moon className="size-3" /> Escuro
+                        </button>
+                        <button
+                          onClick={() => setTemplatePreviewTheme('light')}
+                          className={cn('px-2.5 py-1 text-[11px] flex items-center gap-1 transition-colors', templatePreviewTheme === 'light' ? 'bg-card text-accent' : 'text-text-dim hover:bg-card/50')}
+                        >
+                          <Sun className="size-3" /> Claro
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingTemplate({ id: crypto.randomUUID(), name: '', subject: '', body: '', createdAt: new Date(), updatedAt: new Date() });
+                          setTemplateView('edit');
+                        }}
+                        className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white hover:bg-primary/90 transition-colors"
+                      >
+                        <Plus className="size-3.5" />
+                        Novo template
+                      </button>
+                    </div>
                   </div>
                   {templates.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-text-dim">
@@ -588,37 +607,94 @@ export function EmailScreen() {
                       <p className="text-sm">Nenhum template criado</p>
                     </div>
                   ) : (
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                       {templates.map(tpl => (
-                        <div key={tpl.id} className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:border-primary/30 transition-colors">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-bold text-sm truncate">{tpl.name}</p>
-                              <p className="text-xs text-text-dim truncate">{tpl.subject}</p>
-                            </div>
-                            <div className="flex shrink-0 gap-1">
-                              <button onClick={() => { setEditingTemplate({ ...tpl }); setTemplateView('edit'); }} title="Editar" className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-accent transition-colors"><Pencil className="size-3.5" /></button>
-                              <button onClick={() => { const c = { ...tpl, id: crypto.randomUUID(), name: tpl.name + ' (cópia)', createdAt: new Date(), updatedAt: new Date() }; saveTemplates([...templates, c]); }} title="Duplicar" className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-accent transition-colors"><Copy className="size-3.5" /></button>
-                              <button onClick={() => deleteTemplate(tpl.id)} title="Excluir" className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-red-500 transition-colors"><Trash2 className="size-3.5" /></button>
-                            </div>
-                          </div>
-                          {tpl.body && (
-                            <div className="rounded-lg overflow-hidden border border-border/50 bg-bg mt-1">
+                        <div
+                          key={tpl.id}
+                          className="group rounded-xl border border-border bg-card flex flex-col overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
+                        >
+                          {/* Scaled thumbnail preview */}
+                          <div
+                            className="relative overflow-hidden bg-[#09090b] cursor-zoom-in"
+                            style={{ height: 200 }}
+                            onClick={() => setPreviewingTemplate(tpl)}
+                            title="Clique para visualizar em tela cheia"
+                          >
+                            {tpl.body ? (
                               <iframe
-                                srcDoc={injectEmailTheme(tpl.body, 'dark')}
-                                className="w-full border-0 pointer-events-none"
-                                style={{ height: 120 }}
+                                srcDoc={injectEmailTheme(tpl.body, templatePreviewTheme)}
+                                className="border-0 pointer-events-none absolute top-0 left-0"
+                                style={{
+                                  width: '250%',
+                                  height: 500,
+                                  transform: 'scale(0.4)',
+                                  transformOrigin: 'top left',
+                                }}
                                 sandbox="allow-same-origin"
                                 title={tpl.name}
                               />
+                            ) : (
+                              <div className="flex items-center justify-center h-full text-text-dim/40">
+                                <LayoutTemplate className="size-10" />
+                              </div>
+                            )}
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                              <button
+                                onClick={e => { e.stopPropagation(); setPreviewingTemplate(tpl); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg/90 text-xs font-bold hover:bg-bg transition-colors shadow"
+                              >
+                                <MailOpen className="size-3.5" />
+                                Visualizar
+                              </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); useTemplate(tpl); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors shadow"
+                              >
+                                <Send className="size-3.5" />
+                                Usar
+                              </button>
                             </div>
-                          )}
-                          <button
-                            onClick={() => useTemplate(tpl)}
-                            className="mt-auto w-full rounded-lg border border-primary/30 bg-primary/10 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors"
-                          >
-                            Usar template
-                          </button>
+                          </div>
+
+                          {/* Card footer */}
+                          <div className="p-3 flex flex-col gap-2 border-t border-border/50">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm truncate leading-tight">{tpl.name}</p>
+                                <p className="text-[11px] text-text-dim truncate mt-0.5">{tpl.subject}</p>
+                              </div>
+                              <div className="flex shrink-0 gap-0.5">
+                                <button
+                                  onClick={() => { setEditingTemplate({ ...tpl }); setTemplateView('edit'); }}
+                                  title="Editar"
+                                  className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-accent transition-colors"
+                                >
+                                  <Pencil className="size-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const c = { ...tpl, id: crypto.randomUUID(), name: tpl.name + ' (cópia)', createdAt: new Date(), updatedAt: new Date() };
+                                    saveTemplates([...templates, c]);
+                                  }}
+                                  title="Duplicar"
+                                  className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-accent transition-colors"
+                                >
+                                  <Copy className="size-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => deleteTemplate(tpl.id)}
+                                  title="Excluir"
+                                  className="p-1.5 rounded-lg text-text-dim hover:bg-bg hover:text-red-500 transition-colors"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-text-dim/60">
+                              Atualizado {new Date(tpl.updatedAt).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -760,8 +836,8 @@ export function EmailScreen() {
                   })}
                 </div>
               )}
-              {/* Theme toggle */}
-              <div className="flex items-center gap-1 mb-3">
+              {/* Theme toggle + actions */}
+              <div className="flex items-center gap-1 mb-3 flex-wrap">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-text-dim mr-2">Tema do email</span>
                 {([['dark', Moon], ['light', Sun], ['auto', Monitor]] as const).map(([t, Icon]) => (
                   <button
@@ -779,6 +855,44 @@ export function EmailScreen() {
                     {t === 'dark' ? 'Escuro' : t === 'light' ? 'Claro' : 'Auto'}
                   </button>
                 ))}
+                <div className="ml-auto flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      if (selectedEmail.body) {
+                        navigator.clipboard.writeText(selectedEmail.body);
+                      }
+                    }}
+                    disabled={!selectedEmail.body}
+                    title="Copiar HTML do email"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-text-dim hover:bg-card border border-transparent hover:border-border transition-colors disabled:opacity-40"
+                  >
+                    <Copy className="size-3" />
+                    Copiar HTML
+                  </button>
+                  <button
+                    onClick={() => {
+                      const tpl: EmailTemplate = {
+                        id: crypto.randomUUID(),
+                        name: selectedEmail.subject || 'Template sem título',
+                        subject: selectedEmail.subject || '',
+                        body: selectedEmail.body || '',
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                      };
+                      saveTemplates([...templates, tpl]);
+                      setActiveFolder('templates');
+                      setSelectedEmail(null);
+                      setEditingTemplate(tpl);
+                      setTemplateView('edit');
+                    }}
+                    disabled={!selectedEmail.body}
+                    title="Salvar este email como template"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors disabled:opacity-40"
+                  >
+                    <LayoutTemplate className="size-3" />
+                    Salvar como template
+                  </button>
+                </div>
               </div>
 
               <div className="rounded-lg overflow-hidden border border-border">
@@ -920,6 +1034,72 @@ export function EmailScreen() {
           )}
         </div>
       </div>
+      {/* Template full-screen preview modal */}
+      {previewingTemplate && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm"
+          onClick={() => setPreviewingTemplate(null)}
+        >
+          <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-bg/95 shrink-0" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 min-w-0">
+              <LayoutTemplate className="size-4 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="font-bold text-sm truncate">{previewingTemplate.name}</p>
+                <p className="text-[11px] text-text-dim truncate">{previewingTemplate.subject}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 ml-4">
+              <div className="flex items-center rounded-lg border border-border overflow-hidden">
+                <button
+                  onClick={() => setTemplatePreviewTheme('dark')}
+                  className={cn('px-2.5 py-1 text-[11px] flex items-center gap-1 transition-colors', templatePreviewTheme === 'dark' ? 'bg-card text-accent' : 'text-text-dim hover:bg-card/50')}
+                >
+                  <Moon className="size-3" /> Escuro
+                </button>
+                <button
+                  onClick={() => setTemplatePreviewTheme('light')}
+                  className={cn('px-2.5 py-1 text-[11px] flex items-center gap-1 transition-colors', templatePreviewTheme === 'light' ? 'bg-card text-accent' : 'text-text-dim hover:bg-card/50')}
+                >
+                  <Sun className="size-3" /> Claro
+                </button>
+              </div>
+              <button
+                onClick={() => { useTemplate(previewingTemplate); setPreviewingTemplate(null); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors"
+              >
+                <Send className="size-3.5" />
+                Usar template
+              </button>
+              <button
+                onClick={() => { setEditingTemplate({ ...previewingTemplate }); setTemplateView('edit'); setPreviewingTemplate(null); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs font-bold hover:bg-card/80 transition-colors"
+              >
+                <Pencil className="size-3.5" />
+                Editar
+              </button>
+              <button onClick={() => setPreviewingTemplate(null)} className="p-1.5 rounded-lg text-text-dim hover:bg-card transition-colors ml-1">
+                <X className="size-4" />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto p-6" onClick={e => e.stopPropagation()}>
+            <div className="max-w-2xl mx-auto rounded-xl overflow-hidden border border-border shadow-2xl">
+              <iframe
+                srcDoc={injectEmailTheme(previewingTemplate.body, templatePreviewTheme)}
+                className="w-full border-0"
+                style={{ minHeight: 600 }}
+                sandbox="allow-same-origin"
+                title={previewingTemplate.name}
+                onLoad={e => {
+                  const f = e.currentTarget;
+                  if (f.contentDocument?.body) f.style.height = Math.max(600, f.contentDocument.body.scrollHeight + 32) + 'px';
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {showLabelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-96 rounded-xl border border-border bg-bg p-6 shadow-2xl">
