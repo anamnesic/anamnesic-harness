@@ -154,6 +154,7 @@ export class CliInferenceService {
                     COLORTERM: process.env.COLORTERM || 'truecolor',
                 },
                 stdio: ['ignore', 'pipe', 'pipe'],
+                windowsHide: true,
             });
 
             const timer = setTimeout(() => {

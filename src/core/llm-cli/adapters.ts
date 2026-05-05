@@ -8,7 +8,11 @@ import type {
 
 function commandExists(command: string): boolean {
     const checker = process.platform === 'win32' ? 'where' : 'which';
-    const result = spawnSync(checker, [command], { stdio: 'ignore' });
+    const result = spawnSync(checker, [command], {
+        stdio: 'ignore',
+        windowsHide: true,
+        timeout: 3000,
+    });
     return result.status === 0;
 }
 

@@ -12,6 +12,33 @@ import { readProviderKeyStatuses } from '@/app/api/_lib/project-env-keys';
 type CliName = 'copilot' | 'gemini' | 'kairos-code' | 'codex' | 'ollama';
 type ProviderName = 'kairos' | 'chatgpt' | 'gemini';
 
+// Cache em memória para evitar re-spawns repetidos do copilot
+interface CopilotCacheEntry {
+    available: boolean;
+    expiresAt: number;
+}
+
+const copilotAvailabilityCache = new Map<string, CopilotCacheEntry>();
+const COPILOT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+function getCopilotCached(command: string, args: string[]): boolean | null {
+    const key = `${command}:${args.join(' ')}`;
+    const entry = copilotAvailabilityCache.get(key);
+    if (entry && Date.now() < entry.expiresAt) {
+        return entry.available;
+    }
+    copilotAvailabilityCache.delete(key);
+    return null;
+}
+
+function setCopilotCached(command: string, args: string[], available: boolean): void {
+    const key = `${command}:${args.join(' ')}`;
+    copilotAvailabilityCache.set(key, {
+        available,
+        expiresAt: Date.now() + COPILOT_CACHE_TTL_MS,
+    });
+}
+
 function findCommandInCommonPaths(command: string): string | null {
     const isWindows = process.platform === 'win32';
     const ext = isWindows ? '.exe' : '';
@@ -49,7 +76,11 @@ function findCommandInCommonPaths(command: string): string | null {
 function commandExists(command: string): boolean {
     // First try system PATH
     const checker = process.platform === 'win32' ? 'where' : 'which';
-    const result = spawnSync(checker, [command], { stdio: 'ignore' });
+    const result = spawnSync(checker, [command], {
+        stdio: 'ignore',
+        windowsHide: true,
+        timeout: 3000,
+    });
     if (result.status === 0) {
         return true;
     }
@@ -59,27 +90,51 @@ function commandExists(command: string): boolean {
 }
 
 function commandWorks(command: string, args: string[]): boolean {
+    const isCopilot = command === 'copilot' || (command === 'gh' && args.includes('copilot'));
+    if (isCopilot) {
+        const cached = getCopilotCached(command, args);
+        if (cached !== null) {
+            return cached;
+        }
+    }
+
+    const spawnOpts = {
+        stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'],
+        timeout: 3000,
+        encoding: 'utf-8' as const,
+        windowsHide: true,
+    };
+
     try {
-        const result = spawnSync(command, args, {
-            stdio: 'pipe',
-            timeout: 5000,
-            encoding: 'utf-8',
-        });
-        return result.status === 0 || result.status === null; // status === null means timed out (but command ran)
-    } catch (e) {
-        // If direct command fails, try finding it in common paths
+        const result = spawnSync(command, args, spawnOpts);
+        // status null means timeout or spawn failure; treat as failure
+        if (result.status === 0) {
+            if (isCopilot) {
+                setCopilotCached(command, args, true);
+            }
+            return true;
+        }
+
+        // Direct command failed, try common installation paths
         const fullPath = findCommandInCommonPaths(command);
         if (fullPath) {
-            try {
-                const result = spawnSync(fullPath, args, {
-                    stdio: 'pipe',
-                    timeout: 5000,
-                    encoding: 'utf-8',
-                });
-                return result.status === 0 || result.status === null;
-            } catch {
-                return false;
+            const fpResult = spawnSync(fullPath, args, spawnOpts);
+            if (fpResult.status === 0) {
+                if (isCopilot) {
+                    setCopilotCached(command, args, true);
+                }
+                return true;
             }
+        }
+
+        // All attempts failed; cache negative result for copilot
+        if (isCopilot) {
+            setCopilotCached(command, args, false);
+        }
+        return false;
+    } catch {
+        if (isCopilot) {
+            setCopilotCached(command, args, false);
         }
         return false;
     }
@@ -97,7 +152,8 @@ function ghCopilotWorks(): boolean {
         const result = spawnSync(ghCmd, ['extension', 'list'], {
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'pipe'],
-            timeout: 5000,
+            timeout: 3000,
+            windowsHide: true,
         });
 
         if (result.status !== 0) {
