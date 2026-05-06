@@ -246,6 +246,32 @@ type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 // ─── Terminal Overlay ────────────────────────────────────────────────────────
 
 function TerminalOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [height, setHeight] = useState(320);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    const startY = e.clientY;
+    const startHeight = height;
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = startY - ev.clientY;
+      setHeight(Math.max(200, Math.min(window.innerHeight * 0.85, startHeight + delta)));
+    };
+    const onUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -256,11 +282,23 @@ function TerminalOverlay({ open, onClose }: { open: boolean; onClose: () => void
           exit={{ opacity: 0, y: '100%' }}
           transition={{ type: 'spring', stiffness: 320, damping: 34 }}
           className="fixed inset-x-0 bottom-0 z-[70] flex flex-col"
-          style={{ height: '55vh' }}
+          style={{ height }}
         >
-          <div className="relative flex h-full flex-col rounded-t-2xl border border-b-0 border-border bg-[#0d0d0f]/95 shadow-2xl backdrop-blur-xl overflow-hidden">
-            {/* Drag handle */}
-            <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-2">
+          <div className={cn(
+            'relative flex h-full flex-col rounded-t-2xl border border-b-0 border-border bg-[#0d0d0f]/95 shadow-2xl backdrop-blur-xl overflow-hidden',
+            isResizing && 'select-none',
+          )}>
+            {/* Drag-to-resize handle */}
+            <div
+              className="absolute inset-x-0 top-0 h-2 cursor-ns-resize z-10 group"
+              onMouseDown={handleResizeStart}
+              title="Arraste para redimensionar"
+            >
+              <div className="mx-auto mt-1 h-0.5 w-8 rounded-full bg-border/60 group-hover:bg-accent/50 transition-colors" />
+            </div>
+
+            {/* Title bar */}
+            <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 pt-3 pb-2">
               <div className="flex items-center gap-2 text-text-dim">
                 <TerminalSquare className="size-3.5 text-accent" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">Terminal</span>
@@ -272,6 +310,7 @@ function TerminalOverlay({ open, onClose }: { open: boolean; onClose: () => void
                 <X className="size-3.5" />
               </button>
             </div>
+
             <div className="min-h-0 flex-1 overflow-hidden">
               <TerminalPanel />
             </div>
