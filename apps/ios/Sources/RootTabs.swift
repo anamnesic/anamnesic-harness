@@ -21,9 +21,13 @@ struct RootTabs: View {
                 .tabItem { Label("Voice", systemImage: "mic") }
                 .tag(1)
 
+            PlatformTab()
+                .tabItem { Label("Platform", systemImage: "square.grid.2x2") }
+                .tag(2)
+
             SettingsTab()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
-                .tag(2)
+                .tag(3)
         }
         .overlay(alignment: .topLeading) {
             StatusPill(
@@ -36,7 +40,7 @@ struct RootTabs: View {
                     } else if self.appModel.lastGatewayProblem != nil {
                         self.showGatewayProblemDetails = true
                     } else {
-                        self.selectedTab = 2
+                        self.selectedTab = 3
                     }
                 })
                 .padding(.leading, 10)
@@ -50,7 +54,7 @@ struct RootTabs: View {
                     problem: gatewayProblem,
                     primaryActionTitle: "Open Settings",
                     onPrimaryAction: {
-                        self.selectedTab = 2
+                        self.selectedTab = 3
                     },
                     onShowDetails: {
                         self.showGatewayProblemDetails = true
@@ -94,14 +98,14 @@ struct RootTabs: View {
         .gatewayActionsDialog(
             isPresented: self.$showGatewayActions,
             onDisconnect: { self.appModel.disconnectGateway() },
-            onOpenSettings: { self.selectedTab = 2 })
+            onOpenSettings: { self.selectedTab = 3 })
         .sheet(isPresented: self.$showGatewayProblemDetails) {
             if let gatewayProblem = self.appModel.lastGatewayProblem {
                 GatewayProblemDetailsSheet(
                     problem: gatewayProblem,
                     primaryActionTitle: "Open Settings",
                     onPrimaryAction: {
-                        self.selectedTab = 2
+                        self.selectedTab = 3
                     })
             }
         }

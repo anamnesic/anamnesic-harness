@@ -395,4 +395,7 @@ class MainViewModel(
       thinking = thinking,
       attachments = attachments,
     )
+
+  suspend fun gatewayRequest(method: String, paramsJson: String = "{}"): Result<String> =
+    runCatching { ensureRuntime().operatorRequest(method, paramsJson) }
 }

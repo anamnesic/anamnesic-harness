@@ -549,6 +549,9 @@ class NodeRuntime(
     }
   }
 
+  suspend fun operatorRequest(method: String, paramsJson: String = "{}"): String =
+    operatorSession.request(method, paramsJson)
+
   fun requestCanvasRehydrate(
     source: String = "manual",
     force: Boolean = true,

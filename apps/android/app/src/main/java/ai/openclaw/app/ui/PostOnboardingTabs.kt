@@ -2,6 +2,7 @@ package ai.kairos.app.ui
 
 import ai.kairos.app.HomeDestination
 import ai.kairos.app.MainViewModel
+import ai.kairos.app.ui.platform.PlatformHubRoot
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ScreenShare
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -57,6 +59,7 @@ private enum class HomeTab(
   Chat(label = "Chat", icon = Icons.Default.ChatBubble),
   Voice(label = "Voice", icon = Icons.Default.RecordVoiceOver),
   Screen(label = "Screen", icon = Icons.AutoMirrored.Filled.ScreenShare),
+  Platform(label = "Platform", icon = Icons.Default.Apps),
   Settings(label = "Settings", icon = Icons.Default.Settings),
 }
 
@@ -178,6 +181,7 @@ fun PostOnboardingTabs(
         HomeTab.Chat -> if (!chatTabStarted) ChatSheet(viewModel = viewModel)
         HomeTab.Voice -> VoiceTabScreen(viewModel = viewModel)
         HomeTab.Screen -> Unit
+        HomeTab.Platform -> PlatformHubRoot(viewModel = viewModel)
         HomeTab.Settings -> SettingsSheet(viewModel = viewModel)
       }
     }
