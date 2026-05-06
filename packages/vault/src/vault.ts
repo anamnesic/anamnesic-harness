@@ -13,7 +13,7 @@ import {
   access,
 } from 'node:fs/promises'
 import path from 'node:path'
-import { encrypt, decrypt, type VaultRecord } from './cipher.js'
+import { encrypt, decrypt, type VaultRecord } from './cipher'
 
 const EXT = '.enc'
 

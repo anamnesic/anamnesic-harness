@@ -84,22 +84,6 @@ export class GeminiCliAdapter extends BaseCliAdapter {
     }
 }
 
-export class kairosCliAdapter extends BaseCliAdapter {
-    readonly provider = 'kairos' as const;
-
-    protected getCandidates(): string[] {
-        return ['kairos', 'kairos-code', 'kairos-ai'];
-    }
-
-    protected getInteractiveArgs(): string[] {
-        return [];
-    }
-
-    protected getPromptArgs(_: string, options: LlmCliPromptOptions): string[] {
-        return ['--print', options.prompt];
-    }
-}
-
 export class CopilotCliAdapter extends BaseCliAdapter {
     readonly provider = 'copilot' as const;
 

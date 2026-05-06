@@ -31,7 +31,7 @@ jobs:
         with:
           install-bun: "true"
           install-deps: "true"
-          frozen-lockfile: "true"
+          frozen-lockfile: "false"
 
       - name: Install system dependencies
         run: |
