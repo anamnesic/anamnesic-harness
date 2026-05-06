@@ -10,6 +10,9 @@ on:
       - "packages/ui/**"
       - ".github/workflows/build-desktop-deb.yml"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: read
 
@@ -23,19 +26,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
         with:
-          bun-version: latest
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
+          install-bun: "true"
+          install-deps: "true"
+          frozen-lockfile: "true"
 
       - name: Install system dependencies
         run: |
@@ -60,17 +56,14 @@ jobs:
           workspaces: packages/desktop/src-tauri
           key: x86_64-unknown-linux-gnu
 
-      - name: Install Node dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Build kairos CLI sidecar binary
         run: |
           mkdir -p packages/desktop/src-tauri/sidecars
           bun build packages/kairoscode/src/index.ts \
             --compile \
             --target=bun-linux-x64 \
-            --outfile packages/desktop/src-tauri/sidecars/opencode-cli-x86_64-unknown-linux-gnu
-          chmod +x packages/desktop/src-tauri/sidecars/opencode-cli-x86_64-unknown-linux-gnu
+            --outfile packages/desktop/src-tauri/sidecars/kairos-cli-x86_64-unknown-linux-gnu
+          chmod +x packages/desktop/src-tauri/sidecars/kairos-cli-x86_64-unknown-linux-gnu
 
       - name: Build frontend
         run: |
