@@ -54,7 +54,7 @@ jobs:
 
       - id: version
         run: |
-          ./script/version.ts
+          ./scripts/version.ts
         env:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
           kairos_BUMP: ${{ inputs.bump }}
@@ -623,7 +623,7 @@ jobs:
           git config --global user.name "kairos"
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
 
-      - run: ./script/publish.ts
+      - run: ./scripts/publish.ts
         env:
           kairos_VERSION: ${{ needs.version.outputs.version }}
           kairos_RELEASE: ${{ needs.version.outputs.release }}

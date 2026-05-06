@@ -34,4 +34,4 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.setup-git-committer.outputs.token }}
           kairos_API_KEY: ${{ secrets.kairos_API_KEY }}
-        run: bun script/beta.ts
+        run: bun scripts/beta.ts
