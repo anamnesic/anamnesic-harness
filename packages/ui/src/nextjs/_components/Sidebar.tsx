@@ -8,9 +8,17 @@ const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: '⬡' },
   { href: '/chat', label: 'Chat', icon: '💬' },
   { href: '/agents', label: 'Agents', icon: '🤖' },
+  { href: '/projects', label: 'Projects', icon: '📁' },
+  { href: '/workflows', label: 'Workflows', icon: '⚙️' },
   { href: '/skills', label: 'Skills', icon: '⚡' },
   { href: '/tools', label: 'Tools', icon: '🔧' },
   { href: '/extensions', label: 'Extensions', icon: '🧩' },
+  { href: '/plugins', label: 'Plugins', icon: '🔌' },
+  { href: '/providers', label: 'Providers', icon: '🧠' },
+  { href: '/channels', label: 'Channels', icon: '📡' },
+  { href: '/memory', label: 'Memory', icon: '🗄️' },
+  { href: '/observers', label: 'Observers', icon: '👁️' },
+  { href: '/vault', label: 'Vault', icon: '🔒' },
   { href: '/settings', label: 'Settings', icon: '⚙️' },
 ];
 
@@ -36,7 +44,7 @@ export function Sidebar() {
           ⬡ Kairos
         </span>
       </div>
-      <nav style={{ flex: 1, marginTop: 12 }}>
+      <nav style={{ flex: 1, marginTop: 12, overflowY: 'auto' }}>
         {NAV.map(({ href, label, icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
