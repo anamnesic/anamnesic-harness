@@ -1,0 +1,6 @@
+[submodule "packages/devtools/src/github-desktop"]
+	path = packages/devtools/src/github-desktop
+	url = https://github.com/chronokairo/gitkairos.git
+[submodule "packages/opencode"]
+	path = packages/opencode
+	url = https://github.com/chronokairo/kairoscode.git
