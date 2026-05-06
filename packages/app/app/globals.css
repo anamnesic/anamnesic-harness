@@ -5,8 +5,7 @@
 @theme {
     --font-sans: "Inter", "Public Sans", ui-sans-serif, system-ui, sans-serif;
 
-    /* dark theme (default) */
-    --color-primary: #f5c200;
+    --color-primary: #ec5b13;
     --color-bg: #09090b;
     --color-card: #18181b;
     --color-border: #27272a;
@@ -17,32 +16,14 @@
     --radius-xl: 28px;
 }
 
-/* light theme overrides */
-[data-theme="light"] {
-    --color-primary: #c49b00;
-    --color-bg: #ffffff;
-    --color-card: #f4f4f5;
-    --color-border: #e4e4e7;
-    --color-accent: #52525b;
-    --color-highlight: #09090b;
-    --color-text-dim: #71717a;
-}
-
 @layer base {
     body {
         @apply bg-bg text-highlight font-sans antialiased;
-        color: var(--color-highlight);
-        background: var(--color-bg);
-        transition: background 0.2s, color 0.2s;
     }
 
     * {
         scrollbar-width: thin;
-        scrollbar-color: rgba(245, 194, 0, 0.55) rgba(24, 24, 27, 0.65);
-    }
-
-    [data-theme="light"] * {
-        scrollbar-color: rgba(196, 155, 0, 0.4) rgba(228, 228, 231, 0.8);
+        scrollbar-color: rgba(236, 91, 19, 0.55) rgba(24, 24, 27, 0.65);
     }
 
     *::-webkit-scrollbar {
@@ -55,27 +36,14 @@
         border-radius: 9999px;
     }
 
-    [data-theme="light"] *::-webkit-scrollbar-track {
-        background: rgba(228, 228, 231, 0.8);
-    }
-
     *::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, rgba(245, 194, 0, 0.85), rgba(245, 194, 0, 0.55));
+        background: linear-gradient(180deg, rgba(236, 91, 19, 0.85), rgba(236, 91, 19, 0.55));
         border: 2px solid rgba(24, 24, 27, 0.7);
         border-radius: 9999px;
     }
 
-    [data-theme="light"] *::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, rgba(196, 155, 0, 0.8), rgba(196, 155, 0, 0.5));
-        border-color: rgba(228, 228, 231, 0.8);
-    }
-
     *::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, rgba(245, 194, 0, 1), rgba(245, 194, 0, 0.7));
-    }
-
-    [data-theme="light"] *::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, rgba(196, 155, 0, 1), rgba(196, 155, 0, 0.7));
+        background: linear-gradient(180deg, rgba(236, 91, 19, 1), rgba(236, 91, 19, 0.7));
     }
 
     *::-webkit-scrollbar-corner {

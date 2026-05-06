@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 
 import path from 'path';
 import fs from 'fs';
-import { ok, err } from '@/packages/ui/src/nextjs/api/_lib/response';
+import { ok, err } from '@/app/api/_lib/response';
 import { NextRequest } from 'next/server';
 
 function vaultDir() {
