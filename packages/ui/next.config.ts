@@ -8,6 +8,10 @@ const config: NextConfig = {
     typescript: {
         ignoreBuildErrors: true,
     },
+    experimental: {
+        appDir: true,
+    },
+    // App Router lives in src/nextjs/
 };
 
 export default config;
