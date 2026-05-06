@@ -1,17 +1,17 @@
 import { Effect, Layer, Schema, Context, Stream } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
-import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@kairos-ai/core/cross-spawn-spawner"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import path from "path"
 import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
-import { Flag } from "@opencode-ai/core/flag/flag"
-import * as Log from "@opencode-ai/core/util/log"
-import { makeRuntime } from "@opencode-ai/core/effect/runtime"
+import { Flag } from "@kairos-ai/core/flag/flag"
+import * as Log from "@kairos-ai/core/util/log"
+import { makeRuntime } from "@kairos-ai/core/effect/runtime"
 import semver from "semver"
-import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
-import { NpmConfig } from "@opencode-ai/core/npm-config"
+import { InstallationChannel, InstallationVersion } from "@kairos-ai/core/installation/version"
+import { NpmConfig } from "@kairos-ai/core/npm-config"
 
 const log = Log.create({ service: "installation" })
 
@@ -135,10 +135,10 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
 
       const getBrewFormula = Effect.fnUntraced(function* () {
         const tapFormula = yield* text(["brew", "list", "--formula", "anomalyco/tap/opencode"])
-        if (tapFormula.includes("opencode")) return "anomalyco/tap/opencode"
-        const coreFormula = yield* text(["brew", "list", "--formula", "opencode"])
-        if (coreFormula.includes("opencode")) return "opencode"
-        return "opencode"
+        if (tapFormula.includes("kairos")) return "anomalyco/tap/opencode"
+        const coreFormula = yield* text(["brew", "list", "--formula", "kairos"])
+        if (coreFormula.includes("kairos")) return "kairos"
+        return "kairos"
       })
 
       const upgradeCurl = Effect.fnUntraced(
@@ -180,9 +180,9 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
             { name: "yarn", command: () => text(["yarn", "global", "list"]) },
             { name: "pnpm", command: () => text(["pnpm", "list", "-g", "--depth=0"]) },
             { name: "bun", command: () => text(["bun", "pm", "ls", "-g"]) },
-            { name: "brew", command: () => text(["brew", "list", "--formula", "opencode"]) },
-            { name: "scoop", command: () => text(["scoop", "list", "opencode"]) },
-            { name: "choco", command: () => text(["choco", "list", "--limit-output", "opencode"]) },
+            { name: "brew", command: () => text(["brew", "list", "--formula", "kairos"]) },
+            { name: "scoop", command: () => text(["scoop", "list", "kairos"]) },
+            { name: "choco", command: () => text(["choco", "list", "--limit-output", "kairos"]) },
           ]
 
           checks.sort((a, b) => {
@@ -196,7 +196,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
           for (const check of checks) {
             const output = yield* check.command()
             const installedName =
-              check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "opencode" : "opencode-ai"
+              check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "kairos" : "opencode-ai"
             if (output.includes(installedName)) {
               return check.name
             }
@@ -215,7 +215,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
               return info.formulae[0].versions.stable
             }
             const response = yield* httpOk.execute(
-              HttpClientRequest.get("https://formulae.brew.sh/api/formula/opencode.json").pipe(
+              HttpClientRequest.get("https://formulae.brew.sh/api/formula/kairos.json").pipe(
                 HttpClientRequest.acceptJson,
               ),
             )
@@ -246,7 +246,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
           if (detectedMethod === "scoop") {
             const response = yield* httpOk.execute(
               HttpClientRequest.get(
-                "https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/opencode.json",
+                "https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/kairos.json",
               ).pipe(HttpClientRequest.setHeaders({ Accept: "application/json" })),
             )
             const data = yield* HttpClientResponse.schemaBodyJson(ScoopManifest)(response)
@@ -299,7 +299,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
               break
             }
             case "choco":
-              upgradeResult = yield* run(["choco", "upgrade", "opencode", `--version=${target}`, "-y"])
+              upgradeResult = yield* run(["choco", "upgrade", "kairos", `--version=${target}`, "-y"])
               break
             case "scoop":
               upgradeResult = yield* run(["scoop", "install", `opencode@${target}`])

@@ -1,9 +1,9 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { ZenData } from "@opencode-ai/console-core/model.js"
-import { and, Database, eq, isNull } from "@opencode-ai/console-core/drizzle/index.js"
-import { KeyTable } from "@opencode-ai/console-core/schema/key.sql.js"
-import { WorkspaceTable } from "@opencode-ai/console-core/schema/workspace.sql.js"
-import { ModelTable } from "@opencode-ai/console-core/schema/model.sql.js"
+import { ZenData } from "@kairos-ai/console-core/model.js"
+import { and, Database, eq, isNull } from "@kairos-ai/console-core/drizzle/index.js"
+import { KeyTable } from "@kairos-ai/console-core/schema/key.sql.js"
+import { WorkspaceTable } from "@kairos-ai/console-core/schema/workspace.sql.js"
+import { ModelTable } from "@kairos-ai/console-core/schema/model.sql.js"
 import { buildOptionsResponse, buildModelsResponse } from "~/routes/zen/util/modelsHandler"
 
 export async function OPTIONS(_input: APIEvent) {

@@ -102,7 +102,7 @@ export function DialogGoUpsell(props: DialogGoUpsellProps) {
           <box flexDirection="row">
             <text fg={theme.textMuted}>Subscribe to </text>
             <text attributes={TextAttributes.BOLD} fg={theme.textMuted}>
-              OpenCode Go
+              Kairos Go
             </text>
             <text fg={theme.textMuted}> for reliable access to the</text>
           </box>

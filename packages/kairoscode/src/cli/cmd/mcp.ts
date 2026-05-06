@@ -11,9 +11,9 @@ import { Config } from "@/config/config"
 import { ConfigMCP } from "../../config/mcp"
 import { Instance } from "../../project/instance"
 import { Installation } from "../../installation"
-import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import { InstallationVersion } from "@kairos-ai/core/installation/version"
 import path from "path"
-import { Global } from "@opencode-ai/core/global"
+import { Global } from "@kairos-ai/core/global"
 import { modify, applyEdits } from "jsonc-parser"
 import { Filesystem } from "@/util/filesystem"
 import { Bus } from "../../bus"
@@ -411,10 +411,10 @@ export const McpLogoutCommand = cmd({
 
 async function resolveConfigPath(baseDir: string, global = false) {
   // Check for existing config files (prefer .jsonc over .json, check .opencode/ subdirectory too)
-  const candidates = [path.join(baseDir, "opencode.json"), path.join(baseDir, "opencode.jsonc")]
+  const candidates = [path.join(baseDir, "opencode.json"), path.join(baseDir, "kairos.jsonc")]
 
   if (!global) {
-    candidates.push(path.join(baseDir, ".opencode", "opencode.json"), path.join(baseDir, ".opencode", "opencode.jsonc"))
+    candidates.push(path.join(baseDir, ".opencode", "opencode.json"), path.join(baseDir, ".opencode", "kairos.jsonc"))
   }
 
   for (const candidate of candidates) {

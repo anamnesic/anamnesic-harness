@@ -1,6 +1,6 @@
 import { createConnection } from "net"
 import { createServer } from "http"
-import * as Log from "@opencode-ai/core/util/log"
+import * as Log from "@kairos-ai/core/util/log"
 import { OAUTH_CALLBACK_PORT, OAUTH_CALLBACK_PATH, parseRedirectUri } from "./oauth-provider"
 
 const log = Log.create({ service: "mcp.oauth-callback" })
@@ -12,7 +12,7 @@ let currentPath = OAUTH_CALLBACK_PATH
 const HTML_SUCCESS = `<!DOCTYPE html>
 <html>
 <head>
-  <title>OpenCode - Authorization Successful</title>
+  <title>Kairos - Authorization Successful</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
     .container { text-align: center; padding: 2rem; }
@@ -23,7 +23,7 @@ const HTML_SUCCESS = `<!DOCTYPE html>
 <body>
   <div class="container">
     <h1>Authorization Successful</h1>
-    <p>You can close this window and return to OpenCode.</p>
+    <p>You can close this window and return to Kairos.</p>
   </div>
   <script>setTimeout(() => window.close(), 2000);</script>
 </body>
@@ -32,7 +32,7 @@ const HTML_SUCCESS = `<!DOCTYPE html>
 const HTML_ERROR = (error: string) => `<!DOCTYPE html>
 <html>
 <head>
-  <title>OpenCode - Authorization Failed</title>
+  <title>Kairos - Authorization Failed</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
     .container { text-align: center; padding: 2rem; }

@@ -307,7 +307,7 @@ Agents should route user requests by intent, not by the word "Codex" alone:
 | "Use Codex as the runtime for this agent"                | config change to `agentRuntime.id`               |
 | "Use my ChatGPT/Codex subscription with normal kairos" | `openai-codex/*` model refs                      |
 | "Run Codex through ACP/acpx"                             | ACP `sessions_spawn({ runtime: "acp", ... })`    |
-| "Start kairos Code/Gemini/OpenCode/Cursor in a thread"   | ACP/acpx, not `/codex` and not native sub-agents |
+| "Start kairos Code/Gemini/Kairos/Cursor in a thread"   | ACP/acpx, not `/codex` and not native sub-agents |
 
 kairos only advertises ACP spawn guidance to agents when ACP is enabled,
 dispatchable, and backed by a loaded runtime backend. If ACP is not available,

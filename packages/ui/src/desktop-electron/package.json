@@ -1,12 +1,12 @@
 {
-  "name": "@opencode-ai/desktop-electron",
+  "name": "@kairos-ai/desktop-electron",
   "private": true,
   "version": "1.14.30",
   "type": "module",
   "license": "MIT",
   "homepage": "https://opencode.ai",
   "author": {
-    "name": "OpenCode",
+    "name": "Kairos",
     "email": "hello@opencode.ai"
   },
   "scripts": {
@@ -36,8 +36,8 @@
   "devDependencies": {
     "@actions/artifact": "4.0.0",
     "@lydell/node-pty": "catalog:",
-    "@opencode-ai/app": "workspace:*",
-    "@opencode-ai/ui": "workspace:*",
+    "@kairos-ai/app": "workspace:*",
+    "@kairos-ai/ui": "workspace:*",
     "@solid-primitives/i18n": "2.2.1",
     "@solid-primitives/storage": "catalog:",
     "@solidjs/meta": "catalog:",

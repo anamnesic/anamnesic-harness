@@ -31,10 +31,10 @@ import {
   type Usage,
 } from "@agentclientprotocol/sdk"
 
-import * as Log from "@opencode-ai/core/util/log"
+import * as Log from "@kairos-ai/core/util/log"
 import { pathToFileURL } from "url"
 import { Filesystem } from "@/util/filesystem"
-import { Hash } from "@opencode-ai/core/util/hash"
+import { Hash } from "@kairos-ai/core/util/hash"
 import { ACPSessionManager } from "./session"
 import type { ACPConfig } from "./types"
 import { Provider } from "@/provider/provider"
@@ -48,9 +48,9 @@ import { ConfigMCP } from "@/config/mcp"
 import { Todo } from "@/session/todo"
 import { Result, Schema } from "effect"
 import { LoadAPIKeyError } from "ai"
-import type { AssistantMessage, Event, OpencodeClient, SessionMessageResponse, ToolPart } from "@opencode-ai/sdk/v2"
+import type { AssistantMessage, Event, OpencodeClient, SessionMessageResponse, ToolPart } from "@kairos-ai/sdk/v2"
 import { applyPatch } from "diff"
-import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import { InstallationVersion } from "@kairos-ai/core/installation/version"
 
 type ModeOption = { id: string; name: string; description?: string }
 type ModelOption = { modelId: string; name: string }
@@ -544,9 +544,9 @@ export class Agent implements ACPAgent {
     if (params.clientCapabilities?._meta?.["terminal-auth"] === true) {
       authMethod._meta = {
         "terminal-auth": {
-          command: "opencode",
+          command: "kairos",
           args: ["auth", "login"],
-          label: "OpenCode Login",
+          label: "Kairos Login",
         },
       }
     }
@@ -571,7 +571,7 @@ export class Agent implements ACPAgent {
       },
       authMethods: [authMethod],
       agentInfo: {
-        name: "OpenCode",
+        name: "Kairos",
         version: InstallationVersion,
       },
     }
@@ -1004,7 +1004,7 @@ export class Agent implements ACPAgent {
         }
       } else if (part.type === "file") {
         // Replay file attachments as appropriate ACP content blocks.
-        // OpenCode stores files internally as { type: "file", url, filename, mime }.
+        // Kairos stores files internally as { type: "file", url, filename, mime }.
         // We convert these back to ACP blocks based on the URL scheme and MIME type:
         // - file:// URLs → resource_link
         // - data: URLs with image/* → image block
@@ -1625,7 +1625,7 @@ async function defaultModel(config: ACPConfig, cwd?: string): Promise<{ provider
 
   if (specified && !providers.length) return specified
 
-  const opencodeProvider = providers.find((p) => p.id === "opencode")
+  const opencodeProvider = providers.find((p) => p.id === "kairos")
   if (opencodeProvider) {
     if (opencodeProvider.models["big-pickle"]) {
       return { providerID: ProviderID.opencode, modelID: ModelID.make("big-pickle") }

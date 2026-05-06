@@ -8,10 +8,10 @@ import { map, pipe, sortBy, values } from "remeda"
 import path from "path"
 import os from "os"
 import { Config } from "@/config/config"
-import { Global } from "@opencode-ai/core/global"
+import { Global } from "@kairos-ai/core/global"
 import { Plugin } from "../../plugin"
 import { Instance } from "../../project/instance"
-import type { Hooks } from "@opencode-ai/plugin"
+import type { Hooks } from "@kairos-ai/plugin"
 import { Process } from "@/util/process"
 import { text } from "node:stream/consumers"
 import { Effect } from "effect"
@@ -459,7 +459,7 @@ export const ProvidersLoginCommand = cmd({
           )
         }
 
-        if (provider === "opencode") {
+        if (provider === "kairos") {
           prompts.log.info("Create an api key at https://opencode.ai/auth")
         }
 

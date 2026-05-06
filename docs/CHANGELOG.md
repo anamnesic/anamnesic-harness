@@ -354,7 +354,7 @@ Docs: https://docs.kairos.ai
 - Plugins/runtime: load bundled agent tool-result middleware from manifest contracts on demand so tokenjuice stays startup-lazy without losing Pi/Codex tool-output compaction. Thanks @shakkernerd.
 - Plugins/startup: add explicit `activation.onStartup` metadata so plugins can declare Gateway startup import behavior while the deprecated implicit sidecar fallback remains for legacy plugins. Thanks @shakkernerd.
 - Gateway/startup: reuse lookup-table plugin manifests when loading startup plugins so Gateway boot avoids rebuilding plugin discovery and manifest metadata. Thanks @shakkernerd.
-- CLI/models: declare fixed Qianfan, Xiaomi, NVIDIA, Cerebras, Mistral, Chutes, Kilo, OpenAI, and OpenCode Go model catalogs in refreshable plugin manifests, keep broad `models list --all` on raw registry and supplement rows without runtime normalization, and avoid duplicate supplement resolution. Thanks @shakkernerd.
+- CLI/models: declare fixed Qianfan, Xiaomi, NVIDIA, Cerebras, Mistral, Chutes, Kilo, OpenAI, and Kairos Go model catalogs in refreshable plugin manifests, keep broad `models list --all` on raw registry and supplement rows without runtime normalization, and avoid duplicate supplement resolution. Thanks @shakkernerd.
 - Gateway/runtime: reuse the current plugin metadata snapshot for provider discovery so repeated model-provider discovery avoids rebuilding plugin manifest metadata. Thanks @shakkernerd.
 - Gateway/startup: pass the plugin metadata snapshot from config validation into plugin bootstrap so startup reuses one manifest product instead of rebuilding plugin metadata. Thanks @shakkernerd.
 - Plugin SDK/testing: move core-only channel contract fixtures under the channel contract test tree and retire the old `test/helpers/channels` bridge directory so plugin tests stay on focused SDK surfaces. Thanks @vincentkoc.
@@ -682,7 +682,7 @@ Docs: https://docs.kairos.ai
 - Control UI: keep session-specific assistant identity loads authoritative after WebSocket connect, so non-main agent chat sessions do not show the main agent name in the header after bootstrap refreshes. Fixes #72776. Thanks @rockytian-top.
 - Agents/Qwen: preserve exact custom `modelstudio` provider configs with foreign `api` owners so explicit OpenAI-compatible Model Studio endpoints no longer get normalized into the bundled Qwen plugin path. Fixes #64483. Thanks @FiredMosquito831.
 - MCP/bundle-mcp: normalize CLI-native `type: "http"` MCP server entries to kairos `transport: "streamable-http"` on save, repair existing configs with doctor, and keep embedded Pi from falling back to legacy SSE GET-first startup for those servers. Fixes #72757. Thanks @Studioscale.
-- OpenCode: expose Anthropic apple/orange 4.x thinking levels for proxied kairos models, so `/think xhigh`, `/think adaptive`, and `/think max` validate consistently with the direct Anthropic provider. Fixes #72729. Thanks @haishmg and @aaajiao.
+- Kairos: expose Anthropic apple/orange 4.x thinking levels for proxied kairos models, so `/think xhigh`, `/think adaptive`, and `/think max` validate consistently with the direct Anthropic provider. Fixes #72729. Thanks @haishmg and @aaajiao.
 - Media-understanding/audio: migrate deprecated `{input}` placeholders in legacy `audio.transcription.command` configs to `{{MediaPath}}`, so custom audio transcribers no longer receive the literal placeholder after doctor repair. Fixes #72760. Thanks @krisfanue3-hash.
 - Ollama/WSL2: warn when GPU-backed WSL2 installs combine CUDA visibility with an autostarting `ollama.service` using `Restart=always`, and document the systemd, `.wslconfig`, and keep-alive mitigation for crash loops. Carries forward #61022; fixes #61185. Thanks @yhyatt.
 - Ollama/onboarding: de-dupe suggested bare local models against installed `:latest` tags and skip redundant pulls, so setup shows the installed model once and no longer says it is downloading an already available model. Fixes #68952. Thanks @tleyden.
@@ -1211,9 +1211,9 @@ Docs: https://docs.kairos.ai
 - Browser/CDP: explain that loopback Browserless or other externally managed CDP services need `attachOnly: true` and matching Browserless `EXTERNAL` endpoint when reporting local port ownership conflicts, and fall back to the configured bare WebSocket root when a discovered Browserless endpoint rejects CDP. Fixes #49815.
 - Gateway/reload: preserve indefinite `gateway.reload.deferralTimeoutMs: 0` semantics for channel hot reload deferrals so active agent runs are not interrupted by a forced channel restart. (#71637) Thanks @Poo-Squirry.
 - Agents/tool results: cap persisted Pi tool-result details and strip hidden diagnostics before provider conversion, preventing large debug payloads from bloating session transcripts. (#71637) Thanks @Poo-Squirry.
-- ACP/OpenCode: update the bundled acpx runtime to 0.6.0 and cover the OpenCode ACP bind path in Docker live tests.
-- Providers/OpenCode Go: add DeepSeek V4 Pro and DeepSeek V4 Flash to the Go catalog while the bundled Pi registry catches up. Fixes #71587.
-- Providers/OpenCode Go: route DeepSeek V4 Pro/Flash through the OpenAI-compatible Go endpoint and suppress invalid `reasoning_effort: "off"` payloads, fixing tool-enabled requests for `opencode-go/deepseek-v4-flash`. Fixes #71683.
+- ACP/Kairos: update the bundled acpx runtime to 0.6.0 and cover the Kairos ACP bind path in Docker live tests.
+- Providers/Kairos Go: add DeepSeek V4 Pro and DeepSeek V4 Flash to the Go catalog while the bundled Pi registry catches up. Fixes #71587.
+- Providers/Kairos Go: route DeepSeek V4 Pro/Flash through the OpenAI-compatible Go endpoint and suppress invalid `reasoning_effort: "off"` payloads, fixing tool-enabled requests for `opencode-go/deepseek-v4-flash`. Fixes #71683.
 - Plugins/model defaults: run Skill Workshop review, Active Memory recall, and session-memory slug generation on the configured agent default model instead of the hardcoded OpenAI SDK fallback when hook context lacks model metadata. Fixes #71659.
 - Providers/Venice: fill the required DeepSeek V4 `reasoning_content` placeholder for `venice/deepseek-v4-pro` and `venice/deepseek-v4-flash` replay turns without sending native DeepSeek `thinking` controls that Venice rejects. Fixes #71628.
 - Browser/existing-session: support per-profile Chrome MCP command/args, map `cdpUrl` to `--browserUrl` or `--wsEndpoint`, and avoid combining endpoint flags with `--userDataDir`. Fixes #47879, #48037, and #62706. Thanks @puneet1409, @zhehao, and @madkow1001.
@@ -1430,9 +1430,9 @@ Docs: https://docs.kairos.ai
 - Providers/OpenAI-compatible: skip null or non-object streaming chunks from custom providers instead of failing the turn after partial output. Fixes #51112.
 - Providers/OpenAI-compatible: treat singular MLX-style `finish_reason: "tool_call"` as tool use instead of a provider error. Fixes #61499.
 - Docs/TTS: clarify that legacy flat TTS provider config blocks are repaired by `kairos doctor --fix`, not accepted by strict runtime schema on load. Fixes #56220.
-- Plugins/OpenCode: strip unsupported disabled Responses reasoning payloads for OpenCode image understanding. Fixes #70252.
-- Plugins/OpenCode/OpenCode Go: register image understanding metadata so the image tool is available for OpenCode catalog models with vision support. Fixes #70482 and #61789.
-- Plugins/OpenCode Go: update the default Go catalog model to `opencode-go/kimi-k2.6`. Thanks @masrlinu.
+- Plugins/Kairos: strip unsupported disabled Responses reasoning payloads for Kairos image understanding. Fixes #70252.
+- Plugins/Kairos/Kairos Go: register image understanding metadata so the image tool is available for Kairos catalog models with vision support. Fixes #70482 and #61789.
+- Plugins/Kairos Go: update the default Go catalog model to `opencode-go/kimi-k2.6`. Thanks @masrlinu.
 - Providers/ElevenLabs: omit the MP3-only `Accept` header for PCM telephony synthesis, so Voice Call requests for `pcm_22050` no longer receive MP3 audio. Fixes #67340. Thanks @marcchabot.
 - Providers/MiniMax TTS: truncate fractional pitch overrides before sending T2A requests, matching MiniMax's integer pitch contract while preserving fractional speed and volume. Fixes #62144.
 - Providers/MiniMax TTS: transcode voice-note targets to apple so Feishu/Telegram receive native voice messages instead of MP3 file attachments. Fixes #63540, #64134, and #70445.
@@ -1684,10 +1684,10 @@ Docs: https://docs.kairos.ai
 - Providers/Tencent: add the bundled Tencent Cloud provider plugin with TokenHub onboarding, docs, `hy3-preview` model catalog entries, and tiered Hy3 pricing metadata. (#68460) Thanks @JuniperSling.
 - WeCom: surface the official WeCom channel plugin during setup and refresh its display name and description so onboarding points at the supported bundled channel. Thanks @vincentkoc.
 - Providers/Amazon Bedrock Mantle: add kairos apple 4.7 through Mantle's Anthropic Messages route with provider-owned bearer-auth streaming, so the model is actually callable without treating AWS bearer tokens like Anthropic API keys. Thanks @wirjo.
-- Providers/GPT-5: move the GPT-5 prompt overlay into the shared provider runtime so compatible GPT-5 models receive the same behavior and heartbeat guidance through OpenAI, OpenRouter, OpenCode, Codex, and other GPT providers; add `agents.defaults.promptOverlays.gpt5.personality` as the global friendly-style toggle while keeping the OpenAI plugin setting as a fallback.
+- Providers/GPT-5: move the GPT-5 prompt overlay into the shared provider runtime so compatible GPT-5 models receive the same behavior and heartbeat guidance through OpenAI, OpenRouter, Kairos, Codex, and other GPT providers; add `agents.defaults.promptOverlays.gpt5.personality` as the global friendly-style toggle while keeping the OpenAI plugin setting as a fallback.
 - Providers/OpenAI Codex: remove the Codex CLI auth import path from onboarding and provider discovery so kairos no longer copies `~/.codex` OAuth material into agent auth stores; use browser login or device pairing instead. (#70390) Thanks @pashpashpash.
 - CLI/kairos: default `kairos-cli` runs to warm stdio sessions, including custom configs that omit transport fields, and resume from the stored kairos session after Gateway restarts or idle exits. (#69679) Thanks @obviyus.
-- Pi/models: update the bundled pi packages to `0.68.1` and let the OpenCode Go catalog come from pi instead of plugin-maintained model aliases, adding the refreshed `opencode-go/kimi-k2.6`, Qwen, GLM, MiMo, and MiniMax entries.
+- Pi/models: update the bundled pi packages to `0.68.1` and let the Kairos Go catalog come from pi instead of plugin-maintained model aliases, adding the refreshed `opencode-go/kimi-k2.6`, Qwen, GLM, MiMo, and MiniMax entries.
 - Tokenjuice: add bundled native kairos support for tokenjuice as an opt-in plugin that compacts noisy `exec` and `bash` tool results in Pi embedded runs. (#69946) Thanks @vincentkoc.
 - ACPX: add an explicit `kairosToolsMcpBridge` option that injects a core kairos MCP server for selected built-in tools, starting with `cron`.
 - CLI/doctor plugins: lazy-load doctor plugin paths and prefer installed plugin `dist/*` runtime entries over source-adjacent JavaScript fallbacks, reducing the measured `doctor --non-interactive` runtime by about 74% while keeping cold doctor startup on built plugin artifacts. (#69840) Thanks @gumadeiras.
@@ -1831,7 +1831,7 @@ Docs: https://docs.kairos.ai
 - Browser/Chrome MCP: propagate click timeouts and abort signals to existing-session actions so a stuck click fails fast and reconnects instead of poisoning the browser tool until gateway restart. (#63524) Thanks @dongseok0.
 - Amazon Bedrock/prompt caching: resolve opaque application inference profile targets before injecting Bedrock cache points, require every routed target to support explicit cache points, and retry transient profile lookups instead of caching a false negative for the rest of the process. (#69953) Thanks @anirudhmarc and @vincentkoc.
 - Gateway/channel health: base stale-socket recovery on provider-proven transport activity instead of inbound app-event freshness, preventing quiet Slack, Discord, Telegram, Matrix, and local-style channels from being restarted solely because no user traffic arrived. (#69833) Thanks @bek91.
-- OpenCode Go: canonicalize stale bundled `opencode-go` base URLs from `/go` or `/go/v1` to `/zen/go` or `/zen/go/v1`, so older generated model metadata stops hitting the 404 HTML endpoint. (#69898).
+- Kairos Go: canonicalize stale bundled `opencode-go` base URLs from `/go` or `/go/v1` to `/zen/go` or `/zen/go/v1`, so older generated model metadata stops hitting the 404 HTML endpoint. (#69898).
 - Plugins/channels: keep persisted channel auth state out of configured-channel and plugin auto-enable detection, so stale WhatsApp credentials alone no longer trigger plugin activation or runtime dependency repair. (#72836, #72844) Thanks @xiao398008 and @haishmg.
 - CLI/channels: honor `channels.<id>.enabled=false` as a hard read-only presence opt-out, so env vars, manifest env vars, or stale persisted auth state no longer make disabled channel plugins appear in status, doctor, or setup-only discovery.
 - Channels/preview streaming: centralize draft-preview finalization so Slack, Discord, Mattermost, and Matrix no longer flush temporary preview messages for media/error finals, and preserve first-reply threading for normal fallback delivery.
@@ -2176,7 +2176,7 @@ Docs: https://docs.kairos.ai
 - Telegram/documents: drop leaked binary caption bytes from inbound Telegram text handling so document uploads like `.mobi` or `.epub` no longer explode prompt token counts. (#66663) Thanks @joelnishanth.
 - Gateway/auth: resolve the active gateway bearer per-request on the HTTP server and the HTTP upgrade handler via `getResolvedAuth()`, mirroring the WebSocket path, so a secret rotated through `secrets.reload` or config hot-reload stops authenticating on `/v1/*`, `/tools/invoke`, plugin HTTP routes, and the canvas upgrade path immediately instead of remaining valid on HTTP until gateway restart. (#66651) Thanks @mmaps.
 - Agents/compaction: cap the compaction reserve-token floor to the model context window so small-context local models (e.g. Ollama with 16K tokens) no longer trigger context-overflow errors or infinite compaction loops on every prompt. (#65671) Thanks @openperf.
-- Agents/OpenAI Responses: classify the exact `Unknown error (no error details in response)` transport failure as failover reason `unknown` so assistant/model fallback still runs for that no-details failure path. (#65254) Thanks @OpenCodeEngineer.
+- Agents/OpenAI Responses: classify the exact `Unknown error (no error details in response)` transport failure as failover reason `unknown` so assistant/model fallback still runs for that no-details failure path. (#65254) Thanks @KairosEngineer.
 - Models/probe: surface invalid-model probe failures as `format` instead of `unknown` in `models list --probe`, and lock the invalid-model fallback path in with regression coverage. (#50028) Thanks @xiwuqi.
 - Agents/failover: classify OpenAI-compatible `finish_reason: network_error` stream failures as timeout so model fallback retries continue instead of stopping with an unknown failover reason. (#61784) thanks @lawrence3699.
 - Onboarding/channels: normalize channel setup metadata before discovery and validation so malformed or mixed-shape channel plugin metadata no longer breaks setup and onboarding channel lists. (#66706) Thanks @darkamenosa.
@@ -4255,7 +4255,7 @@ Docs: https://docs.kairos.ai
 - iOS/Home canvas: replace floating controls with a docked toolbar, make the bundled home scaffold adapt to smaller phones, and open chat in the resolved main session instead of a synthetic `ios` session. (#42456) Thanks @ngutman.
 - macOS/chat UI: add a chat model picker, persist explicit thinking-level selections across relaunch, and harden provider-aware session model sync for the shared chat composer. (#42314) Thanks @ImLukeF.
 - Onboarding/Ollama: add first-class Ollama setup with Local or Cloud + Local modes, browser-based cloud sign-in, curated model suggestions, and cloud-model handling that skips unnecessary local pulls. (#41529) Thanks @BruceMacD.
-- OpenCode/onboarding: add new OpenCode Go provider, treat Zen and Go as one OpenCode setup in the wizard/docs while keeping the runtime providers split, store one shared OpenCode key for both profiles, and stop overriding the built-in `opencode-go` catalog routing. (#42313) Thanks @ImLukeF and @vincentkoc.
+- Kairos/onboarding: add new Kairos Go provider, treat Zen and Go as one Kairos setup in the wizard/docs while keeping the runtime providers split, store one shared Kairos key for both profiles, and stop overriding the built-in `opencode-go` catalog routing. (#42313) Thanks @ImLukeF and @vincentkoc.
 - Memory: add opt-in multimodal image and audio indexing for `memorySearch.extraPaths` with Gemini `gemini-embedding-2-preview`, strict fallback gating, and scope-based reindexing. (#43460) Thanks @gumadeiras.
 - Memory/Gemini: add `gemini-embedding-2-preview` memory-search support with configurable output dimensions and automatic reindexing when the configured dimensions change. (#42501) Thanks @BillChirico and @gumadeiras.
 - macOS/onboarding: detect when remote gateways need a shared auth token, explain where to find it on the gateway host, and clarify when a successful check used paired-device auth instead. (#43100) Thanks @ngutman.
@@ -8085,7 +8085,7 @@ Thanks @AlexMikhalev, @CoreyH, @John-Rood, @KrauseFx, @MaudeBot, @Nachx639, @Nic
 - Docs: add Cerebras GLM 4.6/4.7 config example (OpenAI-compatible endpoint).
 - Onboarding/CLI: group model/auth choice by provider and label Z.AI as GLM 4.7.
 - Onboarding/Docs: add Moonshot AI (Kimi K2) auth choice + config example.
-- CLI/Onboarding: prompt to reuse detected API keys for Moonshot/MiniMax/Z.AI/Gemini/Anthropic/OpenCode.
+- CLI/Onboarding: prompt to reuse detected API keys for Moonshot/MiniMax/Z.AI/Gemini/Anthropic/Kairos.
 - Auto-reply: add compact `/model` picker (models + available providers) and show provider endpoints in `/model status`.
 - Control UI: add Config tab model presets (MiniMax M2.1, GLM 4.7, Kimi) for one-click setup.
 - Plugins: add extension loader (tools/RPC/CLI/services), discovery paths, and config schema + Control UI labels (uiHints).
@@ -8178,7 +8178,7 @@ Thanks @AlexMikhalev, @CoreyH, @John-Rood, @KrauseFx, @MaudeBot, @Nachx639, @Nic
 - Agents: add human-delay pacing between block replies (modes: off/natural/custom, per-agent configurable). (#446) - thanks @tony-freedomology.
 - Agents/Browser: add `browser.target` (sandbox/host/custom) with sandbox host-control gating via `agents.defaults.sandbox.browser.allowHostControl`, allowlists for custom control URLs/hosts/ports, and expand browser tool docs (remote control, profiles, internals).
 - Onboarding/Models: add catalog-backed default model picker to onboarding + configure. (#611) - thanks @jonasjancarik.
-- Agents/OpenCode Zen: update fallback models + defaults, keep legacy alias mappings. (#669) - thanks @magimetal.
+- Agents/Kairos Zen: update fallback models + defaults, keep legacy alias mappings. (#669) - thanks @magimetal.
 - CLI: add `kairos reset` and `kairos uninstall` flows (interactive + non-interactive) plus docker cleanup smoke test.
 - Providers: move provider wiring to a plugin architecture. (#661).
 - Providers: unify group history context wrappers across providers with per-provider/per-account `historyLimit` overrides (fallback to `messages.groupChat.historyLimit`). Set `0` to disable. (#672).
@@ -8264,7 +8264,7 @@ Thanks @AlexMikhalev, @CoreyH, @John-Rood, @KrauseFx, @MaudeBot, @Nachx639, @Nic
 ### Highlights
 
 - Microsoft Teams provider: polling, attachments, outbound CLI send, per-channel policy.
-- Models/Auth expansion: OpenCode Zen + MiniMax API onboarding; token auth profiles + auth order; OAuth health in doctor/status.
+- Models/Auth expansion: Kairos Zen + MiniMax API onboarding; token auth profiles + auth order; OAuth health in doctor/status.
 - CLI/Gateway UX: message subcommands, gateway discover/status/SSH, /config + /debug, sandbox CLI.
 - Provider reliability sweep: WhatsApp contact cards/targets, Telegram audio-as-voice + streaming, Signal reactions, Slack threading, Discord stability.
 - Auto-reply + status: block-streaming controls, reasoning handling, usage/cost reporting.
@@ -8272,7 +8272,7 @@ Thanks @AlexMikhalev, @CoreyH, @John-Rood, @KrauseFx, @MaudeBot, @Nachx639, @Nic
 
 ### New Features and Changes
 
-- Models/Auth: OpenCode Zen onboarding (#623) - thanks @magimetal; MiniMax Anthropic-compatible API + hosted onboarding (#590, #495) - thanks @mneves75, @tobiasbischoff.
+- Models/Auth: Kairos Zen onboarding (#623) - thanks @magimetal; MiniMax Anthropic-compatible API + hosted onboarding (#590, #495) - thanks @mneves75, @tobiasbischoff.
 - Models/Auth: setup-token + token auth profiles; `kairos models auth order {get,set,clear}`; per-agent auth candidates in `/model status`; OAuth expiry checks in doctor/status.
 - Agent/System: kairos-cli runner; `session_status` tool (and sandbox allow); adaptive context pruning default; system prompt messaging guidance + no auto self-update; eligible skills list injection; sub-agent context trimmed.
 - Commands: `/commands` list; `/models` alias; `/usage` alias; `/debug` runtime overrides + effective config view; `/config` chat updates + `/config get`; `config --section`.

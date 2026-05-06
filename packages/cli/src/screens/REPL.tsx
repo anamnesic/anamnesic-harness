@@ -3147,7 +3147,7 @@ export function REPL({
     fromKeybinding?: boolean;
   }) => {
     // Re-pin scroll to bottom on submit so the user always sees the new
-    // exchange (matches OpenCode's auto-scroll behavior).
+    // exchange (matches Kairos's auto-scroll behavior).
     repinScroll();
 
     // Resume loop mode if paused

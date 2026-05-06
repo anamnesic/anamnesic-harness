@@ -1,6 +1,6 @@
 import { Auth } from "@/auth"
 import { AppRuntime } from "@/effect/app-runtime"
-import * as Log from "@opencode-ai/core/util/log"
+import * as Log from "@kairos-ai/core/util/log"
 import { Effect } from "effect"
 import { ProviderID } from "@/provider/schema"
 import { Hono } from "hono"
@@ -88,7 +88,7 @@ export function ControlPlaneRoutes(): Hono {
       openAPIRouteHandler(app, {
         documentation: {
           info: {
-            title: "opencode",
+            title: "kairos",
             version: "0.0.3",
             description: "opencode api",
           },

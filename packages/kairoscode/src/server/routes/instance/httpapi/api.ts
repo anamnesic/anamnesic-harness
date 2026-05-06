@@ -43,7 +43,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(TuiApi)
   .addHttpApi(WorkspaceApi)
 
-export const OpenCodeHttpApi = HttpApi.make("opencode")
+export const KairosHttpApi = HttpApi.make("kairos")
   .addHttpApi(RootHttpApi)
   .addHttpApi(EventApi)
   .addHttpApi(InstanceHttpApi)

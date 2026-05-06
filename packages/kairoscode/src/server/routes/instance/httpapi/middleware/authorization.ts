@@ -17,7 +17,7 @@ export class ServerAuthConfig extends ConfigService.Service<ServerAuthConfig>()(
   "@opencode/ExperimentalHttpApiServerAuthConfig",
   {
     password: Config.string("OPENCODE_SERVER_PASSWORD").pipe(Config.option),
-    username: Config.string("OPENCODE_SERVER_USERNAME").pipe(Config.withDefault("opencode")),
+    username: Config.string("OPENCODE_SERVER_USERNAME").pipe(Config.withDefault("kairos")),
   },
 ) {}
 

@@ -2,7 +2,7 @@
   "name": "@kairos/ui",
   "version": "1.0.0",
   "private": true,
-  "description": "Kairos UI — app, desktop, enterprise, web, console, components, storybook",
+  "description": "Kairos UI — app, enterprise, web, console, components, storybook",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

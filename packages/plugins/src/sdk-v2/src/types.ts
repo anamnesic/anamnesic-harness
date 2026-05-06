@@ -30,7 +30,7 @@ export type RuntimeSelection =
   | "auto"
   | { type: "embedded"; id: "pi" | "codex" | (string & {}) }
   | { type: "cli"; id: "kairos-cli" | (string & {}) }
-  | { type: "acp"; harness: "kairos" | "cursor" | "gemini" | "opencode" | (string & {}) }
+  | { type: "acp"; harness: "kairos" | "cursor" | "gemini" | "kairos" | (string & {}) }
   | { type: "managed"; provider: "local" | "node" | "testbox" | "cloud" | (string & {}) };
 
 export type EnvironmentSelection =

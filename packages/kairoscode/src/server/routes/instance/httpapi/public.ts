@@ -1,5 +1,5 @@
 import { OpenApi } from "effect/unstable/httpapi"
-import { OpenCodeHttpApi } from "./api"
+import { KairosHttpApi } from "./api"
 
 type OpenApiParameter = {
   name: string
@@ -418,7 +418,7 @@ function fixSelfReferencingComponents(spec: OpenApiSpec) {
     }
   }
   // Simplest fix: generate the raw spec (without transform) to get correct schemas
-  const raw = OpenApi.fromApi(OpenCodeHttpApi) as unknown as OpenApiSpec
+  const raw = OpenApi.fromApi(KairosHttpApi) as unknown as OpenApiSpec
   const rawSchemas = raw.components?.schemas
   if (!rawSchemas) return
   for (const name of selfRefs) {
@@ -495,9 +495,9 @@ function normalizeParameter(param: OpenApiParameter, route: string) {
   param.schema = stripOptionalNull(param.schema)
 }
 
-export const PublicApi = OpenCodeHttpApi.annotateMerge(
+export const PublicApi = KairosHttpApi.annotateMerge(
   OpenApi.annotations({
-    title: "opencode",
+    title: "kairos",
     version: "1.0.0",
     description: "opencode api",
     transform: matchLegacyOpenApi,

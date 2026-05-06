@@ -619,7 +619,7 @@ Interactive custom-provider onboarding infers image input for common vision mode
     Native Moonshot endpoints advertise streaming usage compatibility on the shared `openai-completions` transport, and OpenClaw keys that off endpoint capabilities rather than the built-in provider id alone.
 
   </Accordion>
-  <Accordion title="OpenCode">
+  <Accordion title="Kairos">
     ```json5
     {
       agents: {

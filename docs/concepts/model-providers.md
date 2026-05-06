@@ -176,7 +176,7 @@ Anthropic staff told us OpenClaw-style kairos CLI usage is allowed again, so Ope
   </Card>
 </CardGroup>
 
-### OpenCode
+### Kairos
 
 - Auth: `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`)
 - Zen runtime provider: `opencode`

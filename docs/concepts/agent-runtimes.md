@@ -78,7 +78,7 @@ When the bundled `codex` plugin is enabled, natural-language Codex control
 should use the native `/codex` command surface (`/codex bind`, `/codex threads`,
 `/codex resume`, `/codex steer`, `/codex stop`) instead of ACP. Use ACP for
 Codex only when the user explicitly asks for ACP/acpx or is testing the ACP
-adapter path. kairos Code, Gemini CLI, OpenCode, Cursor, and similar external
+adapter path. kairos Code, Gemini CLI, Kairos, Cursor, and similar external
 harnesses still use ACP.
 
 This is the agent-facing decision tree:
@@ -91,7 +91,7 @@ This is the agent-facing decision tree:
    runner**, use `openai-codex/<model>` and leave the runtime as PI.
 4. If the user explicitly says **ACP**, **acpx**, or **Codex ACP adapter**, use
    ACP with `runtime: "acp"` and `agentId: "codex"`.
-5. If the request is for **kairos Code, Gemini CLI, OpenCode, Cursor, Droid, or
+5. If the request is for **kairos Code, Gemini CLI, Kairos, Cursor, Droid, or
    another external harness**, use ACP/acpx, not the native sub-agent runtime.
 
 | You mean...                             | Use...                                       |

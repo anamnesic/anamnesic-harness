@@ -1,4 +1,4 @@
-import { NamedError } from "@opencode-ai/core/util/error"
+import { NamedError } from "@kairos-ai/core/util/error"
 import { errorFormat } from "@/util/error"
 
 interface ErrorLike {

@@ -134,7 +134,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="OpenCode example">
+  <Accordion title="Kairos example">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \

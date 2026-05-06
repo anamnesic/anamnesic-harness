@@ -1,6 +1,6 @@
-import { Message, Model, Part, Session, SnapshotFileDiff } from "@opencode-ai/sdk/v2"
-import { fn } from "@opencode-ai/core/util/fn"
-import { iife } from "@opencode-ai/core/util/iife"
+import { Message, Model, Part, Session, SnapshotFileDiff } from "@kairos-ai/sdk/v2"
+import { fn } from "@kairos-ai/core/util/fn"
+import { iife } from "@kairos-ai/core/util/iife"
 import z from "zod"
 import { Storage } from "./storage"
 

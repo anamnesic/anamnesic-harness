@@ -3,11 +3,11 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { UI } from "../ui"
 import { cmd } from "./cmd"
-import { Flag } from "@opencode-ai/core/flag/flag"
+import { Flag } from "@kairos-ai/core/flag/flag"
 import { bootstrap } from "../bootstrap"
 import { EOL } from "os"
 import { Filesystem } from "@/util/filesystem"
-import { createOpencodeClient, type OpencodeClient, type ToolPart } from "@opencode-ai/sdk/v2"
+import { createOpencodeClient, type OpencodeClient, type ToolPart } from "@kairos-ai/sdk/v2"
 import { Server } from "../../server/server"
 import { Provider } from "@/provider/provider"
 import { Agent } from "../../agent/agent"
@@ -652,7 +652,7 @@ export const RunCommand = cmd({
       const headers = (() => {
         const password = args.password ?? process.env.OPENCODE_SERVER_PASSWORD
         if (!password) return undefined
-        const username = process.env.OPENCODE_SERVER_USERNAME ?? "opencode"
+        const username = process.env.OPENCODE_SERVER_USERNAME ?? "kairos"
         const auth = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
         return { Authorization: auth }
       })()

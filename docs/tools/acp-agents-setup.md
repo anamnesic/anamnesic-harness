@@ -78,7 +78,7 @@ Core ACP baseline:
       "kimi",
       "kiro",
       "openclaw",
-      "opencode",
+      "kairos",
       "pi",
       "qwen",
     ],

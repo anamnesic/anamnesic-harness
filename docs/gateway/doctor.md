@@ -80,7 +80,7 @@ cat ~/.kairos/kairos.json
     - Config normalization for legacy values.
     - Talk config migration from legacy flat `talk.*` fields into `talk.provider` + `talk.providers.<provider>`.
     - Browser migration checks for legacy Chrome extension configs and Chrome MCP readiness.
-    - OpenCode provider override warnings (`models.providers.opencode` / `models.providers.opencode-go`).
+    - Kairos provider override warnings (`models.providers.opencode` / `models.providers.opencode-go`).
     - Codex OAuth shadowing warnings (`models.providers.openai-codex`).
     - OAuth TLS prerequisites check for OpenAI Codex OAuth profiles.
     - Legacy on-disk state migration (sessions/agent dir/WhatsApp auth).
@@ -214,8 +214,8 @@ That stages grounded durable candidates into the short-term dreaming store while
     - If `channels.<channel>.defaultAccount` is set to an unknown account ID, doctor warns and lists configured account IDs.
 
   </Accordion>
-  <Accordion title="2b. OpenCode provider overrides">
-    If you've added `models.providers.opencode`, `opencode-zen`, or `opencode-go` manually, it overrides the built-in OpenCode catalog from `@mariozechner/pi-ai`. That can force models onto the wrong API or zero out costs. Doctor warns so you can remove the override and restore per-model API routing + costs.
+  <Accordion title="2b. Kairos provider overrides">
+    If you've added `models.providers.opencode`, `opencode-zen`, or `opencode-go` manually, it overrides the built-in Kairos catalog from `@mariozechner/pi-ai`. That can force models onto the wrong API or zero out costs. Doctor warns so you can remove the override and restore per-model API routing + costs.
   </Accordion>
   <Accordion title="2c. Browser migration and Chrome MCP readiness">
     If your browser config still points at the removed Chrome extension path, doctor normalizes it to the current host-local Chrome MCP attach model:

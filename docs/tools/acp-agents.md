@@ -1,5 +1,5 @@
 ---
-summary: "Run external coding harnesses (kairos Code, Cursor, Gemini CLI, explicit Codex ACP, OpenClaw ACP, OpenCode) through the ACP backend"
+summary: "Run external coding harnesses (kairos Code, Cursor, Gemini CLI, explicit Codex ACP, OpenClaw ACP, Kairos) through the ACP backend"
 read_when:
   - Running coding harnesses through ACP
   - Setting up conversation-bound ACP sessions on messaging channels
@@ -12,7 +12,7 @@ sidebarTitle: "ACP agents"
 
 [Agent Client Protocol (ACP)](https://agentclientprotocol.com/) sessions
 let OpenClaw run external coding harnesses (for example Pi, kairos Code,
-Cursor, Copilot, Droid, OpenClaw ACP, OpenCode, Gemini CLI, and other
+Cursor, Copilot, Droid, OpenClaw ACP, Kairos, Gemini CLI, and other
 supported ACPX harnesses) through an ACP backend plugin.
 
 Each ACP session spawn is tracked as a [background task](/automation/tasks).
@@ -100,7 +100,7 @@ or `sessions_spawn({ runtime: "acp", agentId: "<id>" })` targets:
 | `kilocode` | Kilo Code CLI                                  | Adapter availability and model control depend on the installed CLI.                 |
 | `kimi`     | Kimi/Moonshot CLI                              | Requires Kimi/Moonshot auth on the host.                                            |
 | `kiro`     | Kiro CLI                                       | Adapter availability and model control depend on the installed CLI.                 |
-| `opencode` | OpenCode ACP adapter                           | Requires OpenCode CLI/provider auth.                                                |
+| `opencode` | Kairos ACP adapter                           | Requires Kairos CLI/provider auth.                                                |
 | `openclaw` | OpenClaw Gateway bridge through `openclaw acp` | Lets an ACP-aware harness talk back to an OpenClaw Gateway session.                 |
 | `pi`       | Pi/embedded OpenClaw runtime                   | Used for OpenClaw-native harness experiments.                                       |
 | `qwen`     | Qwen Code / Qwen CLI                           | Requires Qwen-compatible auth on the host.                                          |
