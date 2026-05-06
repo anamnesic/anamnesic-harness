@@ -11,6 +11,7 @@ interface Workspace {
   description?: string;
   createdAt: string;
   isDefault?: boolean;
+  metadata?: { isDefault?: boolean; [k: string]: unknown };
 }
 
 interface WorkspaceContextValue {
@@ -52,19 +53,20 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         return;
       }
 
-      const response = await apiFetch<{
-        items: Workspace[];
-        total: number;
-      }>('/api/v1/workspaces?limit=100');
+      const response = await apiFetch<unknown>('/api/v1/workspaces?limit=100');
       
-      const items = response?.items || [];
+      // API wraps response in { success, data: { items, total } }
+      const payload = (response as any)?.data ?? response;
+      const items: Workspace[] = Array.isArray(payload?.items) ? payload.items
+        : Array.isArray(payload) ? payload
+        : [];
       setWorkspaces(items);
       
       // If no workspace is selected and there are workspaces, select the default or first one
       if (!workspace && items.length > 0) {
         const savedWorkspaceId = localStorage.getItem('kairos-selected-workspace');
         const savedWorkspace = savedWorkspaceId ? items.find(w => w.id === savedWorkspaceId) : null;
-        const defaultWorkspace = savedWorkspace || items.find(w => w.isDefault) || items[0];
+        const defaultWorkspace = savedWorkspace || items.find(w => w.isDefault || w.metadata?.isDefault) || items[0];
         
         setWorkspace(defaultWorkspace);
         localStorage.setItem('kairos-selected-workspace', defaultWorkspace.id);

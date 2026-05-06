@@ -6,6 +6,14 @@ import { ok, err } from '@/app/api/_lib/response';
 import { createWorkspaceSchema } from '@/src/core/validation/schemas';
 import { z } from 'zod';
 
+function sanitizeWorkspace(workspace: any) {
+    const { owner, ...rest } = workspace;
+    return {
+        ...rest,
+        ...(owner ? { owner: { id: owner.id, email: owner.email, fullName: owner.fullName } } : {}),
+    };
+}
+
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
@@ -32,12 +40,12 @@ export async function GET(req: NextRequest) {
         // If pagination is requested, use paginated method
         if (searchParams.has('limit') || searchParams.has('offset')) {
             const result = await workspaceService.listPaginated({ limit, offset });
-            return ok({ items: result.items, total: result.total });
+            return ok({ items: result.items.map(sanitizeWorkspace), total: result.total });
         }
 
         // Otherwise return all workspaces in expected format
         const workspaces = await workspaceService.listAll();
-        return ok({ items: workspaces, total: workspaces.length });
+        return ok({ items: workspaces.map(sanitizeWorkspace), total: workspaces.length });
     } catch (error) {
         console.error('Workspaces GET error:', error);
         if (error instanceof Error) {
