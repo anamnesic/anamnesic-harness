@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, Square, RotateCw, Circle, Maximize2, Minimize2, Send, LayoutGrid, X } from 'lucide-react';
+import { Trash2, Square, RotateCw, Circle, Plus, PanelLeftClose, Columns2, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 import { useToast } from '@/src/components/Toast';
@@ -582,6 +582,13 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
 
         term.onKey(({ key }) => { void sendInputRef.current(tab, key); });
         term.focus();
+
+        // Write any output that arrived before the terminal was mounted
+        const buffered = tabStateRef.current[tab].output;
+        if (buffered) {
+            term.write(buffered);
+            writtenLengths.current[tab] = buffered.length;
+        }
     }, [sendResize]);
 
     useEffect(() => {
@@ -767,58 +774,69 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                 </>
             ) : (
                 <>
-                    <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-3 py-1.5">
+                    {/* Window management toolbar */}
+                    <div className="flex shrink-0 items-center gap-1 border-b border-border/40 px-2 py-1">
                         <StatusDot status={activeState.status} />
-                        <span className="text-[9px] text-text-dim">
-                            {activeState.status === 'connecting' ? 'conectando…' :
-                                activeState.status === 'running' ? `${activeDef.label} ativo` :
-                                    activeState.status === 'exited' ? 'processo encerrado' :
-                                        'desconectado'}
-                        </span>
-                        <div className="ml-auto flex items-center gap-1">
+
+                        <div className="flex-1" />
+
+                        {/* Split / merge */}
+                        <button
+                            onClick={() => setIsMaximized(prev => !prev)}
+                            title={isMaximized ? 'Janela única' : 'Dividir janelas'}
+                            className={cn('flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-card', isMaximized && 'text-accent')}
+                        >
+                            <Columns2 className="size-3.5" />
+                        </button>
+
+                        {/* New window */}
+                        <button
+                            onClick={addInstance}
+                            title="Nova janela"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-accent"
+                        >
+                            <Plus className="size-3.5" />
+                        </button>
+
+                        {/* Close window (only when >1) */}
+                        {agentInstances[activeTab].length > 1 && (
                             <button
-                                onClick={() => setIsMaximized(prev => !prev)}
-                                title={isMaximized ? "Visualização única" : "Dividir tela (ver todos os chats)"}
-                                className={cn(
-                                    "text-text-dim transition-colors hover:text-accent",
-                                    isMaximized && "text-accent"
-                                )}
+                                onClick={() => removeInstance(activeInstance[activeTab])}
+                                title="Fechar janela"
+                                className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-red-400"
                             >
-                                <LayoutGrid className="size-5" />
+                                <PanelLeftClose className="size-3.5" />
                             </button>
+                        )}
+
+                        {/* Restart */}
+                        <button
+                            onClick={() => {
+                                if (activeState.status === 'disconnected' || activeState.status === 'exited') {
+                                    void connect(activeTab);
+                                } else {
+                                    void killSession(activeTab).then(() => connect(activeTab));
+                                }
+                            }}
+                            title="Reiniciar"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-accent"
+                        >
+                            <RotateCw className="size-3.5" />
+                        </button>
+
+                        {/* Kill */}
+                        {activeState.status === 'running' && (
                             <button
-                                onClick={() => {
-                                    if (activeState.status === 'disconnected' || activeState.status === 'exited') {
-                                        void connect(activeTab);
-                                    } else {
-                                        void killSession(activeTab).then(() => connect(activeTab));
-                                    }
-                                }}
-                                title="Reiniciar"
-                                className="text-text-dim transition-colors hover:text-accent"
+                                onClick={() => void killSession(activeTab)}
+                                title="Encerrar processo"
+                                className="flex h-7 w-7 items-center justify-center rounded-md text-red-400 transition-colors hover:bg-card hover:text-red-300"
                             >
-                                <RotateCw className="size-5" />
+                                <Square className="size-3.5" />
                             </button>
-                            <button
-                                onClick={() => setTabState(prev => ({ ...prev, [activeTab]: { ...prev[activeTab], output: '' } }))}
-                                title="Limpar"
-                                className="text-text-dim transition-colors hover:text-accent"
-                            >
-                                <Trash2 className="size-5" />
-                            </button>
-                            {activeState.status === 'running' && (
-                                <button
-                                    onClick={() => void killSession(activeTab)}
-                                    title="Encerrar"
-                                    className="text-red-400 transition-colors hover:text-red-300"
-                                >
-                                    <Square className="size-5" />
-                                </button>
-                            )}
-                        </div>
+                        )}
                     </div>
 
-                    <div className="min-h-0 flex-1 p-3">
+                    <div className="min-h-0 flex-1 p-2">
                         <div
                             ref={el => { hostRefs.current[activeTab] = el; }}
                             onClick={() => xtermRefs.current[activeTab]?.focus()}
