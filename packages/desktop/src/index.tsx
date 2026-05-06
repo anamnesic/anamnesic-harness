@@ -1,19 +1,12 @@
 // @refresh reload
 
-import {
-  ACCEPTED_FILE_EXTENSIONS,
-  filePickerFilters,
-  AppBaseProviders,
-  AppInterface,
-  handleNotificationClick,
-  loadLocaleDict,
-  normalizeLocale,
-  type Locale,
-  type Platform,
-  PlatformProvider,
-  ServerConnection,
-  useCommand,
-} from "@kairos-ai/app"
+import { AppBaseProviders, AppInterface } from "./app"
+import { ACCEPTED_FILE_EXTENSIONS, filePickerFilters } from "./constants/file-picker"
+import { useCommand } from "./context/command"
+import { loadLocaleDict, normalizeLocale, type Locale } from "./context/language"
+import { type Platform, PlatformProvider } from "./context/platform"
+import { ServerConnection } from "./context/server"
+import { handleNotificationClick } from "./utils/notification-click"
 import type { AsyncStorage } from "@solid-primitives/storage"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { readImage } from "@tauri-apps/plugin-clipboard-manager"

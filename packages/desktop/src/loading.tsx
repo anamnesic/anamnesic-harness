@@ -1,6 +1,6 @@
 import { render } from "solid-js/web"
 import { MetaProvider } from "@solidjs/meta"
-import "@kairos-ai/app/index.css"
+import "./index.css"
 import { Font } from "@kairos-ai/ui/font"
 import { Splash } from "@kairos-ai/ui/logo"
 import { Progress } from "@kairos-ai/ui/progress"

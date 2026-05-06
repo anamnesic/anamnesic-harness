@@ -1,24 +1,46 @@
+import { readFileSync } from "node:fs"
+import solidPlugin from "vite-plugin-solid"
+import tailwindcss from "@tailwindcss/vite"
 import { defineConfig } from "vite"
-import appPlugin from "@kairos-ai/app/vite"
+import { fileURLToPath } from "url"
 
 const host = process.env.TAURI_DEV_HOST
+const theme = fileURLToPath(new URL("./public/oc-theme-preload.js", import.meta.url))
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [appPlugin],
-  publicDir: "../app/public",
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-  //
-  // 1. prevent Vite from obscuring rust errors
+  plugins: [
+    {
+      name: "kairos-desktop:config",
+      config() {
+        return {
+          resolve: {
+            alias: {
+              "@": fileURLToPath(new URL("./src", import.meta.url)),
+            },
+          },
+          worker: {
+            format: "es",
+          },
+        }
+      },
+    },
+    {
+      name: "kairos-desktop:theme-preload",
+      transformIndexHtml(html: string) {
+        return html.replace(
+          '<script id="oc-theme-preload-script" src="/oc-theme-preload.js"></script>',
+          `<script id="oc-theme-preload-script">${readFileSync(theme, "utf8")}</script>`,
+        )
+      },
+    },
+    tailwindcss(),
+    solidPlugin(),
+  ],
+  publicDir: "./public",
   clearScreen: false,
   esbuild: {
-    // Improves production stack traces
     keepNames: true,
   },
-  // build: {
-  // sourcemap: true,
-  // },
-  // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: 1420,
     strictPort: true,
@@ -31,7 +53,6 @@ export default defineConfig({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
   },

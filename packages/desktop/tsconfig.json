@@ -15,8 +15,11 @@
     "noEmit": true,
     "emitDeclarationOnly": false,
     "outDir": "node_modules/.ts-dist",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "references": [{ "path": "../app" }],
-  "include": ["src", "package.json"]
+  "references": [],
+  "include": ["src", "package.json", "vite.config.ts"]
 }
