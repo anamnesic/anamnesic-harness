@@ -542,11 +542,47 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     }, []);
 
     const ensureTerminal = useCallback(async (tab: CliTab) => {
-        // Terminal disabled due to xterm.js bug: "Cannot read properties of undefined (reading 'dimensions')"
-        // Multiple fix attempts failed. This is an upstream xterm.js bug.
-        // TODO: Re-enable when xterm.js fixes the issue.
-        return;
-    }, [isMaximized, sendResize]);
+        const host = hostRefs.current[tab];
+        if (!host) return;
+        if (xtermRefs.current[tab]) return; // already initialized
+        if (disposedRefs.current[tab]) return;
+
+        const [{ Terminal }, { FitAddon }] = await Promise.all([
+            import('xterm'),
+            import('@xterm/addon-fit'),
+        ]);
+        if (disposedRefs.current[tab] || !hostRefs.current[tab]) return;
+
+        const term = new Terminal({
+            theme: { background: '#0a0a0a', foreground: '#e2e8f0', cursor: '#f0c040', selectionBackground: '#f0c04040' },
+            fontSize: 13,
+            fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+            cursorBlink: true,
+            allowProposedApi: true,
+            scrollback: 5000,
+        });
+        const fit = new FitAddon();
+        term.loadAddon(fit);
+        term.open(host);
+
+        xtermRefs.current[tab] = term;
+        fitRefs.current[tab] = fit;
+        writtenLengths.current[tab] = 0;
+
+        // Safe fit with guard
+        const safeFit = () => {
+            if (disposedRefs.current[tab]) return;
+            try { fit.fit(); } catch { /* ignore dimensions error on disposal */ }
+        };
+        safeFit();
+
+        const ro = new ResizeObserver(() => { safeFit(); void sendResize(tab, term.cols, term.rows); });
+        ro.observe(host);
+        resizeObservers.current[tab] = ro;
+
+        term.onKey(({ key }) => { void sendInputRef.current(tab, key); });
+        term.focus();
+    }, [sendResize]);
 
     useEffect(() => {
         // Just ensure terminals exist for visible tabs
