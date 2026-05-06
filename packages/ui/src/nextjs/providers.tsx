@@ -6,6 +6,7 @@ import { ToastProvider } from '@/src/components/Toast';
 import { WorkspaceProvider } from '@/src/context/WorkspaceContext';
 import { RepositoryProvider } from '@/src/context/RepositoryContext';
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
+import { ThemeProvider } from './_components/ThemeProvider';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -14,15 +15,17 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <ToastProvider>
-          <WorkspaceProvider>
-            <RepositoryProvider>
-              {children}
-            </RepositoryProvider>
-          </WorkspaceProvider>
-        </ToastProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <WorkspaceProvider>
+              <RepositoryProvider>
+                {children}
+              </RepositoryProvider>
+            </WorkspaceProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

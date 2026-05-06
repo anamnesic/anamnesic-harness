@@ -1,3 +1,5 @@
-import App from '@/src/App';
+import { redirect } from 'next/navigation';
 
-export default App;
+export default function RootPage() {
+  redirect('/dashboard');
+}
