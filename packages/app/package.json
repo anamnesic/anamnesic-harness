@@ -1,0 +1,38 @@
+{
+  "name": "@kairos-ai/app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^16.2.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typeorm": "^0.3.20",
+    "sqlite3": "^5.1.7",
+    "reflect-metadata": "^0.2.2",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "adm-zip": "^0.5.16",
+    "node-pty": "^1.0.0",
+    "zod": "catalog:",
+    "nodemailer": "^6.9.16"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/adm-zip": "^0.5.7",
+    "@types/nodemailer": "^6.4.17",
+    "@tailwindcss/vite": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
+  }
+}
