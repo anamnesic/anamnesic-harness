@@ -57,7 +57,7 @@ kairos/
 │   ├── infra/          @kairos/infra         # Protocol, types, constants, proxy
 │   ├── state/          @kairos/state         # UI state, context, hooks, components
 │   ├── devtools/       @kairos/devtools      # Scripts, containers, QA, tsconfigs
-│   └── opencode/       @kairos/opencode      # Integração opencode
+│   └── kairos/       @kairos/kairos      # Integração kairos
 │
 ├── src/                           # Núcleo legado (em migração para @kairos/core)
 ├── app/                           # Next.js app legado (em migração para @kairos/ui)

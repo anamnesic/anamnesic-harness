@@ -197,12 +197,12 @@
       "destination": "/providers/openrouter"
     },
     {
-      "source": "/opencode",
-      "destination": "/providers/opencode"
+      "source": "/kairos",
+      "destination": "/providers/kairos"
     },
     {
-      "source": "/opencode-go",
-      "destination": "/providers/opencode-go"
+      "source": "/kairos-go",
+      "destination": "/providers/kairos-go"
     },
     {
       "source": "/qianfan",
@@ -1357,8 +1357,8 @@
                   "providers/nvidia",
                   "providers/ollama",
                   "providers/openai",
-                  "providers/opencode",
-                  "providers/opencode-go",
+                  "providers/kairos",
+                  "providers/kairos-go",
                   "providers/openrouter",
                   "providers/perplexity-provider",
                   "providers/qianfan",

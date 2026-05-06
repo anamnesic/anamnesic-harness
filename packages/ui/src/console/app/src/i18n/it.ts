@@ -37,14 +37,14 @@ export const dict = {
   "email.subscribe": "Iscriviti",
   "email.success": "Quasi fatto, controlla la posta in arrivo e conferma il tuo indirizzo email",
 
-  "notFound.title": "Non trovato | opencode",
+  "notFound.title": "Non trovato | kairos",
   "notFound.heading": "404 - Pagina non trovata",
   "notFound.home": "Home",
   "notFound.docs": "Documentazione",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "logo chiaro di opencode",
-  "notFound.logoDarkAlt": "logo scuro di opencode",
+  "notFound.logoLightAlt": "logo chiaro di kairos",
+  "notFound.logoDarkAlt": "logo scuro di kairos",
 
   "user.logout": "Esci",
 
@@ -85,21 +85,21 @@ export const dict = {
 
   "home.title": "Kairos | L'agente di coding IA open source",
 
-  "temp.title": "opencode | Agente di coding IA costruito per il terminale",
+  "temp.title": "kairos | Agente di coding IA costruito per il terminale",
   "temp.hero.title": "L'agente di coding IA costruito per il terminale",
-  "temp.zen": "opencode zen",
+  "temp.zen": "kairos zen",
   "temp.getStarted": "Inizia",
   "temp.feature.native.title": "TUI Nativa",
   "temp.feature.native.body": "Un'interfaccia terminale reattiva, nativa e personalizzabile",
   "temp.feature.zen.beforeLink": "Una",
   "temp.feature.zen.link": "lista curata di modelli",
-  "temp.feature.zen.afterLink": "fornita da opencode",
+  "temp.feature.zen.afterLink": "fornita da kairos",
   "temp.feature.models.beforeLink": "Supporta 75+ provider LLM tramite",
   "temp.feature.models.afterLink": ", inclusi modelli locali",
   "temp.screenshot.caption": "Kairos TUI con il tema tokyonight",
   "temp.screenshot.alt": "Kairos TUI con tema tokyonight",
-  "temp.logoLightAlt": "logo chiaro di opencode",
-  "temp.logoDarkAlt": "logo scuro di opencode",
+  "temp.logoLightAlt": "logo chiaro di kairos",
+  "temp.logoDarkAlt": "logo scuro di kairos",
 
   "home.banner.badge": "Nuovo",
   "home.banner.text": "App desktop disponibile in beta",
@@ -444,15 +444,15 @@ export const dict = {
     "Accedi a modelli configurati per prestazioni ottimali - nessun downgrade o instradamento verso provider più economici.",
   "workspace.newUser.feature.lockin.title": "Nessun lock-in",
   "workspace.newUser.feature.lockin.body":
-    "Usa Zen con qualsiasi agente di coding, e continua a usare altri provider con opencode quando vuoi.",
+    "Usa Zen con qualsiasi agente di coding, e continua a usare altri provider con kairos quando vuoi.",
   "workspace.newUser.copyApiKey": "Copia chiave API",
   "workspace.newUser.copyKey": "Copia Chiave",
   "workspace.newUser.copied": "Copiato!",
   "workspace.newUser.step.enableBilling": "Abilita fatturazione",
   "workspace.newUser.step.login.before": "Esegui",
-  "workspace.newUser.step.login.after": "e seleziona opencode",
+  "workspace.newUser.step.login.after": "e seleziona kairos",
   "workspace.newUser.step.pasteKey": "Incolla la tua chiave API",
-  "workspace.newUser.step.models.before": "Avvia opencode ed esegui",
+  "workspace.newUser.step.models.before": "Avvia kairos ed esegui",
   "workspace.newUser.step.models.after": "per selezionare un modello",
 
   "workspace.models.title": "Modelli",
@@ -498,10 +498,10 @@ export const dict = {
   "workspace.cost.subscriptionShort": "sub",
 
   "workspace.keys.title": "Chiavi API",
-  "workspace.keys.subtitle": "Gestisci le tue chiavi API per accedere ai servizi opencode.",
+  "workspace.keys.subtitle": "Gestisci le tue chiavi API per accedere ai servizi kairos.",
   "workspace.keys.create": "Crea Chiave API",
   "workspace.keys.placeholder": "Inserisci nome chiave",
-  "workspace.keys.empty": "Crea una chiave API opencode Gateway",
+  "workspace.keys.empty": "Crea una chiave API kairos Gateway",
   "workspace.keys.table.name": "Nome",
   "workspace.keys.table.key": "Chiave",
   "workspace.keys.table.createdBy": "Creato da",
@@ -650,7 +650,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "Si resetta tra",
   "workspace.lite.subscription.useBalance": "Usa il tuo saldo disponibile dopo aver raggiunto i limiti di utilizzo",
   "workspace.lite.subscription.selectProvider":
-    'Seleziona "Kairos Go" come provider nella tua configurazione opencode per utilizzare i modelli Go.',
+    'Seleziona "Kairos Go" come provider nella tua configurazione kairos per utilizzare i modelli Go.',
   "workspace.lite.black.message":
     "Attualmente sei abbonato a Kairos Black o sei in lista d'attesa. Annulla l'iscrizione prima se desideri passare a Go.",
   "workspace.lite.other.message":

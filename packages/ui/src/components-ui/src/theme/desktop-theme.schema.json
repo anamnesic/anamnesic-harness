@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://opencode.ai/desktop-theme.json",
+  "$id": "https://kairos.ai/desktop-theme.json",
   "title": "Kairos Desktop Theme",
   "description": "A theme definition for the Kairos desktop application",
   "type": "object",

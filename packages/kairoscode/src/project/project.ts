@@ -120,7 +120,7 @@ export interface Interface {
   readonly removeSandbox: (id: ProjectID, directory: string) => Effect.Effect<void>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/Project") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/Project") {}
 
 type GitResult = { code: number; text: string; stderr: string }
 
@@ -163,7 +163,7 @@ export const layer: Layer.Layer<
         }),
       )
 
-    const fakeVcs = Schema.decodeUnknownSync(Schema.optional(ProjectVcs))(Flag.OPENCODE_FAKE_VCS)
+    const fakeVcs = Schema.decodeUnknownSync(Schema.optional(ProjectVcs))(Flag.KAIROS_FAKE_VCS)
 
     const resolveGitPath = (cwd: string, name: string) => {
       if (!name) return cwd
@@ -278,7 +278,7 @@ export const layer: Layer.Layer<
             time: { created: Date.now(), updated: Date.now() },
           }
 
-      if (Flag.OPENCODE_EXPERIMENTAL_ICON_DISCOVERY) yield* discover(existing).pipe(Effect.ignore, Effect.forkIn(scope))
+      if (Flag.KAIROS_EXPERIMENTAL_ICON_DISCOVERY) yield* discover(existing).pipe(Effect.ignore, Effect.forkIn(scope))
 
       const result: Info = {
         ...existing,

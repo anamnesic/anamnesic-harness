@@ -9,7 +9,7 @@ import { warn } from "console"
 
 const log = Log.create({ service: "config" })
 
-const MANAGED_PLIST_DOMAIN = "ai.opencode.managed"
+const MANAGED_PLIST_DOMAIN = "ai.kairos.managed"
 
 // Keys injected by macOS/MDM into the managed plist that are not Kairos config
 const PLIST_META = new Set([
@@ -24,16 +24,16 @@ const PLIST_META = new Set([
 function systemManagedConfigDir(): string {
   switch (process.platform) {
     case "darwin":
-      return "/Library/Application Support/opencode"
+      return "/Library/Application Support/kairos"
     case "win32":
       return path.join(process.env.ProgramData || "C:\\ProgramData", "kairos")
     default:
-      return "/etc/opencode"
+      return "/etc/kairos"
   }
 }
 
 export function managedConfigDir() {
-  return process.env.OPENCODE_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
+  return process.env.KAIROS_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
 }
 
 export function parseManagedPlist(json: string): string {

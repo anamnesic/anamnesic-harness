@@ -11,16 +11,16 @@ export type Selection = {
 export type Attributes = ReturnType<typeof attributes>
 
 export function select(): Selection {
-  if (Flag.OPENCODE_EXPERIMENTAL_HTTPAPI) return { backend: "effect-httpapi", reason: "env" }
+  if (Flag.KAIROS_EXPERIMENTAL_HTTPAPI) return { backend: "effect-httpapi", reason: "env" }
   return { backend: "hono", reason: "stable" }
 }
 
 export function attributes(selection: Selection): Record<string, string> {
   return {
-    "opencode.server.backend": selection.backend,
-    "opencode.server.backend.reason": selection.reason,
-    "opencode.installation.channel": InstallationChannel,
-    "opencode.installation.version": InstallationVersion,
+    "kairos.server.backend": selection.backend,
+    "kairos.server.backend.reason": selection.reason,
+    "kairos.installation.channel": InstallationChannel,
+    "kairos.installation.version": InstallationVersion,
   }
 }
 

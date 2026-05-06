@@ -321,7 +321,7 @@ API key auth, and dynamic model resolution.
     | `openai-compatible` | Shared OpenAI-style replay policy for OpenAI-compatible transports, including tool-call-id sanitation, assistant-first ordering fixes, and generic Gemini-turn validation where the transport needs it | `moonshot`, `ollama`, `xai`, `zai` |
     | `anthropic-by-model` | kairos-aware replay policy chosen by `modelId`, so Anthropic-message transports only get kairos-specific thinking-block cleanup when the resolved model is actually a kairos id | `amazon-bedrock`, `anthropic-vertex` |
     | `google-gemini` | Native Gemini replay policy plus bootstrap replay sanitation and tagged reasoning-output mode | `google`, `google-gemini-cli` |
-    | `passthrough-gemini` | Gemini thought-signature sanitation for Gemini models running through OpenAI-compatible proxy transports; does not enable native Gemini replay validation or bootstrap rewrites | `openrouter`, `kilocode`, `opencode`, `opencode-go` |
+    | `passthrough-gemini` | Gemini thought-signature sanitation for Gemini models running through OpenAI-compatible proxy transports; does not enable native Gemini replay validation or bootstrap rewrites | `openrouter`, `kilocode`, `kairos`, `kairos-go` |
     | `hybrid-anthropic-openai` | Hybrid policy for providers that mix Anthropic-message and OpenAI-compatible model surfaces in one plugin; optional kairos-only thinking-block dropping stays scoped to the Anthropic side | `minimax` |
 
     Available stream families today:

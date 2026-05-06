@@ -34,7 +34,7 @@
     "active": true,
     "category": "DeveloperTool",
     "targets": ["deb", "rpm", "dmg", "nsis", "app"],
-    "externalBin": ["sidecars/opencode-cli"],
+    "externalBin": ["sidecars/kairos-cli"],
     "linux": {
       "rpm": {
         "compression": {

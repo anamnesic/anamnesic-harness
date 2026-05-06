@@ -23,7 +23,7 @@ export const DialogSelectProvider: Component = () => {
     if (id === "anthropic") return language.t("dialog.provider.anthropic.note")
     if (id === "openai") return language.t("dialog.provider.openai.note")
     if (id.startsWith("github-copilot")) return language.t("dialog.provider.copilot.note")
-    if (id === "opencode-go") return language.t("dialog.provider.opencodeGo.tagline")
+    if (id === "kairos-go") return language.t("dialog.provider.kairosGo.tagline")
   }
 
   return (
@@ -66,7 +66,7 @@ export const DialogSelectProvider: Component = () => {
             <ProviderIcon data-slot="list-item-extra-icon" id={i.id} />
             <span>{i.name}</span>
             <Show when={i.id === "kairos"}>
-              <div class="text-14-regular text-text-weak">{language.t("dialog.provider.opencode.tagline")}</div>
+              <div class="text-14-regular text-text-weak">{language.t("dialog.provider.kairos.tagline")}</div>
             </Show>
             <Show when={i.id === CUSTOM_ID}>
               <Tag>{language.t("settings.providers.tag.custom")}</Tag>
@@ -75,7 +75,7 @@ export const DialogSelectProvider: Component = () => {
               <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
             </Show>
             <Show when={note(i.id)}>{(value) => <div class="text-14-regular text-text-weak">{value()}</div>}</Show>
-            <Show when={i.id === "opencode-go"}>
+            <Show when={i.id === "kairos-go"}>
               <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
             </Show>
           </div>

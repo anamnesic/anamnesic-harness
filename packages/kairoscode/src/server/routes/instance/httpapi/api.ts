@@ -25,9 +25,9 @@ import { WorkspaceApi } from "./groups/workspace"
 const EventSchema = Schema.Union(BusEvent.effectPayloads()).annotate({ identifier: "Event" })
 const SyncEventSchemas = SyncEvent.effectPayloads()
 
-export const RootHttpApi = HttpApi.make("opencode-root").addHttpApi(ControlApi).addHttpApi(GlobalApi)
+export const RootHttpApi = HttpApi.make("kairos-root").addHttpApi(ControlApi).addHttpApi(GlobalApi)
 
-export const InstanceHttpApi = HttpApi.make("opencode-instance")
+export const InstanceHttpApi = HttpApi.make("kairos-instance")
   .addHttpApi(ConfigApi)
   .addHttpApi(ExperimentalApi)
   .addHttpApi(FileApi)

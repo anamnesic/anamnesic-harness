@@ -166,7 +166,7 @@ current OpenClaw or a local checkout until a newer npm package is published.
   <Accordion title="Model providers (enabled by default)">
     `anthropic`, `byteplus`, `cloudflare-ai-gateway`, `github-copilot`, `google`,
     `huggingface`, `kilocode`, `kimi-coding`, `minimax`, `mistral`, `qwen`,
-    `moonshot`, `nvidia`, `openai`, `opencode`, `opencode-go`, `openrouter`,
+    `moonshot`, `nvidia`, `openai`, `kairos`, `kairos-go`, `openrouter`,
     `qianfan`, `synthetic`, `together`, `venice`,
     `vercel-ai-gateway`, `volcengine`, `xiaomi`, `zai`
   </Accordion>

@@ -10,9 +10,9 @@ await Bun.write("./package.json", JSON.stringify(pkg, null, 2) + "\n")
 console.log(`Updated package.json version to ${Script.version}`)
 
 const sidecarConfig = getCurrentSidecar()
-const artifact = process.env.OPENCODE_CLI_ARTIFACT ?? "opencode-cli"
+const artifact = process.env.KAIROS_CLI_ARTIFACT ?? "kairos-cli"
 
-const dir = "src-tauri/target/opencode-binaries"
+const dir = "src-tauri/target/kairos-binaries"
 
 await $`mkdir -p ${dir}`
 await $`gh run download ${process.env.GITHUB_RUN_ID} -n ${artifact}`.cwd(dir)

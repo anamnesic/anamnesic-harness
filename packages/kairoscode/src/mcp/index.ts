@@ -235,7 +235,7 @@ export interface Interface {
   readonly getAuthStatus: (mcpName: string) => Effect.Effect<AuthStatus>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/MCP") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/MCP") {}
 
 export const layer = Layer.effect(
   Service,
@@ -350,7 +350,7 @@ export const layer = Layer.effect(
                 return bus
                   .publish(TuiEvent.ToastShow, {
                     title: "MCP Authentication Required",
-                    message: `Server "${key}" requires authentication. Run: opencode mcp auth ${key}`,
+                    message: `Server "${key}" requires authentication. Run: kairos mcp auth ${key}`,
                     variant: "warning",
                     duration: 8000,
                   })

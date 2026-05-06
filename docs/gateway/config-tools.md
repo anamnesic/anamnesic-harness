@@ -624,14 +624,14 @@ Interactive custom-provider onboarding infers image input for common vision mode
     {
       agents: {
         defaults: {
-          model: { primary: "opencode/kairos-apple-4-6" },
-          models: { "opencode/kairos-apple-4-6": { alias: "apple" } },
+          model: { primary: "kairos/kairos-apple-4-6" },
+          models: { "kairos/kairos-apple-4-6": { alias: "apple" } },
         },
       },
     }
     ```
 
-    Set `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`). Use `opencode/...` refs for the Zen catalog or `opencode-go/...` refs for the Go catalog. Shortcut: `openclaw onboard --auth-choice opencode-zen` or `openclaw onboard --auth-choice opencode-go`.
+    Set `KAIROS_API_KEY` (or `KAIROS_ZEN_API_KEY`). Use `kairos/...` refs for the Zen catalog or `kairos-go/...` refs for the Go catalog. Shortcut: `openclaw onboard --auth-choice kairos-zen` or `openclaw onboard --auth-choice kairos-go`.
 
   </Accordion>
   <Accordion title="Synthetic (Anthropic-compatible)">

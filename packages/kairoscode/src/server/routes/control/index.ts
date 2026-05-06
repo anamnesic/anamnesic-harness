@@ -90,7 +90,7 @@ export function ControlPlaneRoutes(): Hono {
           info: {
             title: "kairos",
             version: "0.0.3",
-            description: "opencode api",
+            description: "kairos api",
           },
           openapi: "3.1.1",
         },

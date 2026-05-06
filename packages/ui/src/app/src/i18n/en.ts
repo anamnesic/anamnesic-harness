@@ -100,9 +100,9 @@ export const dict = {
   "dialog.provider.group.popular": "Popular",
   "dialog.provider.group.other": "Other",
   "dialog.provider.tag.recommended": "Recommended",
-  "dialog.provider.opencode.note": "Curated models including kairos, GPT, Gemini and more",
-  "dialog.provider.opencode.tagline": "Reliable optimized models",
-  "dialog.provider.opencodeGo.tagline": "Low cost subscription for everyone",
+  "dialog.provider.kairos.note": "Curated models including kairos, GPT, Gemini and more",
+  "dialog.provider.kairos.tagline": "Reliable optimized models",
+  "dialog.provider.kairosGo.tagline": "Low cost subscription for everyone",
   "dialog.provider.anthropic.note": "Direct access to kairos models, including Pro and Max",
   "dialog.provider.copilot.note": "AI models for coding assistance via GitHub Copilot",
   "dialog.provider.openai.note": "GPT models for fast, capable general AI tasks",
@@ -134,13 +134,13 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API key",
   "provider.connect.apiKey.placeholder": "API key",
   "provider.connect.apiKey.required": "API key is required",
-  "provider.connect.opencodeZen.line1":
+  "provider.connect.kairosZen.line1":
     "Kairos Zen gives you access to a curated set of reliable optimized models for coding agents.",
-  "provider.connect.opencodeZen.line2":
+  "provider.connect.kairosZen.line2":
     "With a single API key you'll get access to models such as kairos, GPT, Gemini, GLM and more.",
-  "provider.connect.opencodeZen.visit.prefix": "Visit ",
-  "provider.connect.opencodeZen.visit.link": "opencode.ai/zen",
-  "provider.connect.opencodeZen.visit.suffix": " to collect your API key.",
+  "provider.connect.kairosZen.visit.prefix": "Visit ",
+  "provider.connect.kairosZen.visit.link": "kairos.ai/zen",
+  "provider.connect.kairosZen.visit.suffix": " to collect your API key.",
   "provider.connect.oauth.code.visit.prefix": "Visit ",
   "provider.connect.oauth.code.visit.link": "this link",
   "provider.connect.oauth.code.visit.suffix":
@@ -299,7 +299,7 @@ export const dict = {
   "dialog.mcp.empty": "No MCPs configured",
 
   "dialog.lsp.empty": "LSPs auto-detected from file types",
-  "dialog.plugins.empty": "Plugins configured in opencode.json",
+  "dialog.plugins.empty": "Plugins configured in kairos.json",
 
   "mcp.status.connected": "connected",
   "mcp.status.failed": "failed",
@@ -494,7 +494,7 @@ export const dict = {
   "error.chain.responseBody": "Response body:\n{{body}}",
   "error.chain.didYouMean": "Did you mean: {{suggestions}}",
   "error.chain.modelNotFound": "Model not found: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "Check your config (opencode.json) provider/model names",
+  "error.chain.checkConfig": "Check your config (kairos.json) provider/model names",
   "error.chain.mcpFailed": 'MCP server "{{name}}" failed. Note, Kairos does not support MCP authentication yet.',
   "error.chain.providerAuthFailed": "Provider authentication failed ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":

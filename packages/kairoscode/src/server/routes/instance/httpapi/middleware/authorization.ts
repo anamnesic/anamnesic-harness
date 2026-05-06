@@ -3,7 +3,7 @@ import { Config, Context, Effect, Encoding, Layer, Option, Redacted } from "effe
 import { HttpApiError, HttpApiMiddleware, HttpApiSecurity } from "effect/unstable/httpapi"
 
 export class Authorization extends HttpApiMiddleware.Service<Authorization>()(
-  "@opencode/ExperimentalHttpApiAuthorization",
+  "@kairos/ExperimentalHttpApiAuthorization",
   {
     error: HttpApiError.UnauthorizedNoContent,
     security: {
@@ -14,10 +14,10 @@ export class Authorization extends HttpApiMiddleware.Service<Authorization>()(
 ) {}
 
 export class ServerAuthConfig extends ConfigService.Service<ServerAuthConfig>()(
-  "@opencode/ExperimentalHttpApiServerAuthConfig",
+  "@kairos/ExperimentalHttpApiServerAuthConfig",
   {
-    password: Config.string("OPENCODE_SERVER_PASSWORD").pipe(Config.option),
-    username: Config.string("OPENCODE_SERVER_USERNAME").pipe(Config.withDefault("kairos")),
+    password: Config.string("KAIROS_SERVER_PASSWORD").pipe(Config.option),
+    username: Config.string("KAIROS_SERVER_USERNAME").pipe(Config.withDefault("kairos")),
   },
 ) {}
 

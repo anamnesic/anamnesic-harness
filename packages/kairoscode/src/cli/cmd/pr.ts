@@ -7,7 +7,7 @@ import { Process } from "@/util/process"
 
 export const PrCommand = cmd({
   command: "pr <number>",
-  describe: "fetch and checkout a GitHub PR branch, then run opencode",
+  describe: "fetch and checkout a GitHub PR branch, then run kairos",
   builder: (yargs) =>
     yargs.positional("number", {
       type: "number",
@@ -93,12 +93,12 @@ export const PrCommand = cmd({
               )
             }
 
-            // Check for opencode session link in PR body
+            // Check for kairos session link in PR body
             if (prInfo && prInfo.body) {
               const sessionMatch = prInfo.body.match(/https:\/\/opncd\.ai\/s\/([a-zA-Z0-9_-]+)/)
               if (sessionMatch) {
                 const sessionUrl = sessionMatch[0]
-                UI.println(`Found opencode session: ${sessionUrl}`)
+                UI.println(`Found kairos session: ${sessionUrl}`)
                 UI.println(`Importing session...`)
 
                 const importResult = await Process.text(["kairos", "import", sessionUrl], {
@@ -120,18 +120,18 @@ export const PrCommand = cmd({
 
         UI.println(`Successfully checked out PR #${prNumber} as branch '${localBranchName}'`)
         UI.println()
-        UI.println("Starting opencode...")
+        UI.println("Starting kairos...")
         UI.println()
 
-        const opencodeArgs = sessionId ? ["-s", sessionId] : []
-        const opencodeProcess = Process.spawn(["kairos", ...opencodeArgs], {
+        const kairosArgs = sessionId ? ["-s", sessionId] : []
+        const kairosProcess = Process.spawn(["kairos", ...kairosArgs], {
           stdin: "inherit",
           stdout: "inherit",
           stderr: "inherit",
           cwd: process.cwd(),
         })
-        const code = await opencodeProcess.exited
-        if (code !== 0) throw new Error(`opencode exited with code ${code}`)
+        const code = await kairosProcess.exited
+        if (code !== 0) throw new Error(`kairos exited with code ${code}`)
       },
     })
   },

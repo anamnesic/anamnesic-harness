@@ -22,7 +22,7 @@ import { Discovery } from "./discovery"
 const log = Log.create({ service: "skill" })
 const EXTERNAL_DIRS = [".kairos", ".agents"]
 const EXTERNAL_SKILL_PATTERN = "skills/**/SKILL.md"
-const OPENCODE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
+const KAIROS_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
 const SKILL_PATTERN = "**/SKILL.md"
 
 export const Info = Schema.Struct({
@@ -152,7 +152,7 @@ const discoverSkills = Effect.fnUntraced(function* (
 ) {
   const state: ScanState = { matches: new Set(), dirs: new Set() }
 
-  if (!Flag.OPENCODE_DISABLE_EXTERNAL_SKILLS) {
+  if (!Flag.KAIROS_DISABLE_EXTERNAL_SKILLS) {
     for (const dir of EXTERNAL_DIRS) {
       const root = path.join(Global.Path.home, dir)
       if (!(yield* fsys.isDir(root))) continue
@@ -170,7 +170,7 @@ const discoverSkills = Effect.fnUntraced(function* (
 
   const configDirs = yield* config.directories()
   for (const dir of configDirs) {
-    yield* scan(state, dir, OPENCODE_SKILL_PATTERN)
+    yield* scan(state, dir, KAIROS_SKILL_PATTERN)
   }
 
   const cfg = yield* config.get()
@@ -207,7 +207,7 @@ const loadSkills = Effect.fnUntraced(function* (state: State, discovered: Discov
   log.info("init", { count: Object.keys(state.skills).length })
 })
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/Skill") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/Skill") {}
 
 export const layer = Layer.effect(
   Service,

@@ -41,9 +41,9 @@ export const AuthMiddleware: MiddlewareHandler = (c, next) => {
   // Allow CORS preflight requests to succeed without auth.
   // Browser clients sending Authorization headers will preflight with OPTIONS.
   if (c.req.method === "OPTIONS") return next()
-  const password = Flag.OPENCODE_SERVER_PASSWORD
+  const password = Flag.KAIROS_SERVER_PASSWORD
   if (!password) return next()
-  const username = Flag.OPENCODE_SERVER_USERNAME ?? "kairos"
+  const username = Flag.KAIROS_SERVER_USERNAME ?? "kairos"
 
   if (c.req.query("auth_token")) c.req.raw.headers.set("authorization", `Basic ${c.req.query("auth_token")}`)
 
@@ -77,7 +77,7 @@ export function CorsMiddleware(opts?: { cors?: string[] }): MiddlewareHandler {
       if (input === "tauri://localhost" || input === "http://tauri.localhost" || input === "https://tauri.localhost")
         return input
 
-      if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) return input
+      if (/^https:\/\/([a-z0-9-]+\.)*kairos\.ai$/.test(input)) return input
       if (opts?.cors?.includes(input)) return input
     },
   })

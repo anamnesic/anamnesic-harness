@@ -113,7 +113,7 @@ export interface Interface {
   ) => Effect.Effect<{ onMessage: (message: string | ArrayBuffer) => void; onClose: () => void } | undefined>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/Pty") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/Pty") {}
 
 export const layer = Layer.effect(
   Service,
@@ -192,7 +192,7 @@ export const layer = Layer.effect(
         ...input.env,
         ...shell.env,
         TERM: "xterm-256color",
-        OPENCODE_TERMINAL: "1",
+        KAIROS_TERMINAL: "1",
       } as Record<string, string>
 
       if (process.platform === "win32") {

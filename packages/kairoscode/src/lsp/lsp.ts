@@ -111,9 +111,9 @@ const kinds = [
 ]
 
 const filterExperimentalServers = (servers: Record<string, LSPServer.Info>) => {
-  if (Flag.OPENCODE_EXPERIMENTAL_LSP_TY) {
+  if (Flag.KAIROS_EXPERIMENTAL_LSP_TY) {
     if (servers["pyright"]) {
-      log.info("LSP server pyright is disabled because OPENCODE_EXPERIMENTAL_LSP_TY is enabled")
+      log.info("LSP server pyright is disabled because KAIROS_EXPERIMENTAL_LSP_TY is enabled")
       delete servers["pyright"]
     }
   } else {
@@ -149,7 +149,7 @@ export interface Interface {
   readonly outgoingCalls: (input: LocInput) => Effect.Effect<any[]>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/LSP") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/LSP") {}
 
 export const layer = Layer.effect(
   Service,

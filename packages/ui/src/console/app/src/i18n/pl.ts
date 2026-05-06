@@ -36,14 +36,14 @@ export const dict = {
   "email.subscribe": "Subskrybuj",
   "email.success": "Prawie gotowe, sprawdź skrzynkę i potwierdź swój adres e-mail",
 
-  "notFound.title": "Nie znaleziono | opencode",
+  "notFound.title": "Nie znaleziono | kairos",
   "notFound.heading": "404 - Nie znaleziono strony",
   "notFound.home": "Strona główna",
   "notFound.docs": "Dokumentacja",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "jasne logo opencode",
-  "notFound.logoDarkAlt": "ciemne logo opencode",
+  "notFound.logoLightAlt": "jasne logo kairos",
+  "notFound.logoDarkAlt": "ciemne logo kairos",
 
   "user.logout": "Wyloguj się",
 
@@ -84,21 +84,21 @@ export const dict = {
 
   "home.title": "Kairos | Open source'owy agent AI do kodowania",
 
-  "temp.title": "opencode | Agent AI do kodowania zbudowany dla terminala",
+  "temp.title": "kairos | Agent AI do kodowania zbudowany dla terminala",
   "temp.hero.title": "Agent AI do kodowania zbudowany dla terminala",
-  "temp.zen": "opencode zen",
+  "temp.zen": "kairos zen",
   "temp.getStarted": "Rozpocznij",
   "temp.feature.native.title": "Natywny TUI",
   "temp.feature.native.body": "Responsywny, natywny, tematyczny interfejs terminala",
   "temp.feature.zen.beforeLink": "A",
   "temp.feature.zen.link": "wyselekcjonowana lista modeli",
-  "temp.feature.zen.afterLink": "dostarczana przez opencode",
+  "temp.feature.zen.afterLink": "dostarczana przez kairos",
   "temp.feature.models.beforeLink": "Obsługuje 75+ dostawców LLM przez",
   "temp.feature.models.afterLink": ", w tym modele lokalne",
   "temp.screenshot.caption": "Kairos TUI z motywem tokyonight",
   "temp.screenshot.alt": "Kairos TUI z motywem tokyonight",
-  "temp.logoLightAlt": "jasne logo opencode",
-  "temp.logoDarkAlt": "ciemne logo opencode",
+  "temp.logoLightAlt": "jasne logo kairos",
+  "temp.logoDarkAlt": "ciemne logo kairos",
 
   "home.banner.badge": "Nowość",
   "home.banner.text": "Aplikacja desktopowa dostępna w wersji beta",
@@ -450,9 +450,9 @@ export const dict = {
   "workspace.newUser.copied": "Skopiowano!",
   "workspace.newUser.step.enableBilling": "Włącz rozliczenia",
   "workspace.newUser.step.login.before": "Uruchom",
-  "workspace.newUser.step.login.after": "i wybierz opencode",
+  "workspace.newUser.step.login.after": "i wybierz kairos",
   "workspace.newUser.step.pasteKey": "Wklej swój klucz API",
-  "workspace.newUser.step.models.before": "Uruchom opencode i wpisz",
+  "workspace.newUser.step.models.before": "Uruchom kairos i wpisz",
   "workspace.newUser.step.models.after": "aby wybrać model",
 
   "workspace.models.title": "Modele",
@@ -498,10 +498,10 @@ export const dict = {
   "workspace.cost.subscriptionShort": "sub",
 
   "workspace.keys.title": "Klucze API",
-  "workspace.keys.subtitle": "Zarządzaj kluczami API do usług opencode.",
+  "workspace.keys.subtitle": "Zarządzaj kluczami API do usług kairos.",
   "workspace.keys.create": "Utwórz klucz API",
   "workspace.keys.placeholder": "Wpisz nazwę klucza",
-  "workspace.keys.empty": "Utwórz klucz API bramy opencode",
+  "workspace.keys.empty": "Utwórz klucz API bramy kairos",
   "workspace.keys.table.name": "Nazwa",
   "workspace.keys.table.key": "Klucz",
   "workspace.keys.table.createdBy": "Utworzony przez",
@@ -650,7 +650,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "Resetuje się za",
   "workspace.lite.subscription.useBalance": "Użyj dostępnego salda po osiągnięciu limitów użycia",
   "workspace.lite.subscription.selectProvider":
-    'Wybierz "Kairos Go" jako dostawcę w konfiguracji opencode, aby używać modeli Go.',
+    'Wybierz "Kairos Go" jako dostawcę w konfiguracji kairos, aby używać modeli Go.',
   "workspace.lite.black.message":
     "Obecnie subskrybujesz Kairos Black lub jesteś na liście oczekujących. Jeśli chcesz przejść na Go, najpierw anuluj subskrypcję.",
   "workspace.lite.other.message":

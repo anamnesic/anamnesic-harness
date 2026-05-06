@@ -5,7 +5,7 @@ import { NonNegativeInt } from "@/util/schema"
 import { Global } from "@kairos-ai/core/global"
 import { AppFileSystem } from "@kairos-ai/core/filesystem"
 
-export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
+export const OAUTH_DUMMY_KEY = "kairos-oauth-dummy-key"
 
 const file = path.join(Global.Path.data, "auth.json")
 
@@ -48,7 +48,7 @@ export interface Interface {
   readonly remove: (key: string) => Effect.Effect<void, AuthError>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/Auth") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/Auth") {}
 
 export const layer = Layer.effect(
   Service,
@@ -57,9 +57,9 @@ export const layer = Layer.effect(
     const decode = Schema.decodeUnknownOption(Info)
 
     const all = Effect.fn("Auth.all")(function* () {
-      if (process.env.OPENCODE_AUTH_CONTENT) {
+      if (process.env.KAIROS_AUTH_CONTENT) {
         try {
-          return JSON.parse(process.env.OPENCODE_AUTH_CONTENT)
+          return JSON.parse(process.env.KAIROS_AUTH_CONTENT)
         } catch (err) {}
       }
 

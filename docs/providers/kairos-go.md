@@ -6,38 +6,38 @@ read_when:
 title: "Kairos Go"
 ---
 
-Kairos Go is the Go catalog within [Kairos](/providers/opencode).
-It uses the same `OPENCODE_API_KEY` as the Zen catalog, but keeps the runtime
-provider id `opencode-go` so upstream per-model routing stays correct.
+Kairos Go is the Go catalog within [Kairos](/providers/kairos).
+It uses the same `KAIROS_API_KEY` as the Zen catalog, but keeps the runtime
+provider id `kairos-go` so upstream per-model routing stays correct.
 
 | Property         | Value                           |
 | ---------------- | ------------------------------- |
-| Runtime provider | `opencode-go`                   |
-| Auth             | `OPENCODE_API_KEY`              |
-| Parent setup     | [Kairos](/providers/opencode) |
+| Runtime provider | `kairos-go`                   |
+| Auth             | `KAIROS_API_KEY`              |
+| Parent setup     | [Kairos](/providers/kairos) |
 
 ## Built-in catalog
 
 OpenClaw sources most Go catalog rows from the bundled pi model registry and
 supplements current upstream rows while the registry catches up. Run
-`openclaw models list --provider opencode-go` for the current model list.
+`openclaw models list --provider kairos-go` for the current model list.
 
 The provider includes:
 
 | Model ref                       | Name                  |
 | ------------------------------- | --------------------- |
-| `opencode-go/glm-5`             | GLM-5                 |
-| `opencode-go/glm-5.1`           | GLM-5.1               |
-| `opencode-go/kimi-k2.5`         | Kimi K2.5             |
-| `opencode-go/kimi-k2.6`         | Kimi K2.6 (3x limits) |
-| `opencode-go/deepseek-v4-pro`   | DeepSeek V4 Pro       |
-| `opencode-go/deepseek-v4-flash` | DeepSeek V4 Flash     |
-| `opencode-go/mimo-v2-omni`      | MiMo V2 Omni          |
-| `opencode-go/mimo-v2-pro`       | MiMo V2 Pro           |
-| `opencode-go/minimax-m2.5`      | MiniMax M2.5          |
-| `opencode-go/minimax-m2.7`      | MiniMax M2.7          |
-| `opencode-go/qwen3.5-plus`      | Qwen3.5 Plus          |
-| `opencode-go/qwen3.6-plus`      | Qwen3.6 Plus          |
+| `kairos-go/glm-5`             | GLM-5                 |
+| `kairos-go/glm-5.1`           | GLM-5.1               |
+| `kairos-go/kimi-k2.5`         | Kimi K2.5             |
+| `kairos-go/kimi-k2.6`         | Kimi K2.6 (3x limits) |
+| `kairos-go/deepseek-v4-pro`   | DeepSeek V4 Pro       |
+| `kairos-go/deepseek-v4-flash` | DeepSeek V4 Flash     |
+| `kairos-go/mimo-v2-omni`      | MiMo V2 Omni          |
+| `kairos-go/mimo-v2-pro`       | MiMo V2 Pro           |
+| `kairos-go/minimax-m2.5`      | MiniMax M2.5          |
+| `kairos-go/minimax-m2.7`      | MiniMax M2.7          |
+| `kairos-go/qwen3.5-plus`      | Qwen3.5 Plus          |
+| `kairos-go/qwen3.6-plus`      | Qwen3.6 Plus          |
 
 ## Getting started
 
@@ -46,17 +46,17 @@ The provider includes:
     <Steps>
       <Step title="Run onboarding">
         ```bash
-        openclaw onboard --auth-choice opencode-go
+        openclaw onboard --auth-choice kairos-go
         ```
       </Step>
       <Step title="Set a Go model as default">
         ```bash
-        openclaw config set agents.defaults.model.primary "opencode-go/kimi-k2.6"
+        openclaw config set agents.defaults.model.primary "kairos-go/kimi-k2.6"
         ```
       </Step>
       <Step title="Verify models are available">
         ```bash
-        openclaw models list --provider opencode-go
+        openclaw models list --provider kairos-go
         ```
       </Step>
     </Steps>
@@ -66,12 +66,12 @@ The provider includes:
     <Steps>
       <Step title="Pass the key directly">
         ```bash
-        openclaw onboard --opencode-go-api-key "$OPENCODE_API_KEY"
+        openclaw onboard --kairos-go-api-key "$KAIROS_API_KEY"
         ```
       </Step>
       <Step title="Verify models are available">
         ```bash
-        openclaw models list --provider opencode-go
+        openclaw models list --provider kairos-go
         ```
       </Step>
     </Steps>
@@ -82,8 +82,8 @@ The provider includes:
 
 ```json5
 {
-  env: { OPENCODE_API_KEY: "YOUR_API_KEY_HERE" }, // pragma: allowlist secret
-  agents: { defaults: { model: { primary: "opencode-go/kimi-k2.6" } } },
+  env: { KAIROS_API_KEY: "YOUR_API_KEY_HERE" }, // pragma: allowlist secret
+  agents: { defaults: { model: { primary: "kairos-go/kimi-k2.6" } } },
 }
 ```
 
@@ -92,29 +92,29 @@ The provider includes:
 <AccordionGroup>
   <Accordion title="Routing behavior">
     OpenClaw handles per-model routing automatically when the model ref uses
-    `opencode-go/...`. No additional provider config is required.
+    `kairos-go/...`. No additional provider config is required.
   </Accordion>
 
   <Accordion title="Runtime ref convention">
-    Runtime refs stay explicit: `opencode/...` for Zen, `opencode-go/...` for Go.
+    Runtime refs stay explicit: `kairos/...` for Zen, `kairos-go/...` for Go.
     This keeps upstream per-model routing correct across both catalogs.
   </Accordion>
 
   <Accordion title="Shared credentials">
-    The same `OPENCODE_API_KEY` is used by both the Zen and Go catalogs. Entering
+    The same `KAIROS_API_KEY` is used by both the Zen and Go catalogs. Entering
     the key during setup stores credentials for both runtime providers.
   </Accordion>
 </AccordionGroup>
 
 <Tip>
-See [Kairos](/providers/opencode) for the shared onboarding overview and the full
+See [Kairos](/providers/kairos) for the shared onboarding overview and the full
 Zen + Go catalog reference.
 </Tip>
 
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Kairos (parent)" href="/providers/opencode" icon="server">
+  <Card title="Kairos (parent)" href="/providers/kairos" icon="server">
     Shared onboarding, catalog overview, and advanced notes.
   </Card>
   <Card title="Model selection" href="/concepts/model-providers" icon="layers">

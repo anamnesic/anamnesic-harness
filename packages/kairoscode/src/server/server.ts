@@ -103,10 +103,10 @@ function createHono(
 
   const runtime = adapter.create(app)
 
-  if (Flag.OPENCODE_WORKSPACE_ID) {
+  if (Flag.KAIROS_WORKSPACE_ID) {
     return {
       app: app
-        .use(InstanceMiddleware(Flag.OPENCODE_WORKSPACE_ID ? WorkspaceID.make(Flag.OPENCODE_WORKSPACE_ID) : undefined))
+        .use(InstanceMiddleware(Flag.KAIROS_WORKSPACE_ID ? WorkspaceID.make(Flag.KAIROS_WORKSPACE_ID) : undefined))
         .use(FenceMiddleware)
         .route("/", InstanceRoutes(runtime.upgradeWebSocket)),
       runtime,
@@ -141,7 +141,7 @@ export async function openapi() {
       info: {
         title: "kairos",
         version: "1.0.0",
-        description: "opencode api",
+        description: "kairos api",
       },
       openapi: "3.1.1",
     },

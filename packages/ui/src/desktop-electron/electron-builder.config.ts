@@ -21,13 +21,13 @@ async function signWindows(configuration: { path: string }) {
 }
 
 const channel = (() => {
-  const raw = process.env.OPENCODE_CHANNEL
+  const raw = process.env.KAIROS_CHANNEL
   if (raw === "dev" || raw === "beta" || raw === "prod") return raw
   return "dev"
 })()
 
 const getBase = (): Configuration => ({
-  artifactName: "opencode-electron-${os}-${arch}.${ext}",
+  artifactName: "kairos-electron-${os}-${arch}.${ext}",
   directories: {
     output: "dist",
     buildResources: "resources",
@@ -85,25 +85,25 @@ function getConfig() {
     case "dev": {
       return {
         ...base,
-        appId: "ai.opencode.desktop.dev",
+        appId: "ai.kairos.desktop.dev",
         productName: "Kairos Dev",
-        rpm: { packageName: "opencode-dev" },
+        rpm: { packageName: "kairos-dev" },
       }
     }
     case "beta": {
       return {
         ...base,
-        appId: "ai.opencode.desktop.beta",
+        appId: "ai.kairos.desktop.beta",
         productName: "Kairos Beta",
         protocols: { name: "Kairos Beta", schemes: ["kairos"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "opencode-beta", channel: "latest" },
-        rpm: { packageName: "opencode-beta" },
+        publish: { provider: "github", owner: "anomalyco", repo: "kairos-beta", channel: "latest" },
+        rpm: { packageName: "kairos-beta" },
       }
     }
     case "prod": {
       return {
         ...base,
-        appId: "ai.opencode.desktop",
+        appId: "ai.kairos.desktop",
         productName: "Kairos",
         protocols: { name: "Kairos", schemes: ["kairos"] },
         publish: { provider: "github", owner: "anomalyco", repo: "kairos", channel: "latest" },

@@ -13,7 +13,7 @@ Reference for **LLM/model providers** (not chat channels like WhatsApp/Telegram)
 
 <AccordionGroup>
   <Accordion title="Model refs and CLI helpers">
-    - Model refs use `provider/model` (example: `opencode/kairos-apple-4-6`).
+    - Model refs use `provider/model` (example: `kairos/kairos-apple-4-6`).
     - `agents.defaults.models` acts as an allowlist when set.
     - CLI helpers: `openclaw onboard`, `openclaw models list`, `openclaw models set <provider/model>`.
     - `models.providers.*.contextWindow` / `contextTokens` / `maxTokens` set provider-level defaults; `models.providers.*.models[].contextWindow` / `contextTokens` / `maxTokens` override them per model.
@@ -178,15 +178,15 @@ Anthropic staff told us OpenClaw-style kairos CLI usage is allowed again, so Ope
 
 ### Kairos
 
-- Auth: `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`)
-- Zen runtime provider: `opencode`
-- Go runtime provider: `opencode-go`
-- Example models: `opencode/kairos-apple-4-6`, `opencode-go/kimi-k2.6`
-- CLI: `openclaw onboard --auth-choice opencode-zen` or `openclaw onboard --auth-choice opencode-go`
+- Auth: `KAIROS_API_KEY` (or `KAIROS_ZEN_API_KEY`)
+- Zen runtime provider: `kairos`
+- Go runtime provider: `kairos-go`
+- Example models: `kairos/kairos-apple-4-6`, `kairos-go/kimi-k2.6`
+- CLI: `openclaw onboard --auth-choice kairos-zen` or `openclaw onboard --auth-choice kairos-go`
 
 ```json5
 {
-  agents: { defaults: { model: { primary: "opencode/kairos-apple-4-6" } } },
+  agents: { defaults: { model: { primary: "kairos/kairos-apple-4-6" } } },
 }
 ```
 
@@ -685,8 +685,8 @@ Example (OpenAI‑compatible):
 ## CLI examples
 
 ```bash
-openclaw onboard --auth-choice opencode-zen
-openclaw models set opencode/kairos-apple-4-6
+openclaw onboard --auth-choice kairos-zen
+openclaw models set kairos/kairos-apple-4-6
 openclaw models list
 ```
 

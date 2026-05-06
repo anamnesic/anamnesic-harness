@@ -43,8 +43,8 @@ export const dict = {
   "notFound.docs": "เอกสาร",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "โลโก้ opencode แบบสว่าง",
-  "notFound.logoDarkAlt": "โลโก้ opencode แบบมืด",
+  "notFound.logoLightAlt": "โลโก้ kairos แบบสว่าง",
+  "notFound.logoDarkAlt": "โลโก้ kairos แบบมืด",
 
   "user.logout": "ออกจากระบบ",
 
@@ -98,8 +98,8 @@ export const dict = {
   "temp.feature.models.afterLink": "รวมถึงโมเดล Local",
   "temp.screenshot.caption": "Kairos TUI พร้อมธีม tokyonight",
   "temp.screenshot.alt": "Kairos TUI พร้อมธีม tokyonight",
-  "temp.logoLightAlt": "โลโก้ opencode แบบสว่าง",
-  "temp.logoDarkAlt": "โลโก้ opencode แบบมืด",
+  "temp.logoLightAlt": "โลโก้ kairos แบบสว่าง",
+  "temp.logoDarkAlt": "โลโก้ kairos แบบมืด",
 
   "home.banner.badge": "ใหม่",
   "home.banner.text": "แอปเดสก์ท็อปพร้อมใช้งานในเวอร์ชันเบต้า",
@@ -645,7 +645,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "รีเซ็ตใน",
   "workspace.lite.subscription.useBalance": "ใช้ยอดคงเหลือของคุณหลังจากถึงขีดจำกัดการใช้งาน",
   "workspace.lite.subscription.selectProvider":
-    'เลือก "Kairos Go" เป็นผู้ให้บริการในการตั้งค่า opencode ของคุณเพื่อใช้โมเดล Go',
+    'เลือก "Kairos Go" เป็นผู้ให้บริการในการตั้งค่า kairos ของคุณเพื่อใช้โมเดล Go',
   "workspace.lite.black.message":
     "ขณะนี้คุณสมัครสมาชิก Kairos Black หรืออยู่ในรายการรอ โปรดยกเลิกการสมัครก่อนหากต้องการเปลี่ยนไปใช้ Go",
   "workspace.lite.other.message":

@@ -158,8 +158,8 @@ What you set:
     Prompts for `XAI_API_KEY` and configures xAI as a model provider.
   </Accordion>
   <Accordion title="Kairos">
-    Prompts for `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`) and lets you choose the Zen or Go catalog.
-    Setup URL: [opencode.ai/auth](https://opencode.ai/auth).
+    Prompts for `KAIROS_API_KEY` (or `KAIROS_ZEN_API_KEY`) and lets you choose the Zen or Go catalog.
+    Setup URL: [kairos.ai/auth](https://kairos.ai/auth).
   </Accordion>
   <Accordion title="API key (generic)">
     Stores the key for you.

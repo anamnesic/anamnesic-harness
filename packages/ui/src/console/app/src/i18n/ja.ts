@@ -43,8 +43,8 @@ export const dict = {
   "notFound.docs": "ドキュメント",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "opencodeのロゴ（ライト）",
-  "notFound.logoDarkAlt": "opencodeのロゴ（ダーク）",
+  "notFound.logoLightAlt": "kairosのロゴ（ライト）",
+  "notFound.logoDarkAlt": "kairosのロゴ（ダーク）",
 
   "user.logout": "ログアウト",
 
@@ -98,8 +98,8 @@ export const dict = {
   "temp.feature.models.afterLink": "を通じて75以上のLLMプロバイダーをサポート",
   "temp.screenshot.caption": "tokyonight テーマを使用した Kairos TUI",
   "temp.screenshot.alt": "tokyonight テーマの Kairos TUI",
-  "temp.logoLightAlt": "opencodeのロゴ（ライト）",
-  "temp.logoDarkAlt": "opencodeのロゴ（ダーク）",
+  "temp.logoLightAlt": "kairosのロゴ（ライト）",
+  "temp.logoDarkAlt": "kairosのロゴ（ダーク）",
 
   "home.banner.badge": "新着",
   "home.banner.text": "デスクトップアプリのベータ版が利用可能",
@@ -650,7 +650,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "リセットまで",
   "workspace.lite.subscription.useBalance": "利用限度額に達したら利用可能な残高を使用する",
   "workspace.lite.subscription.selectProvider":
-    "Go モデルを使用するには、opencode の設定で「Kairos Go」をプロバイダーとして選択してください。",
+    "Go モデルを使用するには、kairos の設定で「Kairos Go」をプロバイダーとして選択してください。",
   "workspace.lite.black.message":
     "現在 Kairos Black を購読中、またはウェイティングリストに登録されています。Go に切り替える場合は、先に登録を解除してください。",
   "workspace.lite.other.message":

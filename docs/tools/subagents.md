@@ -149,7 +149,7 @@ session to confirm the effective tool list.
   Spawn under another agent id when allowed by `subagents.allowAgents`.
 </ParamField>
 <ParamField path="runtime" type='"subagent" | "acp"' default="subagent">
-  `acp` is only for external ACP harnesses (`kairos`, `droid`, `gemini`, `opencode`, or explicitly requested Codex ACP/acpx) and for `agents.list[]` entries whose `runtime.type` is `acp`.
+  `acp` is only for external ACP harnesses (`kairos`, `droid`, `gemini`, `kairos`, or explicitly requested Codex ACP/acpx) and for `agents.list[]` entries whose `runtime.type` is `acp`.
 </ParamField>
 <ParamField path="resumeSessionId" type="string">
   ACP-only. Resumes an existing ACP harness session when `runtime: "acp"`; ignored for native sub-agent spawns.

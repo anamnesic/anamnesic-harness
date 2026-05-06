@@ -11,7 +11,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "bin": {
-    "opencode": "./bin/opencode"
+    "kairos": "./bin/kairos"
   },
   "exports": {
     "./*": "./src/*.ts"

@@ -33,7 +33,7 @@ export class WorkspaceRouteContext extends Context.Service<
     readonly directory: string
     readonly workspaceID?: WorkspaceID
   }
->()("@opencode/ExperimentalHttpApiWorkspaceRouteContext") {}
+>()("@kairos/ExperimentalHttpApiWorkspaceRouteContext") {}
 
 export class WorkspaceRoutingMiddleware extends HttpApiMiddleware.Service<
   WorkspaceRoutingMiddleware,
@@ -41,7 +41,7 @@ export class WorkspaceRoutingMiddleware extends HttpApiMiddleware.Service<
     provides: WorkspaceRouteContext
     requires: Session.Service
   }
->()("@opencode/ExperimentalHttpApiWorkspaceRouting") {}
+>()("@kairos/ExperimentalHttpApiWorkspaceRouting") {}
 
 function currentDirectory(): string {
   try {
@@ -56,7 +56,7 @@ function requestURL(request: HttpServerRequest.HttpServerRequest): URL {
 }
 
 function configuredWorkspaceID(): WorkspaceID | undefined {
-  return Flag.OPENCODE_WORKSPACE_ID ? WorkspaceID.make(Flag.OPENCODE_WORKSPACE_ID) : undefined
+  return Flag.KAIROS_WORKSPACE_ID ? WorkspaceID.make(Flag.KAIROS_WORKSPACE_ID) : undefined
 }
 
 function selectedWorkspaceID(url: URL, sessionWorkspaceID?: WorkspaceID): WorkspaceID | undefined {
@@ -65,7 +65,7 @@ function selectedWorkspaceID(url: URL, sessionWorkspaceID?: WorkspaceID): Worksp
 }
 
 function defaultDirectory(request: HttpServerRequest.HttpServerRequest, url: URL): string {
-  return url.searchParams.get("directory") || request.headers["x-opencode-directory"] || currentDirectory()
+  return url.searchParams.get("directory") || request.headers["x-kairos-directory"] || currentDirectory()
 }
 
 function shouldStayOnControlPlane(request: HttpServerRequest.HttpServerRequest, url: URL): boolean {

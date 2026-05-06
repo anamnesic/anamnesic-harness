@@ -4,10 +4,10 @@
   "version": "1.14.30",
   "type": "module",
   "license": "MIT",
-  "homepage": "https://opencode.ai",
+  "homepage": "https://kairos.ai",
   "author": {
     "name": "Kairos",
-    "email": "hello@opencode.ai"
+    "email": "hello@kairos.ai"
   },
   "scripts": {
     "typecheck": "tsgo -b",

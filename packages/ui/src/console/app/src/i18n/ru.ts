@@ -37,14 +37,14 @@ export const dict = {
   "email.subscribe": "Подписаться",
   "email.success": "Почти готово, проверьте почту и подтвердите ваш email",
 
-  "notFound.title": "Не найдено | opencode",
+  "notFound.title": "Не найдено | kairos",
   "notFound.heading": "404 - Страница не найдена",
   "notFound.home": "Главная",
   "notFound.docs": "Документация",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "светлый логотип opencode",
-  "notFound.logoDarkAlt": "темный логотип opencode",
+  "notFound.logoLightAlt": "светлый логотип kairos",
+  "notFound.logoDarkAlt": "темный логотип kairos",
 
   "user.logout": "Выйти",
 
@@ -85,21 +85,21 @@ export const dict = {
 
   "home.title": "Kairos | AI-агент с открытым кодом для программирования",
 
-  "temp.title": "opencode | AI-агент для программирования в терминале",
+  "temp.title": "kairos | AI-агент для программирования в терминале",
   "temp.hero.title": "AI-агент для программирования в терминале",
-  "temp.zen": "opencode zen",
+  "temp.zen": "kairos zen",
   "temp.getStarted": "Начать",
   "temp.feature.native.title": "Нативный TUI",
   "temp.feature.native.body": "Отзывчивый, нативный, темизируемый терминальный интерфейс",
   "temp.feature.zen.beforeLink": "",
   "temp.feature.zen.link": "Отобранный список моделей",
-  "temp.feature.zen.afterLink": "от opencode",
+  "temp.feature.zen.afterLink": "от kairos",
   "temp.feature.models.beforeLink": "Поддерживает 75+ провайдеров LLM через",
   "temp.feature.models.afterLink": ", включая локальные модели",
   "temp.screenshot.caption": "Kairos TUI с темой tokyonight",
   "temp.screenshot.alt": "Kairos TUI с темой tokyonight",
-  "temp.logoLightAlt": "светлый логотип opencode",
-  "temp.logoDarkAlt": "темный логотип opencode",
+  "temp.logoLightAlt": "светлый логотип kairos",
+  "temp.logoDarkAlt": "темный логотип kairos",
 
   "home.banner.badge": "Новое",
   "home.banner.text": "Доступно десктопное приложение (бета)",
@@ -449,15 +449,15 @@ export const dict = {
     "Доступ к моделям, настроенным для оптимальной производительности — никаких даунгрейдов или перенаправления к дешевым провайдерам.",
   "workspace.newUser.feature.lockin.title": "Без привязки (Lock-in)",
   "workspace.newUser.feature.lockin.body":
-    "Используйте Zen с любым кодинг-агентом и продолжайте использовать других провайдеров с opencode, когда захотите.",
+    "Используйте Zen с любым кодинг-агентом и продолжайте использовать других провайдеров с kairos, когда захотите.",
   "workspace.newUser.copyApiKey": "Копировать API ключ",
   "workspace.newUser.copyKey": "Копировать ключ",
   "workspace.newUser.copied": "Скопировано!",
   "workspace.newUser.step.enableBilling": "Включить оплату",
   "workspace.newUser.step.login.before": "Запустите",
-  "workspace.newUser.step.login.after": "и выберите opencode",
+  "workspace.newUser.step.login.after": "и выберите kairos",
   "workspace.newUser.step.pasteKey": "Вставьте ваш API ключ",
-  "workspace.newUser.step.models.before": "Запустите opencode и выполните",
+  "workspace.newUser.step.models.before": "Запустите kairos и выполните",
   "workspace.newUser.step.models.after": "для выбора модели",
 
   "workspace.models.title": "Модели",
@@ -504,10 +504,10 @@ export const dict = {
   "workspace.cost.subscriptionShort": "подписка",
 
   "workspace.keys.title": "API Ключи",
-  "workspace.keys.subtitle": "Управляйте вашими API ключами для доступа к сервисам opencode.",
+  "workspace.keys.subtitle": "Управляйте вашими API ключами для доступа к сервисам kairos.",
   "workspace.keys.create": "Создать API ключ",
   "workspace.keys.placeholder": "Введите название ключа",
-  "workspace.keys.empty": "Создайте API ключ для шлюза opencode",
+  "workspace.keys.empty": "Создайте API ключ для шлюза kairos",
   "workspace.keys.table.name": "Название",
   "workspace.keys.table.key": "Ключ",
   "workspace.keys.table.createdBy": "Создан",
@@ -656,7 +656,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "Сброс через",
   "workspace.lite.subscription.useBalance": "Использовать доступный баланс после достижения лимитов",
   "workspace.lite.subscription.selectProvider":
-    'Выберите "Kairos Go" в качестве провайдера в настройках opencode для использования моделей Go.',
+    'Выберите "Kairos Go" в качестве провайдера в настройках kairos для использования моделей Go.',
   "workspace.lite.black.message":
     "Вы подписаны на Kairos Black или находитесь в списке ожидания. Пожалуйста, сначала отмените подписку, если хотите перейти на Go.",
   "workspace.lite.other.message":

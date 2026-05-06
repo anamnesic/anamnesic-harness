@@ -309,7 +309,7 @@ export const Event = {
 
 export function plan(input: { slug: string; time: { created: number } }) {
   const base = Instance.project.vcs
-    ? path.join(Instance.worktree, ".opencode", "plans")
+    ? path.join(Instance.worktree, ".kairos", "plans")
     : path.join(Global.Path.data, "plans")
   return path.join(base, [input.time.created, input.slug].join("-") + ".md")
 }
@@ -432,7 +432,7 @@ export interface Interface {
   ) => Effect.Effect<Option.Option<MessageV2.WithParts>>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/Session") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/Session") {}
 
 export type Patch = Types.DeepMutable<SyncEvent.Event<typeof Event.Updated>["data"]["info"]>
 
@@ -475,7 +475,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
 
       yield* Effect.sync(() => SyncEvent.run(Event.Created, { sessionID: result.id, info: result }))
 
-      if (!Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+      if (!Flag.KAIROS_EXPERIMENTAL_WORKSPACES) {
         // This only exist for backwards compatibility. We should not be
         // manually publishing this event; it is a sync event now
         yield* bus.publish(Event.Updated, {
@@ -788,7 +788,7 @@ export function* list(input?: {
           : or(...conds)!,
       )
     }
-  } else if (input?.scope !== "project" && !Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+  } else if (input?.scope !== "project" && !Flag.KAIROS_EXPERIMENTAL_WORKSPACES) {
     if (input?.directory) {
       conditions.push(eq(SessionTable.directory, input.directory))
     }

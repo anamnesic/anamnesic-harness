@@ -79,7 +79,7 @@ const QueryParameterSchemas = {
 
 const LegacyComponentDescriptions = {
   LogLevel: "Log level",
-  ServerConfig: "Server configuration for opencode serve and web commands",
+  ServerConfig: "Server configuration for kairos serve and web commands",
   LayoutConfig: "@deprecated Always uses stretch layout.",
 } satisfies Record<string, string>
 
@@ -499,7 +499,7 @@ export const PublicApi = KairosHttpApi.annotateMerge(
   OpenApi.annotations({
     title: "kairos",
     version: "1.0.0",
-    description: "opencode api",
+    description: "kairos api",
     transform: matchLegacyOpenApi,
   }),
 )

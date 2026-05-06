@@ -63,7 +63,7 @@ function normalizeLoadedConfig(data: unknown, source: string) {
   delete copy.theme
   delete copy.keybinds
   delete copy.tui
-  log.warn("tui keys in opencode config are deprecated; move them to tui.json", { path: source })
+  log.warn("tui keys in kairos config are deprecated; move them to tui.json", { path: source })
   return copy
 }
 
@@ -103,10 +103,10 @@ export const Info = Schema.Struct({
   }),
   logLevel: Schema.optional(LogLevelRef).annotate({ description: "Log level" }),
   server: Schema.optional(ConfigServer.Server).annotate({
-    description: "Server configuration for opencode serve and web commands",
+    description: "Server configuration for kairos serve and web commands",
   }),
   command: Schema.optional(Schema.Record(Schema.String, ConfigCommand.Info)).annotate({
-    description: "Command configuration, see https://opencode.ai/docs/commands",
+    description: "Command configuration, see https://kairos.ai/docs/commands",
   }),
   skills: Schema.optional(ConfigSkills.Info).annotate({ description: "Additional skill folder paths" }),
   watcher: Schema.optional(
@@ -175,7 +175,7 @@ export const Info = Schema.Struct({
       }),
       [Schema.Record(Schema.String, ConfigAgent.Info)],
     ),
-  ).annotate({ description: "Agent configuration, see https://opencode.ai/docs/agents" }),
+  ).annotate({ description: "Agent configuration, see https://kairos.ai/docs/agents" }),
   provider: Schema.optional(Schema.Record(Schema.String, ConfigProvider.Info)).annotate({
     description: "Custom provider configurations and model overrides",
   }),
@@ -290,10 +290,10 @@ export interface Interface {
   readonly waitForDependencies: () => Effect.Effect<void>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/Config") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/Config") {}
 
 function globalConfigFile() {
-  const candidates = ["kairos.jsonc", "opencode.json", "config.json"].map((file) =>
+  const candidates = ["kairos.jsonc", "kairos.json", "config.json"].map((file) =>
     path.join(Global.Path.config, file),
   )
   for (const file of candidates) {
@@ -372,8 +372,8 @@ export const layer = Layer.effect(
 
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
       if (!data.$schema) {
-        data.$schema = "https://opencode.ai/config.json"
-        const updated = text.replace(/^\s*\{/, '{\n  "$schema": "https://opencode.ai/config.json",')
+        data.$schema = "https://kairos.ai/config.json"
+        const updated = text.replace(/^\s*\{/, '{\n  "$schema": "https://kairos.ai/config.json",')
         yield* fs.writeFileString(options.path, updated).pipe(Effect.catch(() => Effect.void))
       }
       return data
@@ -390,7 +390,7 @@ export const layer = Layer.effect(
       let result: Info = pipe(
         {},
         mergeDeep(yield* loadFile(path.join(Global.Path.config, "config.json"))),
-        mergeDeep(yield* loadFile(path.join(Global.Path.config, "opencode.json"))),
+        mergeDeep(yield* loadFile(path.join(Global.Path.config, "kairos.json"))),
         mergeDeep(yield* loadFile(path.join(Global.Path.config, "kairos.jsonc"))),
       )
 
@@ -401,7 +401,7 @@ export const layer = Layer.effect(
             .then(async (mod) => {
               const { provider, model, ...rest } = mod.default
               if (provider && model) result.model = `${provider}/${model}`
-              result["$schema"] = "https://opencode.ai/config.json"
+              result["$schema"] = "https://kairos.ai/config.json"
               result = mergeDeep(result, rest)
               await fsNode.writeFile(path.join(Global.Path.config, "config.json"), JSON.stringify(result, null, 2))
               await fsNode.unlink(legacy)
@@ -455,7 +455,7 @@ export const layer = Layer.effect(
 
         const pluginScopeForSource = Effect.fnUntraced(function* (source: string) {
           if (source.startsWith("http://") || source.startsWith("https://")) return "global"
-          if (source === "OPENCODE_CONFIG_CONTENT") return "local"
+          if (source === "KAIROS_CONFIG_CONTENT") return "local"
           if (yield* InstanceRef.use((ctx) => Effect.succeed(Instance.containsPath(source, ctx)))) return "local"
           return "global"
         })
@@ -490,15 +490,15 @@ export const layer = Layer.effect(
           if (value.type === "wellknown") {
             const url = key.replace(/\/+$/, "")
             process.env[value.key] = value.token
-            log.debug("fetching remote config", { url: `${url}/.well-known/opencode` })
-            const response = yield* Effect.promise(() => fetch(`${url}/.well-known/opencode`))
+            log.debug("fetching remote config", { url: `${url}/.well-known/kairos` })
+            const response = yield* Effect.promise(() => fetch(`${url}/.well-known/kairos`))
             if (!response.ok) {
               throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
             }
             const wellknown = (yield* Effect.promise(() => response.json())) as { config?: Record<string, unknown> }
             const remoteConfig = wellknown.config ?? {}
-            if (!remoteConfig.$schema) remoteConfig.$schema = "https://opencode.ai/config.json"
-            const source = `${url}/.well-known/opencode`
+            if (!remoteConfig.$schema) remoteConfig.$schema = "https://kairos.ai/config.json"
+            const source = `${url}/.well-known/kairos`
             const next = yield* loadConfig(JSON.stringify(remoteConfig), {
               dir: path.dirname(source),
               source,
@@ -511,12 +511,12 @@ export const layer = Layer.effect(
         const global = yield* getGlobal()
         yield* merge(Global.Path.config, global, "global")
 
-        if (Flag.OPENCODE_CONFIG) {
-          yield* merge(Flag.OPENCODE_CONFIG, yield* loadFile(Flag.OPENCODE_CONFIG))
-          log.debug("loaded custom config", { path: Flag.OPENCODE_CONFIG })
+        if (Flag.KAIROS_CONFIG) {
+          yield* merge(Flag.KAIROS_CONFIG, yield* loadFile(Flag.KAIROS_CONFIG))
+          log.debug("loaded custom config", { path: Flag.KAIROS_CONFIG })
         }
 
-        if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
+        if (!Flag.KAIROS_DISABLE_PROJECT_CONFIG) {
           for (const file of yield* ConfigPaths.files("kairos", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
             yield* merge(file, yield* loadFile(file), "local")
           }
@@ -528,15 +528,15 @@ export const layer = Layer.effect(
 
         const directories = yield* ConfigPaths.directories(ctx.directory, ctx.worktree)
 
-        if (Flag.OPENCODE_CONFIG_DIR) {
-          log.debug("loading config from OPENCODE_CONFIG_DIR", { path: Flag.OPENCODE_CONFIG_DIR })
+        if (Flag.KAIROS_CONFIG_DIR) {
+          log.debug("loading config from KAIROS_CONFIG_DIR", { path: Flag.KAIROS_CONFIG_DIR })
         }
 
         const deps: Fiber.Fiber<void, never>[] = []
 
         for (const dir of directories) {
-          if (dir.endsWith(".opencode") || dir === Flag.OPENCODE_CONFIG_DIR) {
-            for (const file of ["opencode.json", "kairos.jsonc"]) {
+          if (dir.endsWith(".kairos") || dir === Flag.KAIROS_CONFIG_DIR) {
+            for (const file of ["kairos.json", "kairos.jsonc"]) {
               const source = path.join(dir, file)
               log.debug(`loading config from ${source}`)
               yield* merge(source, yield* loadFile(source))
@@ -574,20 +574,20 @@ export const layer = Layer.effect(
           result.command = mergeDeep(result.command ?? {}, yield* Effect.promise(() => ConfigCommand.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir)))
-          // Auto-discovered plugins under `.opencode/plugin(s)` are already local files, so ConfigPlugin.load
+          // Auto-discovered plugins under `.kairos/plugin(s)` are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
           yield* mergePluginOrigins(dir, list)
         }
 
-        if (process.env.OPENCODE_CONFIG_CONTENT) {
-          const source = "OPENCODE_CONFIG_CONTENT"
-          const next = yield* loadConfig(process.env.OPENCODE_CONFIG_CONTENT, {
+        if (process.env.KAIROS_CONFIG_CONTENT) {
+          const source = "KAIROS_CONFIG_CONTENT"
+          const next = yield* loadConfig(process.env.KAIROS_CONFIG_CONTENT, {
             dir: ctx.directory,
             source,
           })
           yield* merge(source, next, "local")
-          log.debug("loaded custom config from OPENCODE_CONFIG_CONTENT")
+          log.debug("loaded custom config from KAIROS_CONFIG_CONTENT")
         }
 
         const activeAccount = Option.getOrUndefined(
@@ -603,8 +603,8 @@ export const layer = Layer.effect(
               { concurrency: 2 },
             )
             if (Option.isSome(tokenOpt)) {
-              process.env["OPENCODE_CONSOLE_TOKEN"] = tokenOpt.value
-              yield* env.set("OPENCODE_CONSOLE_TOKEN", tokenOpt.value)
+              process.env["KAIROS_CONSOLE_TOKEN"] = tokenOpt.value
+              yield* env.set("KAIROS_CONSOLE_TOKEN", tokenOpt.value)
             }
 
             if (Option.isSome(configOpt)) {
@@ -631,7 +631,7 @@ export const layer = Layer.effect(
 
         const managedDir = ConfigManaged.managedConfigDir()
         if (existsSync(managedDir)) {
-          for (const file of ["opencode.json", "kairos.jsonc"]) {
+          for (const file of ["kairos.json", "kairos.jsonc"]) {
             const source = path.join(managedDir, file)
             yield* merge(source, yield* loadFile(source), "global")
           }
@@ -658,8 +658,8 @@ export const layer = Layer.effect(
           })
         }
 
-        if (Flag.OPENCODE_PERMISSION) {
-          result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.OPENCODE_PERMISSION))
+        if (Flag.KAIROS_PERMISSION) {
+          result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.KAIROS_PERMISSION))
         }
 
         if (result.tools) {
@@ -681,10 +681,10 @@ export const layer = Layer.effect(
           result.share = "auto"
         }
 
-        if (Flag.OPENCODE_DISABLE_AUTOCOMPACT) {
+        if (Flag.KAIROS_DISABLE_AUTOCOMPACT) {
           result.compaction = { ...result.compaction, auto: false }
         }
-        if (Flag.OPENCODE_DISABLE_PRUNE) {
+        if (Flag.KAIROS_DISABLE_PRUNE) {
           result.compaction = { ...result.compaction, prune: false }
         }
 

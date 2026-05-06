@@ -331,7 +331,7 @@ export interface Interface {
   }) => Effect.Effect<string[]>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/File") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/File") {}
 
 export const layer = Layer.effect(
   Service,

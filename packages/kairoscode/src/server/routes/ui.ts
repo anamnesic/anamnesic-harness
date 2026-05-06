@@ -5,10 +5,10 @@ import { getMimeType } from "hono/utils/mime"
 import { createHash } from "node:crypto"
 import fs from "node:fs/promises"
 
-const embeddedUIPromise = Flag.OPENCODE_DISABLE_EMBEDDED_WEB_UI
+const embeddedUIPromise = Flag.KAIROS_DISABLE_EMBEDDED_WEB_UI
   ? Promise.resolve(null)
   : // @ts-expect-error - generated file at build time
-    import("opencode-web-ui.gen.ts").then((module) => module.default as Record<string, string>).catch(() => null)
+    import("kairos-web-ui.gen.ts").then((module) => module.default as Record<string, string>).catch(() => null)
 
 const DEFAULT_CSP =
   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:"
@@ -36,11 +36,11 @@ export const UIRoutes = (): Hono =>
         return c.json({ error: "Not Found" }, 404)
       }
     } else {
-      const response = await proxy(`https://app.opencode.ai${path}`, {
+      const response = await proxy(`https://app.kairos.ai${path}`, {
         raw: c.req.raw,
         headers: {
           ...Object.fromEntries(c.req.raw.headers.entries()),
-          host: "app.opencode.ai",
+          host: "app.kairos.ai",
         },
       })
       const match = response.headers.get("content-type")?.includes("text/html")

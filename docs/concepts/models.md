@@ -94,7 +94,7 @@ It can set up model + auth for common providers, including **OpenAI Code (Codex)
 <Note>
 Model refs are normalized to lowercase. Provider aliases like `z.ai/*` normalize to `zai/*`.
 
-Provider configuration examples (including Kairos) live in [Kairos](/providers/opencode).
+Provider configuration examples (including Kairos) live in [Kairos](/providers/kairos).
 </Note>
 
 ### Safe allowlist edits

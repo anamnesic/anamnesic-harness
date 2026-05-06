@@ -54,7 +54,7 @@ export interface Interface {
   readonly stream: (input: StreamInput) => Stream.Stream<Event, unknown>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/LLM") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/LLM") {}
 
 const live: Layer.Layer<
   Service,
@@ -228,7 +228,7 @@ const live: Layer.Layer<
       }
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
-      // from the workflow service are executed via opencode's tool system
+      // from the workflow service are executed via kairos's tool system
       // and results sent back over the WebSocket.
       if (language instanceof GitLabWorkflowLanguageModel) {
         const workflowModel = language as GitLabWorkflowLanguageModel & {
@@ -369,16 +369,16 @@ const live: Layer.Layer<
         headers: {
           ...(input.model.providerID.startsWith("kairos")
             ? {
-                "x-opencode-project": Instance.project.id,
-                "x-opencode-session": input.sessionID,
-                "x-opencode-request": input.user.id,
-                "x-opencode-client": Flag.OPENCODE_CLIENT,
-                "User-Agent": `opencode/${InstallationVersion}`,
+                "x-kairos-project": Instance.project.id,
+                "x-kairos-session": input.sessionID,
+                "x-kairos-request": input.user.id,
+                "x-kairos-client": Flag.KAIROS_CLIENT,
+                "User-Agent": `kairos/${InstallationVersion}`,
               }
             : {
                 "x-session-affinity": input.sessionID,
                 ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
-                "User-Agent": `opencode/${InstallationVersion}`,
+                "User-Agent": `kairos/${InstallationVersion}`,
               }),
           ...input.model.headers,
           ...headers,

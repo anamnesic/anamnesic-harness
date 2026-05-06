@@ -224,11 +224,11 @@ Notes:
   - `OPENCLAW_LIVE_ACP_BIND_AGENT=codex`
   - `OPENCLAW_LIVE_ACP_BIND_AGENT=droid`
   - `OPENCLAW_LIVE_ACP_BIND_AGENT=gemini`
-  - `OPENCLAW_LIVE_ACP_BIND_AGENT=opencode`
+  - `OPENCLAW_LIVE_ACP_BIND_AGENT=kairos`
   - `OPENCLAW_LIVE_ACP_BIND_AGENTS=kairos,codex,gemini`
   - `OPENCLAW_LIVE_ACP_BIND_AGENT_COMMAND='npx -y @agentclientprotocol/kairos-agent-acp@<version>'`
   - `OPENCLAW_LIVE_ACP_BIND_CODEX_MODEL=gpt-5.5`
-  - `OPENCLAW_LIVE_ACP_BIND_OPENCODE_MODEL=opencode/kimi-k2.6`
+  - `OPENCLAW_LIVE_ACP_BIND_KAIROS_MODEL=kairos/kimi-k2.6`
   - `OPENCLAW_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT=1`
   - `OPENCLAW_LIVE_ACP_BIND_REQUIRE_CRON=1`
   - `OPENCLAW_LIVE_ACP_BIND_PARENT_MODEL=openai/gpt-5.5`
@@ -258,17 +258,17 @@ pnpm test:docker:live-acp-bind:kairos
 pnpm test:docker:live-acp-bind:codex
 pnpm test:docker:live-acp-bind:droid
 pnpm test:docker:live-acp-bind:gemini
-pnpm test:docker:live-acp-bind:opencode
+pnpm test:docker:live-acp-bind:kairos
 ```
 
 Docker notes:
 
 - The Docker runner lives at `scripts/test-live-acp-bind-docker.sh`.
 - By default, it runs the ACP bind smoke against the aggregate live CLI agents in sequence: `kairos`, `codex`, then `gemini`.
-- Use `OPENCLAW_LIVE_ACP_BIND_AGENTS=kairos`, `OPENCLAW_LIVE_ACP_BIND_AGENTS=codex`, `OPENCLAW_LIVE_ACP_BIND_AGENTS=droid`, `OPENCLAW_LIVE_ACP_BIND_AGENTS=gemini`, or `OPENCLAW_LIVE_ACP_BIND_AGENTS=opencode` to narrow the matrix.
-- It sources `~/.profile`, stages the matching CLI auth material into the container, then installs the requested live CLI (`@anthropic-ai/kairos-code`, `@openai/codex`, Factory Droid via `https://app.factory.ai/cli`, `@google/gemini-cli`, or `opencode-ai`) if missing. The ACP backend itself is the bundled embedded `acpx/runtime` package from the `acpx` plugin.
+- Use `OPENCLAW_LIVE_ACP_BIND_AGENTS=kairos`, `OPENCLAW_LIVE_ACP_BIND_AGENTS=codex`, `OPENCLAW_LIVE_ACP_BIND_AGENTS=droid`, `OPENCLAW_LIVE_ACP_BIND_AGENTS=gemini`, or `OPENCLAW_LIVE_ACP_BIND_AGENTS=kairos` to narrow the matrix.
+- It sources `~/.profile`, stages the matching CLI auth material into the container, then installs the requested live CLI (`@anthropic-ai/kairos-code`, `@openai/codex`, Factory Droid via `https://app.factory.ai/cli`, `@google/gemini-cli`, or `kairos-ai`) if missing. The ACP backend itself is the bundled embedded `acpx/runtime` package from the `acpx` plugin.
 - The Droid Docker variant stages `~/.factory` for settings, forwards `FACTORY_API_KEY`, and requires that API key because local Factory OAuth/keyring auth is not portable into the container. It uses ACPX's built-in `droid exec --output-format acp` registry entry.
-- The Kairos Docker variant is a strict single-agent regression lane. It writes a temporary `OPENCODE_CONFIG_CONTENT` default model from `OPENCLAW_LIVE_ACP_BIND_OPENCODE_MODEL` (default `opencode/kimi-k2.6`) after sourcing `~/.profile`, and `pnpm test:docker:live-acp-bind:opencode` requires a bound assistant transcript instead of accepting the generic post-bind skip.
+- The Kairos Docker variant is a strict single-agent regression lane. It writes a temporary `KAIROS_CONFIG_CONTENT` default model from `OPENCLAW_LIVE_ACP_BIND_KAIROS_MODEL` (default `kairos/kimi-k2.6`) after sourcing `~/.profile`, and `pnpm test:docker:live-acp-bind:kairos` requires a bound assistant transcript instead of accepting the generic post-bind skip.
 - Direct `acpx` CLI calls are only a manual/workaround path for comparing behavior outside the Gateway. The Docker ACP bind smoke exercises OpenClaw's embedded `acpx` runtime backend.
 
 ## Live: Codex app-server harness smoke
@@ -409,11 +409,11 @@ Include at least one image-capable model in `OPENCLAW_LIVE_GATEWAY_MODELS` (kair
 If you have keys enabled, we also support testing via:
 
 - OpenRouter: `openrouter/...` (hundreds of models; use `openclaw models scan` to find tool+image capable candidates)
-- Kairos: `opencode/...` for Zen and `opencode-go/...` for Go (auth via `OPENCODE_API_KEY` / `OPENCODE_ZEN_API_KEY`)
+- Kairos: `kairos/...` for Zen and `kairos-go/...` for Go (auth via `KAIROS_API_KEY` / `KAIROS_ZEN_API_KEY`)
 
 More providers you can include in the live matrix (if you have creds/config):
 
-- Built-in: `openai`, `openai-codex`, `anthropic`, `google`, `google-vertex`, `google-antigravity`, `google-gemini-cli`, `zai`, `openrouter`, `opencode`, `opencode-go`, `xai`, `groq`, `cerebras`, `mistral`, `github-copilot`
+- Built-in: `openai`, `openai-codex`, `anthropic`, `google`, `google-vertex`, `google-antigravity`, `google-gemini-cli`, `zai`, `openrouter`, `kairos`, `kairos-go`, `xai`, `groq`, `cerebras`, `mistral`, `github-copilot`
 - Via `models.providers` (custom endpoints): `minimax` (cloud/API), plus any OpenAI/Anthropic-compatible proxy (LM Studio, vLLM, LiteLLM, etc.)
 
 <Tip>

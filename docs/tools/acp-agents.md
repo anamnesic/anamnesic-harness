@@ -70,7 +70,7 @@ an unavailable backend.
     - `/acp doctor` reports an enabled, healthy backend.
     - The target id is allowed by `acp.allowedAgents` when that allowlist is set.
     - The harness command can start on the Gateway host.
-    - Provider auth is present for that harness (`kairos`, `codex`, `gemini`, `opencode`, `droid`, etc.).
+    - Provider auth is present for that harness (`kairos`, `codex`, `gemini`, `kairos`, `droid`, etc.).
     - The selected model exists for that harness — model ids are not portable across harnesses.
     - The requested `cwd` exists and is accessible, or omit `cwd` and let the backend use its default.
     - Permission mode matches the work. Non-interactive sessions cannot click native permission prompts, so write/exec-heavy coding runs usually need an ACPX permission profile that can proceed headlessly.
@@ -100,7 +100,7 @@ or `sessions_spawn({ runtime: "acp", agentId: "<id>" })` targets:
 | `kilocode` | Kilo Code CLI                                  | Adapter availability and model control depend on the installed CLI.                 |
 | `kimi`     | Kimi/Moonshot CLI                              | Requires Kimi/Moonshot auth on the host.                                            |
 | `kiro`     | Kiro CLI                                       | Adapter availability and model control depend on the installed CLI.                 |
-| `opencode` | Kairos ACP adapter                           | Requires Kairos CLI/provider auth.                                                |
+| `kairos` | Kairos ACP adapter                           | Requires Kairos CLI/provider auth.                                                |
 | `openclaw` | OpenClaw Gateway bridge through `openclaw acp` | Lets an ACP-aware harness talk back to an OpenClaw Gateway session.                 |
 | `pi`       | Pi/embedded OpenClaw runtime                   | Used for OpenClaw-native harness experiments.                                       |
 | `qwen`     | Qwen Code / Qwen CLI                           | Requires Qwen-compatible auth on the host.                                          |
@@ -200,7 +200,7 @@ Quick `/acp` flow from chat:
     backend is loaded. `acp.dispatch.enabled=false` pauses automatic
     ACP thread dispatch but does not hide or block explicit
     `sessions_spawn({ runtime: "acp" })` calls. It targets ACP harness ids such as `codex`,
-    `kairos`, `droid`, `gemini`, or `opencode`. Do not pass a normal
+    `kairos`, `droid`, `gemini`, or `kairos`. Do not pass a normal
     OpenClaw config agent id from `agents_list` unless that entry is
     explicitly configured with `agents.list[].runtime.type="acp"`;
     otherwise use the default sub-agent runtime. When an OpenClaw agent

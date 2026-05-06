@@ -55,7 +55,7 @@ export const Info = z
   })
 export type Info = z.infer<typeof Info>
 
-export const USER_AGENT = `opencode/${InstallationChannel}/${InstallationVersion}/${Flag.OPENCODE_CLIENT}`
+export const USER_AGENT = `kairos/${InstallationChannel}/${InstallationVersion}/${Flag.KAIROS_CLIENT}`
 
 export function isPreview() {
   return InstallationChannel !== "latest"
@@ -88,7 +88,7 @@ export interface Interface {
   readonly upgrade: (method: Method, target: string) => Effect.Effect<void, UpgradeFailedError>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/Installation") {}
+export class Service extends Context.Service<Service, Interface>()("@kairos/Installation") {}
 
 export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildProcessSpawner.ChildProcessSpawner> =
   Layer.effect(
@@ -134,8 +134,8 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
       )
 
       const getBrewFormula = Effect.fnUntraced(function* () {
-        const tapFormula = yield* text(["brew", "list", "--formula", "anomalyco/tap/opencode"])
-        if (tapFormula.includes("kairos")) return "anomalyco/tap/opencode"
+        const tapFormula = yield* text(["brew", "list", "--formula", "anomalyco/tap/kairos"])
+        if (tapFormula.includes("kairos")) return "anomalyco/tap/kairos"
         const coreFormula = yield* text(["brew", "list", "--formula", "kairos"])
         if (coreFormula.includes("kairos")) return "kairos"
         return "kairos"
@@ -143,7 +143,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
 
       const upgradeCurl = Effect.fnUntraced(
         function* (target: string) {
-          const response = yield* httpOk.execute(HttpClientRequest.get("https://opencode.ai/install"))
+          const response = yield* httpOk.execute(HttpClientRequest.get("https://kairos.ai/install"))
           const body = yield* response.text
           const bodyBytes = new TextEncoder().encode(body)
           const proc = ChildProcess.make("bash", [], {
@@ -171,7 +171,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
           }
         }),
         method: Effect.fn("Installation.method")(function* () {
-          if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl" as Method
+          if (process.execPath.includes(path.join(".kairos", "bin"))) return "curl" as Method
           if (process.execPath.includes(path.join(".local", "bin"))) return "curl" as Method
           const exec = process.execPath.toLowerCase()
 
@@ -196,7 +196,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
           for (const check of checks) {
             const output = yield* check.command()
             const installedName =
-              check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "kairos" : "opencode-ai"
+              check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "kairos" : "kairos-ai"
             if (output.includes(installedName)) {
               return check.name
             }
@@ -226,7 +226,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
           if (detectedMethod === "npm" || detectedMethod === "bun" || detectedMethod === "pnpm") {
             const response = yield* httpOk.execute(
               HttpClientRequest.get(
-                `${yield* NpmConfig.registry(process.cwd())}/opencode-ai/${InstallationChannel}`,
+                `${yield* NpmConfig.registry(process.cwd())}/kairos-ai/${InstallationChannel}`,
               ).pipe(HttpClientRequest.acceptJson),
             )
             const data = yield* HttpClientResponse.schemaBodyJson(NpmPackage)(response)
@@ -236,7 +236,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
           if (detectedMethod === "choco") {
             const response = yield* httpOk.execute(
               HttpClientRequest.get(
-                "https://community.chocolatey.org/api/v2/Packages?$filter=Id%20eq%20%27opencode%27%20and%20IsLatestVersion&$select=Version",
+                "https://community.chocolatey.org/api/v2/Packages?$filter=Id%20eq%20%27kairos%27%20and%20IsLatestVersion&$select=Version",
               ).pipe(HttpClientRequest.setHeaders({ Accept: "application/json;odata=verbose" })),
             )
             const data = yield* HttpClientResponse.schemaBodyJson(ChocoPackage)(response)
@@ -254,7 +254,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
           }
 
           const response = yield* httpOk.execute(
-            HttpClientRequest.get("https://api.github.com/repos/anomalyco/opencode/releases/latest").pipe(
+            HttpClientRequest.get("https://api.github.com/repos/anomalyco/kairos/releases/latest").pipe(
               HttpClientRequest.acceptJson,
             ),
           )
@@ -268,13 +268,13 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
               upgradeResult = yield* upgradeCurl(target)
               break
             case "npm":
-              upgradeResult = yield* run(["npm", "install", "-g", `opencode-ai@${target}`])
+              upgradeResult = yield* run(["npm", "install", "-g", `kairos-ai@${target}`])
               break
             case "pnpm":
-              upgradeResult = yield* run(["pnpm", "install", "-g", `opencode-ai@${target}`])
+              upgradeResult = yield* run(["pnpm", "install", "-g", `kairos-ai@${target}`])
               break
             case "bun":
-              upgradeResult = yield* run(["bun", "install", "-g", `opencode-ai@${target}`])
+              upgradeResult = yield* run(["bun", "install", "-g", `kairos-ai@${target}`])
               break
             case "brew": {
               const formula = yield* getBrewFormula()
@@ -302,7 +302,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildPro
               upgradeResult = yield* run(["choco", "upgrade", "kairos", `--version=${target}`, "-y"])
               break
             case "scoop":
-              upgradeResult = yield* run(["scoop", "install", `opencode@${target}`])
+              upgradeResult = yield* run(["scoop", "install", `kairos@${target}`])
               break
             default:
               return yield* new UpgradeFailedError({ stderr: `Unknown method: ${m}` })

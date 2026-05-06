@@ -138,12 +138,12 @@ openclaw onboard --non-interactive \
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
-      --auth-choice opencode-zen \
-      --opencode-zen-api-key "$OPENCODE_API_KEY" \
+      --auth-choice kairos-zen \
+      --kairos-zen-api-key "$KAIROS_API_KEY" \
       --gateway-port 18789 \
       --gateway-bind loopback
     ```
-    Swap to `--auth-choice opencode-go --opencode-go-api-key "$OPENCODE_API_KEY"` for the Go catalog.
+    Swap to `--auth-choice kairos-go --kairos-go-api-key "$KAIROS_API_KEY"` for the Go catalog.
   </Accordion>
   <Accordion title="Ollama example">
     ```bash

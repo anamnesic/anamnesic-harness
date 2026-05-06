@@ -126,7 +126,7 @@ export async function load(dir: string) {
     })
     if (!md) continue
 
-    const patterns = ["/.opencode/agent/", "/.opencode/agents/", "/agent/", "/agents/"]
+    const patterns = ["/.kairos/agent/", "/.kairos/agents/", "/agent/", "/agents/"]
     const name = configEntryNameFromPath(item, patterns)
 
     const config = {

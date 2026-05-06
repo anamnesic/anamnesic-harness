@@ -40,7 +40,7 @@ Current acpx built-in harness aliases:
 - `kimi`
 - `kiro`
 - `openclaw`
-- `opencode`
+- `kairos`
 - `pi`
 - `qwen`
 

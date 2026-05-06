@@ -332,7 +332,7 @@ under `skills.entries` in `~/.openclaw/openclaw.json`:
   `false` disables the skill even if it is bundled or installed.
   The bundled `coding-agent` skill is opt-in: set
   `skills.entries.coding-agent.enabled: true` before exposing it to agents,
-  then make sure one of `kairos`, `codex`, `opencode`, or `pi` is installed and
+  then make sure one of `kairos`, `codex`, `kairos`, or `pi` is installed and
   authenticated for its own CLI.
 </ParamField>
 <ParamField path="apiKey" type='string | { source, provider, id }'>

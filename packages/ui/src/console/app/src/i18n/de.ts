@@ -651,7 +651,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "Setzt zurück in",
   "workspace.lite.subscription.useBalance": "Nutze dein verfügbares Guthaben, nachdem die Nutzungslimits erreicht sind",
   "workspace.lite.subscription.selectProvider":
-    'Wähle "Kairos Go" als Anbieter in deiner opencode-Konfiguration, um Go-Modelle zu verwenden.',
+    'Wähle "Kairos Go" als Anbieter in deiner kairos-Konfiguration, um Go-Modelle zu verwenden.',
   "workspace.lite.black.message":
     "Du hast derzeit Kairos Black abonniert oder stehst auf der Warteliste. Bitte kündige zuerst, wenn du zu Go wechseln möchtest.",
   "workspace.lite.other.message":

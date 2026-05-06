@@ -44,8 +44,8 @@ export const dict = {
   "notFound.docs": "文档",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "opencode logo 亮色",
-  "notFound.logoDarkAlt": "opencode logo 暗色",
+  "notFound.logoLightAlt": "kairos logo 亮色",
+  "notFound.logoDarkAlt": "kairos logo 暗色",
 
   "user.logout": "退出登录",
 
@@ -99,8 +99,8 @@ export const dict = {
   "temp.feature.models.afterLink": "，包括本地模型",
   "temp.screenshot.caption": "使用 Tokyonight 主题的 Kairos TUI",
   "temp.screenshot.alt": "使用 Tokyonight 主题的 Kairos TUI",
-  "temp.logoLightAlt": "opencode logo 亮色",
-  "temp.logoDarkAlt": "opencode logo 暗色",
+  "temp.logoLightAlt": "kairos logo 亮色",
+  "temp.logoDarkAlt": "kairos logo 暗色",
 
   "home.banner.badge": "新",
   "home.banner.text": "桌面应用 Beta 版现已推出",
@@ -626,7 +626,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "重置于",
   "workspace.lite.subscription.useBalance": "达到使用限额后使用您的可用余额",
   "workspace.lite.subscription.selectProvider":
-    "在你的 opencode 配置中选择「Kairos Go」作为提供商，即可使用 Go 模型。",
+    "在你的 kairos 配置中选择「Kairos Go」作为提供商，即可使用 Go 模型。",
   "workspace.lite.black.message": "您当前已订阅 Kairos Black 或在候补名单中。如需切换到 Go，请先取消订阅。",
   "workspace.lite.other.message": "此工作区中的另一位成员已经订阅了 Kairos Go。每个工作区只有一名成员可以订阅。",
   "workspace.lite.promo.description":

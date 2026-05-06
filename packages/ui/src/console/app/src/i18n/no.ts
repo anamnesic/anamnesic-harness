@@ -37,14 +37,14 @@ export const dict = {
   "email.subscribe": "Abonner",
   "email.success": "Nesten ferdig - sjekk innboksen din og bekreft e-postadressen",
 
-  "notFound.title": "Ikke funnet | opencode",
+  "notFound.title": "Ikke funnet | kairos",
   "notFound.heading": "404 - Side ikke funnet",
   "notFound.home": "Hjem",
   "notFound.docs": "Dokumentasjon",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "opencode logo lys",
-  "notFound.logoDarkAlt": "opencode logo mørk",
+  "notFound.logoLightAlt": "kairos logo lys",
+  "notFound.logoDarkAlt": "kairos logo mørk",
 
   "user.logout": "Logg ut",
 
@@ -85,21 +85,21 @@ export const dict = {
 
   "home.title": "Kairos | Den åpne kildekode AI-kodingsagenten",
 
-  "temp.title": "opencode | AI-kodingsagent bygget for terminalen",
+  "temp.title": "kairos | AI-kodingsagent bygget for terminalen",
   "temp.hero.title": "AI-kodingsagenten bygget for terminalen",
-  "temp.zen": "opencode zen",
+  "temp.zen": "kairos zen",
   "temp.getStarted": "Kom i gang",
   "temp.feature.native.title": "Native TUI",
   "temp.feature.native.body": "Et responsivt, native terminal-brukergrensesnitt som kan temes",
   "temp.feature.zen.beforeLink": "En",
   "temp.feature.zen.link": "kuratert liste over modeller",
-  "temp.feature.zen.afterLink": "levert av opencode",
+  "temp.feature.zen.afterLink": "levert av kairos",
   "temp.feature.models.beforeLink": "Støtter 75+ LLM-leverandører gjennom",
   "temp.feature.models.afterLink": ", inkludert lokale modeller",
-  "temp.screenshot.caption": "opencode TUI med tokyonight-tema",
-  "temp.screenshot.alt": "opencode TUI med tokyonight-tema",
-  "temp.logoLightAlt": "opencode logo lys",
-  "temp.logoDarkAlt": "opencode logo mørk",
+  "temp.screenshot.caption": "kairos TUI med tokyonight-tema",
+  "temp.screenshot.alt": "kairos TUI med tokyonight-tema",
+  "temp.logoLightAlt": "kairos logo lys",
+  "temp.logoDarkAlt": "kairos logo mørk",
 
   "home.banner.badge": "Ny",
   "home.banner.text": "Desktop-app tilgjengelig i beta",
@@ -443,15 +443,15 @@ export const dict = {
     "Få tilgang til modeller konfigurert for optimal ytelse – ingen nedgraderinger eller ruting til billigere leverandører.",
   "workspace.newUser.feature.lockin.title": "Ingen innlåsing",
   "workspace.newUser.feature.lockin.body":
-    "Bruk Zen med hvilken som helst kodeagent, og fortsett å bruke andre leverandører med opencode når du vil.",
+    "Bruk Zen med hvilken som helst kodeagent, og fortsett å bruke andre leverandører med kairos når du vil.",
   "workspace.newUser.copyApiKey": "Kopier API-nøkkel",
   "workspace.newUser.copyKey": "Kopier nøkkel",
   "workspace.newUser.copied": "Kopiert!",
   "workspace.newUser.step.enableBilling": "Aktiver fakturering",
   "workspace.newUser.step.login.before": "Kjør",
-  "workspace.newUser.step.login.after": "og velg opencode",
+  "workspace.newUser.step.login.after": "og velg kairos",
   "workspace.newUser.step.pasteKey": "Lim inn API-nøkkelen",
-  "workspace.newUser.step.models.before": "Start opencode og kjør",
+  "workspace.newUser.step.models.before": "Start kairos og kjør",
   "workspace.newUser.step.models.after": "for å velge en modell",
 
   "workspace.models.title": "Modeller",
@@ -497,10 +497,10 @@ export const dict = {
   "workspace.cost.subscriptionShort": "sub",
 
   "workspace.keys.title": "API-nøkler",
-  "workspace.keys.subtitle": "Administrer API-nøklene dine for å få tilgang til opencode-tjenester.",
+  "workspace.keys.subtitle": "Administrer API-nøklene dine for å få tilgang til kairos-tjenester.",
   "workspace.keys.create": "Opprett API-nøkkel",
   "workspace.keys.placeholder": "Skriv inn navn på nøkkel",
-  "workspace.keys.empty": "Opprett en opencode Gateway API-nøkkel",
+  "workspace.keys.empty": "Opprett en kairos Gateway API-nøkkel",
   "workspace.keys.table.name": "Navn",
   "workspace.keys.table.key": "Nøkkel",
   "workspace.keys.table.createdBy": "Opprettet av",
@@ -649,7 +649,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "Nullstilles om",
   "workspace.lite.subscription.useBalance": "Bruk din tilgjengelige saldo etter å ha nådd bruksgrensene",
   "workspace.lite.subscription.selectProvider":
-    'Velg "Kairos Go" som leverandør i opencode-konfigurasjonen din for å bruke Go-modeller.',
+    'Velg "Kairos Go" som leverandør i kairos-konfigurasjonen din for å bruke Go-modeller.',
   "workspace.lite.black.message":
     "Du abonnerer for øyeblikket på Kairos Black eller står på venteliste. Vennligst avslutt abonnementet først hvis du vil bytte til Go.",
   "workspace.lite.other.message":

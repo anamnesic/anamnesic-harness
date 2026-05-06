@@ -44,8 +44,8 @@ export const dict = {
   "notFound.docs": "Documentation",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "opencode logo light",
-  "notFound.logoDarkAlt": "opencode logo dark",
+  "notFound.logoLightAlt": "kairos logo light",
+  "notFound.logoDarkAlt": "kairos logo dark",
 
   "user.logout": "Se déconnecter",
 
@@ -96,8 +96,8 @@ export const dict = {
   "temp.feature.models.afterLink": ", y compris les modèles locaux",
   "temp.screenshot.caption": "Kairos TUI avec le thème tokyonight",
   "temp.screenshot.alt": "Kairos TUI avec le thème tokyonight",
-  "temp.logoLightAlt": "opencode logo light",
-  "temp.logoDarkAlt": "opencode logo dark",
+  "temp.logoLightAlt": "kairos logo light",
+  "temp.logoDarkAlt": "kairos logo dark",
 
   "home.banner.badge": "Nouveau",
   "home.banner.text": "Application desktop disponible en bêta",
@@ -658,7 +658,7 @@ export const dict = {
   "workspace.lite.subscription.useBalance":
     "Utilisez votre solde disponible après avoir atteint les limites d'utilisation",
   "workspace.lite.subscription.selectProvider":
-    'Sélectionnez "Kairos Go" comme fournisseur dans votre configuration opencode pour utiliser les modèles Go.',
+    'Sélectionnez "Kairos Go" comme fournisseur dans votre configuration kairos pour utiliser les modèles Go.',
   "workspace.lite.black.message":
     "Vous êtes actuellement abonné à Kairos Black ou sur liste d'attente. Veuillez d'abord vous désabonner si vous souhaitez passer à Go.",
   "workspace.lite.other.message":

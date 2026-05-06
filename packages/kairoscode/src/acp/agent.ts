@@ -535,9 +535,9 @@ export class Agent implements ACPAgent {
     log.info("initialize", { protocolVersion: params.protocolVersion })
 
     const authMethod: AuthMethod = {
-      description: "Run `opencode auth login` in the terminal",
-      name: "Login with opencode",
-      id: "opencode-login",
+      description: "Run `kairos auth login` in the terminal",
+      name: "Login with kairos",
+      id: "kairos-login",
     }
 
     // If client supports terminal-auth capability, use that instead.
@@ -1625,12 +1625,12 @@ async function defaultModel(config: ACPConfig, cwd?: string): Promise<{ provider
 
   if (specified && !providers.length) return specified
 
-  const opencodeProvider = providers.find((p) => p.id === "kairos")
-  if (opencodeProvider) {
-    if (opencodeProvider.models["big-pickle"]) {
-      return { providerID: ProviderID.opencode, modelID: ModelID.make("big-pickle") }
+  const kairosProvider = providers.find((p) => p.id === "kairos")
+  if (kairosProvider) {
+    if (kairosProvider.models["big-pickle"]) {
+      return { providerID: ProviderID.kairos, modelID: ModelID.make("big-pickle") }
     }
-    const [best] = Provider.sort(Object.values(opencodeProvider.models))
+    const [best] = Provider.sort(Object.values(kairosProvider.models))
     if (best) {
       return {
         providerID: ProviderID.make(best.providerID),
@@ -1650,7 +1650,7 @@ async function defaultModel(config: ACPConfig, cwd?: string): Promise<{ provider
 
   if (specified) return specified
 
-  return { providerID: ProviderID.opencode, modelID: ModelID.make("big-pickle") }
+  return { providerID: ProviderID.kairos, modelID: ModelID.make("big-pickle") }
 }
 
 function parseUri(
@@ -1763,7 +1763,7 @@ function buildVariantMeta(input: {
   availableVariants: string[]
 }) {
   return {
-    opencode: {
+    kairos: {
       modelId: `${input.model.providerID}/${input.model.modelID}`,
       variant: input.variant ?? null,
       availableVariants: input.availableVariants,

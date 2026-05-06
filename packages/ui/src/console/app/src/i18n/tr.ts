@@ -37,14 +37,14 @@ export const dict = {
   "email.subscribe": "Abone ol",
   "email.success": "Neredeyse bitti, gelen kutunuzu kontrol edin ve e-postanızı onaylayın",
 
-  "notFound.title": "Bulunamadı | opencode",
+  "notFound.title": "Bulunamadı | kairos",
   "notFound.heading": "404 - Sayfa bulunamadı",
   "notFound.home": "Ana sayfa",
   "notFound.docs": "Dokümantasyon",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
-  "notFound.logoLightAlt": "opencode açık logo",
-  "notFound.logoDarkAlt": "opencode koyu logo",
+  "notFound.logoLightAlt": "kairos açık logo",
+  "notFound.logoDarkAlt": "kairos koyu logo",
 
   "user.logout": "Çıkış",
 
@@ -85,21 +85,21 @@ export const dict = {
 
   "home.title": "Kairos | Açık kaynaklı yapay zeka kodlama ajanı",
 
-  "temp.title": "opencode | Terminal için geliştirilmiş yapay zeka kodlama ajanı",
+  "temp.title": "kairos | Terminal için geliştirilmiş yapay zeka kodlama ajanı",
   "temp.hero.title": "Terminal için geliştirilmiş yapay zeka kodlama ajanı",
-  "temp.zen": "opencode zen",
+  "temp.zen": "kairos zen",
   "temp.getStarted": "Başlayın",
   "temp.feature.native.title": "Yerel (Native) TUI",
   "temp.feature.native.body": "Duyarlı, yerel, temalandırılabilir bir terminal arayüzü",
-  "temp.feature.zen.beforeLink": "opencode tarafından sağlanan ",
+  "temp.feature.zen.beforeLink": "kairos tarafından sağlanan ",
   "temp.feature.zen.link": "seçkin modeller listesi",
   "temp.feature.zen.afterLink": "",
   "temp.feature.models.beforeLink": "Yerel modeller dahil 75+ LLM sağlayıcısını ",
   "temp.feature.models.afterLink": " üzerinden destekler",
-  "temp.screenshot.caption": "opencode TUI ve tokyonight teması",
-  "temp.screenshot.alt": "tokyonight temalı opencode TUI",
-  "temp.logoLightAlt": "opencode açık logo",
-  "temp.logoDarkAlt": "opencode koyu logo",
+  "temp.screenshot.caption": "kairos TUI ve tokyonight teması",
+  "temp.screenshot.alt": "tokyonight temalı kairos TUI",
+  "temp.logoLightAlt": "kairos açık logo",
+  "temp.logoDarkAlt": "kairos koyu logo",
 
   "home.banner.badge": "Yeni",
   "home.banner.text": "Masaüstü uygulaması beta olarak mevcut",
@@ -446,15 +446,15 @@ export const dict = {
     "Optimum performans için yapılandırılmış modellere erişin; sürüm düşürme veya daha ucuz sağlayıcılara yönlendirme yok.",
   "workspace.newUser.feature.lockin.title": "Kilitlenme Yok",
   "workspace.newUser.feature.lockin.body":
-    "Zen'i herhangi bir kodlama ajanıyla kullanın ve istediğiniz zaman opencode ile diğer sağlayıcıları kullanmaya devam edin.",
+    "Zen'i herhangi bir kodlama ajanıyla kullanın ve istediğiniz zaman kairos ile diğer sağlayıcıları kullanmaya devam edin.",
   "workspace.newUser.copyApiKey": "API anahtarını kopyala",
   "workspace.newUser.copyKey": "Anahtarı Kopyala",
   "workspace.newUser.copied": "Kopyalandı!",
   "workspace.newUser.step.enableBilling": "Faturalandırmayı etkinleştir",
   "workspace.newUser.step.login.before": "Çalıştır",
-  "workspace.newUser.step.login.after": "ve opencode seçeneğini seçin",
+  "workspace.newUser.step.login.after": "ve kairos seçeneğini seçin",
   "workspace.newUser.step.pasteKey": "API anahtarınızı yapıştırın",
-  "workspace.newUser.step.models.before": "opencode'u başlatın ve çalıştırın",
+  "workspace.newUser.step.models.before": "kairos'u başlatın ve çalıştırın",
   "workspace.newUser.step.models.after": "bir model seçmek için",
 
   "workspace.models.title": "Modeller",
@@ -500,10 +500,10 @@ export const dict = {
   "workspace.cost.subscriptionShort": "abonelik",
 
   "workspace.keys.title": "API Anahtarları",
-  "workspace.keys.subtitle": "opencode hizmetlerine erişim için API anahtarlarınızı yönetin.",
+  "workspace.keys.subtitle": "kairos hizmetlerine erişim için API anahtarlarınızı yönetin.",
   "workspace.keys.create": "API Anahtarı Oluştur",
   "workspace.keys.placeholder": "Anahtar adını girin",
-  "workspace.keys.empty": "Bir opencode Gateway API anahtarı oluşturun",
+  "workspace.keys.empty": "Bir kairos Gateway API anahtarı oluşturun",
   "workspace.keys.table.name": "İsim",
   "workspace.keys.table.key": "Anahtar",
   "workspace.keys.table.createdBy": "Oluşturan",
@@ -652,7 +652,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "Sıfırlama süresi",
   "workspace.lite.subscription.useBalance": "Kullanım limitlerine ulaştıktan sonra mevcut bakiyenizi kullanın",
   "workspace.lite.subscription.selectProvider":
-    'Go modellerini kullanmak için opencode yapılandırmanızda "Kairos Go"\'yu sağlayıcı olarak seçin.',
+    'Go modellerini kullanmak için kairos yapılandırmanızda "Kairos Go"\'yu sağlayıcı olarak seçin.',
   "workspace.lite.black.message":
     "Şu anda Kairos Black abonesisiniz veya bekleme listesindesiniz. Go'ya geçmek istiyorsanız lütfen önce aboneliğinizi iptal edin.",
   "workspace.lite.other.message":

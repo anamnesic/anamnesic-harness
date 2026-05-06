@@ -18,7 +18,7 @@ packages/
 ├── infra/          # @kairos/infra — Protocol, types, constants, proxy
 ├── state/          # @kairos/state — UI state, context, hooks, components
 ├── devtools/       # @kairos/devtools — Scripts, containers, QA, tsconfigs
-└── opencode/       # @kairos/opencode — Integração opencode
+└── kairos/       # @kairos/kairos — Integração kairos
 ```
 
 ---
@@ -192,14 +192,14 @@ src/
 
 ---
 
-## `@kairos/opencode` — Opencode Integration
+## `@kairos/kairos` — Opencode Integration
 
-**Pacote:** `packages/opencode/`
-**Papel na arquitetura:** Integração do opencode como sub-produto independente dentro do ecossistema Kairos.
+**Pacote:** `packages/kairos/`
+**Papel na arquitetura:** Integração do kairos como sub-produto independente dentro do ecossistema Kairos.
 
 ```
 src/
-├── opencode/   # Pacote opencode completo: agents, ACP, auth, account, audio
+├── kairos/   # Pacote kairos completo: agents, ACP, auth, account, audio
 └── internals/  # Código-fonte interno: ACP, bindings, canvas-host, channels, chat, agents
 ```
 
@@ -214,7 +214,7 @@ src/
 @kairos/editor ────────┼──→ @kairos/core ──→ @kairos/infra
 @kairos/plugins ───────┤          ↑
 @kairos/state ─────────┤     @kairos/infra
-@kairos/opencode ──────┘
+@kairos/kairos ──────┘
 
 @kairos/devtools  (sem dependência de runtime nos outros pacotes)
 ```

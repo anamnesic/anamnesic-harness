@@ -10,8 +10,8 @@ Kairos exposes two hosted catalogs in OpenClaw:
 
 | Catalog | Prefix            | Runtime provider |
 | ------- | ----------------- | ---------------- |
-| **Zen** | `opencode/...`    | `opencode`       |
-| **Go**  | `opencode-go/...` | `opencode-go`    |
+| **Zen** | `kairos/...`    | `kairos`       |
+| **Go**  | `kairos-go/...` | `kairos-go`    |
 
 Both catalogs use the same Kairos API key. OpenClaw keeps the runtime provider ids
 split so upstream per-model routing stays correct, but onboarding and docs treat them
@@ -26,23 +26,23 @@ as one Kairos setup.
     <Steps>
       <Step title="Run onboarding">
         ```bash
-        openclaw onboard --auth-choice opencode-zen
+        openclaw onboard --auth-choice kairos-zen
         ```
 
         Or pass the key directly:
 
         ```bash
-        openclaw onboard --opencode-zen-api-key "$OPENCODE_API_KEY"
+        openclaw onboard --kairos-zen-api-key "$KAIROS_API_KEY"
         ```
       </Step>
       <Step title="Set a Zen model as the default">
         ```bash
-        openclaw config set agents.defaults.model.primary "opencode/kairos-apple-4-6"
+        openclaw config set agents.defaults.model.primary "kairos/kairos-apple-4-6"
         ```
       </Step>
       <Step title="Verify models are available">
         ```bash
-        openclaw models list --provider opencode
+        openclaw models list --provider kairos
         ```
       </Step>
     </Steps>
@@ -55,23 +55,23 @@ as one Kairos setup.
     <Steps>
       <Step title="Run onboarding">
         ```bash
-        openclaw onboard --auth-choice opencode-go
+        openclaw onboard --auth-choice kairos-go
         ```
 
         Or pass the key directly:
 
         ```bash
-        openclaw onboard --opencode-go-api-key "$OPENCODE_API_KEY"
+        openclaw onboard --kairos-go-api-key "$KAIROS_API_KEY"
         ```
       </Step>
       <Step title="Set a Go model as the default">
         ```bash
-        openclaw config set agents.defaults.model.primary "opencode-go/kimi-k2.6"
+        openclaw config set agents.defaults.model.primary "kairos-go/kimi-k2.6"
         ```
       </Step>
       <Step title="Verify models are available">
         ```bash
-        openclaw models list --provider opencode-go
+        openclaw models list --provider kairos-go
         ```
       </Step>
     </Steps>
@@ -83,8 +83,8 @@ as one Kairos setup.
 
 ```json5
 {
-  env: { OPENCODE_API_KEY: "sk-..." },
-  agents: { defaults: { model: { primary: "opencode/kairos-apple-4-6" } } },
+  env: { KAIROS_API_KEY: "sk-..." },
+  agents: { defaults: { model: { primary: "kairos/kairos-apple-4-6" } } },
 }
 ```
 
@@ -94,21 +94,21 @@ as one Kairos setup.
 
 | Property         | Value                                                                   |
 | ---------------- | ----------------------------------------------------------------------- |
-| Runtime provider | `opencode`                                                              |
-| Example models   | `opencode/kairos-apple-4-6`, `opencode/gpt-5.5`, `opencode/gemini-3-pro` |
+| Runtime provider | `kairos`                                                              |
+| Example models   | `kairos/kairos-apple-4-6`, `kairos/gpt-5.5`, `kairos/gemini-3-pro` |
 
 ### Go
 
 | Property         | Value                                                                    |
 | ---------------- | ------------------------------------------------------------------------ |
-| Runtime provider | `opencode-go`                                                            |
-| Example models   | `opencode-go/kimi-k2.6`, `opencode-go/glm-5`, `opencode-go/minimax-m2.5` |
+| Runtime provider | `kairos-go`                                                            |
+| Example models   | `kairos-go/kimi-k2.6`, `kairos-go/glm-5`, `kairos-go/minimax-m2.5` |
 
 ## Advanced configuration
 
 <AccordionGroup>
   <Accordion title="API key aliases">
-    `OPENCODE_ZEN_API_KEY` is also supported as an alias for `OPENCODE_API_KEY`.
+    `KAIROS_ZEN_API_KEY` is also supported as an alias for `KAIROS_API_KEY`.
   </Accordion>
 
   <Accordion title="Shared credentials">
