@@ -1,11 +1,12 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Login } from '@/src/screens/Login';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/src/context/AuthContext';
 import { useEffect } from 'react';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -19,5 +20,13 @@ export default function LoginPage() {
 
   return (
     <Login onNavigateToSignup={() => router.push('/signup')} />
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

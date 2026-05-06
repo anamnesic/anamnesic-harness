@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
@@ -19,6 +19,8 @@ import {
   MailOpen,
   X,
   MessageSquare,
+  Menu,
+  ChevronDown,
 } from 'lucide-react';
 import { apiFetch } from './lib/api';
 import { ContextualChat } from './components/ContextualChat';
@@ -124,16 +126,15 @@ function NotificationPopup({ onClose, onNavigate }: { onClose: () => void; onNav
   );
 }
 
-const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange, unreadEmailCount, chatOpen, onChatToggle }: {
+const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatOpen, onChatToggle, onTabChange }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
   rightElement?: React.ReactNode;
-  activeTab: string;
-  onTabChange: (id: TabId) => void;
   unreadEmailCount?: number;
   chatOpen?: boolean;
   onChatToggle?: () => void;
+  onTabChange: (id: TabId) => void;
 }) => {
   const [showPopup, setShowPopup] = useState(false);
   return (
@@ -153,47 +154,17 @@ const Header = ({ title, subtitle, onBack, rightElement, activeTab, onTabChange,
             </div>
           )}
           <div className="min-w-0">
-            {activeTab !== 'dashboard' && (
-              <Breadcrumbs
-                items={[
-                  { label: 'Início', onClick: onBack },
-                  { label: title, active: true }
-                ]}
-                className="mb-1"
-              />
-            )}
             <h1 className="text-lg font-bold leading-none tracking-tight">{title}</h1>
             {subtitle && (
-              <p className={cn(
-                'mt-1 text-text-dim',
-                activeTab === 'dashboard'
-                  ? 'text-[10px] font-bold uppercase tracking-[0.2em]'
-                  : 'text-xs'
-              )}>
+              <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-text-dim">
                 {subtitle}
               </p>
             )}
           </div>
         </div>
-        <div className="mx-auto min-w-0 flex-1 px-1">
-          <div className="mx-auto flex items-center gap-1 rounded-xl border border-border bg-card/60 p-0.5">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
-                  activeTab === tab.id
-                    ? 'bg-bg text-highlight border border-border'
-                    : 'text-text-dim hover:text-accent hover:bg-card/60',
-                )}
-              >
-                <tab.icon className={cn('size-3.5', activeTab === tab.id && 'text-primary')} />
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+
+        <div className="flex-1" />
+
         <div className="flex items-center gap-2">
           <RepositorySelector />
           {onChatToggle && (
@@ -254,33 +225,121 @@ const TABS = [
 type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'redteaming' | 'integrations' | 'inference';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
-const LeftSidebar = ({ onNavigate }: { onNavigate: (id: TabId) => void }) => (
-  <aside className="w-64 border-r border-border bg-bg/50 flex flex-col h-screen sticky top-0 overflow-hidden">
-    <div className="p-4 border-b border-border/50">
-      <RepositorySelector hideWhenEmpty />
-    </div>
-    <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-      {[
-        { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
-        { id: 'control', label: 'Segurança', icon: Shield },
-        { id: 'agents', label: 'Agentes', icon: Bot },
-        { id: 'skills', label: 'Skills', icon: Pencil },
-        { id: 'decisions', label: 'Decisões', icon: Lightbulb },
-        { id: 'system', label: 'Núcleo', icon: Settings2 },
-      ].map(item => (
-        <button
-          key={item.id}
-          onClick={() => onNavigate(item.id as TabId)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg text-text-dim hover:text-accent hover:bg-card/50 transition-colors"
-        >
-          <item.icon className="size-4" />
-          <span className="truncate">{item.label}</span>
-        </button>
-      ))}
-    </nav>
-  </aside>
-);
+// ─── Bottom Dock ────────────────────────────────────────────────────────────
 
+function BottomDock({
+  activeTab,
+  onTabChange,
+  minimized,
+  onMinimize,
+}: {
+  activeTab: TabId;
+  onTabChange: (id: TabId) => void;
+  minimized: boolean;
+  onMinimize: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {!minimized && (
+        <motion.div
+          initial={{ opacity: 0, y: 32, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 32, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+          className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2"
+        >
+          <div className="flex items-end gap-1 rounded-2xl border border-border bg-bg/90 px-2 py-2 shadow-2xl backdrop-blur-xl">
+            {TABS.map((tab, i) => (
+              <DockItem
+                key={tab.id}
+                tab={tab}
+                active={activeTab === tab.id}
+                onSelect={() => onTabChange(tab.id)}
+                index={i}
+              />
+            ))}
+
+            {/* Divider */}
+            <div className="mx-1 h-8 w-px bg-border/60 self-center" />
+
+            {/* Minimize button */}
+            <button
+              onClick={onMinimize}
+              title="Minimizar dock"
+              className="flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-1.5 text-text-dim hover:text-accent hover:bg-card/60 transition-all group"
+            >
+              <ChevronDown className="size-4 group-hover:translate-y-0.5 transition-transform" />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Min</span>
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function DockItem({
+  tab,
+  active,
+  onSelect,
+  index,
+}: {
+  tab: { id: string; label: string; icon: React.ElementType };
+  active: boolean;
+  onSelect: () => void;
+  index: number;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <motion.button
+      onClick={onSelect}
+      onHoverStart={() => setHovered(true)}
+      onHoverEnd={() => setHovered(false)}
+      animate={{ scale: hovered ? 1.18 : 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+      className={cn(
+        'relative flex flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 transition-colors',
+        active
+          ? 'bg-primary/15 text-primary'
+          : 'text-text-dim hover:text-accent',
+      )}
+    >
+      <tab.icon className={cn('size-5', active && 'text-primary')} />
+      <span className="text-[9px] font-bold uppercase tracking-wider leading-none">
+        {tab.label}
+      </span>
+      {/* Active indicator dot */}
+      {active && (
+        <motion.span
+          layoutId="dock-active-dot"
+          className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 size-1 rounded-full bg-primary"
+        />
+      )}
+    </motion.button>
+  );
+}
+
+// ─── Floating Hamburger ─────────────────────────────────────────────────────
+
+function FloatingMenuButton({ onClick }: { onClick: () => void }) {
+  return (
+    <AnimatePresence>
+      <motion.button
+        key="hamburger"
+        initial={{ opacity: 0, scale: 0.7, x: -20 }}
+        animate={{ opacity: 1, scale: 1, x: 0 }}
+        exit={{ opacity: 0, scale: 0.7, x: -20 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+        onClick={onClick}
+        title="Expandir menu"
+        className="fixed bottom-5 left-5 z-50 flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-bg/90 text-accent shadow-2xl backdrop-blur-xl hover:text-primary hover:border-primary/40 transition-colors"
+      >
+        <Menu className="size-5" />
+      </motion.button>
+    </AnimatePresence>
+  );
+}
 
 function useScreenConfig(
   active: TabId,
@@ -404,6 +463,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [unreadEmailCount, setUnreadEmailCount] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
+  const [dockMinimized, setDockMinimized] = useState(false);
   const { isAuthenticated, isLoading } = useAuth();
 
   const config = useScreenConfig(
@@ -429,21 +489,19 @@ function AppContent() {
     <>
       <OnboardingModal />
       <div className="flex h-screen overflow-hidden bg-bg font-sans text-highlight selection:bg-primary/20">
-        {/* Main Content */}
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <Header
             title={config.title}
             subtitle={config.subtitle}
             onBack={config.onBack}
             rightElement={config.rightElement}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
             unreadEmailCount={unreadEmailCount}
             chatOpen={chatOpen}
             onChatToggle={() => setChatOpen(v => !v)}
+            onTabChange={setActiveTab}
           />
           <div className="flex min-h-0 flex-1 overflow-hidden">
-            <main className="scrollbar-kairos flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+            <main className="scrollbar-kairos flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pb-24">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
@@ -466,6 +524,19 @@ function AppContent() {
           </div>
         </div>
       </div>
+
+      {/* Bottom dock navigation */}
+      <BottomDock
+        activeTab={activeTab}
+        onTabChange={tab => { setActiveTab(tab); setDockMinimized(false); }}
+        minimized={dockMinimized}
+        onMinimize={() => setDockMinimized(true)}
+      />
+
+      {/* Floating hamburger when dock is minimized */}
+      {dockMinimized && (
+        <FloatingMenuButton onClick={() => setDockMinimized(false)} />
+      )}
     </>
   );
 }
