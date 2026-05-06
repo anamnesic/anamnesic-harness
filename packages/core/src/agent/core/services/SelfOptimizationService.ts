@@ -1,10 +1,10 @@
-import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { CliInferenceService, type LlmCliProvider } from '../llm-cli';
 import { MetricsService, type MetricsSnapshot } from './MetricsService';
 import { ModelBenchmarkService, type BenchmarkReport } from './ModelBenchmarkService';
 import { Logger } from '../utils/Logger';
+import { vaultWrite, vaultAppend, vaultRead, vaultExists } from '@kairos/vault';
 
 const optimizationSchema = z.object({
     configImprovements: z.array(z.object({
@@ -88,7 +88,7 @@ export class SelfOptimizationService {
         this.preferredProvider = options.preferredProvider ?? 'gemini';
         this.fallbackProviders = options.fallbackProviders ?? ['kairos', 'copilot', 'codex'];
         this.intervalMs = Math.max(60_000, options.intervalMs ?? 10 * 60_000);
-        this.dataDir = options.dataDir ?? path.join(process.cwd(), 'data', 'self-optimization');
+        this.dataDir = options.dataDir ?? 'self-optimization';
     }
 
     static getInstance(options?: SelfOptimizationServiceOptions): SelfOptimizationService {
@@ -184,18 +184,18 @@ export class SelfOptimizationService {
             timestamp: new Date().toISOString(),
         };
 
-        await fs.mkdir(this.dataDir, { recursive: true });
-        const logFile = path.join(this.dataDir, 'decisions.log');
-        await fs.appendFile(logFile, JSON.stringify(decision) + '\n', 'utf8');
+        await vaultAppend(`${this.dataDir}/decisions.log`, JSON.stringify(decision));
         return decision;
     }
 
     async getDecisionHistory(limit: number = 100): Promise<OptimizationDecision[]> {
         const safeLimit = Math.max(1, Math.min(limit, 500));
-        const logFile = path.join(this.dataDir, 'decisions.log');
+        const logRelPath = `${this.dataDir}/decisions.log`;
 
         try {
-            const raw = await fs.readFile(logFile, 'utf8');
+            const exists = await vaultExists(logRelPath);
+            if (!exists) return [];
+            const raw = await vaultRead(logRelPath);
             const rows = raw
                 .split(/\r?\n/)
                 .filter(Boolean)
@@ -310,12 +310,9 @@ export class SelfOptimizationService {
 
     private async persistRun(payload: Omit<SelfOptimizationRunResult, 'outputFile'>): Promise<string> {
         const dateKey = new Date(payload.generatedAt).toISOString().slice(0, 10);
-        const dayDir = path.join(this.dataDir, dateKey);
-        await fs.mkdir(dayDir, { recursive: true });
-
         const stamp = payload.generatedAt.replace(/[:.]/g, '-');
-        const outputFile = path.join(dayDir, `self-optimization-${stamp}.json`);
-        await fs.writeFile(outputFile, JSON.stringify(payload, null, 2), 'utf8');
-        return outputFile;
+        const relPath = `${this.dataDir}/${dateKey}/self-optimization-${stamp}.json`;
+        await vaultWrite(relPath, JSON.stringify(payload, null, 2));
+        return relPath;
     }
 }

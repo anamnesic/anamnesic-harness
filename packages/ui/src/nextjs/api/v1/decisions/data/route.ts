@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { ok, err } from '@/app/api/_lib/response';
+import { vaultDataDir, vaultReadEnc } from '@kairos/vault';
 
 type DecisionSource = 'proactive' | 'self-optimization' | 'decision-log' | 'system-log' | 'audit';
 
@@ -52,7 +53,9 @@ async function listJsonFiles(dirPath: string, limit: number): Promise<string[]> 
     const files: Array<{ filePath: string; mtimeMs: number }> = [];
 
     for (const entry of all) {
-        if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.json')) continue;
+        if (!entry.isFile()) continue;
+        const name = entry.name.toLowerCase();
+        if (!name.endsWith('.json.enc') && !name.endsWith('.json')) continue;
         const filePath = path.join(entry.parentPath, entry.name);
         const stat = await fs.stat(filePath).catch(() => null);
         if (!stat) continue;
@@ -65,7 +68,9 @@ async function listJsonFiles(dirPath: string, limit: number): Promise<string[]> 
 
 async function readJson(filePath: string): Promise<Record<string, unknown> | null> {
     try {
-        const raw = await fs.readFile(filePath, 'utf8');
+        const raw = filePath.endsWith('.enc')
+            ? await vaultReadEnc(filePath)
+            : await fs.readFile(filePath, 'utf8');
         const parsed = JSON.parse(raw) as unknown;
         if (parsed && typeof parsed === 'object') {
             return parsed as Record<string, unknown>;
@@ -313,8 +318,10 @@ async function parseSelfOptimizationFiles(
 }
 
 async function parseDecisionLog(dataDir: string, selfDir: string, maxRows: number): Promise<DecisionFeedItem[]> {
-    const logPath = path.join(selfDir, 'decisions.log');
-    const raw = await fs.readFile(logPath, 'utf8').catch(() => '');
+    const logPath = path.join(selfDir, 'decisions.log.enc');
+    const raw = await vaultReadEnc(logPath).catch(
+        () => fs.readFile(path.join(selfDir, 'decisions.log'), 'utf8').catch(() => ''),
+    );
     if (!raw.trim()) return [];
 
     const lines = raw.split(/\r?\n/).filter(Boolean);
@@ -442,7 +449,7 @@ async function collectInventory(dataDir: string): Promise<Record<string, SourceI
 
 export async function GET() {
     try {
-        const dataDir = path.join(process.cwd(), 'data');
+        const dataDir = vaultDataDir();
         const proactiveDir = path.join(dataDir, 'proactive');
         const selfDir = path.join(dataDir, 'self-optimization');
         const logsDir = path.join(dataDir, 'logs');

@@ -1,8 +1,8 @@
-import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { CliInferenceService, type LlmCliProvider } from '../llm-cli';
 import { memoryManager, type EnrichedMemoryEntry } from '../../memory';
+import { vaultWrite } from '@kairos/vault';
 import { ApprovalFlow } from '../../policies/approvalFlow';
 import { Logger } from '../utils/Logger';
 
@@ -92,7 +92,7 @@ export class ProactivePlannerService {
         this.intervalMs = Math.max(30_000, options.intervalMs ?? 5 * 60_000);
         this.recentWindowDays = Math.max(1, options.recentWindowDays ?? 2);
         this.maxEvents = Math.max(20, options.maxEvents ?? 200);
-        this.dataDir = options.dataDir ?? path.join(process.cwd(), 'data', 'proactive');
+        this.dataDir = options.dataDir ?? 'proactive';
         this.requireApprovalForSensitiveTasks = options.requireApprovalForSensitiveTasks ?? true;
         this.approvalRequester = options.approvalRequester ?? 'proactive-planner';
         this.approvalFlow = options.approvalFlow;
@@ -297,14 +297,10 @@ export class ProactivePlannerService {
         payload: Omit<ProactivePlannerRunResult, 'projectId' | 'outputFile'>,
     ): Promise<string> {
         const dateKey = new Date(payload.generatedAt).toISOString().slice(0, 10);
-        const dayDir = path.join(this.dataDir, dateKey);
-        await fs.mkdir(dayDir, { recursive: true });
-
         const safeProject = this.slug(projectId || 'system') || 'system';
         const stamp = payload.generatedAt.replace(/[:.]/g, '-');
-        const outputFile = path.join(dayDir, `${safeProject}-${stamp}.json`);
-
-        await fs.writeFile(outputFile, JSON.stringify({ projectId, ...payload }, null, 2), 'utf8');
-        return outputFile;
+        const relPath = `${this.dataDir}/${dateKey}/${safeProject}-${stamp}.json`;
+        await vaultWrite(relPath, JSON.stringify({ projectId, ...payload }, null, 2));
+        return relPath;
     }
 }

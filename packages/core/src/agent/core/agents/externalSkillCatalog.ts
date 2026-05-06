@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
 import path from 'path';
+import { vaultRead, vaultReaddir } from '@kairos/vault';
 
 export interface ExternalSkillDefinition {
     provider: string;
@@ -7,60 +7,60 @@ export interface ExternalSkillDefinition {
     key: string;
     title: string;
     description: string;
+    capabilities: string[];
+    use_for: string[];
+    category: string;
     prompt: string;
 }
 
-const SKILLS_ROOT = path.join(process.cwd(), 'data', 'skills');
+interface SkillFrontmatter {
+    id: string;
+    name: string;
+    version?: string;
+    category: string;
+    capabilities?: string[];
+    description?: string;
+    use_for?: string[];
+}
+
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 let cache: { loadedAt: number; items: ExternalSkillDefinition[] } | null = null;
 
-function toSlug(value: string): string {
-    return value
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-}
+function parseFrontmatter(raw: string): { meta: SkillFrontmatter; body: string } | null {
+    if (!raw.startsWith('---')) return null;
+    const end = raw.indexOf('\n---', 3);
+    if (end === -1) return null;
+    const yamlBlock = raw.slice(4, end);
+    const body = raw.slice(end + 4).trim();
 
-function toTitle(value: string): string {
-    const cleaned = value
-        .replace(/[_-]+/g, ' ')
-        .replace(/\.[^/.]+$/, '')
-        .trim();
+    const meta: Record<string, unknown> = {};
+    let currentKey = '';
+    let currentList: string[] | null = null;
 
-    if (!cleaned) return value;
-
-    return cleaned
-        .split(/\s+/)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-}
-
-async function getProviderDirectories(): Promise<string[]> {
-    const entries = await fs.readdir(SKILLS_ROOT, { withFileTypes: true });
-    return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-}
-
-async function getFilesRecursively(rootDir: string): Promise<string[]> {
-    const out: string[] = [];
-
-    async function walk(currentDir: string): Promise<void> {
-        const entries = await fs.readdir(currentDir, { withFileTypes: true });
-
-        for (const entry of entries) {
-            const fullPath = path.join(currentDir, entry.name);
-            if (entry.isDirectory()) {
-                await walk(fullPath);
-            } else if (entry.isFile()) {
-                out.push(fullPath);
+    for (const line of yamlBlock.split('\n')) {
+        const listItem = line.match(/^  - (.+)$/);
+        if (listItem) {
+            currentList?.push(listItem[1].replace(/^"|"$/g, '').replace(/^'|'$/g, ''));
+            continue;
+        }
+        const kv = line.match(/^([a-z_]+): ?(.*)$/);
+        if (kv) {
+            currentList = null;
+            const [, k, v] = kv;
+            const val = v.replace(/^"|"$/g, '').trim();
+            if (val === '') {
+                currentList = [];
+                meta[k] = currentList;
+            } else {
+                meta[k] = val;
             }
+            currentKey = k;
         }
     }
 
-    await walk(rootDir);
-    return out;
+    if (!meta['id'] || !meta['name'] || !meta['category']) return null;
+    return { meta: meta as unknown as SkillFrontmatter, body };
 }
 
 export async function loadExternalSkillsFromData(force = false): Promise<ExternalSkillDefinition[]> {
@@ -68,9 +68,9 @@ export async function loadExternalSkillsFromData(force = false): Promise<Externa
         return cache.items;
     }
 
-    let providers: string[] = [];
+    let files: string[] = [];
     try {
-        providers = await getProviderDirectories();
+        files = await vaultReaddir('skills/kairos');
     } catch {
         cache = { loadedAt: Date.now(), items: [] };
         return [];
@@ -78,37 +78,34 @@ export async function loadExternalSkillsFromData(force = false): Promise<Externa
 
     const skills: ExternalSkillDefinition[] = [];
 
-    for (const providerName of providers) {
-        const providerDir = path.join(SKILLS_ROOT, providerName);
-        const files = await getFilesRecursively(providerDir);
-
-        for (const filePath of files) {
-            let prompt = '';
-            try {
-                prompt = (await fs.readFile(filePath, 'utf8')).trim();
-            } catch {
-                continue;
-            }
-
-            if (!prompt) continue;
-
-            const relativePath = path.relative(providerDir, filePath).replace(/\\/g, '/');
-            const fileName = path.basename(filePath);
-            const fileSlug = toSlug(relativePath.replace(/\.[^/.]+$/, ''));
-            const providerSlug = toSlug(providerName);
-            const key = `${providerSlug}-${fileSlug}`;
-
-            skills.push({
-                provider: providerName,
-                filePath,
-                key,
-                title: toTitle(fileName),
-                description: `Skill importada automaticamente de data/skills/${providerName}/${relativePath}`,
-                prompt,
-            });
+    for (const relFile of files.filter(f => f.endsWith('.md'))) {
+        const vaultRelPath = `skills/kairos/${relFile}`;
+        let raw = '';
+        try {
+            raw = await vaultRead(vaultRelPath);
+        } catch {
+            continue;
         }
+
+        const parsed = parseFrontmatter(raw);
+        if (!parsed || !parsed.body.trim()) continue;
+
+        const { meta, body } = parsed;
+        skills.push({
+            provider: meta.name,
+            filePath: vaultRelPath,
+            key: meta.id,
+            title: meta.name,
+            description: meta.description ?? '',
+            capabilities: meta.capabilities ?? [],
+            use_for: meta.use_for ?? [],
+            category: meta.category,
+            prompt: body,
+        });
     }
 
     cache = { loadedAt: Date.now(), items: skills };
     return skills;
 }
+
+

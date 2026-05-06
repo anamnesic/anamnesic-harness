@@ -61,3 +61,35 @@ data/index/*
 !data/index/.gitkeep
 data/summaries/*
 !data/summaries/.gitkeep
+
+# Vault — sensitive plaintext data (never commit)
+data/emails.json
+data/email-sync-meta.json
+data/skills/ANTHROPIC/
+data/skills/OPENAI/
+data/skills/GOOGLE/
+data/skills/XAI/
+data/skills/META/
+data/skills/MISTRAL/
+data/skills/MOONSHOT/
+data/skills/MINIMAX/
+data/skills/CURSOR/
+data/skills/CLINE/
+data/skills/WINDSURF/
+data/skills/FACTORY/
+data/skills/SAMEDEV/
+data/skills/DEVIN/
+data/skills/REPLIT/
+data/skills/MANUS/
+data/skills/BOLT/
+data/skills/LOVABLE/
+data/skills/VERCEL V0/
+data/skills/PERPLEXITY/
+data/skills/MULTION/
+data/skills/DIA/
+data/skills/BRAVE/
+data/skills/HUME/
+data/skills/CLUELY/
+data/proactive/
+data/self-optimization/
+data/vault/

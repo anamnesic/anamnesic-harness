@@ -99,6 +99,9 @@
     "think": "dist/agent/interfaces/cli/index.js"
   },
   "scripts": {
+    "vault:init": "node --experimental-strip-types packages/vault/scripts/vault-init.ts",
+    "vault:migrate": "node --experimental-strip-types packages/vault/scripts/vault-migrate.ts",
+    "vault:skills": "node --experimental-strip-types packages/vault/scripts/skills-migrate.ts",
     "dev": "cd packages/ui && next dev",
     "build": "cd packages/ui && next build",
     "export": "cd packages/ui && next build",

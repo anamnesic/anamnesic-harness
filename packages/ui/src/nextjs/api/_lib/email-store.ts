@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { vaultReadJsonSync, vaultWriteJsonSync } from '@kairos/vault';
 
 export interface EmailRecord {
   id: string;
@@ -21,36 +20,28 @@ interface SyncMeta {
   lastSyncedAt?: string;
 }
 
-const STORE_PATH = path.join(process.cwd(), 'data', 'emails.json');
-const META_PATH  = path.join(process.cwd(), 'data', 'email-sync-meta.json');
-
 function readStore(): EmailRecord[] {
   try {
-    if (!fs.existsSync(STORE_PATH)) return [];
-    const raw = fs.readFileSync(STORE_PATH, 'utf-8');
-    return JSON.parse(raw) as EmailRecord[];
+    return vaultReadJsonSync<EmailRecord[]>('emails.json');
   } catch {
     return [];
   }
 }
 
 function writeStore(records: EmailRecord[]): void {
-  fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
-  fs.writeFileSync(STORE_PATH, JSON.stringify(records, null, 2), 'utf-8');
+  vaultWriteJsonSync('emails.json', records);
 }
 
 export function readSyncMeta(): SyncMeta {
   try {
-    if (!fs.existsSync(META_PATH)) return { firstSyncDone: false };
-    return JSON.parse(fs.readFileSync(META_PATH, 'utf-8')) as SyncMeta;
+    return vaultReadJsonSync<SyncMeta>('email-sync-meta.json');
   } catch {
     return { firstSyncDone: false };
   }
 }
 
 export function writeSyncMeta(meta: SyncMeta): void {
-  fs.mkdirSync(path.dirname(META_PATH), { recursive: true });
-  fs.writeFileSync(META_PATH, JSON.stringify(meta, null, 2), 'utf-8');
+  vaultWriteJsonSync('email-sync-meta.json', meta);
 }
 
 export function listEmails(): EmailRecord[] {
