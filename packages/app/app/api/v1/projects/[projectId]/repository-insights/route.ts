@@ -33,7 +33,7 @@ async function runGit(cwd: string, args: string[]): Promise<string> {
     const { stdout } = await execFileAsync('git', args, {
         cwd,
         windowsHide: true,
-        maxBuffer: 1024 * 1024,
+        maxBuffer: 16 * 1024 * 1024,
     });
     return stdout.trim();
 }

@@ -424,14 +424,13 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     // manualmente clicando no ícone ↻ da aba.
     const autoConnectedRef = useRef<Set<CliTab>>(new Set());
     useEffect(() => {
-        if (!repoPath) return;
         for (const tab of CLI_TABS) {
             if (autoConnectedRef.current.has(tab.id)) continue;
             if (tabStateRef.current[tab.id].status !== 'disconnected') continue;
             autoConnectedRef.current.add(tab.id);
             void connect(tab.id);
         }
-    }, [repoPath, connect]);
+    }, [connect]);
 
     useEffect(() => {
         onHeaderStateChange?.({
@@ -732,32 +731,6 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                 </>
             ) : (
                 <>
-                    <div className="flex shrink-0 gap-1 border-b border-border px-3 pt-2">
-                        {CLI_TABS.map(tab => {
-                            const ts = tabState[tab.id];
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={cn(
-                                        'relative rounded-t-lg border border-b-0 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
-                                        activeTab === tab.id
-                                            ? `border-border bg-bg ${tab.colorClass}`
-                                            : 'border-transparent text-text-dim hover:text-accent',
-                                    )}
-                                >
-                                    {tab.label}
-                                    {ts.status === 'running' && (
-                                        <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-green-500" />
-                                    )}
-                                    {ts.status === 'connecting' && (
-                                        <span className="absolute -right-0.5 -top-0.5 size-1.5 animate-pulse rounded-full bg-yellow-500" />
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-
                     <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-3 py-1.5">
                         <StatusDot status={activeState.status} />
                         <span className="text-[9px] text-text-dim">
