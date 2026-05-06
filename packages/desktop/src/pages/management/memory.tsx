@@ -29,8 +29,8 @@ export default function MemoryPage() {
 
   return (
     <div>
-      <h1 style={{ "font-size": "24px", "font-weight": "700", "margin-bottom": "8px", color: "white" }}>Memory</h1>
-      <p style={{ "font-size": "14px", color: "#71717a", "margin-bottom": "24px" }}>Search and recall agent memory</p>
+      <h1 style={{ "font-size": "24px", "font-weight": "700", "margin-bottom": "8px", color: "var(--text-base)" }}>Memory</h1>
+      <p style={{ "font-size": "14px", color: "var(--text-weak)", "margin-bottom": "24px" }}>Search and recall agent memory</p>
 
       <div style={{ display: "flex", gap: "8px", "margin-bottom": "28px" }}>
         <input
@@ -39,12 +39,12 @@ export default function MemoryPage() {
           value={query()}
           onInput={(e) => setQuery(e.currentTarget.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          style={{ background: "#18181b", border: "1px solid #27272a", "border-radius": "6px", padding: "8px 12px", color: "white", "font-size": "14px", width: "360px" }}
+          style={{ background: "var(--surface-raised-base, var(--surface-base))", border: "1px solid var(--border-base)", "border-radius": "6px", padding: "8px 12px", color: "var(--text-base)", "font-size": "14px", width: "360px" }}
         />
         <button
           type="button"
           onClick={handleSearch}
-          style={{ background: "#f5c200", border: "none", "border-radius": "6px", padding: "8px 20px", color: "#09090b", "font-size": "14px", "font-weight": "600", cursor: "pointer" }}
+          style={{ background: "var(--text-base)", border: "none", "border-radius": "6px", padding: "8px 20px", color: "var(--background-base)", "font-size": "14px", "font-weight": "600", cursor: "pointer" }}
         >
           Search
         </button>
@@ -52,28 +52,28 @@ export default function MemoryPage() {
 
       <Switch>
         <Match when={results.loading}>
-          <p style={{ color: "#71717a" }}>Searching…</p>
+          <p style={{ color: "var(--text-weak)" }}>Searching…</p>
         </Match>
         <Match when={results.error}>
-          <p style={{ color: "#f87171" }}>Search failed</p>
+          <p style={{ color: "var(--text-critical-base, #dc2626)" }}>Search failed</p>
         </Match>
         <Match when={results()}>
           {(res) => (
             <Show when={submitted()}>
               <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
                 <Show when={res().results.length === 0}>
-                  <p style={{ color: "#71717a" }}>No results found.</p>
+                  <p style={{ color: "var(--text-weak)" }}>No results found.</p>
                 </Show>
                 <For each={res().results}>
                   {(item) => (
-                    <div style={{ background: "#18181b", border: "1px solid #27272a", "border-radius": "10px", padding: "16px 20px" }}>
+                    <div style={{ background: "var(--surface-raised-base, var(--surface-base))", border: "1px solid var(--border-base)", "border-radius": "10px", padding: "16px 20px" }}>
                       <div style={{ display: "flex", "justify-content": "space-between", "align-items": "flex-start", "margin-bottom": "8px" }}>
-                        <span style={{ "font-size": "12px", "font-family": "monospace", color: "#71717a" }}>{item.id}</span>
-                        <span style={{ "border-radius": "4px", padding: "2px 8px", "font-size": "12px", "font-weight": "500", display: "inline-block", background: "#27272a", color: "#f5c200" }}>
+                        <span style={{ "font-size": "12px", "font-family": "monospace", color: "var(--text-weak)" }}>{item.id}</span>
+                        <span style={{ "border-radius": "4px", padding: "2px 8px", "font-size": "12px", "font-weight": "500", display: "inline-block", background: "var(--surface-base)", color: "var(--text-base)" }}>
                           score: {item.score.toFixed(3)}
                         </span>
                       </div>
-                      <p style={{ "font-size": "14px", color: "white", margin: "0", "white-space": "pre-wrap" }}>{item.content}</p>
+                      <p style={{ "font-size": "14px", color: "var(--text-base)", margin: "0", "white-space": "pre-wrap" }}>{item.content}</p>
                     </div>
                   )}
                 </For>

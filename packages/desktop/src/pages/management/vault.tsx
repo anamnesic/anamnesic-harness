@@ -44,11 +44,11 @@ export default function VaultPage() {
 
   return (
     <div>
-      <h1 style={{ "font-size": "24px", "font-weight": "700", "margin-bottom": "8px", color: "white" }}>Vault</h1>
-      <p style={{ "font-size": "14px", color: "#71717a", "margin-bottom": "32px" }}>Manage secrets and credentials</p>
+      <h1 style={{ "font-size": "24px", "font-weight": "700", "margin-bottom": "8px", color: "var(--text-base)" }}>Vault</h1>
+      <p style={{ "font-size": "14px", color: "var(--text-weak)", "margin-bottom": "32px" }}>Manage secrets and credentials</p>
 
-      <div style={{ background: "#18181b", border: "1px solid #27272a", "border-radius": "10px", padding: "16px 20px", "max-width": "560px", "margin-bottom": "32px" }}>
-        <div style={{ "font-size": "13px", "font-weight": "600", color: "#a1a1aa", "margin-bottom": "12px", "text-transform": "uppercase", "letter-spacing": "0.06em" }}>
+      <div style={{ background: "var(--surface-raised-base, var(--surface-base))", border: "1px solid var(--border-base)", "border-radius": "10px", padding: "16px 20px", "max-width": "560px", "margin-bottom": "32px" }}>
+        <div style={{ "font-size": "13px", "font-weight": "600", color: "var(--text-weak)", "margin-bottom": "12px", "text-transform": "uppercase", "letter-spacing": "0.06em" }}>
           Add Secret
         </div>
         <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
@@ -57,47 +57,47 @@ export default function VaultPage() {
             placeholder="Key"
             value={newKey()}
             onInput={(e) => setNewKey(e.currentTarget.value)}
-            style={{ background: "#09090b", border: "1px solid #27272a", "border-radius": "6px", padding: "8px 12px", color: "white", "font-size": "14px" }}
+            style={{ background: "var(--surface-base)", border: "1px solid var(--border-base)", "border-radius": "6px", padding: "8px 12px", color: "var(--text-base)", "font-size": "14px" }}
           />
           <input
             type="password"
             placeholder="Value"
             value={newValue()}
             onInput={(e) => setNewValue(e.currentTarget.value)}
-            style={{ background: "#09090b", border: "1px solid #27272a", "border-radius": "6px", padding: "8px 12px", color: "white", "font-size": "14px" }}
+            style={{ background: "var(--surface-base)", border: "1px solid var(--border-base)", "border-radius": "6px", padding: "8px 12px", color: "var(--text-base)", "font-size": "14px" }}
           />
           <button
             type="button"
             disabled={saving() || !newKey().trim()}
             onClick={handleAdd}
-            style={{ background: "#f5c200", border: "none", "border-radius": "6px", padding: "8px 20px", color: "#09090b", "font-size": "14px", "font-weight": "600", cursor: "pointer", "align-self": "flex-start" }}
+            style={{ background: "var(--text-base)", border: "none", "border-radius": "6px", padding: "8px 20px", color: "var(--background-base)", "font-size": "14px", "font-weight": "600", cursor: "pointer", "align-self": "flex-start" }}
           >
             {saving() ? "Saving…" : "Add Secret"}
           </button>
         </div>
       </div>
 
-      <div style={{ "font-size": "13px", "font-weight": "600", color: "#a1a1aa", "margin-bottom": "16px", "text-transform": "uppercase", "letter-spacing": "0.06em" }}>
+      <div style={{ "font-size": "13px", "font-weight": "600", color: "var(--text-weak)", "margin-bottom": "16px", "text-transform": "uppercase", "letter-spacing": "0.06em" }}>
         Stored Secrets
       </div>
 
       <Switch>
         <Match when={entries.loading}>
-          <p style={{ color: "#71717a" }}>Loading…</p>
+          <p style={{ color: "var(--text-weak)" }}>Loading…</p>
         </Match>
         <Match when={entries.error}>
-          <p style={{ color: "#f87171" }}>Failed to load vault entries</p>
+          <p style={{ color: "var(--text-critical-base, #dc2626)" }}>Failed to load vault entries</p>
         </Match>
         <Match when={entries()}>
           <Show when={(entries() ?? []).length === 0}>
-            <p style={{ color: "#71717a" }}>No secrets stored.</p>
+            <p style={{ color: "var(--text-weak)" }}>No secrets stored.</p>
           </Show>
           <div style={{ display: "flex", "flex-direction": "column", gap: "8px", "max-width": "560px" }}>
             <For each={entries()}>
               {(entry) => (
-                <div style={{ background: "#18181b", border: "1px solid #27272a", "border-radius": "8px", padding: "12px 16px", display: "flex", "align-items": "center", "justify-content": "space-between" }}>
+                <div style={{ background: "var(--surface-raised-base, var(--surface-base))", border: "1px solid var(--border-base)", "border-radius": "8px", padding: "12px 16px", display: "flex", "align-items": "center", "justify-content": "space-between" }}>
                   <div>
-                    <div style={{ "font-size": "14px", color: "white", "font-family": "monospace" }}>{entry.key}</div>
+                    <div style={{ "font-size": "14px", color: "var(--text-base)", "font-family": "monospace" }}>{entry.key}</div>
                     <Show when={entry.updatedAt}>
                       <div style={{ "font-size": "12px", color: "#52525b", "margin-top": "2px" }}>
                         Updated {new Date(entry.updatedAt!).toLocaleString()}
@@ -108,7 +108,7 @@ export default function VaultPage() {
                     type="button"
                     disabled={deleting() === entry.key}
                     onClick={() => handleDelete(entry.key)}
-                    style={{ background: "transparent", border: "1px solid #dc2626", "border-radius": "6px", padding: "4px 12px", "font-size": "13px", color: "#f87171", cursor: "pointer" }}
+                    style={{ background: "transparent", border: "1px solid #dc2626", "border-radius": "6px", padding: "4px 12px", "font-size": "13px", color: "var(--text-critical-base, #dc2626)", cursor: "pointer" }}
                   >
                     {deleting() === entry.key ? "…" : "Delete"}
                   </button>

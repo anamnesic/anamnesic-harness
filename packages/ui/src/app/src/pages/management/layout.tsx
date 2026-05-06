@@ -22,12 +22,12 @@ export default function ManagementLayout(props: ParentProps) {
   const loc = useLocation()
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#09090b", color: "white", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: "var(--background-base)", color: "var(--text-base)", overflow: "hidden" }}>
       <nav
         style={{
           width: "220px",
-          background: "#18181b",
-          borderRight: "1px solid #27272a",
+          background: "var(--surface-raised-base, var(--surface-base))",
+          borderRight: "1px solid var(--border-base)",
           display: "flex",
           flexDirection: "column",
           padding: "16px 8px",
@@ -41,7 +41,7 @@ export default function ManagementLayout(props: ParentProps) {
             padding: "0 8px 16px",
             fontSize: "13px",
             fontWeight: "700",
-            color: "#f5c200",
+            color: "var(--text-base)",
             "letter-spacing": "0.1em",
             "text-transform": "uppercase",
           }}
@@ -62,8 +62,8 @@ export default function ManagementLayout(props: ParentProps) {
                   "border-radius": "6px",
                   "font-size": "14px",
                   "text-decoration": "none",
-                  color: active() ? "#f5c200" : "#a1a1aa",
-                  background: active() ? "rgba(245,194,0,0.1)" : "transparent",
+                  color: active() ? "var(--text-base)" : "var(--text-weak)",
+                  background: active() ? "var(--surface-base)" : "transparent",
                   transition: "background 0.15s, color 0.15s",
                 }}
               >
@@ -83,7 +83,7 @@ export default function ManagementLayout(props: ParentProps) {
               padding: "8px 10px",
               "border-radius": "6px",
               "font-size": "13px",
-              color: "#71717a",
+              color: "var(--text-weak)",
               "text-decoration": "none",
             }}
           >

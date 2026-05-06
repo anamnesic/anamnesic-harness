@@ -30,15 +30,15 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 style={{ "font-size": "24px", "font-weight": "700", "margin-bottom": "8px", color: "white" }}>Settings</h1>
-      <p style={{ "font-size": "14px", color: "#71717a", "margin-bottom": "32px" }}>Configure application settings</p>
+      <h1 style={{ "font-size": "24px", "font-weight": "700", "margin-bottom": "8px", color: "var(--text-base)" }}>Settings</h1>
+      <p style={{ "font-size": "14px", color: "var(--text-weak)", "margin-bottom": "32px" }}>Configure application settings</p>
 
       <Switch>
         <Match when={settings.loading}>
-          <p style={{ color: "#71717a" }}>Loading…</p>
+          <p style={{ color: "var(--text-weak)" }}>Loading…</p>
         </Match>
         <Match when={settings.error}>
-          <p style={{ color: "#f87171" }}>Failed to load settings</p>
+          <p style={{ color: "var(--text-critical-base, #dc2626)" }}>Failed to load settings</p>
         </Match>
         <Match when={settings()}>
           {(s) => (
@@ -47,8 +47,8 @@ export default function SettingsPage() {
                 {([key, val]) => {
                   const [editVal, setEditVal] = createSignal(String(val ?? ""))
                   return (
-                    <div style={{ background: "#18181b", border: "1px solid #27272a", "border-radius": "10px", padding: "16px 20px" }}>
-                      <label style={{ "font-size": "13px", "font-weight": "600", color: "#a1a1aa", display: "block", "margin-bottom": "8px" }}>
+                    <div style={{ background: "var(--surface-raised-base, var(--surface-base))", border: "1px solid var(--border-base)", "border-radius": "10px", padding: "16px 20px" }}>
+                      <label style={{ "font-size": "13px", "font-weight": "600", color: "var(--text-weak)", display: "block", "margin-bottom": "8px" }}>
                         {key}
                       </label>
                       <div style={{ display: "flex", gap: "8px" }}>
@@ -56,13 +56,13 @@ export default function SettingsPage() {
                           type="text"
                           value={editVal()}
                           onInput={(e) => setEditVal(e.currentTarget.value)}
-                          style={{ background: "#09090b", border: "1px solid #27272a", "border-radius": "6px", padding: "8px 12px", color: "white", "font-size": "14px", flex: "1" }}
+                          style={{ background: "var(--surface-base)", border: "1px solid var(--border-base)", "border-radius": "6px", padding: "8px 12px", color: "var(--text-base)", "font-size": "14px", flex: "1" }}
                         />
                         <button
                           type="button"
                           disabled={saving()}
                           onClick={() => handleSave(key, editVal())}
-                          style={{ background: "#f5c200", border: "none", "border-radius": "6px", padding: "8px 16px", color: "#09090b", "font-size": "13px", "font-weight": "600", cursor: "pointer" }}
+                          style={{ background: "var(--text-base)", border: "none", "border-radius": "6px", padding: "8px 16px", color: "var(--background-base)", "font-size": "13px", "font-weight": "600", cursor: "pointer" }}
                         >
                           Save
                         </button>

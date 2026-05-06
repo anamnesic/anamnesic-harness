@@ -25,43 +25,43 @@ export default function ExtensionsPage() {
 
   return (
     <div>
-      <h1 style={{ "font-size": "24px", "font-weight": "700", "margin-bottom": "8px", color: "white" }}>Extensions</h1>
-      <p style={{ "font-size": "14px", color: "#71717a", "margin-bottom": "24px" }}>Browse Open VSX extensions</p>
+      <h1 style={{ "font-size": "24px", "font-weight": "700", "margin-bottom": "8px", color: "var(--text-base)" }}>Extensions</h1>
+      <p style={{ "font-size": "14px", color: "var(--text-weak)", "margin-bottom": "24px" }}>Browse Open VSX extensions</p>
 
       <input
         type="text"
         placeholder="Search extensions…"
         value={query()}
         onInput={(e) => setQuery(e.currentTarget.value)}
-        style={{ background: "#18181b", border: "1px solid #27272a", "border-radius": "6px", padding: "8px 12px", color: "white", "font-size": "14px", width: "320px", "margin-bottom": "28px", display: "block" }}
+        style={{ background: "var(--surface-raised-base, var(--surface-base))", border: "1px solid var(--border-base)", "border-radius": "6px", padding: "8px 12px", color: "var(--text-base)", "font-size": "14px", width: "320px", "margin-bottom": "28px", display: "block" }}
       />
 
       <Switch>
         <Match when={result.loading}>
-          <p style={{ color: "#71717a" }}>Loading…</p>
+          <p style={{ color: "var(--text-weak)" }}>Loading…</p>
         </Match>
         <Match when={result.error}>
-          <p style={{ color: "#f87171" }}>Failed to load extensions</p>
+          <p style={{ color: "var(--text-critical-base, #dc2626)" }}>Failed to load extensions</p>
         </Match>
         <Match when={result()}>
           {(res) => (
             <>
-              <p style={{ "font-size": "13px", color: "#71717a", "margin-bottom": "20px" }}>{res().extensions.length} results</p>
+              <p style={{ "font-size": "13px", color: "var(--text-weak)", "margin-bottom": "20px" }}>{res().extensions.length} results</p>
               <div style={{ display: "grid", "grid-template-columns": "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
                 <For each={res().extensions}>
                   {(ext) => (
-                    <div style={{ background: "#18181b", border: "1px solid #27272a", "border-radius": "10px", padding: "16px 20px" }}>
-                      <div style={{ "font-size": "15px", "font-weight": "600", color: "white", "margin-bottom": "4px" }}>
+                    <div style={{ background: "var(--surface-raised-base, var(--surface-base))", border: "1px solid var(--border-base)", "border-radius": "10px", padding: "16px 20px" }}>
+                      <div style={{ "font-size": "15px", "font-weight": "600", color: "var(--text-base)", "margin-bottom": "4px" }}>
                         {ext.displayName ?? ext.name}
                       </div>
-                      <div style={{ "font-size": "12px", color: "#71717a", "margin-bottom": "8px" }}>
+                      <div style={{ "font-size": "12px", color: "var(--text-weak)", "margin-bottom": "8px" }}>
                         {ext.namespace}.{ext.name} · v{ext.version}
                       </div>
                       <Show when={ext.description}>
-                        <p style={{ "font-size": "13px", color: "#a1a1aa", margin: "0" }}>{ext.description}</p>
+                        <p style={{ "font-size": "13px", color: "var(--text-weak)", margin: "0" }}>{ext.description}</p>
                       </Show>
                       <Show when={ext.averageRating != null}>
-                        <div style={{ "margin-top": "8px", "font-size": "12px", color: "#f5c200" }}>
+                        <div style={{ "margin-top": "8px", "font-size": "12px", color: "var(--text-base)" }}>
                           ★ {ext.averageRating!.toFixed(1)}
                         </div>
                       </Show>
