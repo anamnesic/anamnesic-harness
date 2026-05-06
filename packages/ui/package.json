@@ -43,8 +43,8 @@
   },
   "dependencies": {
     "@kobalte/core": "catalog:",
-    "@kairos-ai/sdk": "workspace:*",
-    "@kairos-ai/core": "workspace:*",
+    "@kairos/sdk": "workspace:*",
+    "@kairos/core": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@shikijs/transformers": "3.9.2",
     "@solid-primitives/bounds": "0.1.3",
