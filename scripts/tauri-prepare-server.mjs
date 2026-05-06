@@ -8,9 +8,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
-const standalone = join(root, '.next', 'standalone');
-const staticDir = join(root, '.next', 'static');
-const publicDir = join(root, 'public');
+const appDir = join(root, 'packages', 'app');
+const standalone = join(appDir, 'out', 'standalone');
+const staticDir = join(appDir, 'out', 'static');
+const publicDir = join(appDir, 'public');
 const target = join(root, 'src-tauri', 'server-bundle');
 
 if (!existsSync(standalone)) {
