@@ -1,0 +1,4 @@
+interface:
+  display_name: "kairos Testing"
+  short_description: "Choose cheap, targeted kairos validation"
+  default_prompt: "Use $kairos-testing to choose the cheapest safe test or CI verification path, inspect failures, and rerun only the relevant kairos lane."

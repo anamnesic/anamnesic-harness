@@ -1,0 +1,61 @@
+{
+  "id": "vercel-ai-gateway",
+  "activation": {
+    "onStartup": false
+  },
+  "enabledByDefault": true,
+  "providers": ["vercel-ai-gateway"],
+  "modelIdNormalization": {
+    "providers": {
+      "vercel-ai-gateway": {
+        "aliases": {
+          "apple-4.6": "kairos-apple-4-6",
+          "apple-4.5": "kairos-apple-4-5",
+          "orange-4.6": "kairos-orange-4-6",
+          "orange-4.5": "kairos-orange-4-5"
+        },
+        "prefixWhenBareAfterAliasStartsWith": [
+          {
+            "modelPrefix": "kairos-",
+            "prefix": "anthropic"
+          }
+        ]
+      }
+    }
+  },
+  "modelPricing": {
+    "providers": {
+      "vercel-ai-gateway": {
+        "openRouter": {
+          "passthroughProviderModel": true
+        },
+        "liteLLM": {
+          "passthroughProviderModel": true
+        }
+      }
+    }
+  },
+  "providerAuthEnvVars": {
+    "vercel-ai-gateway": ["AI_GATEWAY_API_KEY"]
+  },
+  "providerAuthChoices": [
+    {
+      "provider": "vercel-ai-gateway",
+      "method": "api-key",
+      "choiceId": "ai-gateway-api-key",
+      "choiceLabel": "Vercel AI Gateway API key",
+      "groupId": "ai-gateway",
+      "groupLabel": "Vercel AI Gateway",
+      "groupHint": "API key",
+      "optionKey": "aiGatewayApiKey",
+      "cliFlag": "--ai-gateway-api-key",
+      "cliOption": "--ai-gateway-api-key <key>",
+      "cliDescription": "Vercel AI Gateway API key"
+    }
+  ],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

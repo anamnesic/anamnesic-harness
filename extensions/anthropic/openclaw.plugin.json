@@ -1,0 +1,109 @@
+{
+  "id": "anthropic",
+  "activation": {
+    "onStartup": false
+  },
+  "enabledByDefault": true,
+  "providers": ["anthropic"],
+  "providerDiscoveryEntry": "./provider-discovery.ts",
+  "modelSupport": {
+    "modelPrefixes": ["kairos-"]
+  },
+  "modelIdNormalization": {
+    "providers": {
+      "anthropic": {
+        "aliases": {
+          "apple-4.6": "kairos-apple-4-6",
+          "apple-4.5": "kairos-apple-4-5",
+          "orange-4.6": "kairos-orange-4-6",
+          "orange-4.5": "kairos-orange-4-5"
+        }
+      }
+    }
+  },
+  "modelPricing": {
+    "providers": {
+      "anthropic": {
+        "openRouter": {
+          "modelIdTransforms": ["version-dots"]
+        }
+      }
+    }
+  },
+  "providerEndpoints": [
+    {
+      "endpointClass": "anthropic-public",
+      "hosts": ["api.anthropic.com"]
+    }
+  ],
+  "providerRequest": {
+    "providers": {
+      "anthropic": {
+        "family": "anthropic"
+      }
+    }
+  },
+  "cliBackends": ["kairos-cli"],
+  "syntheticAuthRefs": ["kairos-cli"],
+  "providerAuthEnvVars": {
+    "anthropic": ["ANTHROPIC_OAUTH_TOKEN", "ANTHROPIC_API_KEY"]
+  },
+  "providerAuthChoices": [
+    {
+      "provider": "anthropic",
+      "method": "cli",
+      "choiceId": "anthropic-cli",
+      "deprecatedChoiceIds": ["kairos-cli"],
+      "choiceLabel": "Anthropic kairos CLI",
+      "choiceHint": "Reuse a local kairos CLI login on this host",
+      "assistantPriority": -20,
+      "groupId": "anthropic",
+      "groupLabel": "Anthropic",
+      "groupHint": "kairos CLI + API key"
+    },
+    {
+      "provider": "anthropic",
+      "method": "setup-token",
+      "choiceId": "setup-token",
+      "choiceLabel": "Anthropic setup-token",
+      "choiceHint": "Manual token path",
+      "assistantPriority": 40,
+      "groupId": "anthropic",
+      "groupLabel": "Anthropic",
+      "groupHint": "kairos CLI + API key + token"
+    },
+    {
+      "provider": "anthropic",
+      "method": "api-key",
+      "choiceId": "apiKey",
+      "choiceLabel": "Anthropic API key",
+      "groupId": "anthropic",
+      "groupLabel": "Anthropic",
+      "groupHint": "kairos CLI + API key",
+      "optionKey": "anthropicApiKey",
+      "cliFlag": "--anthropic-api-key",
+      "cliOption": "--anthropic-api-key <key>",
+      "cliDescription": "Anthropic API key"
+    }
+  ],
+  "contracts": {
+    "mediaUnderstandingProviders": ["anthropic"]
+  },
+  "mediaUnderstandingProviderMetadata": {
+    "anthropic": {
+      "capabilities": ["image"],
+      "defaultModels": {
+        "image": "kairos-apple-4-7"
+      },
+      "autoPriority": {
+        "image": 20
+      },
+      "nativeDocumentInputs": ["pdf"]
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

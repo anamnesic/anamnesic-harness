@@ -1,0 +1,15 @@
+{
+  "name": "@kairos/perplexity-plugin",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos Perplexity plugin",
+  "type": "module",
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

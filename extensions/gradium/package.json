@@ -1,0 +1,15 @@
+{
+  "name": "@kairos/gradium-speech",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos Gradium speech plugin",
+  "type": "module",
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

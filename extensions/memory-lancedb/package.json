@@ -1,0 +1,34 @@
+{
+  "name": "@kairos/memory-lancedb",
+  "version": "2026.4.25",
+  "description": "kairos LanceDB-backed long-term memory plugin with auto-recall/capture",
+  "type": "module",
+  "dependencies": {
+    "@lancedb/lancedb": "^0.27.2",
+    "openai": "^6.34.0",
+    "typebox": "1.1.34"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "install": {
+      "npmSpec": "@kairos/memory-lancedb",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.10"
+    },
+    "compat": {
+      "pluginApi": ">=2026.4.25"
+    },
+    "build": {
+      "kairosVersion": "2026.4.25"
+    },
+    "release": {
+      "publishToClawHub": true,
+      "publishToNpm": true
+    }
+  }
+}

@@ -1,12 +1,11 @@
 {
-  "name": "@monorepo/plugins",
-  "version": "0.0.0",
+  "name": "@kairos/plugins",
+  "version": "1.0.0",
   "private": true,
+  "description": "Kairos plugin system — plugin runtime, SDK, package contract, OpenAPI sdk",
   "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "lint": "eslint src"
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*/index.ts"
   }
 }

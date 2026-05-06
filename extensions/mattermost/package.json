@@ -1,0 +1,41 @@
+{
+  "name": "@kairos/mattermost",
+  "version": "2026.4.25",
+  "description": "kairos Mattermost channel plugin",
+  "type": "module",
+  "dependencies": {
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*",
+    "kairos": "workspace:*"
+  },
+  "peerDependencies": {
+    "kairos": ">=2026.4.25"
+  },
+  "peerDependenciesMeta": {
+    "kairos": {
+      "optional": true
+    }
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "mattermost",
+      "label": "Mattermost",
+      "selectionLabel": "Mattermost (plugin)",
+      "docsPath": "/channels/mattermost",
+      "docsLabel": "mattermost",
+      "blurb": "self-hosted Slack-style chat; install the plugin to enable.",
+      "order": 65
+    },
+    "install": {
+      "npmSpec": "@kairos/mattermost",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.10"
+    }
+  }
+}

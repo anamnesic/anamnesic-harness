@@ -1,0 +1,55 @@
+{
+  "name": "@kairos/zalo",
+  "version": "2026.4.25",
+  "description": "kairos Zalo channel plugin",
+  "type": "module",
+  "dependencies": {
+    "undici": "8.1.0"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*",
+    "kairos": "workspace:*"
+  },
+  "peerDependencies": {
+    "kairos": ">=2026.4.25"
+  },
+  "peerDependenciesMeta": {
+    "kairos": {
+      "optional": true
+    }
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "zalo",
+      "label": "Zalo",
+      "selectionLabel": "Zalo (Bot API)",
+      "docsPath": "/channels/zalo",
+      "docsLabel": "zalo",
+      "blurb": "Vietnam-focused messaging platform with Bot API.",
+      "aliases": [
+        "zl"
+      ],
+      "order": 80,
+      "quickstartAllowFrom": true
+    },
+    "install": {
+      "npmSpec": "@kairos/zalo",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.4.10"
+    },
+    "compat": {
+      "pluginApi": ">=2026.4.25"
+    },
+    "build": {
+      "kairosVersion": "2026.4.25"
+    },
+    "release": {
+      "publishToClawHub": true,
+      "publishToNpm": true
+    }
+  }
+}

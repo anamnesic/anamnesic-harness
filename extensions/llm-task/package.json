@@ -1,0 +1,19 @@
+{
+  "name": "@kairos/llm-task",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos JSON-only LLM task plugin",
+  "type": "module",
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "typebox": "1.1.34"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

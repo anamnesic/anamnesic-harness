@@ -1,0 +1,18 @@
+{
+  "name": "@kairos/tavily-plugin",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos Tavily plugin",
+  "type": "module",
+  "dependencies": {
+    "typebox": "1.1.34"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
