@@ -21,7 +21,9 @@ import {
   MessageSquare,
   Menu,
   ChevronDown,
+  TerminalSquare,
 } from 'lucide-react';
+import { TerminalPanel } from './screens/TerminalPanel';
 import { apiFetch } from './lib/api';
 import { ContextualChat } from './components/ContextualChat';
 import { cn } from './lib/utils';
@@ -126,7 +128,7 @@ function NotificationPopup({ onClose, onNavigate }: { onClose: () => void; onNav
   );
 }
 
-const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatOpen, onChatToggle, onTabChange }: {
+const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatOpen, onChatToggle, onTabChange, terminalOpen, onTerminalToggle }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
@@ -135,6 +137,8 @@ const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatO
   chatOpen?: boolean;
   onChatToggle?: () => void;
   onTabChange: (id: TabId) => void;
+  terminalOpen?: boolean;
+  onTerminalToggle?: () => void;
 }) => {
   const [showPopup, setShowPopup] = useState(false);
   return (
@@ -167,6 +171,20 @@ const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatO
 
         <div className="flex items-center gap-2">
           <RepositorySelector />
+          {onTerminalToggle && (
+            <button
+              onClick={onTerminalToggle}
+              title="Terminal"
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-xl border transition-colors',
+                terminalOpen
+                  ? 'bg-primary/10 border-primary/40 text-primary'
+                  : 'bg-card border-border text-text-dim hover:border-accent/40 hover:text-accent',
+              )}
+            >
+              <TerminalSquare className="size-4" />
+            </button>
+          )}
           {onChatToggle && (
             <button
               onClick={onChatToggle}
@@ -210,7 +228,7 @@ const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatO
 
 const TABS = [
   { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
-  { id: 'repo-files', label: 'Repo', icon: FileText },
+  { id: 'repo-files', label: 'Arquivos', icon: FileText },
   { id: 'repo-context', label: 'Wiki', icon: BookOpen },
   { id: 'repo-decisions', label: 'Decisoes', icon: Lightbulb },
   { id: 'control', label: 'Segurança', icon: Shield },
@@ -224,6 +242,45 @@ const TABS = [
 // Secondary tabs accessible via back navigation (not in bottom nav)
 type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'redteaming' | 'integrations' | 'inference';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
+
+// ─── Terminal Overlay ────────────────────────────────────────────────────────
+
+function TerminalOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="terminal-overlay"
+          initial={{ opacity: 0, y: '100%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: '100%' }}
+          transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+          className="fixed inset-x-0 bottom-0 z-[70] flex flex-col"
+          style={{ height: '55vh' }}
+        >
+          <div className="relative flex h-full flex-col rounded-t-2xl border border-b-0 border-border bg-[#0d0d0f]/95 shadow-2xl backdrop-blur-xl overflow-hidden">
+            {/* Drag handle */}
+            <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-2">
+              <div className="flex items-center gap-2 text-text-dim">
+                <TerminalSquare className="size-3.5 text-accent" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Terminal</span>
+              </div>
+              <button
+                onClick={onClose}
+                className="flex h-6 w-6 items-center justify-center rounded-lg text-text-dim hover:text-accent transition-colors"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <TerminalPanel />
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 // ─── Bottom Dock ────────────────────────────────────────────────────────────
 
@@ -463,6 +520,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [unreadEmailCount, setUnreadEmailCount] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
+  const [terminalOpen, setTerminalOpen] = useState(false);
   const [dockMinimized, setDockMinimized] = useState(false);
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -499,6 +557,8 @@ function AppContent() {
             chatOpen={chatOpen}
             onChatToggle={() => setChatOpen(v => !v)}
             onTabChange={setActiveTab}
+            terminalOpen={terminalOpen}
+            onTerminalToggle={() => setTerminalOpen(v => !v)}
           />
           <div className="flex min-h-0 flex-1 overflow-hidden">
             <main className="scrollbar-kairos flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pb-24">
@@ -524,6 +584,9 @@ function AppContent() {
           </div>
         </div>
       </div>
+
+      {/* Terminal overlay — slides up over everything */}
+      <TerminalOverlay open={terminalOpen} onClose={() => setTerminalOpen(false)} />
 
       {/* Bottom dock navigation */}
       <BottomDock
