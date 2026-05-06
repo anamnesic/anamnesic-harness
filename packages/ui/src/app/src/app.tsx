@@ -47,6 +47,21 @@ import { ErrorPage } from "./pages/error"
 import { useCheckServerHealth } from "./utils/server-health"
 
 const HomeRoute = lazy(() => import("@/pages/home"))
+const ManagementLayout = lazy(() => import("@/pages/management/layout"))
+const ManagementDashboard = lazy(() => import("@/pages/management/dashboard"))
+const ManagementAgents = lazy(() => import("@/pages/management/agents"))
+const ManagementSkills = lazy(() => import("@/pages/management/skills"))
+const ManagementTools = lazy(() => import("@/pages/management/tools"))
+const ManagementExtensions = lazy(() => import("@/pages/management/extensions"))
+const ManagementSettings = lazy(() => import("@/pages/management/settings"))
+const ManagementObservers = lazy(() => import("@/pages/management/observers"))
+const ManagementProjects = lazy(() => import("@/pages/management/projects"))
+const ManagementWorkflows = lazy(() => import("@/pages/management/workflows"))
+const ManagementProviders = lazy(() => import("@/pages/management/providers"))
+const ManagementMemory = lazy(() => import("@/pages/management/memory"))
+const ManagementChannels = lazy(() => import("@/pages/management/channels"))
+const ManagementVault = lazy(() => import("@/pages/management/vault"))
+const ManagementPlugins = lazy(() => import("@/pages/management/plugins"))
 const loadSession = () => import("@/pages/session")
 const Session = lazy(loadSession)
 const Loading = () => <div class="size-full" />
@@ -310,6 +325,23 @@ export function AppInterface(props: {
                   <Route path="/:dir" component={DirectoryLayout}>
                     <Route path="/" component={SessionIndexRoute} />
                     <Route path="/session/:id?" component={SessionRoute} />
+                  </Route>
+                  <Route path="/management" component={ManagementLayout}>
+                    <Route path="/" component={() => <Navigate href="/management/dashboard" />} />
+                    <Route path="/dashboard" component={ManagementDashboard} />
+                    <Route path="/agents" component={ManagementAgents} />
+                    <Route path="/skills" component={ManagementSkills} />
+                    <Route path="/tools" component={ManagementTools} />
+                    <Route path="/extensions" component={ManagementExtensions} />
+                    <Route path="/settings" component={ManagementSettings} />
+                    <Route path="/observers" component={ManagementObservers} />
+                    <Route path="/projects" component={ManagementProjects} />
+                    <Route path="/workflows" component={ManagementWorkflows} />
+                    <Route path="/providers" component={ManagementProviders} />
+                    <Route path="/memory" component={ManagementMemory} />
+                    <Route path="/channels" component={ManagementChannels} />
+                    <Route path="/vault" component={ManagementVault} />
+                    <Route path="/plugins" component={ManagementPlugins} />
                   </Route>
                 </Dynamic>
               </GlobalSyncProvider>
