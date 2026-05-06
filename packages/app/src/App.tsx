@@ -19,11 +19,14 @@ import {
   MailOpen,
   X,
   MessageSquare,
-  Menu,
+  Plus,
+  PanelLeftClose,
+  Columns2,
+  RotateCw,
   ChevronDown,
   TerminalSquare,
 } from 'lucide-react';
-import { TerminalPanel } from './screens/TerminalPanel';
+import { TerminalPanel, type TerminalControls } from './screens/TerminalPanel';
 import { apiFetch } from './lib/api';
 import { ContextualChat } from './components/ContextualChat';
 import { cn } from './lib/utils';
@@ -245,9 +248,18 @@ type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 // ─── Terminal Overlay ────────────────────────────────────────────────────────
 
+function StatusDot({ status }: { status: string }) {
+  const color =
+    status === 'running' ? 'bg-green-400' :
+    status === 'connecting' ? 'bg-yellow-400 animate-pulse' :
+    'bg-neutral-500';
+  return <span className={cn('inline-block size-2 rounded-full', color)} />;
+}
+
 function TerminalOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [height, setHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
+  const [controls, setControls] = useState<TerminalControls | null>(null);
 
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -297,22 +309,42 @@ function TerminalOverlay({ open, onClose }: { open: boolean; onClose: () => void
               <div className="mx-auto mt-1 h-0.5 w-8 rounded-full bg-border/60 group-hover:bg-accent/50 transition-colors" />
             </div>
 
-            {/* Title bar */}
-            <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 pt-3 pb-2">
-              <div className="flex items-center gap-2 text-text-dim">
-                <TerminalSquare className="size-3.5 text-accent" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Terminal</span>
-              </div>
-              <button
-                onClick={onClose}
-                className="flex h-6 w-6 items-center justify-center rounded-lg text-text-dim hover:text-accent transition-colors"
-              >
+            {/* Title bar — label + controls + close */}
+            <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 pt-3 pb-2">
+              <TerminalSquare className="size-3.5 shrink-0 text-accent" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Terminal</span>
+
+              {controls && (
+                <>
+                  <StatusDot status={controls.status} />
+                  <div className="flex-1" />
+
+                  <button onClick={controls.onToggleSplit} title={controls.isMaximized ? 'Janela única' : 'Dividir'} className="flex h-6 w-6 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-accent">
+                    <Columns2 className="size-3" />
+                  </button>
+                  <button onClick={controls.onAdd} title="Nova janela" className="flex h-6 w-6 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-accent">
+                    <Plus className="size-3" />
+                  </button>
+                  {controls.instanceCount > 1 && (
+                    <button onClick={controls.onRemove} title="Fechar janela" className="flex h-6 w-6 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-red-400">
+                      <PanelLeftClose className="size-3" />
+                    </button>
+                  )}
+                  <button onClick={controls.onRestart} title="Reiniciar" className="flex h-6 w-6 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-accent">
+                    <RotateCw className="size-3" />
+                  </button>
+                </>
+              )}
+
+              {!controls && <div className="flex-1" />}
+
+              <button onClick={onClose} className="flex h-6 w-6 items-center justify-center rounded-lg text-text-dim transition-colors hover:text-accent">
                 <X className="size-3.5" />
               </button>
             </div>
 
             <div className="min-h-0 flex-1 overflow-hidden">
-              <TerminalPanel />
+              <TerminalPanel onControlsChange={setControls} />
             </div>
           </div>
         </motion.div>

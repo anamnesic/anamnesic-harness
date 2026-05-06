@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, Square, RotateCw, Circle, Plus, PanelLeftClose, Columns2, X } from 'lucide-react';
+import { Trash2, Square, RotateCw, X } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useRepository } from '@/src/context/RepositoryContext';
 import { useToast } from '@/src/components/Toast';
@@ -103,18 +103,23 @@ const INITIAL: TabStateMap = {
     shell: initialTabState(),
 };
 
-interface TerminalPanelProps {
-    onMaximizeChange?: (isMaximized: boolean) => void;
-    onHeaderStateChange?: (state: {
-        repoPath: string;
-        isMaximized: boolean;
-        onToggleMaximize: () => void;
-        onRestartAll: () => void;
-        onClearAll: () => void;
-    }) => void;
+export interface TerminalControls {
+    status: 'disconnected' | 'connecting' | 'running' | 'exited';
+    isMaximized: boolean;
+    instanceCount: number;
+    onAdd: () => void;
+    onRemove: () => void;
+    onToggleSplit: () => void;
+    onRestart: () => void;
+    onKill: () => void;
 }
 
-export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: TerminalPanelProps) {
+interface TerminalPanelProps {
+    onMaximizeChange?: (isMaximized: boolean) => void;
+    onControlsChange?: (controls: TerminalControls) => void;
+}
+
+export function TerminalPanel({ onMaximizeChange, onControlsChange }: TerminalPanelProps) {
     const { repository } = useRepository();
     const { toast } = useToast();
     const [isMaximized, setIsMaximized] = useState(false);
@@ -433,28 +438,23 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
     }, [connect]);
 
     useEffect(() => {
-        onHeaderStateChange?.({
-            repoPath,
+        onControlsChange?.({
+            status: tabState.shell.status,
             isMaximized,
-            onToggleMaximize: () => setIsMaximized(prev => !prev),
-            onRestartAll: () => {
-                for (const tab of CLI_TABS) {
-                    // Só reinicia abas que já foram conectadas alguma vez (running/exited).
-                    // Evita spam de 500 em CLIs cujo binário não existe no host.
-                    const st = tabStateRef.current[tab.id].status;
-                    if (tab.id === 'shell' || st === 'running' || st === 'exited') {
-                        void killSession(tab.id).then(() => connect(tab.id));
-                    }
+            instanceCount: agentInstances.shell.length,
+            onAdd: addInstance,
+            onRemove: () => removeInstance(activeInstance.shell),
+            onToggleSplit: () => setIsMaximized(prev => !prev),
+            onRestart: () => {
+                if (tabState.shell.status === 'disconnected' || tabState.shell.status === 'exited') {
+                    void connect('shell');
+                } else {
+                    void killSession('shell').then(() => connect('shell'));
                 }
             },
-            onClearAll: () => {
-                setTabState(prev => ({
-                    ...prev,
-                    shell: { ...prev.shell, output: '' },
-                }));
-            },
+            onKill: () => void killSession('shell'),
         });
-    }, [repoPath, isMaximized, killSession, connect, onHeaderStateChange]);
+    }, [tabState.shell.status, isMaximized, agentInstances.shell.length, addInstance, removeInstance, activeInstance.shell, connect, killSession, onControlsChange]);
 
     const resizeListenersRef = useRef<{ mouseMove: ((e: MouseEvent) => void) | null; mouseUp: ((e: MouseEvent) => void) | null }>({ mouseMove: null, mouseUp: null });
     
@@ -773,78 +773,13 @@ export function TerminalPanel({ onMaximizeChange, onHeaderStateChange }: Termina
                     </div>
                 </>
             ) : (
-                <>
-                    {/* Window management toolbar */}
-                    <div className="flex shrink-0 items-center gap-1 border-b border-border/40 px-2 py-1">
-                        <StatusDot status={activeState.status} />
-
-                        <div className="flex-1" />
-
-                        {/* Split / merge */}
-                        <button
-                            onClick={() => setIsMaximized(prev => !prev)}
-                            title={isMaximized ? 'Janela única' : 'Dividir janelas'}
-                            className={cn('flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-card', isMaximized && 'text-accent')}
-                        >
-                            <Columns2 className="size-3.5" />
-                        </button>
-
-                        {/* New window */}
-                        <button
-                            onClick={addInstance}
-                            title="Nova janela"
-                            className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-accent"
-                        >
-                            <Plus className="size-3.5" />
-                        </button>
-
-                        {/* Close window (only when >1) */}
-                        {agentInstances[activeTab].length > 1 && (
-                            <button
-                                onClick={() => removeInstance(activeInstance[activeTab])}
-                                title="Fechar janela"
-                                className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-red-400"
-                            >
-                                <PanelLeftClose className="size-3.5" />
-                            </button>
-                        )}
-
-                        {/* Restart */}
-                        <button
-                            onClick={() => {
-                                if (activeState.status === 'disconnected' || activeState.status === 'exited') {
-                                    void connect(activeTab);
-                                } else {
-                                    void killSession(activeTab).then(() => connect(activeTab));
-                                }
-                            }}
-                            title="Reiniciar"
-                            className="flex h-7 w-7 items-center justify-center rounded-md text-text-dim transition-colors hover:bg-card hover:text-accent"
-                        >
-                            <RotateCw className="size-3.5" />
-                        </button>
-
-                        {/* Kill */}
-                        {activeState.status === 'running' && (
-                            <button
-                                onClick={() => void killSession(activeTab)}
-                                title="Encerrar processo"
-                                className="flex h-7 w-7 items-center justify-center rounded-md text-red-400 transition-colors hover:bg-card hover:text-red-300"
-                            >
-                                <Square className="size-3.5" />
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="min-h-0 flex-1 p-2">
-                        <div
-                            ref={el => { hostRefs.current[activeTab] = el; }}
-                            onClick={() => xtermRefs.current[activeTab]?.focus()}
-                            className="terminal-host h-full w-full overflow-hidden rounded-xl border border-border/30"
-                        />
-                    </div>
-
-                </>
+                <div className="min-h-0 flex-1">
+                    <div
+                        ref={el => { hostRefs.current[activeTab] = el; }}
+                        onClick={() => xtermRefs.current[activeTab]?.focus()}
+                        className="terminal-host h-full w-full overflow-hidden"
+                    />
+                </div>
             )}
 
         </aside>
