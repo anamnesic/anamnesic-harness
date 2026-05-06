@@ -1,4 +1,4 @@
-export type LlmCliProvider = 'kairos' | 'gemini' | 'copilot' | 'codex' | 'opencode';
+export type LlmCliProvider = 'kairos' | 'gemini' | 'copilot' | 'codex' | 'kairos';
 
 export type LlmCliMode = 'interactive' | 'prompt';
 

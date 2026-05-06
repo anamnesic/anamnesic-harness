@@ -48,7 +48,7 @@ export const CLI_CAPABILITY_MATRIX: CliCapabilityMatrix = {
         'long-analysis': { supported: true, quality: 'low', notes: 'Optional fallback when installed.' },
         'code-automation': { supported: true, quality: 'medium', notes: 'Optional code automation provider when installed.' },
     },
-    opencode: {
+    kairos: {
         summarization: { supported: true, quality: 'medium', notes: 'Optional fallback when installed.' },
         enrichment: { supported: true, quality: 'medium', notes: 'Optional fallback when installed.' },
         reranking: { supported: true, quality: 'low', notes: 'Optional fallback when installed.' },

@@ -18,8 +18,8 @@ const taskTypeSchema = z.enum([
 
     const routingRuleSchema = z.object({
         taskType: taskTypeSchema,
-        preferredProvider: z.enum(['gemini', 'kairos', 'copilot', 'codex', 'opencode']),
-        fallbackProviders: z.array(z.enum(['gemini', 'kairos', 'copilot', 'codex', 'opencode'])).max(4),
+        preferredProvider: z.enum(['gemini', 'kairos', 'copilot', 'codex', 'kairos']),
+        fallbackProviders: z.array(z.enum(['gemini', 'kairos', 'copilot', 'codex', 'kairos'])).max(4),
         rationale: z.string().min(1),
         confidence: z.number().min(0).max(1),
     });
@@ -70,7 +70,7 @@ export class BenchmarkInterpretationService {
         options: BenchmarkInterpretationServiceOptions = {},
     ) {
         this.preferredProvider = options.preferredProvider ?? 'gemini';
-        this.fallbackProviders = options.fallbackProviders ?? ['kairos', 'copilot', 'codex', 'opencode'];
+        this.fallbackProviders = options.fallbackProviders ?? ['kairos', 'copilot', 'codex', 'kairos'];
         this.dataDir = options.dataDir ?? path.join(process.cwd(), 'data', 'benchmark-interpretation');
     }
 

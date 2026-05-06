@@ -138,11 +138,11 @@ export class CodexCliAdapter extends BaseCliAdapter {
     }
 }
 
-export class OpenCodeCliAdapter extends BaseCliAdapter {
-    readonly provider = 'opencode' as const;
+export class kairosCliAdapter extends BaseCliAdapter {
+    readonly provider = 'kairos' as const;
 
     protected getCandidates(): string[] {
-        return ['opencode', 'oc'];
+        return ['kairos', 'oc'];
     }
 
     protected getInteractiveArgs(): string[] {

@@ -29,7 +29,7 @@ export interface ResolvedRouting {
     taskType: CliTaskType;
 }
 
-const DEFAULT_FALLBACK_ORDER: LlmCliProvider[] = ['kairos', 'copilot', 'codex', 'opencode'];
+const DEFAULT_FALLBACK_ORDER: LlmCliProvider[] = ['kairos', 'copilot', 'codex', 'kairos'];
 
 export class ProviderRoutingStrategy {
     constructor(private readonly config: CliRoutingConfig = {}) { }
