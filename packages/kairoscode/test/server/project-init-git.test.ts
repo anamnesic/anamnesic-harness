@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { Effect } from "effect"
 import path from "path"
+import { Hash } from "@kairos-ai/core/util/hash"
+import { Global } from "@kairos-ai/core/global"
 import { GlobalBus } from "../../src/bus/global"
 import { Snapshot } from "../../src/snapshot"
 import { Instance } from "../../src/project/instance"
@@ -46,7 +48,7 @@ describe("project.initGit endpoint", () => {
       expect(seen.some((evt) => evt.directory === tmp.path && evt.payload.type === "server.instance.disposed")).toBe(
         true,
       )
-      expect(await Filesystem.exists(path.join(tmp.path, ".git", "kairos"))).toBe(false)
+      expect(await Filesystem.exists(path.join(Global.Path.data, "repos", Hash.fast(tmp.path), "project-id"))).toBe(false)
 
       const current = await app.request("/project/current", {
         headers: {

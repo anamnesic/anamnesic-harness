@@ -6,6 +6,8 @@ import path from "path"
 import { tmpdir } from "../fixture/fixture"
 import { GlobalBus } from "../../src/bus/global"
 import { ProjectID } from "../../src/project/schema"
+import { Hash } from "@kairos-ai/core/util/hash"
+import { Global } from "@kairos-ai/core/global"
 import { Effect, Layer, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { NodePath } from "@effect/platform-node"
@@ -80,8 +82,8 @@ describe("Project.fromDirectory", () => {
     expect(project.vcs).toBe("git")
     expect(project.worktree).toBe(tmp.path)
 
-    const kairosFile = path.join(tmp.path, ".git", "kairos")
-    expect(await Bun.file(kairosFile).exists()).toBe(false)
+    const projectIdFile = path.join(Global.Path.data, "repos", Hash.fast(tmp.path), "project-id")
+    expect(await Bun.file(projectIdFile).exists()).toBe(false)
   })
 
   test("should handle git repository with commits", async () => {
@@ -94,8 +96,8 @@ describe("Project.fromDirectory", () => {
     expect(project.vcs).toBe("git")
     expect(project.worktree).toBe(tmp.path)
 
-    const kairosFile = path.join(tmp.path, ".git", "kairos")
-    expect(await Bun.file(kairosFile).exists()).toBe(true)
+    const projectIdFile = path.join(Global.Path.data, "repos", Hash.fast(tmp.path), "project-id")
+    expect(await Bun.file(projectIdFile).exists()).toBe(true)
   })
 
   test("returns global for non-git directory", async () => {
@@ -188,8 +190,8 @@ describe("Project.fromDirectory with worktrees", () => {
 
       expect(wt.id).toBe(main.id)
 
-      // Cache should live in the common .git dir, not the worktree's .git file
-      const cache = path.join(tmp.path, ".git", "kairos")
+      // Cache should be in ~/.kairos/repos/<hash>/project-id
+      const cache = path.join(Global.Path.data, "repos", Hash.fast(tmp.path), "project-id")
       const exists = await Bun.file(cache).exists()
       expect(exists).toBe(true)
     } finally {
@@ -533,8 +535,8 @@ describe("Project.fromDirectory with bare repos", () => {
       expect(project.id).not.toBe(ProjectID.global)
       expect(project.worktree).toBe(barePath)
 
-      const correctCache = path.join(barePath, "kairos")
-      const wrongCache = path.join(parentDir, ".git", "kairos")
+      const correctCache = path.join(Global.Path.data, "repos", Hash.fast(worktreePath), "project-id")
+      const wrongCache = path.join(Global.Path.data, "repos", Hash.fast(parentDir), "project-id")
 
       expect(await Bun.file(correctCache).exists()).toBe(true)
       expect(await Bun.file(wrongCache).exists()).toBe(false)
@@ -564,9 +566,9 @@ describe("Project.fromDirectory with bare repos", () => {
 
       expect(projA.id).not.toBe(projB.id)
 
-      const cacheA = path.join(bareA, "kairos")
-      const cacheB = path.join(bareB, "kairos")
-      const wrongCache = path.join(parentDir, ".git", "kairos")
+      const cacheA = path.join(Global.Path.data, "repos", Hash.fast(worktreeA), "project-id")
+      const cacheB = path.join(Global.Path.data, "repos", Hash.fast(worktreeB), "project-id")
+      const wrongCache = path.join(Global.Path.data, "repos", Hash.fast(parentDir), "project-id")
 
       expect(await Bun.file(cacheA).exists()).toBe(true)
       expect(await Bun.file(cacheB).exists()).toBe(true)
@@ -592,7 +594,7 @@ describe("Project.fromDirectory with bare repos", () => {
       expect(project.id).not.toBe(ProjectID.global)
       expect(project.worktree).toBe(barePath)
 
-      const correctCache = path.join(barePath, "kairos")
+      const correctCache = path.join(Global.Path.data, "repos", Hash.fast(worktreePath), "project-id")
       expect(await Bun.file(correctCache).exists()).toBe(true)
     } finally {
       await $`rm -rf ${barePath} ${worktreePath}`.quiet().nothrow()
