@@ -119,7 +119,7 @@ describe.sequential('ProactivePlannerService', () => {
         expect(persisted.plan.risks[0].title).toBe('Deploy instability');
     });
 
-    it('falls back to safe plan when model output is invalid', async () => {
+    it('writes alert file when model output is invalid', async () => {
         const executePrompt = vi.fn().mockResolvedValue({
             provider: 'gemini',
             command: 'gemini',
@@ -136,10 +136,12 @@ describe.sequential('ProactivePlannerService', () => {
             endedAt: new Date().toISOString(),
         });
 
+        const onParseError = vi.fn();
         const { ProactivePlannerService } = await import('../ProactivePlannerService');
         const service = new ProactivePlannerService({ executePrompt } as any, {
             intervalMs: 30_000,
             recentWindowDays: 1,
+            onParseError,
         });
 
         const result = await service.runNow('proj-b');
@@ -147,6 +149,14 @@ describe.sequential('ProactivePlannerService', () => {
         expect(result.plan.risks).toHaveLength(0);
         expect(result.plan.opportunities).toHaveLength(0);
         expect(result.plan.taskCandidates).toHaveLength(0);
-        expect(result.plan.recommendations[0].title).toContain('Manual review required');
+        expect(result.plan.recommendations[0].title).toContain('Alerta');
+        expect(onParseError).toHaveBeenCalledTimes(1);
+        expect(onParseError).toHaveBeenCalledWith(
+            expect.objectContaining({ reason: 'Model output did not contain JSON', projectId: 'proj-b' }),
+        );
+
+        const persisted = JSON.parse(await fs.readFile(result.outputFile, 'utf8'));
+        expect(persisted.type).toBe('alert');
+        expect(persisted.plan.recommendations[0].title).toContain('Alerta');
     });
 });

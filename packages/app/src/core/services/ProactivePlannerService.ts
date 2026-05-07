@@ -145,8 +145,44 @@ export class ProactivePlannerService {
         });
 
         const parsedPlan = this.parseModelOutput(result.rawText || result.stdout || '');
-        const pendingApprovals = this.routeTaskApprovals(parsedPlan.taskCandidates);
         const generatedAt = new Date().toISOString();
+
+        if (!parsedPlan) {
+            const errorDetail = {
+                reason: 'Model output did not contain JSON',
+                projectId,
+                provider: result.provider,
+                timestamp: generatedAt,
+            };
+            this.logger.warn(`Proactive planner parse error: ${errorDetail.reason}`);
+            const alertFile = await this.writeAlertFile(projectId, errorDetail, result);
+            await this.onParseError?.(errorDetail);
+            const runResult: ProactivePlannerRunResult = {
+                projectId,
+                generatedAt,
+                provider: result.provider,
+                command: result.command,
+                exitCode: result.exitCode,
+                inputEvents: events.length,
+                plan: {
+                    risks: [],
+                    opportunities: [],
+                    taskCandidates: [],
+                    recommendations: [{
+                        title: 'Alerta: revisão do modelo precisa de correção',
+                        rationale: errorDetail.reason,
+                        action: 'Corrigir o prompt ou o formato de saída do modelo',
+                    }],
+                },
+                pendingApprovals: [],
+                outputFile: alertFile,
+            };
+            this.latestPlan = runResult;
+            await this.onPlanGenerated?.(runResult);
+            return runResult;
+        }
+
+        const pendingApprovals = this.routeTaskApprovals(parsedPlan.taskCandidates);
         const outputFile = await this.persistRun(projectId, {
             generatedAt,
             provider: result.provider,
@@ -243,6 +279,47 @@ export class ProactivePlannerService {
         const last = rawText.lastIndexOf('}');
         if (first === -1 || last <= first) return null;
         return rawText.slice(first, last + 1).trim();
+    }
+
+    private async writeAlertFile(
+        projectId: string,
+        error: { reason: string; provider: string; timestamp: string },
+        inferenceResult: { command: string; exitCode: number | null },
+    ): Promise<string> {
+        const dateKey = new Date(error.timestamp).toISOString().slice(0, 10);
+        const dayDir = path.join(this.dataDir, dateKey);
+        await fs.mkdir(dayDir, { recursive: true });
+
+        const safeProject = this.slug(projectId || 'system') || 'system';
+        const stamp = error.timestamp.replace(/[:.]/g, '-');
+        const outputFile = path.join(dayDir, `${safeProject}-alert-${stamp}.json`);
+
+        await fs.writeFile(outputFile, JSON.stringify({
+            projectId,
+            generatedAt: error.timestamp,
+            provider: error.provider,
+            command: inferenceResult.command,
+            exitCode: inferenceResult.exitCode,
+            inputEvents: 0,
+            type: 'alert',
+            alert: {
+                title: 'Erro: saída do modelo não contém JSON',
+                reason: error.reason,
+                action: 'Corrigir o prompt ou o formato de saída do modelo e executar o planner novamente',
+            },
+            plan: {
+                risks: [],
+                opportunities: [],
+                taskCandidates: [],
+                recommendations: [{
+                    title: 'Alerta: revisão do modelo precisa de correção',
+                    rationale: error.reason,
+                    action: 'Corrigir o prompt ou o formato de saída do modelo',
+                }],
+            },
+            pendingApprovals: [],
+        }, null, 2), 'utf8');
+        return outputFile;
     }
 
     private routeTaskApprovals(tasks: ProactivePlan['taskCandidates']): Array<{ requestId: string; taskTitle: string; reason: string }> {

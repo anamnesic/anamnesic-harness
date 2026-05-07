@@ -2,10 +2,12 @@ import { getDb } from '@/app/api/_lib/db';
 import { ProactivePlannerService } from '@/src/core/services/ProactivePlannerService';
 import { ApprovalFlow } from '@/src/policies/approvalFlow';
 import { SettingsService } from '@/src/core/services/SettingsService';
+import { Logger } from '@/src/core/utils/Logger';
 
 let started = false;
 const approvalFlow = new ApprovalFlow();
 let proactivePlanner: ProactivePlannerService | null = null;
+const logger = Logger.getInstance('proactive');
 
 async function createProactivePlannerService(): Promise<ProactivePlannerService> {
     if (proactivePlanner) return proactivePlanner;
@@ -23,6 +25,9 @@ async function createProactivePlannerService(): Promise<ProactivePlannerService>
         recentWindowDays: 2,
         maxEvents: 250,
         requireApprovalForSensitiveTasks: true,
+        onParseError: (error) => {
+            logger.warn(`Parse error for project ${error.projectId}: ${error.reason}`);
+        },
     });
 
     return proactivePlanner;
