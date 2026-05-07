@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { BookText, Brain, Database, FileSearch, Filter, Lightbulb, ShieldAlert, Sparkles, Workflow } from 'lucide-react';
-import { useApi } from '@/src/lib/api';
+import { BookText, Brain, Database, FileSearch, Filter, Lightbulb, ShieldAlert, Sparkles, Workflow, CheckCircle2, XCircle } from 'lucide-react';
+import { apiFetch, useApi } from '@/src/lib/api';
 import { cn } from '@/src/lib/utils';
 
 interface DecisionFeedItem {
@@ -18,6 +18,7 @@ interface DecisionFeedItem {
 }
 
 type StatusFilterValue = DecisionFeedItem['status'] | 'all' | 'completed';
+type DecisionTab = 'proactive' | 'optimization' | 'observer';
 
 const STATUS_LABELS: Record<DecisionFeedItem['status'], string> = {
   pending: 'Em andamento',
@@ -93,22 +94,27 @@ function formatWhen(iso: string): string {
 
 export function Decisions() {
   const { data, loading, error, refetch } = useApi<ApiEnvelope<DecisionFeedData>>('/api/v1/decisions/data');
-  const [sourceFilter, setSourceFilter] = useState<DecisionFeedItem['source'] | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<DecisionTab>('proactive');
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const feed = data?.data;
-  const proactiveItems = useMemo(
-    () => (feed?.items ?? []).filter((item) => item.source === 'proactive'),
-    [feed?.items],
-  );
+  const [actionBusy, setActionBusy] = useState(false);
+
+  const tabItems = useMemo(() => {
+    if (!feed?.items) return [];
+    if (activeTab === 'proactive') {
+      return feed.items.filter((item) => item.source === 'proactive');
+    }
+    if (activeTab === 'optimization') {
+      return feed.items.filter((item) => item.source === 'self-optimization');
+    }
+    return feed.items.filter((item) => item.source === 'decision-log' || item.source === 'system-log' || item.source === 'audit');
+  }, [feed?.items, activeTab]);
 
   const filteredItems = useMemo(() => {
-    const items = feed?.items ?? [];
-
-    return items.filter((item) => {
-      if (sourceFilter !== 'all' && item.source !== sourceFilter) return false;
+    const items = tabItems.filter((item) => {
       if (statusFilter !== 'all') {
         if (statusFilter === 'completed') {
           if (item.status !== 'accepted' && item.status !== 'rejected') return false;
@@ -126,7 +132,14 @@ export function Decisions() {
         || item.sourceFile.toLowerCase().includes(q)
       );
     });
-  }, [feed?.items, query, sourceFilter, statusFilter]);
+
+    return items.slice().sort((a, b) => {
+      const aPending = a.status === 'pending' ? 0 : 1;
+      const bPending = b.status === 'pending' ? 0 : 1;
+      if (aPending !== bPending) return aPending - bPending;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+  }, [tabItems, query, statusFilter]);
 
   const selected = useMemo(() => {
     if (!filteredItems.length) return null;
@@ -134,17 +147,31 @@ export function Decisions() {
     return filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
   }, [filteredItems, selectedId]);
 
-  const sourceFilters: Array<{ value: DecisionFeedItem['source'] | 'all'; label: string; count: number }> = useMemo(() => {
+  async function handleDecisionAction(item: DecisionFeedItem, action: 'approve' | 'reject') {
+    if (!item.metadata?.requestId) return;
+    setActionBusy(true);
+
+    try {
+      await apiFetch('/api/v1/proactive/insights', {
+        method: 'POST',
+        body: JSON.stringify({ action, requestId: item.metadata.requestId }),
+      });
+      await refetch();
+    } catch {
+      // swallow; UI state remains
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  const tabCounts = useMemo(() => {
     const bySource = feed?.bySource ?? {};
-    return [
-      { value: 'all', label: 'Tudo', count: feed?.total ?? 0 },
-      { value: 'proactive', label: 'Proactive', count: bySource.proactive ?? 0 },
-      { value: 'self-optimization', label: 'Self Opt', count: bySource['self-optimization'] ?? 0 },
-      { value: 'decision-log', label: 'Aceites/Rejeições', count: bySource['decision-log'] ?? 0 },
-      { value: 'system-log', label: 'System Log', count: bySource['system-log'] ?? 0 },
-      { value: 'audit', label: 'Audit', count: bySource.audit ?? 0 },
-    ];
-  }, [feed?.bySource, feed?.total]);
+    return {
+      proactive: bySource.proactive ?? 0,
+      optimization: bySource['self-optimization'] ?? 0,
+      observer: (bySource['decision-log'] ?? 0) + (bySource['system-log'] ?? 0) + (bySource.audit ?? 0),
+    };
+  }, [feed?.bySource]);
 
   const completedCount = (feed?.byStatus?.accepted ?? 0) + (feed?.byStatus?.rejected ?? 0);
   const statusFilters: Array<{ value: StatusFilterValue; label: string; count: number }> = useMemo(() => {
@@ -218,6 +245,47 @@ export function Decisions() {
         </div>
       </div>
 
+      <div className="bento-card">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('proactive')}
+            className={cn(
+              'rounded-full border px-3 py-2 text-xs font-bold transition-colors',
+              activeTab === 'proactive'
+                ? 'border-primary/60 bg-primary/10 text-accent'
+                : 'border-border text-text-dim hover:border-primary/30 hover:text-accent',
+            )}
+          >
+            Proactive ({tabCounts.proactive})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('optimization')}
+            className={cn(
+              'rounded-full border px-3 py-2 text-xs font-bold transition-colors',
+              activeTab === 'optimization'
+                ? 'border-primary/60 bg-primary/10 text-accent'
+                : 'border-border text-text-dim hover:border-primary/30 hover:text-accent',
+            )}
+          >
+            Optimization ({tabCounts.optimization})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('observer')}
+            className={cn(
+              'rounded-full border px-3 py-2 text-xs font-bold transition-colors',
+              activeTab === 'observer'
+                ? 'border-primary/60 bg-primary/10 text-accent'
+                : 'border-border text-text-dim hover:border-primary/30 hover:text-accent',
+            )}
+          >
+            Observer ({tabCounts.observer})
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bento-card">
           <p className="label-caps">Total de decisões/eventos</p>
@@ -241,43 +309,6 @@ export function Decisions() {
         </div>
       </div>
 
-      <div className="bento-card">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="label-caps">Sugestões proativas</p>
-            <h3 className="text-lg font-bold mt-2">{proactiveItems.length ? `${proactiveItems.length} item(s) proativo(s)` : 'Sem sugestões proativas disponíveis'}</h3>
-            <p className="text-xs text-text-dim mt-1">
-              Veja o feed de proativas ou selecione o filtro Proactive para visualizar todas.
-            </p>
-          </div>
-          <button
-            onClick={() => setSourceFilter('proactive')}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
-          >
-            Ver proativas
-          </button>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(proactiveItems.slice(0, 3).length === 0 ? [null] : proactiveItems.slice(0, 3)).map((item, index) => (
-            item ? (
-              <div key={item.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="label-caps text-text-dim">{SOURCE_LABELS[item.source]}</span>
-                  <span className={cn('rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider', STATUS_TONE[item.status])}>
-                    {STATUS_LABELS[item.status] ?? item.status}
-                  </span>
-                </div>
-                <p className="font-semibold text-sm text-highlight mb-2 line-clamp-2">{item.title}</p>
-                <p className="text-xs text-text-dim line-clamp-3">{item.summary}</p>
-              </div>
-            ) : (
-              <div key={`empty-${index}`} className="rounded-xl border border-border bg-card p-4 text-sm text-text-dim">
-                Nenhuma sugestão proativa no momento.
-              </div>
-            )
-          ))}
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[20rem_1fr_24rem] gap-4 min-h-[65vh]">
         <aside className="bento-card min-h-0 overflow-hidden flex flex-col">
@@ -287,21 +318,10 @@ export function Decisions() {
           </div>
 
           <div className="space-y-2">
-            {sourceFilters.map((item) => (
-              <button
-                key={item.value}
-                onClick={() => setSourceFilter(item.value)}
-                className={cn(
-                  'w-full flex items-center justify-between rounded-lg border px-3 py-2 text-xs transition-colors',
-                  sourceFilter === item.value
-                    ? 'border-primary/60 bg-primary/10 text-accent'
-                    : 'border-border text-text-dim hover:text-accent',
-                )}
-              >
-                <span className="font-semibold">{item.label}</span>
-                <span>{item.count}</span>
-              </button>
-            ))}
+            <div className="rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-text-dim">
+              <p className="font-semibold text-highlight">Aba ativa</p>
+              <p className="mt-1">{activeTab === 'proactive' ? 'Mostrando sugestões proativas.' : activeTab === 'optimization' ? 'Mostrando itens de auto-otimização.' : 'Mostrando histórico e observações.'}</p>
+            </div>
           </div>
 
           <div className="mt-4 border-t border-border/60 pt-3 space-y-2">
@@ -351,35 +371,57 @@ export function Decisions() {
                 const selectedRow = selected?.id === item.id;
 
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedId(item.id)}
-                    className={cn(
-                      'w-full text-left rounded-xl border p-3 transition-colors',
-                      selectedRow
-                        ? 'border-primary/60 bg-primary/10'
-                        : 'border-border bg-card/30 hover:border-border/80',
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <SourceIcon className="size-3.5 text-primary shrink-0" />
-                          <span className="label-caps text-text-dim">{SOURCE_LABELS[item.source]}</span>
-                          <span className="label-caps text-text-dim">• {item.category}</span>
+                  <div key={item.id} className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(item.id)}
+                      className={cn(
+                        'w-full text-left rounded-xl border p-3 transition-colors',
+                        selectedRow
+                          ? 'border-primary/60 bg-primary/10'
+                          : 'border-border bg-card/30 hover:border-border/80',
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <SourceIcon className="size-3.5 text-primary shrink-0" />
+                            <span className="label-caps text-text-dim">{SOURCE_LABELS[item.source]}</span>
+                            <span className="label-caps text-text-dim">• {item.category}</span>
+                          </div>
+                          <p className="font-semibold text-sm text-highlight truncate">{item.title}</p>
+                          <p className="text-xs text-text-dim mt-1 line-clamp-2">{item.summary}</p>
                         </div>
-                        <p className="font-semibold text-sm text-highlight truncate">{item.title}</p>
-                        <p className="text-xs text-text-dim mt-1 line-clamp-2">{item.summary}</p>
-                      </div>
 
-                      <div className="shrink-0 text-right space-y-1">
-                        <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', STATUS_TONE[item.status])}>
-                          {STATUS_LABELS[item.status] ?? item.status}
-                        </span>
-                        <p className="text-[10px] text-text-dim">{formatWhen(item.timestamp)}</p>
+                        <div className="shrink-0 text-right space-y-1">
+                          <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', STATUS_TONE[item.status])}>
+                            {STATUS_LABELS[item.status] ?? item.status}
+                          </span>
+                          <p className="text-[10px] text-text-dim">{formatWhen(item.timestamp)}</p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    {item.source === 'proactive' && item.category === 'pending-approval' && item.status === 'pending' ? (
+                      <div className="mt-1 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={actionBusy}
+                          onClick={() => void handleDecisionAction(item, 'approve')}
+                          className="inline-flex flex-1 items-center justify-center rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-bold text-green-400 hover:bg-green-500/15 transition-colors"
+                        >
+                          <CheckCircle2 className="size-4 mr-2" /> Aprovar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionBusy}
+                          onClick={() => void handleDecisionAction(item, 'reject')}
+                          className="inline-flex flex-1 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-500/15 transition-colors"
+                        >
+                          <XCircle className="size-4 mr-2" /> Rejeitar
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })
             )}

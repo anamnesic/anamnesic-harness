@@ -22,6 +22,10 @@ interface AgentStats { totalAgents: number; activeAgents: number; totalTasksComp
 interface WorkflowStats { total: number; active: number; totalExecutions: number; successfulExecutions: number; failedExecutions: number; successRate: number }
 interface RunsData { data?: Array<{ status: string }> | { items?: Array<{ status: string }>; total?: number }; count?: number }
 
+interface SettingsData {
+    aiSettings?: Record<string, unknown>;
+}
+
 interface ProactiveInsightResponse {
     success?: boolean;
     data?: {
@@ -48,7 +52,11 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     const { data: history, loading: histLoading, error: historyErr } = usePolling<HistoryData>('/api/chat/history?limit=3', 60000);
     const { data: agentStats, error: agentsErr } = usePolling<AgentStats>('/api/v1/agents/stats', 20000);
     const { data: workflowStats, error: workflowsErr } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 20000);
-    const { data: proactiveInsights, loading: proactiveLoading, refetch: refetchProactive, error: proactiveErr } = usePolling<ProactiveInsightResponse>('/api/v1/proactive/insights', 45000);
+    const { data: settingsData } = useApi<SettingsData>('/api/v1/settings');
+    const proactivePollingIntervalMs = typeof settingsData?.aiSettings?.['proactive.ui.pollIntervalMs'] === 'number'
+        ? settingsData.aiSettings['proactive.ui.pollIntervalMs']
+        : 60 * 60_000;
+    const { data: proactiveInsights, loading: proactiveLoading, refetch: refetchProactive, error: proactiveErr } = usePolling<ProactiveInsightResponse>('/api/v1/proactive/insights', proactivePollingIntervalMs);
     const { data: runsData, error: runsErr } = usePolling<RunsData>('/api/v1/orchestrator/runs?limit=20', 20000);
     const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
     const [proactiveBusy, setProactiveBusy] = useState(false);

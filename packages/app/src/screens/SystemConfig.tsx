@@ -88,6 +88,9 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
 
     const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
     const [localModelStates, setLocalModelStates] = useState<Record<string, boolean>>({});
+    const [proactivePlannerIntervalSeconds, setProactivePlannerIntervalSeconds] = useState(3600);
+    const [selfOptimizationIntervalSeconds, setSelfOptimizationIntervalSeconds] = useState(3600);
+    const [proactiveRefreshIntervalSeconds, setProactiveRefreshIntervalSeconds] = useState(3600);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
@@ -97,6 +100,9 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         : (availability as AvailabilityData | null);
     const availableModels = AVAILABLE_MODELS.filter((model) => availabilityPayload?.models?.[model.id] ?? false);
     const installedCli = availabilityPayload?.availableCli ?? [];
+
+    const parseMsToSeconds = (value: unknown, fallback: number) =>
+        typeof value === 'number' && Number.isFinite(value) ? Math.max(1, Math.round(value / 1000)) : fallback;
 
     useEffect(() => {
         if (!settings?.flags) {
@@ -112,6 +118,15 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
             nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
         }
         setLocalModelStates(nextModels);
+        setProactivePlannerIntervalSeconds(
+            parseMsToSeconds(settings.aiSettings?.['proactive.planner.intervalMs'], 3600),
+        );
+        setSelfOptimizationIntervalSeconds(
+            parseMsToSeconds(settings.aiSettings?.['selfOptimization.intervalMs'], 3600),
+        );
+        setProactiveRefreshIntervalSeconds(
+            parseMsToSeconds(settings.aiSettings?.['proactive.ui.pollIntervalMs'], 3600),
+        );
         setDirty(false);
     }, [settings, availabilityPayload]);
 
@@ -128,10 +143,14 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     async function handleCommit() {
         setSaving(true);
         try {
-            const aiSettingsPayload: Record<string, boolean> = {};
+            const aiSettingsPayload: Record<string, any> = {};
             for (const [modelId, enabled] of Object.entries(localModelStates)) {
                 aiSettingsPayload[`models.${modelId}`] = enabled;
             }
+
+            aiSettingsPayload['proactive.planner.intervalMs'] = proactivePlannerIntervalSeconds * 1000;
+            aiSettingsPayload['selfOptimization.intervalMs'] = selfOptimizationIntervalSeconds * 1000;
+            aiSettingsPayload['proactive.ui.pollIntervalMs'] = proactiveRefreshIntervalSeconds * 1000;
 
             await apiFetch('/api/v1/settings', {
                 method: 'PATCH',
@@ -159,6 +178,15 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
             nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
         }
         setLocalModelStates(nextModels);
+        setProactivePlannerIntervalSeconds(
+            parseMsToSeconds(settings?.aiSettings?.['proactive.planner.intervalMs'], 3600),
+        );
+        setSelfOptimizationIntervalSeconds(
+            parseMsToSeconds(settings?.aiSettings?.['selfOptimization.intervalMs'], 3600),
+        );
+        setProactiveRefreshIntervalSeconds(
+            parseMsToSeconds(settings?.aiSettings?.['proactive.ui.pollIntervalMs'], 3600),
+        );
         setDirty(false);
     }
 
@@ -288,6 +316,54 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                             ))}
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* Proactive Timing Settings */}
+            <div className="bento-card">
+                <div className="flex items-center justify-between">
+                    <span className="label-caps">Proactive Timers</span>
+                    <span className="text-xs text-text-dim">Valores em segundos</span>
+                </div>
+                <div className="space-y-4 mt-4">
+                    <div className="grid gap-4">
+                        <div className="grid grid-cols-1 gap-2">
+                            <label className="text-[8px] font-black text-text-dim uppercase">Planejador proativo</label>
+                            <p className="text-xs text-text-dim">Intervalo entre execuções do planejador proativo.</p>
+                            <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={proactivePlannerIntervalSeconds}
+                                onChange={(event) => setProactivePlannerIntervalSeconds(Math.max(1, Number(event.target.value) || 1))}
+                                className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-right text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            <label className="text-[8px] font-black text-text-dim uppercase">Auto-otimização</label>
+                            <p className="text-xs text-text-dim">Intervalo entre execuções do serviço de auto-otimização.</p>
+                            <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={selfOptimizationIntervalSeconds}
+                                onChange={(event) => setSelfOptimizationIntervalSeconds(Math.max(1, Number(event.target.value) || 1))}
+                                className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-right text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            <label className="text-[8px] font-black text-text-dim uppercase">Atualização de insights</label>
+                            <p className="text-xs text-text-dim">Intervalo de polling para atualizar insights proativos no dashboard.</p>
+                            <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={proactiveRefreshIntervalSeconds}
+                                onChange={(event) => setProactiveRefreshIntervalSeconds(Math.max(1, Number(event.target.value) || 1))}
+                                className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-right text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -531,4 +607,3 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         </motion.div>
     );
 }
-
