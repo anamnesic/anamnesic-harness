@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import os from 'node:os';
 import { ok, err } from '@/app/api/_lib/response';
 import { vaultDataDir, vaultReadEnc } from '@kairos/vault';
 
@@ -389,19 +390,16 @@ async function readTailLines(filePath: string, maxBytes: number, maxLines: numbe
 }
 
 async function resolveDataDir(): Promise<string> {
-    const plainDataDir = path.join(process.cwd(), 'data');
+    const kairosDir = process.env['KAIROS_HOME'] ?? path.join(os.homedir(), '.kairos');
     const vaultDir = vaultDataDir();
 
     const vaultAccessible = await fs.access(vaultDir).then(() => true).catch(() => false);
-    if (!vaultAccessible) return plainDataDir;
+    if (vaultAccessible) {
+        const vaultHasContent = await fs.readdir(vaultDir).then((entries) => entries.length > 0).catch(() => false);
+        if (vaultHasContent) return vaultDir;
+    }
 
-    const dataAccessible = await fs.access(plainDataDir).then(() => true).catch(() => false);
-    if (!dataAccessible) return vaultDir;
-
-    const vaultHasContent = await fs.readdir(vaultDir).then((entries) => entries.length > 0).catch(() => false);
-    if (vaultHasContent) return vaultDir;
-
-    return plainDataDir;
+    return kairosDir;
 }
 
 async function parseJsonLineLogs(

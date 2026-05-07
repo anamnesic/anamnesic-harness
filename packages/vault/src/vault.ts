@@ -12,13 +12,18 @@ import {
   mkdir,
   access,
 } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import { encrypt, decrypt, type VaultRecord } from './cipher'
 
 const EXT = '.enc'
 
+function kairosHome(): string {
+  return process.env['KAIROS_HOME'] ?? path.join(os.homedir(), '.kairos')
+}
+
 function resolveVaultDir(): string {
-  return path.join(process.cwd(), 'data', 'vault')
+  return path.join(kairosHome(), 'vault')
 }
 
 function getKey(): Buffer {
@@ -49,7 +54,7 @@ export function vaultReadSync(relPath: string): string {
   const vaultDir = resolveVaultDir()
   const key = getKey()
   if (key.length === 0) {
-    const plainPath = path.join(process.cwd(), 'data', relPath)
+    const plainPath = path.join(kairosHome(), relPath)
     return readFileSync(plainPath, 'utf-8')
   }
   const raw = readFileSync(encPath(vaultDir, relPath), 'utf-8')
@@ -60,7 +65,7 @@ export function vaultWriteSync(relPath: string, content: string): void {
   const vaultDir = resolveVaultDir()
   const key = getKey()
   if (key.length === 0) {
-    const plainPath = path.join(process.cwd(), 'data', relPath)
+    const plainPath = path.join(kairosHome(), relPath)
     mkdirSync(path.dirname(plainPath), { recursive: true })
     writeFileSync(plainPath, content, 'utf-8')
     return
@@ -82,7 +87,7 @@ export function vaultReaddirSync(relPrefix: string): string[] {
   const vaultDir = resolveVaultDir()
   const key = getKey()
   if (key.length === 0) {
-    const plainDir = path.join(process.cwd(), 'data', relPrefix)
+    const plainDir = path.join(kairosHome(), relPrefix)
     return collectFiles(plainDir).map((f) => path.relative(plainDir, f))
   }
   const dir = path.join(vaultDir, relPrefix)
@@ -109,7 +114,7 @@ export async function vaultRead(relPath: string): Promise<string> {
   const vaultDir = resolveVaultDir()
   const key = getKey()
   if (key.length === 0) {
-    const plainPath = path.join(process.cwd(), 'data', relPath)
+    const plainPath = path.join(kairosHome(), relPath)
     return readFile(plainPath, 'utf-8')
   }
   const raw = await readFile(encPath(vaultDir, relPath), 'utf-8')
@@ -120,7 +125,7 @@ export async function vaultWrite(relPath: string, content: string): Promise<void
   const vaultDir = resolveVaultDir()
   const key = getKey()
   if (key.length === 0) {
-    const plainPath = path.join(process.cwd(), 'data', relPath)
+    const plainPath = path.join(kairosHome(), relPath)
     await mkdir(path.dirname(plainPath), { recursive: true })
     await writeFile(plainPath, content, 'utf-8')
     return
@@ -142,7 +147,7 @@ export async function vaultReaddir(relPrefix: string): Promise<string[]> {
   const vaultDir = resolveVaultDir()
   const key = getKey()
   if (key.length === 0) {
-    const plainDir = path.join(process.cwd(), 'data', relPrefix)
+    const plainDir = path.join(kairosHome(), relPrefix)
     return collectFilesAsync(plainDir).then((files) =>
       files.map((f) => path.relative(plainDir, f)),
     )
@@ -161,14 +166,14 @@ export async function vaultExists(relPath: string): Promise<boolean> {
   const vaultDir = resolveVaultDir()
   const key = getKey()
   if (key.length === 0) {
-    return access(path.join(process.cwd(), 'data', relPath)).then(() => true).catch(() => false)
+    return access(path.join(kairosHome(), relPath)).then(() => true).catch(() => false)
   }
   return access(encPath(vaultDir, relPath)).then(() => true).catch(() => false)
 }
 
 // ── Abs-path helpers (for callers that use absolute data/ paths) ───────────
 
-/** Returns the absolute path to the vault directory (data/vault). */
+/** Returns the absolute path to the vault directory (~/.kairos/vault). */
 export function vaultDataDir(): string {
   return resolveVaultDir()
 }

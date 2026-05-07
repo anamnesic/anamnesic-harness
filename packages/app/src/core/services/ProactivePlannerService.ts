@@ -1,5 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import os from 'node:os';
 import { z } from 'zod';
 import { CliInferenceService, type LlmCliProvider } from '../llm-cli';
 import { memoryManager, type EnrichedMemoryEntry } from '../../memory';
@@ -94,7 +95,7 @@ export class ProactivePlannerService {
         this.intervalMs = Math.max(30_000, options.intervalMs ?? 5 * 60_000);
         this.recentWindowDays = Math.max(1, options.recentWindowDays ?? 2);
         this.maxEvents = Math.max(20, options.maxEvents ?? 200);
-        this.dataDir = options.dataDir ?? path.join(process.cwd(), 'data', 'proactive');
+        this.dataDir = options.dataDir ?? path.join(os.homedir(), '.kairos', 'proactive');
         this.requireApprovalForSensitiveTasks = options.requireApprovalForSensitiveTasks ?? true;
         this.approvalRequester = options.approvalRequester ?? 'proactive-planner';
         this.approvalFlow = options.approvalFlow;
@@ -319,6 +320,7 @@ export class ProactivePlannerService {
             },
             pendingApprovals: [],
         }, null, 2), 'utf8');
+        await this.cleanupOldFiles(safeProject, new Set([outputFile]));
         return outputFile;
     }
 
@@ -357,6 +359,23 @@ export class ProactivePlannerService {
         return input.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     }
 
+    private async cleanupOldFiles(safeProject: string, keepPaths: Set<string>): Promise<void> {
+        const dateDirs = await fs.readdir(this.dataDir).catch(() => []);
+        for (const dir of dateDirs) {
+            const dirPath = path.join(this.dataDir, dir);
+            const stat = await fs.stat(dirPath).catch(() => null);
+            if (!stat?.isDirectory()) continue;
+
+            const entries = await fs.readdir(dirPath).catch(() => []);
+            for (const entry of entries) {
+                if (!entry.startsWith(safeProject)) continue;
+                const fullPath = path.join(dirPath, entry);
+                if (keepPaths.has(fullPath)) continue;
+                await fs.unlink(fullPath).catch(() => {});
+            }
+        }
+    }
+
     private async persistRun(
         projectId: string,
         payload: Omit<ProactivePlannerRunResult, 'projectId' | 'outputFile'>,
@@ -370,6 +389,7 @@ export class ProactivePlannerService {
         const outputFile = path.join(dayDir, `${safeProject}-${stamp}.json`);
 
         await fs.writeFile(outputFile, JSON.stringify({ projectId, ...payload }, null, 2), 'utf8');
+        await this.cleanupOldFiles(safeProject, new Set([outputFile]));
         return outputFile;
     }
 }

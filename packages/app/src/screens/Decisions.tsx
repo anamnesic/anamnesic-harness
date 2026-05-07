@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { BookText, Brain, ChevronLeft, ChevronRight, Database, FileSearch, Filter, Lightbulb, ShieldAlert, Sparkles, Workflow, CheckCircle2, XCircle } from 'lucide-react';
+import { BookText, Brain, ChevronLeft, ChevronRight, Clock3, Database, FileSearch, Filter, Lightbulb, ShieldAlert, Sparkles, Workflow, CheckCircle2, XCircle } from 'lucide-react';
 import { apiFetch, useApi } from '@/src/lib/api';
 import { cn } from '@/src/lib/utils';
 
@@ -155,7 +155,7 @@ export function Decisions() {
     return filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
   }, [filteredItems, selectedId]);
 
-  async function handleDecisionAction(item: DecisionFeedItem, action: 'approve' | 'reject' | 'execute-task') {
+  async function handleDecisionAction(item: DecisionFeedItem, action: 'approve' | 'reject' | 'postpone' | 'execute-task') {
     setActionBusy(true);
 
     try {
@@ -167,9 +167,11 @@ export function Decisions() {
           body: JSON.stringify({ action: 'execute-task', taskTitle, taskDescription }),
         });
       } else if (item.metadata?.requestId) {
+        const body: Record<string, unknown> = { action, requestId: item.metadata.requestId };
+        if (action === 'postpone') body.ttlMs = 300_000;
         await apiFetch('/api/v1/proactive/insights', {
           method: 'POST',
-          body: JSON.stringify({ action, requestId: item.metadata.requestId }),
+          body: JSON.stringify(body),
         });
       }
       await refetch();
@@ -354,7 +356,7 @@ export function Decisions() {
           </div>
 
           <div className="mt-4 border-t border-border/60 pt-3 min-h-0 overflow-auto">
-            <p className="label-caps mb-2">Inventário data/</p>
+            <p className="label-caps mb-2">Inventário ~/.kairos/</p>
             <div className="space-y-2 text-xs text-text-dim">
               {Object.entries(feed?.inventory ?? {}).map(([name, info]) => (
                 <div key={name} className="rounded-lg border border-border/60 bg-card/40 px-2.5 py-2">
@@ -418,22 +420,30 @@ export function Decisions() {
                       </div>
                     </button>
                     {item.source === 'proactive' && item.status === 'pending' && (item.category === 'task-candidate' || item.category === 'pending-approval') ? (
-                      <div className="mt-1 flex gap-2">
+                      <div className="grid grid-cols-3 gap-2 mt-3">
                         <button
                           type="button"
                           disabled={actionBusy}
                           onClick={() => void handleDecisionAction(item, item.category === 'task-candidate' ? 'execute-task' : 'approve')}
-                          className="inline-flex flex-1 items-center justify-center rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-bold text-green-400 hover:bg-green-500/15 transition-colors"
+                          className="flex items-center justify-center gap-1 rounded-lg bg-green-500/15 text-green-400 py-2 text-[11px] font-bold hover:bg-green-500/20 transition-colors disabled:opacity-60"
                         >
-                          <CheckCircle2 className="size-4 mr-2" /> Aprovar
+                          <CheckCircle2 className="size-3.5" /> Aprovar
                         </button>
                         <button
                           type="button"
                           disabled={actionBusy}
                           onClick={() => void handleDecisionAction(item, 'reject')}
-                          className="inline-flex flex-1 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-500/15 transition-colors"
+                          className="flex items-center justify-center gap-1 rounded-lg bg-red-500/15 text-red-400 py-2 text-[11px] font-bold hover:bg-red-500/20 transition-colors disabled:opacity-60"
                         >
-                          <XCircle className="size-4 mr-2" /> Rejeitar
+                          <XCircle className="size-3.5" /> Rejeitar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionBusy}
+                          onClick={() => void handleDecisionAction(item, 'postpone')}
+                          className="flex items-center justify-center gap-1 rounded-lg bg-yellow-500/15 text-yellow-400 py-2 text-[11px] font-bold hover:bg-yellow-500/20 transition-colors disabled:opacity-60"
+                        >
+                          <Clock3 className="size-3.5" /> Adiar
                         </button>
                       </div>
                     ) : null}
@@ -495,7 +505,7 @@ export function Decisions() {
 
               <div className="rounded-lg border border-border/60 p-2 bg-card/30">
                 <p className="label-caps text-text-dim">Arquivo de origem</p>
-                <p className="mt-1 text-xs font-mono text-highlight break-all">data/{selected.sourceFile}</p>
+                <p className="mt-1 text-xs font-mono text-highlight break-all">~/.kairos/{selected.sourceFile}</p>
               </div>
 
               <div className="rounded-lg border border-border/60 p-2 bg-card/30">
