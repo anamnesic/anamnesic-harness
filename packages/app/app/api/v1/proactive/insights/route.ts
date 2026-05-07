@@ -3,9 +3,14 @@ export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { err, ok } from '@/app/api/_lib/response';
 import { ensureProactivePlannerStarted, getProactiveApprovalFlow, getProactivePlanner } from '@/app/api/_lib/proactive';
+import { vaultAppend } from '@kairos/vault';
 
 function resolveActor(req: NextRequest): string {
     return req.headers.get('x-user-id') || req.headers.get('x-workspace-id') || 'ui-user';
+}
+
+async function appendDecisionLog(entry: Record<string, unknown>) {
+    await vaultAppend('self-optimization/decisions.log', JSON.stringify(entry));
 }
 
 export async function GET(req: NextRequest) {
@@ -68,18 +73,39 @@ export async function POST(req: NextRequest) {
 
         if (action === 'approve') {
             approvals.approve(requestId, actor);
+            await appendDecisionLog({
+                suggestionId: requestId,
+                decision: 'accepted',
+                actor,
+                reason: `Aprovado por ${actor}`,
+                timestamp: new Date().toISOString(),
+            });
             return ok({ requestId, status: 'approved' });
         }
 
         if (action === 'reject') {
-            const reason = typeof body?.reason === 'string' ? body.reason : undefined;
+            const reason = typeof body?.reason === 'string' ? body.reason : `Negado por ${actor}`;
             approvals.deny(requestId, actor, reason);
+            await appendDecisionLog({
+                suggestionId: requestId,
+                decision: 'rejected',
+                actor,
+                reason,
+                timestamp: new Date().toISOString(),
+            });
             return ok({ requestId, status: 'denied' });
         }
 
         if (action === 'postpone') {
             const ttlMs = typeof body?.ttlMs === 'number' ? body.ttlMs : undefined;
             const postponed = approvals.postpone(requestId, actor, ttlMs);
+            await appendDecisionLog({
+                suggestionId: requestId,
+                decision: 'pending',
+                actor,
+                reason: `Postergado por ${actor}`,
+                timestamp: new Date().toISOString(),
+            });
             return ok({ requestId, status: postponed.status, expiresAt: postponed.expiresAt.toISOString() });
         }
 

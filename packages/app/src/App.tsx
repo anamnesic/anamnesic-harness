@@ -25,6 +25,7 @@ import {
   RotateCw,
   ChevronDown,
   TerminalSquare,
+  Menu,
 } from 'lucide-react';
 import { TerminalPanel, type TerminalControls } from './screens/TerminalPanel';
 import { apiFetch } from './lib/api';
@@ -678,4 +679,3 @@ function AppContent() {
 export default function App() {
   return <AppContent />;
 }
-

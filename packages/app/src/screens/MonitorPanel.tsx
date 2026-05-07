@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, RefreshCcw, Brain } from 'lucide-react';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, RefreshCcw, Brain, BookOpen } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -139,6 +139,7 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
             }
             if (action === 'approve') {
                 toast('Ação aprovada', 'success');
+                onNavigate('decisions');
             }
             if (action === 'reject') {
                 toast('Ação rejeitada', 'info');
@@ -173,20 +174,61 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-2">
                 {integrationStatus.map((item) => {
+                    const statusLabel = item.error
+                        ? 'erro'
+                        : item.loading
+                            ? 'carregando'
+                            : 'ok';
+                    const Icon = item.label === 'Health'
+                        ? Shield
+                        : item.label === 'Metrics'
+                            ? TrendingUp
+                            : item.label === 'History'
+                                ? BookOpen
+                                : item.error
+                                    ? XCircle
+                                    : item.loading
+                                        ? Clock3
+                                        : CheckCircle2;
                     const tone = item.error
                         ? 'border-red-500/30 bg-red-500/10 text-red-300'
                         : item.loading
                             ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
                             : 'border-green-500/30 bg-green-500/10 text-green-300';
-                    const label = item.error ? 'erro' : item.loading ? 'carregando' : 'ok';
+
+                    if (item.label === 'Health' || item.label === 'Metrics' || item.label === 'History') {
+                        return (
+                            <button
+                                key={item.label}
+                                type="button"
+                                disabled
+                                aria-label={`${item.label} ${statusLabel}`}
+                                title={`${item.label} ${statusLabel}`}
+                                className={cn(
+                                    'inline-flex h-12 w-12 items-center justify-center rounded-2xl border transition-colors',
+                                    item.error
+                                        ? 'border-red-500/30 bg-red-500/10 text-red-500'
+                                        : item.loading
+                                            ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
+                                            : 'border-green-500/30 bg-green-500/10 text-green-500',
+                                )}
+                            >
+                                <Icon className={cn('size-5', item.loading && 'animate-spin')} />
+                            </button>
+                        );
+                    }
 
                     return (
                         <span
                             key={item.label}
-                            className={cn('rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider', tone)}
-                            title={item.error ?? `${item.label} ${label}`}
+                            className={cn(
+                                'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-wider',
+                                tone,
+                            )}
+                            title={`${item.label} ${statusLabel}`}
                         >
-                            {item.label}: {label}
+                            <Icon className="size-4" />
+                            {item.label}: {statusLabel}
                         </span>
                     );
                 })}
@@ -486,4 +528,3 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
         </motion.div>
     );
 }
-
