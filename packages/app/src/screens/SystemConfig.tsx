@@ -29,9 +29,10 @@ interface SettingsData {
     workspaceId?: string;
 }
 interface AvailabilityData {
-    cli: Record<'copilot' | 'gemini' | 'kairos-code' | 'codex', boolean>;
+    cli: Record<'copilot' | 'gemini' | 'kairos-code' | 'codex' | 'ollama', boolean>;
     availableCli: string[];
     models: Record<string, boolean>;
+    providerEnabled?: Record<string, boolean>;
 }
 interface MetricsData {
     nodeVersion?: string;
@@ -88,6 +89,12 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
 
     const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
     const [localModelStates, setLocalModelStates] = useState<Record<string, boolean>>({});
+    const [localCliEnabled, setLocalCliEnabled] = useState<Record<string, boolean>>({
+        copilot: true,
+        gemini: true,
+        kairos: true,
+        codex: true,
+    });
     const [proactivePlannerIntervalSeconds, setProactivePlannerIntervalSeconds] = useState(3600);
     const [selfOptimizationIntervalSeconds, setSelfOptimizationIntervalSeconds] = useState(3600);
     const [proactiveRefreshIntervalSeconds, setProactiveRefreshIntervalSeconds] = useState(3600);
@@ -118,6 +125,14 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
             nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
         }
         setLocalModelStates(nextModels);
+
+        setLocalCliEnabled({
+            copilot: typeof settings.aiSettings?.['copilot.enabled'] === 'boolean' ? settings.aiSettings['copilot.enabled'] : true,
+            gemini: typeof settings.aiSettings?.['gemini.enabled'] === 'boolean' ? settings.aiSettings['gemini.enabled'] : true,
+            kairos: typeof settings.aiSettings?.['kairos.enabled'] === 'boolean' ? settings.aiSettings['kairos.enabled'] : true,
+            codex: typeof settings.aiSettings?.['codex.enabled'] === 'boolean' ? settings.aiSettings['codex.enabled'] : true,
+        });
+
         setProactivePlannerIntervalSeconds(
             parseMsToSeconds(settings.aiSettings?.['proactive.planner.intervalMs'], 3600),
         );
@@ -140,6 +155,11 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         setDirty(true);
     }
 
+    function toggleCliProvider(provider: string) {
+        setLocalCliEnabled(prev => ({ ...prev, [provider]: !prev[provider] }));
+        setDirty(true);
+    }
+
     async function handleCommit() {
         setSaving(true);
         try {
@@ -148,6 +168,10 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                 aiSettingsPayload[`models.${modelId}`] = enabled;
             }
 
+            aiSettingsPayload['copilot.enabled'] = localCliEnabled.copilot;
+            aiSettingsPayload['gemini.enabled'] = localCliEnabled.gemini;
+            aiSettingsPayload['kairos.enabled'] = localCliEnabled.kairos;
+            aiSettingsPayload['codex.enabled'] = localCliEnabled.codex;
             aiSettingsPayload['proactive.planner.intervalMs'] = proactivePlannerIntervalSeconds * 1000;
             aiSettingsPayload['selfOptimization.intervalMs'] = selfOptimizationIntervalSeconds * 1000;
             aiSettingsPayload['proactive.ui.pollIntervalMs'] = proactiveRefreshIntervalSeconds * 1000;
@@ -178,6 +202,12 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
             nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
         }
         setLocalModelStates(nextModels);
+        setLocalCliEnabled({
+            copilot: typeof settings?.aiSettings?.['copilot.enabled'] === 'boolean' ? settings?.aiSettings?.['copilot.enabled'] : true,
+            gemini: typeof settings?.aiSettings?.['gemini.enabled'] === 'boolean' ? settings?.aiSettings?.['gemini.enabled'] : true,
+            kairos: typeof settings?.aiSettings?.['kairos.enabled'] === 'boolean' ? settings?.aiSettings?.['kairos.enabled'] : true,
+            codex: typeof settings?.aiSettings?.['codex.enabled'] === 'boolean' ? settings?.aiSettings?.['codex.enabled'] : true,
+        });
         setProactivePlannerIntervalSeconds(
             parseMsToSeconds(settings?.aiSettings?.['proactive.planner.intervalMs'], 3600),
         );
@@ -316,6 +346,38 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                             ))}
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* CLI Provider Activation */}
+            <div className="bento-card">
+                <div className="flex items-center justify-between">
+                    <span className="label-caps">CLI Providers</span>
+                    <span className="text-xs text-text-dim">Ative ou desative provedores CLI usados para inferência.</span>
+                </div>
+                <div className="space-y-4 mt-4">
+                    {[
+                        { key: 'copilot', label: 'Copilot' },
+                        { key: 'gemini', label: 'Gemini' },
+                        { key: 'kairos', label: 'Kairos' },
+                        { key: 'codex', label: 'Codex' },
+                    ].map((provider) => (
+                        <div key={provider.key} className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold text-accent">{provider.label}</p>
+                                <p className="text-[10px] text-text-dim">Usar este provedor CLI para inferência quando disponível.</p>
+                            </div>
+                            <button
+                                onClick={() => toggleCliProvider(provider.key)}
+                                className={cn(
+                                    'h-5 w-9 rounded-full p-0.5 flex items-center transition-colors cursor-pointer',
+                                    localCliEnabled[provider.key] ? 'bg-primary' : 'bg-border',
+                                )}
+                            >
+                                <div className={cn('size-4 bg-white rounded-full transition-transform', localCliEnabled[provider.key] ? 'translate-x-4' : 'translate-x-0')} />
+                            </button>
+                        </div>
+                    ))}
                 </div>
             </div>
 
