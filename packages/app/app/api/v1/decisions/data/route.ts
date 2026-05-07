@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import os from 'node:os';
 import { ok, err } from '@/app/api/_lib/response';
 import { vaultDataDir, vaultReadEnc } from '@kairos/vault';
 
@@ -49,19 +50,28 @@ function shortText(value: unknown, fallback = 'Sem detalhe disponível', maxLen 
 }
 
 async function listJsonFiles(dirPath: string, limit: number): Promise<string[]> {
-    const all = await fs.readdir(dirPath, { recursive: true, withFileTypes: true }).catch(() => []);
     const files: Array<{ filePath: string; mtimeMs: number }> = [];
 
-    for (const entry of all) {
-        if (!entry.isFile()) continue;
-        const name = entry.name.toLowerCase();
-        if (!name.endsWith('.json.enc') && !name.endsWith('.json')) continue;
-        const filePath = path.join(entry.parentPath, entry.name);
-        const stat = await fs.stat(filePath).catch(() => null);
-        if (!stat) continue;
-        files.push({ filePath, mtimeMs: stat.mtimeMs });
+    async function walk(currentPath: string) {
+        const entries = await fs.readdir(currentPath, { withFileTypes: true }).catch(() => []);
+        for (const entry of entries) {
+            const filePath = path.join(currentPath, entry.name);
+            if (entry.isDirectory()) {
+                await walk(filePath);
+                continue;
+            }
+
+            if (!entry.isFile()) continue;
+            const name = entry.name.toLowerCase();
+            if (!name.endsWith('.json.enc') && !name.endsWith('.json')) continue;
+
+            const stat = await fs.stat(filePath).catch(() => null);
+            if (!stat) continue;
+            files.push({ filePath, mtimeMs: stat.mtimeMs });
+        }
     }
 
+    await walk(dirPath);
     files.sort((a, b) => b.mtimeMs - a.mtimeMs);
     return files.slice(0, limit).map((item) => item.filePath);
 }
@@ -191,6 +201,8 @@ async function parseProactiveFiles(
                     priority: task.priority,
                     sensitivity: task.sensitivity,
                     requiresApproval: task.requiresApproval,
+                    description: task.description,
+                    rationale: task.rationale,
                 },
             });
         });
@@ -377,6 +389,19 @@ async function readTailLines(filePath: string, maxBytes: number, maxLines: numbe
     }
 }
 
+async function resolveDataDir(): Promise<string> {
+    const kairosDir = process.env['KAIROS_HOME'] ?? path.join(os.homedir(), '.kairos');
+    const vaultDir = vaultDataDir();
+
+    const vaultAccessible = await fs.access(vaultDir).then(() => true).catch(() => false);
+    if (vaultAccessible) {
+        const vaultHasContent = await fs.readdir(vaultDir).then((entries) => entries.length > 0).catch(() => false);
+        if (vaultHasContent) return vaultDir;
+    }
+
+    return kairosDir;
+}
+
 async function parseJsonLineLogs(
     dataDir: string,
     logFilePath: string,
@@ -428,7 +453,7 @@ async function collectInventory(dataDir: string): Promise<Record<string, SourceI
         for (const file of files) {
             if (!file.isFile()) continue;
             count += 1;
-            const filePath = path.join(file.parentPath, file.name);
+            const filePath = path.join(dirPath, file.name);
             const stat = await fs.stat(filePath).catch(() => null);
             if (!stat) continue;
             if (!latestTimestamp || stat.mtime.toISOString() > latestTimestamp) {
@@ -449,7 +474,7 @@ async function collectInventory(dataDir: string): Promise<Record<string, SourceI
 
 export async function GET() {
     try {
-        const dataDir = vaultDataDir();
+        const dataDir = await resolveDataDir();
         const proactiveDir = path.join(dataDir, 'proactive');
         const selfDir = path.join(dataDir, 'self-optimization');
         const logsDir = path.join(dataDir, 'logs');

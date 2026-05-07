@@ -25,6 +25,7 @@ import {
   RotateCw,
   ChevronDown,
   TerminalSquare,
+  Menu,
 } from 'lucide-react';
 import { TerminalPanel, type TerminalControls } from './screens/TerminalPanel';
 import { apiFetch } from './lib/api';
@@ -131,7 +132,7 @@ function NotificationPopup({ onClose, onNavigate }: { onClose: () => void; onNav
   );
 }
 
-const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatOpen, onChatToggle, onTabChange, terminalOpen, onTerminalToggle }: {
+const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatOpen, onChatToggle, onTabChange, terminalOpen, onTerminalToggle, onConfigClick, configActive }: {
   title: string;
   subtitle?: string;
   onBack?: () => void;
@@ -142,6 +143,8 @@ const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatO
   onTabChange: (id: TabId) => void;
   terminalOpen?: boolean;
   onTerminalToggle?: () => void;
+  onConfigClick?: () => void;
+  configActive?: boolean;
 }) => {
   const [showPopup, setShowPopup] = useState(false);
   return (
@@ -202,26 +205,39 @@ const Header = ({ title, subtitle, onBack, rightElement, unreadEmailCount, chatO
               <MessageSquare className="size-4" />
             </button>
           )}
-          {rightElement ?? (
-            <div className="relative">
-              <button
-                onClick={() => setShowPopup(v => !v)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group"
-              >
-                <Bell className="size-4 text-accent group-hover:scale-110 transition-transform" />
-                {(unreadEmailCount ?? 0) > 0 && (
-                  <span className="absolute -right-1 -top-1 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white px-1 shadow">
-                    {(unreadEmailCount ?? 0) > 99 ? '99+' : unreadEmailCount}
-                  </span>
-                )}
-              </button>
-              {showPopup && (
-                <NotificationPopup
-                  onClose={() => setShowPopup(false)}
-                  onNavigate={() => onTabChange('email' as TabId)}
-                />
+          {rightElement}
+          <div className="relative">
+            <button
+              onClick={() => setShowPopup(v => !v)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-card border border-border hover:border-accent/40 transition-colors relative group"
+            >
+              <Bell className="size-4 text-accent group-hover:scale-110 transition-transform" />
+              {(unreadEmailCount ?? 0) > 0 && (
+                <span className="absolute -right-1 -top-1 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white px-1 shadow">
+                  {(unreadEmailCount ?? 0) > 99 ? '99+' : unreadEmailCount}
+                </span>
               )}
-            </div>
+            </button>
+            {showPopup && (
+              <NotificationPopup
+                onClose={() => setShowPopup(false)}
+                onNavigate={() => onTabChange('email' as TabId)}
+              />
+            )}
+          </div>
+          {onConfigClick && (
+            <button
+              onClick={onConfigClick}
+              title="Núcleo"
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-xl border transition-colors',
+                configActive
+                  ? 'bg-primary/10 border-primary/40 text-primary'
+                  : 'bg-card border-border text-text-dim hover:border-accent/40 hover:text-accent',
+              )}
+            >
+              <Settings2 className="size-4" />
+            </button>
           )}
         </div>
       </div>
@@ -238,12 +254,11 @@ const TABS = [
   { id: 'agents', label: 'Agentes', icon: Bot },
   { id: 'skills', label: 'Skills', icon: Pencil },
   { id: 'mcp', label: 'MCP', icon: ServerCog },
-  { id: 'system', label: 'Núcleo', icon: Settings2 },
   { id: 'email', label: 'Email', icon: Mail },
 ] as const;
 
 // Secondary tabs accessible via back navigation (not in bottom nav)
-type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'redteaming' | 'integrations' | 'inference';
+type SecondaryTabId = 'ledger' | 'observers' | 'workflows' | 'snapshots' | 'tasks' | 'redteaming' | 'integrations' | 'inference' | 'system';
 type TabId = typeof TABS[number]['id'] | SecondaryTabId;
 
 // ─── Terminal Overlay ────────────────────────────────────────────────────────
@@ -482,14 +497,7 @@ function useScreenConfig(
         subtitle: 'Painel Operacional',
         element: <MonitorPanel onNavigate={setActive} />,
         onBack: undefined,
-        rightElement: (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
-              <div className="size-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-              <span className="text-primary text-[10px] font-bold uppercase tracking-wider">Online</span>
-            </div>
-          </div>
-        ),
+        rightElement: undefined,
       };
     case 'inference':
       return { title: 'Inference Hub', subtitle: 'Jobs em background e memória semântica', element: <InferenceHub />, onBack: goHome, rightElement: undefined };
@@ -546,8 +554,8 @@ function useScreenConfig(
     case 'repo-decisions':
       return {
         title: 'Decisões',
-        subtitle: 'Registro de decisões do repositório',
-        element: <Projects embedded activeTab="decisions" hideTabBar />,
+        subtitle: 'Registro de decisões operacionais',
+        element: <Decisions />,
         onBack: undefined,
         rightElement: undefined,
       };
@@ -630,6 +638,8 @@ function AppContent() {
             onTabChange={setActiveTab}
             terminalOpen={terminalOpen}
             onTerminalToggle={() => setTerminalOpen(v => !v)}
+            onConfigClick={() => setActiveTab('system')}
+            configActive={activeTab === 'system'}
           />
           <div className="flex min-h-0 flex-1 overflow-hidden">
             <main className="scrollbar-kairos flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pb-24">
@@ -678,4 +688,3 @@ function AppContent() {
 export default function App() {
   return <AppContent />;
 }
-

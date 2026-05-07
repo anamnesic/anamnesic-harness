@@ -6,11 +6,12 @@ import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { NextRequest } from 'next/server';
 import { ok, err } from '@/app/api/_lib/response';
-import { AVAILABLE_MODELS } from '@/src/config/models';
+import { getDb } from '@/app/api/_lib/db';
+import { SettingsService } from '@/src/core/services/SettingsService';
 import { readProviderKeyStatuses } from '@/app/api/_lib/project-env-keys';
 
-type CliName = 'copilot' | 'gemini' | 'kairos-code' | 'codex' | 'ollama';
-type ProviderName = 'kairos' | 'chatgpt' | 'gemini';
+type CliName = 'copilot' | 'gemini' | 'claude-code' | 'codex' | 'opencode' | 'ollama';
+type ProviderName = 'claude' | 'chatgpt' | 'gemini';
 
 // Cache em memória para evitar re-spawns repetidos do copilot
 interface CopilotCacheEntry {
@@ -290,6 +291,29 @@ export async function GET(req: NextRequest) {
         cli.ollama = ollamaRunning;
 
         const projectId = req.headers.get('x-project-id') || req.headers.get('X-Project-Id') || '';
+        const db = await getDb();
+        const settingsService = new SettingsService(db);
+        const aiSettings = await settingsService.getAIProviderSettings('system');
+        const providerEnabled = {
+            copilot: aiSettings['copilot.enabled'] !== false,
+            gemini: aiSettings['gemini.enabled'] !== false,
+            kairos: aiSettings['kairos.enabled'] !== false,
+            codex: aiSettings['codex.enabled'] !== false,
+        };
+
+        if (!providerEnabled.copilot) {
+            cli.copilot = false;
+        }
+        if (!providerEnabled.gemini) {
+            cli.gemini = false;
+        }
+        if (!providerEnabled.kairos) {
+            cli['kairos-code'] = false;
+        }
+        if (!providerEnabled.codex) {
+            cli.codex = false;
+        }
+
         let providerKeys: Partial<Record<ProviderName, boolean>> = {};
 
         if (projectId) {
@@ -320,6 +344,7 @@ export async function GET(req: NextRequest) {
             availableCli,
             providerKeys,
             models,
+            providerEnabled,
         });
     } catch (e) {
         if (e instanceof Error) {

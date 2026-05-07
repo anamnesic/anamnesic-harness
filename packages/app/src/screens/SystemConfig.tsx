@@ -8,7 +8,6 @@ import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { ApiKeys } from './ApiKeys';
-import { AVAILABLE_MODELS } from '@/src/config/models';
 import { useRepository } from '@/src/context/RepositoryContext';
 
 const FLAG_LABELS: Record<string, string> = {
@@ -29,9 +28,11 @@ interface SettingsData {
     workspaceId?: string;
 }
 interface AvailabilityData {
-    cli: Record<'copilot' | 'gemini' | 'kairos-code' | 'codex', boolean>;
+    cli: Record<'copilot' | 'gemini' | 'claude-code' | 'codex' | 'opencode' | 'ollama', boolean>;
     availableCli: string[];
     models: Record<string, boolean>;
+    modelCatalog: Array<{ id: string; provider: string; source: string }>;
+    providerEnabled?: Record<string, boolean>;
 }
 interface MetricsData {
     nodeVersion?: string;
@@ -72,8 +73,11 @@ interface SystemAnalysisData {
 
 const CLI_MODEL_IDS = new Set(['gpt-5.2-codex', 'gpt-5.3-codex']);
 
-function isCliModel(modelId: string) {
-    return CLI_MODEL_IDS.has(modelId) || modelId.includes('codex') || modelId.includes('grok-code');
+function isCliModel(model: { id: string; source?: string }) {
+    return model.source === 'cli'
+        || CLI_MODEL_IDS.has(model.id)
+        || model.id.includes('codex')
+        || model.id.includes('grok-code');
 }
 
 export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void }) {
@@ -88,6 +92,16 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
 
     const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
     const [localModelStates, setLocalModelStates] = useState<Record<string, boolean>>({});
+    const [localCliEnabled, setLocalCliEnabled] = useState<Record<string, boolean>>({
+        copilot: true,
+        gemini: true,
+        claude: true,
+        codex: true,
+        opencode: true,
+    });
+    const [proactivePlannerIntervalSeconds, setProactivePlannerIntervalSeconds] = useState(3600);
+    const [selfOptimizationIntervalSeconds, setSelfOptimizationIntervalSeconds] = useState(3600);
+    const [proactiveRefreshIntervalSeconds, setProactiveRefreshIntervalSeconds] = useState(3600);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
@@ -95,8 +109,11 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const availabilityPayload = (availability as { data?: AvailabilityData } | null)?.data
         ? (availability as { data?: AvailabilityData }).data
         : (availability as AvailabilityData | null);
-    const availableModels = AVAILABLE_MODELS.filter((model) => availabilityPayload?.models?.[model.id] ?? false);
+    const availableModels = availabilityPayload?.modelCatalog ?? [];
     const installedCli = availabilityPayload?.availableCli ?? [];
+
+    const parseMsToSeconds = (value: unknown, fallback: number) =>
+        typeof value === 'number' && Number.isFinite(value) ? Math.max(1, Math.round(value / 1000)) : fallback;
 
     useEffect(() => {
         if (!settings?.flags) {
@@ -112,6 +129,26 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
             nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
         }
         setLocalModelStates(nextModels);
+
+        setLocalCliEnabled({
+            copilot: typeof settings.aiSettings?.['copilot.enabled'] === 'boolean' ? settings.aiSettings['copilot.enabled'] : true,
+            gemini: typeof settings.aiSettings?.['gemini.enabled'] === 'boolean' ? settings.aiSettings['gemini.enabled'] : true,
+            claude: typeof settings.aiSettings?.['claude.enabled'] === 'boolean'
+                ? settings.aiSettings['claude.enabled']
+                : (typeof settings.aiSettings?.['kairos.enabled'] === 'boolean' ? settings.aiSettings['kairos.enabled'] : true),
+            codex: typeof settings.aiSettings?.['codex.enabled'] === 'boolean' ? settings.aiSettings['codex.enabled'] : true,
+            opencode: typeof settings.aiSettings?.['opencode.enabled'] === 'boolean' ? settings.aiSettings['opencode.enabled'] : true,
+        });
+
+        setProactivePlannerIntervalSeconds(
+            parseMsToSeconds(settings.aiSettings?.['proactive.planner.intervalMs'], 3600),
+        );
+        setSelfOptimizationIntervalSeconds(
+            parseMsToSeconds(settings.aiSettings?.['selfOptimization.intervalMs'], 3600),
+        );
+        setProactiveRefreshIntervalSeconds(
+            parseMsToSeconds(settings.aiSettings?.['proactive.ui.pollIntervalMs'], 3600),
+        );
         setDirty(false);
     }, [settings, availabilityPayload]);
 
@@ -125,13 +162,27 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         setDirty(true);
     }
 
+    function toggleCliProvider(provider: string) {
+        setLocalCliEnabled(prev => ({ ...prev, [provider]: !prev[provider] }));
+        setDirty(true);
+    }
+
     async function handleCommit() {
         setSaving(true);
         try {
-            const aiSettingsPayload: Record<string, boolean> = {};
+            const aiSettingsPayload: Record<string, any> = {};
             for (const [modelId, enabled] of Object.entries(localModelStates)) {
                 aiSettingsPayload[`models.${modelId}`] = enabled;
             }
+
+            aiSettingsPayload['copilot.enabled'] = localCliEnabled.copilot;
+            aiSettingsPayload['gemini.enabled'] = localCliEnabled.gemini;
+            aiSettingsPayload['claude.enabled'] = localCliEnabled.claude;
+            aiSettingsPayload['codex.enabled'] = localCliEnabled.codex;
+            aiSettingsPayload['opencode.enabled'] = localCliEnabled.opencode;
+            aiSettingsPayload['proactive.planner.intervalMs'] = proactivePlannerIntervalSeconds * 1000;
+            aiSettingsPayload['selfOptimization.intervalMs'] = selfOptimizationIntervalSeconds * 1000;
+            aiSettingsPayload['proactive.ui.pollIntervalMs'] = proactiveRefreshIntervalSeconds * 1000;
 
             await apiFetch('/api/v1/settings', {
                 method: 'PATCH',
@@ -159,6 +210,24 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
             nextModels[model.id] = typeof raw === 'boolean' ? raw : true;
         }
         setLocalModelStates(nextModels);
+        setLocalCliEnabled({
+            copilot: typeof settings?.aiSettings?.['copilot.enabled'] === 'boolean' ? settings?.aiSettings?.['copilot.enabled'] : true,
+            gemini: typeof settings?.aiSettings?.['gemini.enabled'] === 'boolean' ? settings?.aiSettings?.['gemini.enabled'] : true,
+            claude: typeof settings?.aiSettings?.['claude.enabled'] === 'boolean'
+                ? settings?.aiSettings?.['claude.enabled']
+                : (typeof settings?.aiSettings?.['kairos.enabled'] === 'boolean' ? settings?.aiSettings?.['kairos.enabled'] : true),
+            codex: typeof settings?.aiSettings?.['codex.enabled'] === 'boolean' ? settings?.aiSettings?.['codex.enabled'] : true,
+            opencode: typeof settings?.aiSettings?.['opencode.enabled'] === 'boolean' ? settings?.aiSettings?.['opencode.enabled'] : true,
+        });
+        setProactivePlannerIntervalSeconds(
+            parseMsToSeconds(settings?.aiSettings?.['proactive.planner.intervalMs'], 3600),
+        );
+        setSelfOptimizationIntervalSeconds(
+            parseMsToSeconds(settings?.aiSettings?.['selfOptimization.intervalMs'], 3600),
+        );
+        setProactiveRefreshIntervalSeconds(
+            parseMsToSeconds(settings?.aiSettings?.['proactive.ui.pollIntervalMs'], 3600),
+        );
         setDirty(false);
     }
 
@@ -288,6 +357,87 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                             ))}
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* CLI Provider Activation */}
+            <div className="bento-card">
+                <div className="flex items-center justify-between">
+                    <span className="label-caps">CLI Providers</span>
+                    <span className="text-xs text-text-dim">Ative ou desative provedores CLI usados para inferência.</span>
+                </div>
+                <div className="space-y-4 mt-4">
+                    {[
+                        { key: 'copilot', label: 'Copilot' },
+                        { key: 'gemini', label: 'Gemini' },
+                        { key: 'claude', label: 'Claude Code' },
+                        { key: 'codex', label: 'Codex' },
+                        { key: 'opencode', label: 'OpenCode' },
+                    ].map((provider) => (
+                        <div key={provider.key} className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold text-accent">{provider.label}</p>
+                                <p className="text-[10px] text-text-dim">Usar este provedor CLI para inferência quando disponível.</p>
+                            </div>
+                            <button
+                                onClick={() => toggleCliProvider(provider.key)}
+                                className={cn(
+                                    'h-5 w-9 rounded-full p-0.5 flex items-center transition-colors cursor-pointer',
+                                    localCliEnabled[provider.key] ? 'bg-primary' : 'bg-border',
+                                )}
+                            >
+                                <div className={cn('size-4 bg-white rounded-full transition-transform', localCliEnabled[provider.key] ? 'translate-x-4' : 'translate-x-0')} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Proactive Timing Settings */}
+            <div className="bento-card">
+                <div className="flex items-center justify-between">
+                    <span className="label-caps">Proactive Timers</span>
+                    <span className="text-xs text-text-dim">Valores em segundos</span>
+                </div>
+                <div className="space-y-4 mt-4">
+                    <div className="grid gap-4">
+                        <div className="grid grid-cols-1 gap-2">
+                            <label className="text-[8px] font-black text-text-dim uppercase">Planejador proativo</label>
+                            <p className="text-xs text-text-dim">Intervalo entre execuções do planejador proativo.</p>
+                            <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={proactivePlannerIntervalSeconds}
+                                onChange={(event) => setProactivePlannerIntervalSeconds(Math.max(1, Number(event.target.value) || 1))}
+                                className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-right text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            <label className="text-[8px] font-black text-text-dim uppercase">Auto-otimização</label>
+                            <p className="text-xs text-text-dim">Intervalo entre execuções do serviço de auto-otimização.</p>
+                            <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={selfOptimizationIntervalSeconds}
+                                onChange={(event) => setSelfOptimizationIntervalSeconds(Math.max(1, Number(event.target.value) || 1))}
+                                className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-right text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            <label className="text-[8px] font-black text-text-dim uppercase">Atualização de insights</label>
+                            <p className="text-xs text-text-dim">Intervalo de polling para atualizar insights proativos no dashboard.</p>
+                            <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={proactiveRefreshIntervalSeconds}
+                                onChange={(event) => setProactiveRefreshIntervalSeconds(Math.max(1, Number(event.target.value) || 1))}
+                                className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-right text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -461,15 +611,15 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                         <p className="text-xs text-text-dim py-2">Nenhum modelo disponível. Instale um CLI e configure suas chaves de API.</p>
                     ) : availableModels.map((model) => {
                         const enabled = localModelStates[model.id] ?? true;
-                        const cli = isCliModel(model.id);
+                        const cli = isCliModel(model);
 
                         return (
                             <div key={model.id} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-bg px-3 py-2.5">
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <p className="text-xs font-bold text-accent truncate">{model.name}</p>
+                                        <p className="text-xs font-bold text-accent truncate">{model.id}</p>
                                         <span className="rounded-full bg-card px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-text-dim shrink-0">
-                                            {model.group}
+                                            {model.provider}
                                         </span>
                                         {cli && (
                                             <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary shrink-0">
@@ -477,7 +627,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-[10px] text-text-dim truncate">{model.id} · {model.description}</p>
+                                    <p className="text-[10px] text-text-dim truncate">source: {model.source}</p>
                                 </div>
                                 <button
                                     onClick={() => toggleModel(model.id)}
@@ -531,4 +681,3 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         </motion.div>
     );
 }
-

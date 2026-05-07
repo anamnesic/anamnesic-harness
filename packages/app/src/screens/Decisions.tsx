@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { BookText, Brain, Database, FileSearch, Filter, Lightbulb, ShieldAlert, Sparkles, Workflow } from 'lucide-react';
-import { useApi } from '@/src/lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import { BookText, Brain, ChevronLeft, ChevronRight, Clock3, Database, FileSearch, Filter, Lightbulb, ShieldAlert, Sparkles, Workflow, CheckCircle2, XCircle } from 'lucide-react';
+import { apiFetch, useApi } from '@/src/lib/api';
 import { cn } from '@/src/lib/utils';
 
 interface DecisionFeedItem {
@@ -16,6 +16,19 @@ interface DecisionFeedItem {
   sourceFile: string;
   metadata?: Record<string, unknown>;
 }
+
+type StatusFilterValue = DecisionFeedItem['status'] | 'all' | 'completed';
+type DecisionTab = 'proactive' | 'optimization' | 'observer';
+
+const STATUS_LABELS: Record<DecisionFeedItem['status'], string> = {
+  pending: 'Em andamento',
+  accepted: 'Aprovado',
+  rejected: 'Negado',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
+};
 
 interface SourceInventory {
   files: number;
@@ -81,19 +94,38 @@ function formatWhen(iso: string): string {
 
 export function Decisions() {
   const { data, loading, error, refetch } = useApi<ApiEnvelope<DecisionFeedData>>('/api/v1/decisions/data');
-  const [sourceFilter, setSourceFilter] = useState<DecisionFeedItem['source'] | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<DecisionFeedItem['status'] | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<DecisionTab>('proactive');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const feed = data?.data;
+  const [actionBusy, setActionBusy] = useState(false);
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
+
+  useEffect(() => { setPage(0); }, [activeTab, statusFilter, query]);
+
+  const tabItems = useMemo(() => {
+    if (!feed?.items) return [];
+    if (activeTab === 'proactive') {
+      return feed.items.filter((item) => item.source === 'proactive');
+    }
+    if (activeTab === 'optimization') {
+      return feed.items.filter((item) => item.source === 'self-optimization');
+    }
+    return feed.items.filter((item) => item.source === 'decision-log' || item.source === 'system-log' || item.source === 'audit');
+  }, [feed?.items, activeTab]);
 
   const filteredItems = useMemo(() => {
-    const items = feed?.items ?? [];
-
-    return items.filter((item) => {
-      if (sourceFilter !== 'all' && item.source !== sourceFilter) return false;
-      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+    const items = tabItems.filter((item) => {
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'completed') {
+          if (item.status !== 'accepted' && item.status !== 'rejected') return false;
+        } else if (item.status !== statusFilter) {
+          return false;
+        }
+      }
       if (!query.trim()) return true;
 
       const q = query.toLowerCase();
@@ -104,7 +136,18 @@ export function Decisions() {
         || item.sourceFile.toLowerCase().includes(q)
       );
     });
-  }, [feed?.items, query, sourceFilter, statusFilter]);
+
+    return items.slice().sort((a, b) => {
+      const aPending = a.status === 'pending' ? 0 : 1;
+      const bPending = b.status === 'pending' ? 0 : 1;
+      if (aPending !== bPending) return aPending - bPending;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+  }, [tabItems, query, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageItems = useMemo(() => filteredItems.slice(safePage * pageSize, (safePage + 1) * pageSize), [filteredItems, safePage, pageSize]);
 
   const selected = useMemo(() => {
     if (!filteredItems.length) return null;
@@ -112,31 +155,57 @@ export function Decisions() {
     return filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
   }, [filteredItems, selectedId]);
 
-  const sourceFilters: Array<{ value: DecisionFeedItem['source'] | 'all'; label: string; count: number }> = useMemo(() => {
-    const bySource = feed?.bySource ?? {};
-    return [
-      { value: 'all', label: 'Tudo', count: feed?.total ?? 0 },
-      { value: 'proactive', label: 'Proactive', count: bySource.proactive ?? 0 },
-      { value: 'self-optimization', label: 'Self Opt', count: bySource['self-optimization'] ?? 0 },
-      { value: 'decision-log', label: 'Aceites/Rejeições', count: bySource['decision-log'] ?? 0 },
-      { value: 'system-log', label: 'System Log', count: bySource['system-log'] ?? 0 },
-      { value: 'audit', label: 'Audit', count: bySource.audit ?? 0 },
-    ];
-  }, [feed?.bySource, feed?.total]);
+  async function handleDecisionAction(item: DecisionFeedItem, action: 'approve' | 'reject' | 'postpone' | 'execute-task') {
+    setActionBusy(true);
 
-  const statusFilters: Array<{ value: DecisionFeedItem['status'] | 'all'; label: string; count: number }> = useMemo(() => {
+    try {
+      if (item.category === 'task-candidate' && action === 'execute-task') {
+        const taskTitle = item.title;
+        const taskDescription = (item.metadata?.description as string) || item.summary;
+        await apiFetch('/api/v1/proactive/insights', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'execute-task', taskTitle, taskDescription }),
+        });
+      } else if (item.metadata?.requestId) {
+        const body: Record<string, unknown> = { action, requestId: item.metadata.requestId };
+        if (action === 'postpone') body.ttlMs = 300_000;
+        await apiFetch('/api/v1/proactive/insights', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+      }
+      await refetch();
+    } catch {
+      // swallow; UI state remains
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  const tabCounts = useMemo(() => {
+    const bySource = feed?.bySource ?? {};
+    return {
+      proactive: bySource.proactive ?? 0,
+      optimization: bySource['self-optimization'] ?? 0,
+      observer: (bySource['decision-log'] ?? 0) + (bySource['system-log'] ?? 0) + (bySource.audit ?? 0),
+    };
+  }, [feed?.bySource]);
+
+  const completedCount = (feed?.byStatus?.accepted ?? 0) + (feed?.byStatus?.rejected ?? 0);
+  const statusFilters: Array<{ value: StatusFilterValue; label: string; count: number }> = useMemo(() => {
     const byStatus = feed?.byStatus ?? {};
     return [
       { value: 'all', label: 'Todos status', count: feed?.total ?? 0 },
-      { value: 'pending', label: 'Pendente', count: byStatus.pending ?? 0 },
-      { value: 'accepted', label: 'Aceito', count: byStatus.accepted ?? 0 },
-      { value: 'rejected', label: 'Rejeitado', count: byStatus.rejected ?? 0 },
+      { value: 'pending', label: 'Em andamento', count: byStatus.pending ?? 0 },
+      { value: 'completed', label: 'Concluídas', count: completedCount },
+      { value: 'accepted', label: 'Aprovadas', count: byStatus.accepted ?? 0 },
+      { value: 'rejected', label: 'Negadas', count: byStatus.rejected ?? 0 },
       { value: 'high', label: 'High', count: byStatus.high ?? 0 },
       { value: 'medium', label: 'Medium', count: byStatus.medium ?? 0 },
       { value: 'low', label: 'Low', count: byStatus.low ?? 0 },
       { value: 'info', label: 'Info', count: byStatus.info ?? 0 },
     ];
-  }, [feed?.byStatus, feed?.total]);
+  }, [feed?.byStatus, feed?.total, completedCount]);
 
   if (loading) {
     return (
@@ -194,24 +263,70 @@ export function Decisions() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="bento-card">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('proactive')}
+            className={cn(
+              'rounded-full border px-3 py-2 text-xs font-bold transition-colors',
+              activeTab === 'proactive'
+                ? 'border-primary/60 bg-primary/10 text-accent'
+                : 'border-border text-text-dim hover:border-primary/30 hover:text-accent',
+            )}
+          >
+            Proactive ({tabCounts.proactive})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('optimization')}
+            className={cn(
+              'rounded-full border px-3 py-2 text-xs font-bold transition-colors',
+              activeTab === 'optimization'
+                ? 'border-primary/60 bg-primary/10 text-accent'
+                : 'border-border text-text-dim hover:border-primary/30 hover:text-accent',
+            )}
+          >
+            Optimization ({tabCounts.optimization})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('observer')}
+            className={cn(
+              'rounded-full border px-3 py-2 text-xs font-bold transition-colors',
+              activeTab === 'observer'
+                ? 'border-primary/60 bg-primary/10 text-accent'
+                : 'border-border text-text-dim hover:border-primary/30 hover:text-accent',
+            )}
+          >
+            Observer ({tabCounts.observer})
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bento-card">
           <p className="label-caps">Total de decisões/eventos</p>
           <p className="text-2xl font-bold mt-2">{feed?.total ?? 0}</p>
         </div>
         <div className="bento-card">
-          <p className="label-caps">Aceitas</p>
-          <p className="text-2xl font-bold mt-2 text-green-400">{feed?.byStatus?.accepted ?? 0}</p>
-        </div>
-        <div className="bento-card">
-          <p className="label-caps">Pendentes</p>
+          <p className="label-caps">Pendentes / em andamento</p>
           <p className="text-2xl font-bold mt-2 text-yellow-300">{feed?.byStatus?.pending ?? 0}</p>
         </div>
         <div className="bento-card">
-          <p className="label-caps">Riscos high</p>
-          <p className="text-2xl font-bold mt-2 text-red-300">{feed?.byStatus?.high ?? 0}</p>
+          <p className="label-caps">Aprovadas</p>
+          <p className="text-2xl font-bold mt-2 text-green-400">{feed?.byStatus?.accepted ?? 0}</p>
+        </div>
+        <div className="bento-card">
+          <p className="label-caps">Negadas</p>
+          <p className="text-2xl font-bold mt-2 text-red-400">{feed?.byStatus?.rejected ?? 0}</p>
+        </div>
+        <div className="bento-card">
+          <p className="label-caps">Concluídas</p>
+          <p className="text-2xl font-bold mt-2 text-cyan-300">{completedCount}</p>
         </div>
       </div>
+
 
       <div className="grid grid-cols-1 xl:grid-cols-[20rem_1fr_24rem] gap-4 min-h-[65vh]">
         <aside className="bento-card min-h-0 overflow-hidden flex flex-col">
@@ -221,28 +336,17 @@ export function Decisions() {
           </div>
 
           <div className="space-y-2">
-            {sourceFilters.map((item) => (
-              <button
-                key={item.value}
-                onClick={() => setSourceFilter(item.value)}
-                className={cn(
-                  'w-full flex items-center justify-between rounded-lg border px-3 py-2 text-xs transition-colors',
-                  sourceFilter === item.value
-                    ? 'border-primary/60 bg-primary/10 text-accent'
-                    : 'border-border text-text-dim hover:text-accent',
-                )}
-              >
-                <span className="font-semibold">{item.label}</span>
-                <span>{item.count}</span>
-              </button>
-            ))}
+            <div className="rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-text-dim">
+              <p className="font-semibold text-highlight">Aba ativa</p>
+              <p className="mt-1">{activeTab === 'proactive' ? 'Mostrando sugestões proativas.' : activeTab === 'optimization' ? 'Mostrando itens de auto-otimização.' : 'Mostrando histórico e observações.'}</p>
+            </div>
           </div>
 
           <div className="mt-4 border-t border-border/60 pt-3 space-y-2">
             <p className="label-caps">Status</p>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as DecisionFeedItem['status'] | 'all')}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilterValue)}
               className="w-full rounded-lg border border-border bg-bg px-2.5 py-2 text-xs"
             >
               {statusFilters.map((item) => (
@@ -252,7 +356,7 @@ export function Decisions() {
           </div>
 
           <div className="mt-4 border-t border-border/60 pt-3 min-h-0 overflow-auto">
-            <p className="label-caps mb-2">Inventário data/</p>
+            <p className="label-caps mb-2">Inventário ~/.kairos/</p>
             <div className="space-y-2 text-xs text-text-dim">
               {Object.entries(feed?.inventory ?? {}).map(([name, info]) => (
                 <div key={name} className="rounded-lg border border-border/60 bg-card/40 px-2.5 py-2">
@@ -277,45 +381,98 @@ export function Decisions() {
           </div>
 
           <div className="min-h-0 overflow-auto space-y-2 pr-1">
-            {filteredItems.length === 0 ? (
+            {pageItems.length === 0 ? (
               <p className="text-sm text-text-dim py-8 text-center">Nenhum item encontrado para os filtros atuais.</p>
             ) : (
-              filteredItems.map((item) => {
+              pageItems.map((item) => {
                 const SourceIcon = SOURCE_ICONS[item.source];
                 const selectedRow = selected?.id === item.id;
 
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedId(item.id)}
-                    className={cn(
-                      'w-full text-left rounded-xl border p-3 transition-colors',
-                      selectedRow
-                        ? 'border-primary/60 bg-primary/10'
-                        : 'border-border bg-card/30 hover:border-border/80',
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <SourceIcon className="size-3.5 text-primary shrink-0" />
-                          <span className="label-caps text-text-dim">{SOURCE_LABELS[item.source]}</span>
-                          <span className="label-caps text-text-dim">• {item.category}</span>
+                  <div key={item.id} className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(item.id)}
+                      className={cn(
+                        'w-full text-left rounded-xl border p-3 transition-colors',
+                        selectedRow
+                          ? 'border-primary/60 bg-primary/10'
+                          : 'border-border bg-card/30 hover:border-border/80',
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <SourceIcon className="size-3.5 text-primary shrink-0" />
+                            <span className="label-caps text-text-dim">{SOURCE_LABELS[item.source]}</span>
+                            <span className="label-caps text-text-dim">• {item.category}</span>
+                          </div>
+                          <p className="font-semibold text-sm text-highlight truncate">{item.title}</p>
+                          <p className="text-xs text-text-dim mt-1 line-clamp-2">{item.summary}</p>
                         </div>
-                        <p className="font-semibold text-sm text-highlight truncate">{item.title}</p>
-                        <p className="text-xs text-text-dim mt-1 line-clamp-2">{item.summary}</p>
-                      </div>
 
-                      <div className="shrink-0 text-right space-y-1">
-                        <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', STATUS_TONE[item.status])}>
-                          {item.status}
-                        </span>
-                        <p className="text-[10px] text-text-dim">{formatWhen(item.timestamp)}</p>
+                        <div className="shrink-0 text-right space-y-1">
+                          <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', STATUS_TONE[item.status])}>
+                            {STATUS_LABELS[item.status] ?? item.status}
+                          </span>
+                          <p className="text-[10px] text-text-dim">{formatWhen(item.timestamp)}</p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    {item.source === 'proactive' && item.status === 'pending' && (item.category === 'task-candidate' || item.category === 'pending-approval') ? (
+                      <div className="grid grid-cols-3 gap-2 mt-3">
+                        <button
+                          type="button"
+                          disabled={actionBusy}
+                          onClick={() => void handleDecisionAction(item, item.category === 'task-candidate' ? 'execute-task' : 'approve')}
+                          className="flex items-center justify-center gap-1 rounded-lg bg-green-500/15 text-green-400 py-2 text-[11px] font-bold hover:bg-green-500/20 transition-colors disabled:opacity-60"
+                        >
+                          <CheckCircle2 className="size-3.5" /> Aprovar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionBusy}
+                          onClick={() => void handleDecisionAction(item, 'reject')}
+                          className="flex items-center justify-center gap-1 rounded-lg bg-red-500/15 text-red-400 py-2 text-[11px] font-bold hover:bg-red-500/20 transition-colors disabled:opacity-60"
+                        >
+                          <XCircle className="size-3.5" /> Rejeitar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionBusy}
+                          onClick={() => void handleDecisionAction(item, 'postpone')}
+                          className="flex items-center justify-center gap-1 rounded-lg bg-yellow-500/15 text-yellow-400 py-2 text-[11px] font-bold hover:bg-yellow-500/20 transition-colors disabled:opacity-60"
+                        >
+                          <Clock3 className="size-3.5" /> Adiar
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })
+            )}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 pt-3 pb-1">
+                <button
+                  type="button"
+                  disabled={safePage === 0}
+                  onClick={() => setPage(safePage - 1)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-text-dim hover:text-accent hover:border-primary/30 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <span className="text-xs text-text-dim">
+                  {safePage + 1} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={safePage >= totalPages - 1}
+                  onClick={() => setPage(safePage + 1)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-text-dim hover:text-accent hover:border-primary/30 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
             )}
           </div>
         </section>
@@ -348,7 +505,7 @@ export function Decisions() {
 
               <div className="rounded-lg border border-border/60 p-2 bg-card/30">
                 <p className="label-caps text-text-dim">Arquivo de origem</p>
-                <p className="mt-1 text-xs font-mono text-highlight break-all">data/{selected.sourceFile}</p>
+                <p className="mt-1 text-xs font-mono text-highlight break-all">~/.kairos/{selected.sourceFile}</p>
               </div>
 
               <div className="rounded-lg border border-border/60 p-2 bg-card/30">
@@ -369,4 +526,3 @@ export function Decisions() {
     </div>
   );
 }
-
