@@ -17,6 +17,18 @@ interface DecisionFeedItem {
   metadata?: Record<string, unknown>;
 }
 
+type StatusFilterValue = DecisionFeedItem['status'] | 'all' | 'completed';
+
+const STATUS_LABELS: Record<DecisionFeedItem['status'], string> = {
+  pending: 'Em andamento',
+  accepted: 'Aprovado',
+  rejected: 'Negado',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
+};
+
 interface SourceInventory {
   files: number;
   latestFile: string | null;
@@ -82,7 +94,7 @@ function formatWhen(iso: string): string {
 export function Decisions() {
   const { data, loading, error, refetch } = useApi<ApiEnvelope<DecisionFeedData>>('/api/v1/decisions/data');
   const [sourceFilter, setSourceFilter] = useState<DecisionFeedItem['source'] | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<DecisionFeedItem['status'] | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -93,7 +105,13 @@ export function Decisions() {
 
     return items.filter((item) => {
       if (sourceFilter !== 'all' && item.source !== sourceFilter) return false;
-      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'completed') {
+          if (item.status !== 'accepted' && item.status !== 'rejected') return false;
+        } else if (item.status !== statusFilter) {
+          return false;
+        }
+      }
       if (!query.trim()) return true;
 
       const q = query.toLowerCase();
@@ -124,19 +142,21 @@ export function Decisions() {
     ];
   }, [feed?.bySource, feed?.total]);
 
-  const statusFilters: Array<{ value: DecisionFeedItem['status'] | 'all'; label: string; count: number }> = useMemo(() => {
+  const completedCount = (feed?.byStatus?.accepted ?? 0) + (feed?.byStatus?.rejected ?? 0);
+  const statusFilters: Array<{ value: StatusFilterValue; label: string; count: number }> = useMemo(() => {
     const byStatus = feed?.byStatus ?? {};
     return [
       { value: 'all', label: 'Todos status', count: feed?.total ?? 0 },
-      { value: 'pending', label: 'Pendente', count: byStatus.pending ?? 0 },
-      { value: 'accepted', label: 'Aceito', count: byStatus.accepted ?? 0 },
-      { value: 'rejected', label: 'Rejeitado', count: byStatus.rejected ?? 0 },
+      { value: 'pending', label: 'Em andamento', count: byStatus.pending ?? 0 },
+      { value: 'completed', label: 'Concluídas', count: completedCount },
+      { value: 'accepted', label: 'Aprovadas', count: byStatus.accepted ?? 0 },
+      { value: 'rejected', label: 'Negadas', count: byStatus.rejected ?? 0 },
       { value: 'high', label: 'High', count: byStatus.high ?? 0 },
       { value: 'medium', label: 'Medium', count: byStatus.medium ?? 0 },
       { value: 'low', label: 'Low', count: byStatus.low ?? 0 },
       { value: 'info', label: 'Info', count: byStatus.info ?? 0 },
     ];
-  }, [feed?.byStatus, feed?.total]);
+  }, [feed?.byStatus, feed?.total, completedCount]);
 
   if (loading) {
     return (
@@ -194,22 +214,26 @@ export function Decisions() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bento-card">
           <p className="label-caps">Total de decisões/eventos</p>
           <p className="text-2xl font-bold mt-2">{feed?.total ?? 0}</p>
         </div>
         <div className="bento-card">
-          <p className="label-caps">Aceitas</p>
-          <p className="text-2xl font-bold mt-2 text-green-400">{feed?.byStatus?.accepted ?? 0}</p>
-        </div>
-        <div className="bento-card">
-          <p className="label-caps">Pendentes</p>
+          <p className="label-caps">Pendentes / em andamento</p>
           <p className="text-2xl font-bold mt-2 text-yellow-300">{feed?.byStatus?.pending ?? 0}</p>
         </div>
         <div className="bento-card">
-          <p className="label-caps">Riscos high</p>
-          <p className="text-2xl font-bold mt-2 text-red-300">{feed?.byStatus?.high ?? 0}</p>
+          <p className="label-caps">Aprovadas</p>
+          <p className="text-2xl font-bold mt-2 text-green-400">{feed?.byStatus?.accepted ?? 0}</p>
+        </div>
+        <div className="bento-card">
+          <p className="label-caps">Negadas</p>
+          <p className="text-2xl font-bold mt-2 text-red-400">{feed?.byStatus?.rejected ?? 0}</p>
+        </div>
+        <div className="bento-card">
+          <p className="label-caps">Concluídas</p>
+          <p className="text-2xl font-bold mt-2 text-cyan-300">{completedCount}</p>
         </div>
       </div>
 
@@ -242,7 +266,7 @@ export function Decisions() {
             <p className="label-caps">Status</p>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as DecisionFeedItem['status'] | 'all')}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilterValue)}
               className="w-full rounded-lg border border-border bg-bg px-2.5 py-2 text-xs"
             >
               {statusFilters.map((item) => (
@@ -308,7 +332,7 @@ export function Decisions() {
 
                       <div className="shrink-0 text-right space-y-1">
                         <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', STATUS_TONE[item.status])}>
-                          {item.status}
+                          {STATUS_LABELS[item.status] ?? item.status}
                         </span>
                         <p className="text-[10px] text-text-dim">{formatWhen(item.timestamp)}</p>
                       </div>
@@ -369,4 +393,3 @@ export function Decisions() {
     </div>
   );
 }
-
