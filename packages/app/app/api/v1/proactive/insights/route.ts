@@ -1,9 +1,13 @@
 export const runtime = 'nodejs';
 
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
 import { NextRequest } from 'next/server';
 import { err, ok } from '@/app/api/_lib/response';
 import { ensureProactivePlannerStarted, getProactiveApprovalFlow, getProactivePlanner } from '@/app/api/_lib/proactive';
 import { vaultAppend } from '@kairos/vault';
+
+const execAsync = promisify(exec);
 
 function resolveActor(req: NextRequest): string {
     return req.headers.get('x-user-id') || req.headers.get('x-workspace-id') || 'ui-user';
@@ -67,6 +71,39 @@ export async function POST(req: NextRequest) {
             return ok({ refreshedAt: refreshed.generatedAt });
         }
 
+        if (action === 'execute-task') {
+            const taskTitle = typeof body?.taskTitle === 'string' ? body.taskTitle : '';
+            const taskDescription = typeof body?.taskDescription === 'string' ? body.taskDescription : '';
+
+            if (!taskTitle && !taskDescription) {
+                return err('TASK_INFO_REQUIRED', 'taskTitle or taskDescription is required', 400);
+            }
+
+            const prompt = taskDescription || taskTitle;
+            const opencodeBin = process.env.OPENCODE_BIN || 'opencode';
+            const { stdout, stderr } = await execAsync(`"${opencodeBin}" "${prompt.replace(/"/g, '\\"')}"`).catch((e) => ({
+                stdout: '',
+                stderr: String(e),
+            }));
+
+            await appendDecisionLog({
+                suggestionId: `task-${taskTitle.slice(0, 40)}-${Date.now()}`,
+                decision: 'executed',
+                actor,
+                reason: `Executado por ${actor}: ${taskTitle}`,
+                timestamp: new Date().toISOString(),
+                stdout: stdout.slice(0, 2000),
+                stderr: stderr.slice(0, 2000),
+            });
+
+            return ok({
+                executed: true,
+                taskTitle,
+                stdout: stdout.slice(0, 2000),
+                stderr: stderr.slice(0, 2000),
+            });
+        }
+
         if (!requestId) {
             return err('REQUEST_ID_REQUIRED', 'requestId is required for approval actions', 400);
         }
@@ -109,7 +146,7 @@ export async function POST(req: NextRequest) {
             return ok({ requestId, status: postponed.status, expiresAt: postponed.expiresAt.toISOString() });
         }
 
-        return err('INVALID_ACTION', 'Supported actions: refresh, approve, reject, postpone', 400);
+        return err('INVALID_ACTION', 'Supported actions: refresh, approve, reject, postpone, execute-task', 400);
     } catch (error) {
         return err('INTERNAL_ERROR', 'Failed to process proactive action', 500, String(error));
     }

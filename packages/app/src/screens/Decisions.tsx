@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { BookText, Brain, Database, FileSearch, Filter, Lightbulb, ShieldAlert, Sparkles, Workflow, CheckCircle2, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { BookText, Brain, ChevronLeft, ChevronRight, Database, FileSearch, Filter, Lightbulb, ShieldAlert, Sparkles, Workflow, CheckCircle2, XCircle } from 'lucide-react';
 import { apiFetch, useApi } from '@/src/lib/api';
 import { cn } from '@/src/lib/utils';
 
@@ -101,6 +101,10 @@ export function Decisions() {
 
   const feed = data?.data;
   const [actionBusy, setActionBusy] = useState(false);
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
+
+  useEffect(() => { setPage(0); }, [activeTab, statusFilter, query]);
 
   const tabItems = useMemo(() => {
     if (!feed?.items) return [];
@@ -141,21 +145,33 @@ export function Decisions() {
     });
   }, [tabItems, query, statusFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageItems = useMemo(() => filteredItems.slice(safePage * pageSize, (safePage + 1) * pageSize), [filteredItems, safePage, pageSize]);
+
   const selected = useMemo(() => {
     if (!filteredItems.length) return null;
     if (!selectedId) return filteredItems[0];
     return filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
   }, [filteredItems, selectedId]);
 
-  async function handleDecisionAction(item: DecisionFeedItem, action: 'approve' | 'reject') {
-    if (!item.metadata?.requestId) return;
+  async function handleDecisionAction(item: DecisionFeedItem, action: 'approve' | 'reject' | 'execute-task') {
     setActionBusy(true);
 
     try {
-      await apiFetch('/api/v1/proactive/insights', {
-        method: 'POST',
-        body: JSON.stringify({ action, requestId: item.metadata.requestId }),
-      });
+      if (item.category === 'task-candidate' && action === 'execute-task') {
+        const taskTitle = item.title;
+        const taskDescription = (item.metadata?.description as string) || item.summary;
+        await apiFetch('/api/v1/proactive/insights', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'execute-task', taskTitle, taskDescription }),
+        });
+      } else if (item.metadata?.requestId) {
+        await apiFetch('/api/v1/proactive/insights', {
+          method: 'POST',
+          body: JSON.stringify({ action, requestId: item.metadata.requestId }),
+        });
+      }
       await refetch();
     } catch {
       // swallow; UI state remains
@@ -363,10 +379,10 @@ export function Decisions() {
           </div>
 
           <div className="min-h-0 overflow-auto space-y-2 pr-1">
-            {filteredItems.length === 0 ? (
+            {pageItems.length === 0 ? (
               <p className="text-sm text-text-dim py-8 text-center">Nenhum item encontrado para os filtros atuais.</p>
             ) : (
-              filteredItems.map((item) => {
+              pageItems.map((item) => {
                 const SourceIcon = SOURCE_ICONS[item.source];
                 const selectedRow = selected?.id === item.id;
 
@@ -401,12 +417,12 @@ export function Decisions() {
                         </div>
                       </div>
                     </button>
-                    {item.source === 'proactive' && item.category === 'pending-approval' && item.status === 'pending' ? (
+                    {item.source === 'proactive' && item.status === 'pending' && (item.category === 'task-candidate' || item.category === 'pending-approval') ? (
                       <div className="mt-1 flex gap-2">
                         <button
                           type="button"
                           disabled={actionBusy}
-                          onClick={() => void handleDecisionAction(item, 'approve')}
+                          onClick={() => void handleDecisionAction(item, item.category === 'task-candidate' ? 'execute-task' : 'approve')}
                           className="inline-flex flex-1 items-center justify-center rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-bold text-green-400 hover:bg-green-500/15 transition-colors"
                         >
                           <CheckCircle2 className="size-4 mr-2" /> Aprovar
@@ -424,6 +440,29 @@ export function Decisions() {
                   </div>
                 );
               })
+            )}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 pt-3 pb-1">
+                <button
+                  type="button"
+                  disabled={safePage === 0}
+                  onClick={() => setPage(safePage - 1)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-text-dim hover:text-accent hover:border-primary/30 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <span className="text-xs text-text-dim">
+                  {safePage + 1} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={safePage >= totalPages - 1}
+                  onClick={() => setPage(safePage + 1)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-text-dim hover:text-accent hover:border-primary/30 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
             )}
           </div>
         </section>

@@ -200,6 +200,8 @@ async function parseProactiveFiles(
                     priority: task.priority,
                     sensitivity: task.sensitivity,
                     requiresApproval: task.requiresApproval,
+                    description: task.description,
+                    rationale: task.rationale,
                 },
             });
         });
