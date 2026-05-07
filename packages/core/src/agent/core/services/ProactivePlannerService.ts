@@ -47,6 +47,7 @@ export interface ProactivePlannerServiceOptions {
     approvalRequester?: string;
     approvalFlow?: ApprovalFlow;
     onPlanGenerated?: (result: ProactivePlannerRunResult) => void | Promise<void>;
+    onParseError?: (error: { reason: string; projectId: string; provider: string; timestamp: string }) => void | Promise<void>;
 }
 
 export interface ProactivePlannerRunResult {
@@ -79,6 +80,7 @@ export class ProactivePlannerService {
     private readonly approvalRequester: string;
     private readonly approvalFlow?: ApprovalFlow;
     private readonly onPlanGenerated?: (result: ProactivePlannerRunResult) => void | Promise<void>;
+    private readonly onParseError?: (error: { reason: string; projectId: string; provider: string; timestamp: string }) => void | Promise<void>;
 
     private timer: ReturnType<typeof setInterval> | null = null;
     private latestPlan: ProactivePlannerRunResult | null = null;
@@ -97,6 +99,7 @@ export class ProactivePlannerService {
         this.approvalRequester = options.approvalRequester ?? 'proactive-planner';
         this.approvalFlow = options.approvalFlow;
         this.onPlanGenerated = options.onPlanGenerated;
+        this.onParseError = options.onParseError;
     }
 
     static getInstance(options?: ProactivePlannerServiceOptions): ProactivePlannerService {
@@ -131,7 +134,7 @@ export class ProactivePlannerService {
         return this.latestPlan;
     }
 
-    async runNow(projectId: string = 'system'): Promise<ProactivePlannerRunResult> {
+    async runNow(projectId: string = 'system'): Promise<ProactivePlannerRunResult | null> {
         const events = await this.loadRecentEnrichedEvents();
         const prompt = this.buildPrompt(projectId, events);
 
@@ -142,8 +145,45 @@ export class ProactivePlannerService {
         });
 
         const parsedPlan = this.parseModelOutput(result.rawText || result.stdout || '');
-        const pendingApprovals = this.routeTaskApprovals(parsedPlan.taskCandidates);
         const generatedAt = new Date().toISOString();
+
+        if (!parsedPlan) {
+            const errorDetail = {
+                reason: 'Model output did not contain JSON',
+                projectId,
+                provider: result.provider,
+                timestamp: generatedAt,
+            };
+            this.logger.warn(`Proactive planner parse error: ${errorDetail.reason}`);
+            const alertFile = await this.writeAlertFile(projectId, errorDetail, result);
+            await this.onParseError?.(errorDetail);
+            const outputFile = alertFile;
+            const runResult: ProactivePlannerRunResult = {
+                projectId,
+                generatedAt,
+                provider: result.provider,
+                command: result.command,
+                exitCode: result.exitCode,
+                inputEvents: events.length,
+                plan: {
+                    risks: [],
+                    opportunities: [],
+                    taskCandidates: [],
+                    recommendations: [{
+                        title: 'Alerta: revisão do modelo precisa de correção',
+                        rationale: errorDetail.reason,
+                        action: 'Corrigir o prompt ou o formato de saída do modelo',
+                    }],
+                },
+                pendingApprovals: [],
+                outputFile,
+            };
+            this.latestPlan = runResult;
+            await this.onPlanGenerated?.(runResult);
+            return runResult;
+        }
+
+        const pendingApprovals = this.routeTaskApprovals(parsedPlan.taskCandidates);
         const outputFile = await this.persistRun(projectId, {
             generatedAt,
             provider: result.provider,
@@ -215,11 +255,9 @@ export class ProactivePlannerService {
         ].join('\n');
     }
 
-    private parseModelOutput(rawText: string): ProactivePlan {
+    private parseModelOutput(rawText: string): ProactivePlan | null {
         const candidate = this.extractJsonObject(rawText);
-        if (!candidate) {
-            return this.fallbackPlan('Model output did not contain JSON');
-        }
+        if (!candidate) return null;
 
         try {
             const parsed = JSON.parse(candidate);
@@ -228,10 +266,10 @@ export class ProactivePlannerService {
                 return validated.data;
             }
         } catch {
-            // fallback below
+            // null below
         }
 
-        return this.fallbackPlan('Model output failed schema validation');
+        return null;
     }
 
     private extractJsonObject(rawText: string): string | null {
@@ -244,17 +282,41 @@ export class ProactivePlannerService {
         return rawText.slice(first, last + 1).trim();
     }
 
-    private fallbackPlan(reason: string): ProactivePlan {
-        return {
-            risks: [],
-            opportunities: [],
-            taskCandidates: [],
-            recommendations: [{
-                title: 'Manual review required',
-                rationale: reason,
-                action: 'Inspect recent enriched events and run planner again.',
-            }],
-        };
+    private async writeAlertFile(
+        projectId: string,
+        error: { reason: string; provider: string; timestamp: string },
+        result: { command: string; exitCode: number | null },
+    ): Promise<string> {
+        const dateKey = new Date(error.timestamp).toISOString().slice(0, 10);
+        const safeProject = this.slug(projectId || 'system') || 'system';
+        const stamp = error.timestamp.replace(/[:.]/g, '-');
+        const relPath = `${this.dataDir}/${dateKey}/${safeProject}-alert-${stamp}.json`;
+        await vaultWrite(relPath, JSON.stringify({
+            projectId,
+            generatedAt: error.timestamp,
+            provider: error.provider,
+            command: result.command,
+            exitCode: result.exitCode,
+            inputEvents: 0,
+            type: 'alert',
+            alert: {
+                title: 'Erro: saída do modelo não contém JSON',
+                reason: error.reason,
+                action: 'Corrigir o prompt ou o formato de saída do modelo e executar o planner novamente',
+            },
+            plan: {
+                risks: [],
+                opportunities: [],
+                taskCandidates: [],
+                recommendations: [{
+                    title: 'Alerta: revisão do modelo precisa de correção',
+                    rationale: error.reason,
+                    action: 'Corrigir o prompt ou o formato de saída do modelo',
+                }],
+            },
+            pendingApprovals: [],
+        }, null, 2));
+        return relPath;
     }
 
     private routeTaskApprovals(tasks: ProactivePlan['taskCandidates']): Array<{ requestId: string; taskTitle: string; reason: string }> {

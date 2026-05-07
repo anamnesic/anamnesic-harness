@@ -47,6 +47,7 @@ export interface ProactivePlannerServiceOptions {
     approvalRequester?: string;
     approvalFlow?: ApprovalFlow;
     onPlanGenerated?: (result: ProactivePlannerRunResult) => void | Promise<void>;
+    onParseError?: (error: { reason: string; projectId: string; provider: string; timestamp: string }) => void | Promise<void>;
 }
 
 export interface ProactivePlannerRunResult {
@@ -79,6 +80,7 @@ export class ProactivePlannerService {
     private readonly approvalRequester: string;
     private readonly approvalFlow?: ApprovalFlow;
     private readonly onPlanGenerated?: (result: ProactivePlannerRunResult) => void | Promise<void>;
+    private readonly onParseError?: (error: { reason: string; projectId: string; provider: string; timestamp: string }) => void | Promise<void>;
 
     private timer: ReturnType<typeof setInterval> | null = null;
     private latestPlan: ProactivePlannerRunResult | null = null;
@@ -97,6 +99,7 @@ export class ProactivePlannerService {
         this.approvalRequester = options.approvalRequester ?? 'proactive-planner';
         this.approvalFlow = options.approvalFlow;
         this.onPlanGenerated = options.onPlanGenerated;
+        this.onParseError = options.onParseError;
     }
 
     static getInstance(options?: ProactivePlannerServiceOptions): ProactivePlannerService {
@@ -215,11 +218,9 @@ export class ProactivePlannerService {
         ].join('\n');
     }
 
-    private parseModelOutput(rawText: string): ProactivePlan {
+    private parseModelOutput(rawText: string): ProactivePlan | null {
         const candidate = this.extractJsonObject(rawText);
-        if (!candidate) {
-            return this.fallbackPlan('Model output did not contain JSON');
-        }
+        if (!candidate) return null;
 
         try {
             const parsed = JSON.parse(candidate);
@@ -228,10 +229,10 @@ export class ProactivePlannerService {
                 return validated.data;
             }
         } catch {
-            // fallback below
+            // null below
         }
 
-        return this.fallbackPlan('Model output failed schema validation');
+        return null;
     }
 
     private extractJsonObject(rawText: string): string | null {
@@ -242,19 +243,6 @@ export class ProactivePlannerService {
         const last = rawText.lastIndexOf('}');
         if (first === -1 || last <= first) return null;
         return rawText.slice(first, last + 1).trim();
-    }
-
-    private fallbackPlan(reason: string): ProactivePlan {
-        return {
-            risks: [],
-            opportunities: [],
-            taskCandidates: [],
-            recommendations: [{
-                title: 'Manual review required',
-                rationale: reason,
-                action: 'Inspect recent enriched events and run planner again.',
-            }],
-        };
     }
 
     private routeTaskApprovals(tasks: ProactivePlan['taskCandidates']): Array<{ requestId: string; taskTitle: string; reason: string }> {
