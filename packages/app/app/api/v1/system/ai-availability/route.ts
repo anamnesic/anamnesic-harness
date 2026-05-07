@@ -6,13 +6,12 @@ import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { NextRequest } from 'next/server';
 import { ok, err } from '@/app/api/_lib/response';
-import { AVAILABLE_MODELS } from '@/src/config/models';
 import { getDb } from '@/app/api/_lib/db';
 import { SettingsService } from '@/src/core/services/SettingsService';
 import { readProviderKeyStatuses } from '@/app/api/_lib/project-env-keys';
 
-type CliName = 'copilot' | 'gemini' | 'kairos-code' | 'codex' | 'ollama';
-type ProviderName = 'kairos' | 'chatgpt' | 'gemini';
+type CliName = 'copilot' | 'gemini' | 'claude-code' | 'codex' | 'opencode' | 'ollama';
+type ProviderName = 'claude' | 'chatgpt' | 'gemini';
 
 // Cache em memória para evitar re-spawns repetidos do copilot
 interface CopilotCacheEntry {

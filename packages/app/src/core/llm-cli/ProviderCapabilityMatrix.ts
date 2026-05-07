@@ -24,7 +24,7 @@ export const CLI_CAPABILITY_MATRIX: CliCapabilityMatrix = {
         'long-analysis': { supported: true, quality: 'medium', notes: 'Capable, but not default for very long analysis.' },
         'code-automation': { supported: true, quality: 'medium', notes: 'Can automate code tasks when needed.' },
     },
-    kairos: {
+    claude: {
         summarization: { supported: true, quality: 'medium', notes: 'Reliable fallback for summaries.' },
         enrichment: { supported: true, quality: 'medium', notes: 'Good fallback for enrichment.' },
         reranking: { supported: true, quality: 'medium', notes: 'Good fallback for reranking.' },

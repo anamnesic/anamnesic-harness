@@ -1,5 +1,5 @@
 import {
-    kairosCliAdapter,
+    ClaudeCodeCliAdapter,
     CodexCliAdapter,
     CopilotCliAdapter,
     GeminiCliAdapter,
@@ -12,7 +12,7 @@ export class LlmCliRegistry {
 
     constructor() {
         this.register(new GeminiCliAdapter());
-        this.register(new kairosCliAdapter());
+        this.register(new ClaudeCodeCliAdapter());
         this.register(new CopilotCliAdapter());
         this.register(new CodexCliAdapter());
         this.register(new OpenCodeCliAdapter());

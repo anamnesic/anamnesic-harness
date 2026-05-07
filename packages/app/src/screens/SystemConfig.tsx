@@ -8,7 +8,6 @@ import { useToast } from '@/src/components/Toast';
 import { Skeleton, SkeletonCard } from '@/src/components/Skeleton';
 import { cn } from '@/src/lib/utils';
 import { ApiKeys } from './ApiKeys';
-import { AVAILABLE_MODELS } from '@/src/config/models';
 import { useRepository } from '@/src/context/RepositoryContext';
 
 const FLAG_LABELS: Record<string, string> = {
@@ -29,9 +28,10 @@ interface SettingsData {
     workspaceId?: string;
 }
 interface AvailabilityData {
-    cli: Record<'copilot' | 'gemini' | 'kairos-code' | 'codex' | 'ollama', boolean>;
+    cli: Record<'copilot' | 'gemini' | 'claude-code' | 'codex' | 'opencode' | 'ollama', boolean>;
     availableCli: string[];
     models: Record<string, boolean>;
+    modelCatalog: Array<{ id: string; provider: string; source: string }>;
     providerEnabled?: Record<string, boolean>;
 }
 interface MetricsData {
@@ -73,8 +73,11 @@ interface SystemAnalysisData {
 
 const CLI_MODEL_IDS = new Set(['gpt-5.2-codex', 'gpt-5.3-codex']);
 
-function isCliModel(modelId: string) {
-    return CLI_MODEL_IDS.has(modelId) || modelId.includes('codex') || modelId.includes('grok-code');
+function isCliModel(model: { id: string; source?: string }) {
+    return model.source === 'cli'
+        || CLI_MODEL_IDS.has(model.id)
+        || model.id.includes('codex')
+        || model.id.includes('grok-code');
 }
 
 export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void }) {
@@ -92,8 +95,9 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const [localCliEnabled, setLocalCliEnabled] = useState<Record<string, boolean>>({
         copilot: true,
         gemini: true,
-        kairos: true,
+        claude: true,
         codex: true,
+        opencode: true,
     });
     const [proactivePlannerIntervalSeconds, setProactivePlannerIntervalSeconds] = useState(3600);
     const [selfOptimizationIntervalSeconds, setSelfOptimizationIntervalSeconds] = useState(3600);
@@ -105,7 +109,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
     const availabilityPayload = (availability as { data?: AvailabilityData } | null)?.data
         ? (availability as { data?: AvailabilityData }).data
         : (availability as AvailabilityData | null);
-    const availableModels = AVAILABLE_MODELS.filter((model) => availabilityPayload?.models?.[model.id] ?? false);
+    const availableModels = availabilityPayload?.modelCatalog ?? [];
     const installedCli = availabilityPayload?.availableCli ?? [];
 
     const parseMsToSeconds = (value: unknown, fallback: number) =>
@@ -129,8 +133,11 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         setLocalCliEnabled({
             copilot: typeof settings.aiSettings?.['copilot.enabled'] === 'boolean' ? settings.aiSettings['copilot.enabled'] : true,
             gemini: typeof settings.aiSettings?.['gemini.enabled'] === 'boolean' ? settings.aiSettings['gemini.enabled'] : true,
-            kairos: typeof settings.aiSettings?.['kairos.enabled'] === 'boolean' ? settings.aiSettings['kairos.enabled'] : true,
+            claude: typeof settings.aiSettings?.['claude.enabled'] === 'boolean'
+                ? settings.aiSettings['claude.enabled']
+                : (typeof settings.aiSettings?.['kairos.enabled'] === 'boolean' ? settings.aiSettings['kairos.enabled'] : true),
             codex: typeof settings.aiSettings?.['codex.enabled'] === 'boolean' ? settings.aiSettings['codex.enabled'] : true,
+            opencode: typeof settings.aiSettings?.['opencode.enabled'] === 'boolean' ? settings.aiSettings['opencode.enabled'] : true,
         });
 
         setProactivePlannerIntervalSeconds(
@@ -170,8 +177,9 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
 
             aiSettingsPayload['copilot.enabled'] = localCliEnabled.copilot;
             aiSettingsPayload['gemini.enabled'] = localCliEnabled.gemini;
-            aiSettingsPayload['kairos.enabled'] = localCliEnabled.kairos;
+            aiSettingsPayload['claude.enabled'] = localCliEnabled.claude;
             aiSettingsPayload['codex.enabled'] = localCliEnabled.codex;
+            aiSettingsPayload['opencode.enabled'] = localCliEnabled.opencode;
             aiSettingsPayload['proactive.planner.intervalMs'] = proactivePlannerIntervalSeconds * 1000;
             aiSettingsPayload['selfOptimization.intervalMs'] = selfOptimizationIntervalSeconds * 1000;
             aiSettingsPayload['proactive.ui.pollIntervalMs'] = proactiveRefreshIntervalSeconds * 1000;
@@ -205,8 +213,11 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
         setLocalCliEnabled({
             copilot: typeof settings?.aiSettings?.['copilot.enabled'] === 'boolean' ? settings?.aiSettings?.['copilot.enabled'] : true,
             gemini: typeof settings?.aiSettings?.['gemini.enabled'] === 'boolean' ? settings?.aiSettings?.['gemini.enabled'] : true,
-            kairos: typeof settings?.aiSettings?.['kairos.enabled'] === 'boolean' ? settings?.aiSettings?.['kairos.enabled'] : true,
+            claude: typeof settings?.aiSettings?.['claude.enabled'] === 'boolean'
+                ? settings?.aiSettings?.['claude.enabled']
+                : (typeof settings?.aiSettings?.['kairos.enabled'] === 'boolean' ? settings?.aiSettings?.['kairos.enabled'] : true),
             codex: typeof settings?.aiSettings?.['codex.enabled'] === 'boolean' ? settings?.aiSettings?.['codex.enabled'] : true,
+            opencode: typeof settings?.aiSettings?.['opencode.enabled'] === 'boolean' ? settings?.aiSettings?.['opencode.enabled'] : true,
         });
         setProactivePlannerIntervalSeconds(
             parseMsToSeconds(settings?.aiSettings?.['proactive.planner.intervalMs'], 3600),
@@ -359,8 +370,9 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                     {[
                         { key: 'copilot', label: 'Copilot' },
                         { key: 'gemini', label: 'Gemini' },
-                        { key: 'kairos', label: 'Kairos' },
+                        { key: 'claude', label: 'Claude Code' },
                         { key: 'codex', label: 'Codex' },
+                        { key: 'opencode', label: 'OpenCode' },
                     ].map((provider) => (
                         <div key={provider.key} className="flex items-center justify-between">
                             <div>
@@ -599,15 +611,15 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                         <p className="text-xs text-text-dim py-2">Nenhum modelo disponível. Instale um CLI e configure suas chaves de API.</p>
                     ) : availableModels.map((model) => {
                         const enabled = localModelStates[model.id] ?? true;
-                        const cli = isCliModel(model.id);
+                        const cli = isCliModel(model);
 
                         return (
                             <div key={model.id} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-bg px-3 py-2.5">
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <p className="text-xs font-bold text-accent truncate">{model.name}</p>
+                                        <p className="text-xs font-bold text-accent truncate">{model.id}</p>
                                         <span className="rounded-full bg-card px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-text-dim shrink-0">
-                                            {model.group}
+                                            {model.provider}
                                         </span>
                                         {cli && (
                                             <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary shrink-0">
@@ -615,7 +627,7 @@ export function SystemConfig({ onNavigate }: { onNavigate?: (id: string) => void
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-[10px] text-text-dim truncate">{model.id} · {model.description}</p>
+                                    <p className="text-[10px] text-text-dim truncate">source: {model.source}</p>
                                 </div>
                                 <button
                                     onClick={() => toggleModel(model.id)}
