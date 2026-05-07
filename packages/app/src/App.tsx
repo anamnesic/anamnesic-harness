@@ -554,8 +554,8 @@ function useScreenConfig(
     case 'repo-decisions':
       return {
         title: 'Decisões',
-        subtitle: 'Registro de decisões do repositório',
-        element: <Projects embedded activeTab="decisions" hideTabBar />,
+        subtitle: 'Registro de decisões operacionais',
+        element: <Decisions />,
         onBack: undefined,
         rightElement: undefined,
       };

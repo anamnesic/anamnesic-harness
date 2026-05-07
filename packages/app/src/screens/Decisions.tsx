@@ -99,6 +99,10 @@ export function Decisions() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const feed = data?.data;
+  const proactiveItems = useMemo(
+    () => (feed?.items ?? []).filter((item) => item.source === 'proactive'),
+    [feed?.items],
+  );
 
   const filteredItems = useMemo(() => {
     const items = feed?.items ?? [];
@@ -234,6 +238,44 @@ export function Decisions() {
         <div className="bento-card">
           <p className="label-caps">Concluídas</p>
           <p className="text-2xl font-bold mt-2 text-cyan-300">{completedCount}</p>
+        </div>
+      </div>
+
+      <div className="bento-card">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="label-caps">Sugestões proativas</p>
+            <h3 className="text-lg font-bold mt-2">{proactiveItems.length ? `${proactiveItems.length} item(s) proativo(s)` : 'Sem sugestões proativas disponíveis'}</h3>
+            <p className="text-xs text-text-dim mt-1">
+              Veja o feed de proativas ou selecione o filtro Proactive para visualizar todas.
+            </p>
+          </div>
+          <button
+            onClick={() => setSourceFilter('proactive')}
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accent hover:border-primary/60 transition-colors"
+          >
+            Ver proativas
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {(proactiveItems.slice(0, 3).length === 0 ? [null] : proactiveItems.slice(0, 3)).map((item, index) => (
+            item ? (
+              <div key={item.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="label-caps text-text-dim">{SOURCE_LABELS[item.source]}</span>
+                  <span className={cn('rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider', STATUS_TONE[item.status])}>
+                    {STATUS_LABELS[item.status] ?? item.status}
+                  </span>
+                </div>
+                <p className="font-semibold text-sm text-highlight mb-2 line-clamp-2">{item.title}</p>
+                <p className="text-xs text-text-dim line-clamp-3">{item.summary}</p>
+              </div>
+            ) : (
+              <div key={`empty-${index}`} className="rounded-xl border border-border bg-card p-4 text-sm text-text-dim">
+                Nenhuma sugestão proativa no momento.
+              </div>
+            )
+          ))}
         </div>
       </div>
 
