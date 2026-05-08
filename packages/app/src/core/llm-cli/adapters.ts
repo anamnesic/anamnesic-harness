@@ -84,11 +84,11 @@ export class GeminiCliAdapter extends BaseCliAdapter {
     }
 }
 
-export class kairosCliAdapter extends BaseCliAdapter {
-    readonly provider = 'kairos' as const;
+export class ClaudeCodeCliAdapter extends BaseCliAdapter {
+    readonly provider = 'claude' as const;
 
     protected getCandidates(): string[] {
-        return ['kairos', 'kairos-code', 'kairos-ai'];
+        return ['claude', 'claude-code', 'claude-cli'];
     }
 
     protected getInteractiveArgs(): string[] {

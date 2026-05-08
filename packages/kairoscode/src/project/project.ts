@@ -6,6 +6,8 @@ import { ProjectTable } from "./project.sql"
 import { SessionTable } from "../session/session.sql"
 import * as Log from "@kairos-ai/core/util/log"
 import { Flag } from "@kairos-ai/core/flag/flag"
+import { Hash } from "@kairos-ai/core/util/hash"
+import { Global } from "@kairos-ai/core/global"
 import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global"
 import { which } from "../util/which"
@@ -176,8 +178,8 @@ export const layer: Layer.Layer<
 
     const scope = yield* Scope.Scope
 
-    const readCachedProjectId = Effect.fnUntraced(function* (dir: string) {
-      return yield* fs.readFileString(pathSvc.join(dir, "kairos")).pipe(
+    const readCachedProjectId = Effect.fnUntraced(function* (repoKey: string) {
+      return yield* fs.readFileString(pathSvc.join(Global.Path.data, "repos", repoKey, "project-id")).pipe(
         Effect.map((x) => x.trim()),
         Effect.map((x) => ProjectID.make(x)),
         Effect.catch(() => Effect.void),
@@ -204,8 +206,9 @@ export const layer: Layer.Layer<
         }
 
         let sandbox = pathSvc.dirname(dotgit)
+        const repoKey = Hash.fast(sandbox)
         const gitBinary = yield* Effect.sync(() => which("git"))
-        let id = yield* readCachedProjectId(dotgit)
+        let id = yield* readCachedProjectId(repoKey)
 
         if (!gitBinary) {
           return {
@@ -231,7 +234,7 @@ export const layer: Layer.Layer<
         const worktree = common === sandbox ? sandbox : isBareRepo ? common : pathSvc.dirname(common)
 
         if (id == null) {
-          id = yield* readCachedProjectId(common)
+          id = yield* readCachedProjectId(repoKey)
         }
 
         if (!id) {
@@ -244,7 +247,9 @@ export const layer: Layer.Layer<
 
           id = roots[0] ? ProjectID.make(roots[0]) : undefined
           if (id) {
-            yield* fs.writeFileString(pathSvc.join(common, "kairos"), id).pipe(Effect.ignore)
+            const repoDir = pathSvc.join(Global.Path.data, "repos", repoKey)
+            yield* fs.makeDirectory(repoDir, { recursive: true }).pipe(Effect.orDie)
+            yield* fs.writeFileString(pathSvc.join(repoDir, "project-id"), id).pipe(Effect.ignore)
           }
         }
 

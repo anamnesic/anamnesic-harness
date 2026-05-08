@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, RefreshCcw, Brain } from 'lucide-react';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, RefreshCcw, Brain, BookOpen } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -21,6 +21,10 @@ interface HistoryData { data?: any[] | { items?: any[]; total?: number }; count?
 interface AgentStats { totalAgents: number; activeAgents: number; totalTasksCompleted: number; totalTasksFailed: number; byState: Record<string, number> }
 interface WorkflowStats { total: number; active: number; totalExecutions: number; successfulExecutions: number; failedExecutions: number; successRate: number }
 interface RunsData { data?: Array<{ status: string }> | { items?: Array<{ status: string }>; total?: number }; count?: number }
+
+interface SettingsData {
+    aiSettings?: Record<string, unknown>;
+}
 
 interface ProactiveInsightResponse {
     success?: boolean;
@@ -48,7 +52,11 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     const { data: history, loading: histLoading, error: historyErr } = usePolling<HistoryData>('/api/chat/history?limit=3', 60000);
     const { data: agentStats, error: agentsErr } = usePolling<AgentStats>('/api/v1/agents/stats', 20000);
     const { data: workflowStats, error: workflowsErr } = usePolling<WorkflowStats>('/api/v1/workflows/stats', 20000);
-    const { data: proactiveInsights, loading: proactiveLoading, refetch: refetchProactive, error: proactiveErr } = usePolling<ProactiveInsightResponse>('/api/v1/proactive/insights', 45000);
+    const { data: settingsData } = useApi<SettingsData>('/api/v1/settings');
+    const proactivePollingIntervalMs = typeof settingsData?.aiSettings?.['proactive.ui.pollIntervalMs'] === 'number'
+        ? settingsData.aiSettings['proactive.ui.pollIntervalMs']
+        : 60 * 60_000;
+    const { data: proactiveInsights, loading: proactiveLoading, refetch: refetchProactive, error: proactiveErr } = usePolling<ProactiveInsightResponse>('/api/v1/proactive/insights', proactivePollingIntervalMs);
     const { data: runsData, error: runsErr } = usePolling<RunsData>('/api/v1/orchestrator/runs?limit=20', 20000);
     const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
     const [proactiveBusy, setProactiveBusy] = useState(false);
@@ -140,6 +148,7 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
             }
             if (action === 'approve') {
                 toast('Ação aprovada', 'success');
+                onNavigate('decisions');
             }
             if (action === 'reject') {
                 toast('Ação rejeitada', 'info');
@@ -174,20 +183,61 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-2">
                 {integrationStatus.map((item) => {
+                    const statusLabel = item.error
+                        ? 'erro'
+                        : item.loading
+                            ? 'carregando'
+                            : 'ok';
+                    const Icon = item.label === 'Health'
+                        ? Shield
+                        : item.label === 'Metrics'
+                            ? TrendingUp
+                            : item.label === 'History'
+                                ? BookOpen
+                                : item.error
+                                    ? XCircle
+                                    : item.loading
+                                        ? Clock3
+                                        : CheckCircle2;
                     const tone = item.error
                         ? 'border-red-500/30 bg-red-500/10 text-red-300'
                         : item.loading
                             ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
                             : 'border-green-500/30 bg-green-500/10 text-green-300';
-                    const label = item.error ? 'erro' : item.loading ? 'carregando' : 'ok';
+
+                    if (item.label === 'Health' || item.label === 'Metrics' || item.label === 'History') {
+                        return (
+                            <button
+                                key={item.label}
+                                type="button"
+                                disabled
+                                aria-label={`${item.label} ${statusLabel}`}
+                                title={`${item.label} ${statusLabel}`}
+                                className={cn(
+                                    'inline-flex h-12 w-12 items-center justify-center rounded-2xl border transition-colors',
+                                    item.error
+                                        ? 'border-red-500/30 bg-red-500/10 text-red-500'
+                                        : item.loading
+                                            ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
+                                            : 'border-green-500/30 bg-green-500/10 text-green-500',
+                                )}
+                            >
+                                <Icon className={cn('size-5', item.loading && 'animate-spin')} />
+                            </button>
+                        );
+                    }
 
                     return (
                         <span
                             key={item.label}
-                            className={cn('rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider', tone)}
-                            title={item.error ?? `${item.label} ${label}`}
+                            className={cn(
+                                'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-wider',
+                                tone,
+                            )}
+                            title={`${item.label} ${statusLabel}`}
                         >
-                            {item.label}: {label}
+                            <Icon className="size-4" />
+                            {item.label}: {statusLabel}
                         </span>
                     );
                 })}
@@ -347,7 +397,7 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
                     <div className="mt-auto pt-4">
                         {metricsLoading
                             ? <Skeleton className="h-9 w-16" />
-                            : <p className="text-3xl font-bold tracking-tighter">{metrics?.threads ?? '—'}</p>}
+                            : <p className="text-3xl font-bold tracking-tighter">{metrics?.data?.threads ?? '—'}</p>}
                         <p className="text-[10px] text-text-dim mt-1">Disponível</p>
                     </div>
                 </div>
@@ -358,7 +408,7 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
                     <div className="mt-auto pt-4">
                         {metricsLoading
                             ? <Skeleton className="h-9 w-16" />
-                            : <p className="text-3xl font-bold tracking-tighter">{metrics?.loadAvg ?? '—'}</p>}
+                            : <p className="text-3xl font-bold tracking-tighter">{metrics?.data?.loadAvg ?? '—'}</p>}
                         <p className="text-[10px] text-text-dim mt-1">1-min</p>
                     </div>
                 </div>
@@ -487,4 +537,3 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
         </motion.div>
     );
 }
-

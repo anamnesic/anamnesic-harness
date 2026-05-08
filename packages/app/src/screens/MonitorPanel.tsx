@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, RefreshCcw, Brain } from 'lucide-react';
+import { Code2, MemoryStick, Shield, Activity, Bot, GitBranch, Bug, TrendingUp, ShieldAlert, CheckCircle2, XCircle, Clock3, Brain, BookOpen } from 'lucide-react';
 import { usePolling } from '@/src/lib/usePolling';
 import { useEventStream } from '@/src/lib/useEventStream';
 import { useToast } from '@/src/components/Toast';
@@ -50,10 +50,8 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     const { data: historyResponse, loading: histLoading, error: historyErr } = usePolling<ApiEnvelope<HistoryData>>('/api/chat/history?limit=3', 60000);
     const { data: agentStatsResponse, error: agentsErr } = usePolling<ApiEnvelope<AgentStats>>('/api/v1/agents/stats', 20000);
     const { data: workflowStatsResponse, error: workflowsErr } = usePolling<ApiEnvelope<WorkflowStats>>('/api/v1/workflows/stats', 20000);
-    const { data: proactiveResponse, loading: proactiveLoading, refetch: refetchProactive, error: proactiveErr } = usePolling<ApiEnvelope<ProactiveInsightResponse>>('/api/v1/proactive/insights', 45000);
     const { data: runsResponse, error: runsErr } = usePolling<ApiEnvelope<RunsData>>('/api/v1/orchestrator/runs?limit=20', 20000);
     const [liveRuns, setLiveRuns] = useState<Array<{ status: string }>>([]);
-    const [proactiveBusy, setProactiveBusy] = useState(false);
     const { toast } = useToast();
     const lastToastRef = useRef<Record<string, number>>({});
 
@@ -97,7 +95,6 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     const history = historyResponse?.data;
     const agentStats = agentStatsResponse?.data;
     const workflowStats = workflowStatsResponse?.data;
-    const proactiveData = proactiveResponse?.data;
     const polledRuns = runsResponse?.data?.items ?? [];
 
     const allRuns = liveRuns.length > 0 ? liveRuns : polledRuns;
@@ -112,48 +109,15 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
     const isOnline = health?.status === 'ok';
     const actions: any[] = history?.items ?? [];
 
-    const topRecommendation = proactiveData?.plan?.recommendations?.[0];
-    const topRisk = proactiveData?.plan?.risks?.[0];
-    const topPendingApproval = proactiveData?.pendingApprovals?.find((item) => item.status === 'pending') || null;
-
     const integrationStatus = [
         { label: 'Health', error: healthErr, loading: !health && !healthErr },
         { label: 'Metrics', error: metricsErr, loading: metricsLoading },
         { label: 'History', error: historyErr, loading: histLoading },
         { label: 'Agents', error: agentsErr, loading: !agentStats && !agentsErr },
         { label: 'Workflows', error: workflowsErr, loading: !workflowStats && !workflowsErr },
-        { label: 'Proactive', error: proactiveErr, loading: proactiveLoading },
         { label: 'Runs', error: runsErr, loading: !allRuns.length && !runsErr },
     ];
 
-    async function runProactiveAction(action: 'refresh' | 'approve' | 'reject' | 'postpone', requestId?: string) {
-        setProactiveBusy(true);
-        try {
-            await apiFetch('/api/v1/proactive/insights', {
-                method: 'POST',
-                body: JSON.stringify({ action, requestId }),
-            });
-
-            if (action === 'refresh') {
-                toast('Insights proativos atualizados', 'success');
-            }
-            if (action === 'approve') {
-                toast('Ação aprovada', 'success');
-            }
-            if (action === 'reject') {
-                toast('Ação rejeitada', 'info');
-            }
-            if (action === 'postpone') {
-                toast('Ação adiada', 'info');
-            }
-
-            await refetchProactive();
-        } catch (error) {
-            toast('Falha ao processar ação proativa', 'error');
-        } finally {
-            setProactiveBusy(false);
-        }
-    }
 
     return (
         <motion.div
@@ -173,20 +137,61 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-2">
                 {integrationStatus.map((item) => {
+                    const statusLabel = item.error
+                        ? 'erro'
+                        : item.loading
+                            ? 'carregando'
+                            : 'ok';
+                    const Icon = item.label === 'Health'
+                        ? Shield
+                        : item.label === 'Metrics'
+                            ? TrendingUp
+                            : item.label === 'History'
+                                ? BookOpen
+                                : item.error
+                                    ? XCircle
+                                    : item.loading
+                                        ? Clock3
+                                        : CheckCircle2;
                     const tone = item.error
                         ? 'border-red-500/30 bg-red-500/10 text-red-300'
                         : item.loading
                             ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
                             : 'border-green-500/30 bg-green-500/10 text-green-300';
-                    const label = item.error ? 'erro' : item.loading ? 'carregando' : 'ok';
+
+                    if (item.label === 'Health' || item.label === 'Metrics' || item.label === 'History') {
+                        return (
+                            <button
+                                key={item.label}
+                                type="button"
+                                disabled
+                                aria-label={`${item.label} ${statusLabel}`}
+                                title={`${item.label} ${statusLabel}`}
+                                className={cn(
+                                    'inline-flex h-12 w-12 items-center justify-center rounded-2xl border transition-colors',
+                                    item.error
+                                        ? 'border-red-500/30 bg-red-500/10 text-red-500'
+                                        : item.loading
+                                            ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
+                                            : 'border-green-500/30 bg-green-500/10 text-green-500',
+                                )}
+                            >
+                                <Icon className={cn('size-5', item.loading && 'animate-spin')} />
+                            </button>
+                        );
+                    }
 
                     return (
                         <span
                             key={item.label}
-                            className={cn('rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider', tone)}
-                            title={item.error ?? `${item.label} ${label}`}
+                            className={cn(
+                                'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-wider',
+                                tone,
+                            )}
+                            title={`${item.label} ${statusLabel}`}
                         >
-                            {item.label}: {label}
+                            <Icon className="size-4" />
+                            {item.label}: {statusLabel}
                         </span>
                     );
                 })}
@@ -235,77 +240,6 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
                             : 'bg-border'}`}
                         />
                     </div>
-                </div>
-
-                {/* Suggestion Card */}
-                <div className="bento-card col-span-4 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                        <span className="label-caps">Sugestão proativa</span>
-                        <button
-                            onClick={() => void runProactiveAction('refresh')}
-                            disabled={proactiveBusy}
-                            className="rounded-lg border border-border p-1.5 hover:border-primary/60 transition-colors disabled:opacity-60"
-                            aria-label="Atualizar insights proativos"
-                        >
-                            <RefreshCcw className="size-3.5" />
-                        </button>
-                    </div>
-
-                    {proactiveLoading ? (
-                        <div className="space-y-2 mt-4">
-                            <SkeletonRow />
-                            <SkeletonRow />
-                            <SkeletonRow />
-                        </div>
-                    ) : (
-                        <>
-                            <h3 className="text-lg font-bold tracking-tight mt-2">
-                                {topRecommendation?.title || topRisk?.title || 'Sem sugestão prioritária no momento'}
-                            </h3>
-                            <p className="text-xs text-text-dim mt-2 line-clamp-3">
-                                {topRecommendation?.rationale || topRisk?.evidence || 'Nenhum insight relevante gerado ainda.'}
-                            </p>
-                            <p className="text-[10px] text-text-dim mt-3">
-                                {proactiveData
-                                    ? `Provider: ${proactiveData.provider} · Eventos: ${proactiveData.inputEvents}`
-                                    : 'Aguardando primeira execução do planner'}
-                            </p>
-                        </>
-                    )}
-
-                    {topPendingApproval && (
-                        <div className="mt-4 rounded-xl border border-border p-3 bg-bg/40">
-                            <p className="text-[10px] uppercase tracking-widest text-text-dim font-bold">Aprovação pendente</p>
-                            <p className="text-sm font-semibold mt-1">{topPendingApproval.taskTitle}</p>
-                            <p className="text-xs text-text-dim mt-1 line-clamp-2">{topPendingApproval.reason}</p>
-                            <div className="grid grid-cols-3 gap-2 mt-3">
-                                <button
-                                    onClick={() => void runProactiveAction('approve', topPendingApproval.requestId)}
-                                    disabled={proactiveBusy}
-                                    className="flex items-center justify-center gap-1 rounded-lg bg-green-500/15 text-green-400 py-2 text-[11px] font-bold hover:bg-green-500/20 transition-colors disabled:opacity-60"
-                                >
-                                    <CheckCircle2 className="size-3.5" />
-                                    Aprovar
-                                </button>
-                                <button
-                                    onClick={() => void runProactiveAction('reject', topPendingApproval.requestId)}
-                                    disabled={proactiveBusy}
-                                    className="flex items-center justify-center gap-1 rounded-lg bg-red-500/15 text-red-400 py-2 text-[11px] font-bold hover:bg-red-500/20 transition-colors disabled:opacity-60"
-                                >
-                                    <XCircle className="size-3.5" />
-                                    Rejeitar
-                                </button>
-                                <button
-                                    onClick={() => void runProactiveAction('postpone', topPendingApproval.requestId)}
-                                    disabled={proactiveBusy}
-                                    className="flex items-center justify-center gap-1 rounded-lg bg-yellow-500/15 text-yellow-400 py-2 text-[11px] font-bold hover:bg-yellow-500/20 transition-colors disabled:opacity-60"
-                                >
-                                    <Clock3 className="size-3.5" />
-                                    Adiar
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Operações de segurança Card */}
@@ -486,4 +420,3 @@ export function MonitorPanel({ onNavigate }: MonitorPanelProps) {
         </motion.div>
     );
 }
-

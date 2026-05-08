@@ -1,19 +1,20 @@
 #!/usr/bin/env bun
 /**
- * vault-migrate: encrypts all plaintext sensitive data files into data/vault/
+ * vault-migrate: encrypts all plaintext sensitive data files into vault/
  * Run this once after setting KAIROS_VAULT_KEY.
  *
  * Usage:
  *   KAIROS_VAULT_KEY=<hex> bun run packages/vault/scripts/vault-migrate.ts
  *
  * What it migrates:
- *   data/emails.json            → data/vault/emails.json.enc
- *   data/email-sync-meta.json   → data/vault/email-sync-meta.json.enc
- *   data/skills/**              → data/vault/skills/**
- *   data/proactive/**           → data/vault/proactive/**
- *   data/self-optimization/**   → data/vault/self-optimization/**
+ *   ~/.kairos/emails.json            → ~/.kairos/vault/emails.json.enc
+ *   ~/.kairos/email-sync-meta.json   → ~/.kairos/vault/email-sync-meta.json.enc
+ *   ~/.kairos/skills/**              → ~/.kairos/vault/skills/**
+ *   ~/.kairos/proactive/**           → ~/.kairos/vault/proactive/**
+ *   ~/.kairos/self-optimization/**   → ~/.kairos/vault/self-optimization/**
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { encrypt } from '../src/cipher.js'
 
@@ -28,8 +29,7 @@ if (key.length !== 32) {
   process.exit(1)
 }
 
-const ROOT = process.cwd()
-const DATA_DIR = path.join(ROOT, 'data')
+const DATA_DIR = process.env['KAIROS_HOME'] ?? path.join(os.homedir(), '.kairos')
 const VAULT_DIR = path.join(DATA_DIR, 'vault')
 
 const TARGETS = [
@@ -79,13 +79,12 @@ for (const target of TARGETS) {
   }
 }
 
-console.log(`\n🔒  ${total} file(s) encrypted to data/vault/`)
+console.log(`\n🔒  ${total} file(s) encrypted to ${VAULT_DIR}/`)
 console.log('\nNext steps:')
-console.log('  1. Verify encrypted files look correct in data/vault/')
-console.log('  2. Add plaintext paths to .gitignore (already done if you ran this from the repo)')
-console.log('  3. Remove plaintext files from git tracking:')
-console.log('       git rm --cached data/emails.json data/email-sync-meta.json')
-console.log('       git rm --cached -r data/skills/ data/proactive/ data/self-optimization/')
+console.log('  1. Verify encrypted files look correct in:', VAULT_DIR)
+console.log('  2. Plaintext paths in ~/.kairos/ can now be removed:')
+console.log('       rm ~/.kairos/emails.json ~/.kairos/email-sync-meta.json')
+console.log('       rm -rf ~/.kairos/skills/ ~/.kairos/proactive/ ~/.kairos/self-optimization/')
 console.log('  4. ⚠️  Git history still contains plaintext. Use git filter-repo to purge:')
 console.log('       pip install git-filter-repo')
 console.log('       git filter-repo --path data/emails.json --invert-paths')

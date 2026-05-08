@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { ok, err } from '@/app/api/_lib/response';
+import { vaultReadEnc } from '@kairos/vault';
 
 type DecisionSource = 'proactive' | 'self-optimization' | 'decision-log' | 'system-log' | 'audit';
 
@@ -48,24 +49,37 @@ function shortText(value: unknown, fallback = 'Sem detalhe disponível', maxLen 
 }
 
 async function listJsonFiles(dirPath: string, limit: number): Promise<string[]> {
-    const all = await fs.readdir(dirPath, { recursive: true, withFileTypes: true }).catch(() => []);
     const files: Array<{ filePath: string; mtimeMs: number }> = [];
 
-    for (const entry of all) {
-        if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.json')) continue;
-        const filePath = path.join(entry.parentPath, entry.name);
-        const stat = await fs.stat(filePath).catch(() => null);
-        if (!stat) continue;
-        files.push({ filePath, mtimeMs: stat.mtimeMs });
+    async function walk(currentPath: string) {
+        const entries = await fs.readdir(currentPath, { withFileTypes: true }).catch(() => []);
+        for (const entry of entries) {
+            const filePath = path.join(currentPath, entry.name);
+            if (entry.isDirectory()) {
+                await walk(filePath);
+                continue;
+            }
+
+            if (!entry.isFile()) continue;
+            const name = entry.name.toLowerCase();
+            if (!name.endsWith('.json.enc') && !name.endsWith('.json')) continue;
+
+            const stat = await fs.stat(filePath).catch(() => null);
+            if (!stat) continue;
+            files.push({ filePath, mtimeMs: stat.mtimeMs });
+        }
     }
 
+    await walk(dirPath);
     files.sort((a, b) => b.mtimeMs - a.mtimeMs);
     return files.slice(0, limit).map((item) => item.filePath);
 }
 
 async function readJson(filePath: string): Promise<Record<string, unknown> | null> {
     try {
-        const raw = await fs.readFile(filePath, 'utf8');
+        const raw = filePath.endsWith('.enc')
+            ? await vaultReadEnc(filePath)
+            : await fs.readFile(filePath, 'utf8');
         const parsed = JSON.parse(raw) as unknown;
         if (parsed && typeof parsed === 'object') {
             return parsed as Record<string, unknown>;

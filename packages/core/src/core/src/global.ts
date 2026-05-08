@@ -1,31 +1,27 @@
 import path from "path"
 import fs from "fs/promises"
-import { xdgData, xdgCache, xdgConfig, xdgState } from "xdg-basedir"
 import os from "os"
 import { Context, Effect, Layer } from "effect"
 import { Flock } from "./util/flock"
 
-const app = "kairos"
-const data = path.join(xdgData!, app)
-const cache = path.join(xdgCache!, app)
-const config = path.join(xdgConfig!, app)
-const state = path.join(xdgState!, app)
+const homeDir = () => process.env.KAIROS_TEST_HOME ?? os.homedir()
+const kairosRoot = path.join(homeDir(), ".kairos")
 
 const paths = {
   get home() {
     return process.env.KAIROS_TEST_HOME ?? os.homedir()
   },
-  data,
-  bin: path.join(cache, "bin"),
-  log: path.join(data, "log"),
-  cache,
-  config,
-  state,
+  data: kairosRoot,
+  bin: path.join(kairosRoot, "bin"),
+  log: path.join(kairosRoot, "log"),
+  cache: kairosRoot,
+  config: kairosRoot,
+  state: kairosRoot,
 }
 
 export const Path = paths
 
-Flock.setGlobal({ state })
+Flock.setGlobal({ state: kairosRoot })
 
 await Promise.all([
   fs.mkdir(Path.data, { recursive: true }),
@@ -33,6 +29,12 @@ await Promise.all([
   fs.mkdir(Path.state, { recursive: true }),
   fs.mkdir(Path.log, { recursive: true }),
   fs.mkdir(Path.bin, { recursive: true }),
+  fs.mkdir(path.join(kairosRoot, "repos"), { recursive: true }),
+  fs.mkdir(path.join(kairosRoot, "tools"), { recursive: true }),
+  fs.mkdir(path.join(kairosRoot, "memories"), { recursive: true }),
+  fs.mkdir(path.join(kairosRoot, "skills"), { recursive: true }),
+  fs.mkdir(path.join(kairosRoot, "plugins"), { recursive: true }),
+  fs.mkdir(path.join(kairosRoot, "mcps"), { recursive: true }),
 ])
 
 export class Service extends Context.Service<Service, Interface>()("@kairos/Global") {}

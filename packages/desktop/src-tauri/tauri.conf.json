@@ -5,9 +5,9 @@
   "mainBinaryName": "kairos",
   "version": "../package.json",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "pnpm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "pnpm --filter @kairos-ai/desktop exec vite build",
     "frontendDist": "../dist"
   },
   "app": {

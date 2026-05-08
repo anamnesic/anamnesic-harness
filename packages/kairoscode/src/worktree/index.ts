@@ -214,7 +214,7 @@ export const layer: Layer.Layer<
         throw new NotGitError({ message: "Worktrees are only supported for git projects" })
       }
 
-      const root = pathSvc.join(Global.Path.data, "worktree", ctx.project.id)
+      const root = pathSvc.join(Global.Path.data, "repos", ctx.project.id, "worktree")
       yield* fs.makeDirectory(root, { recursive: true }).pipe(Effect.orDie)
 
       const base = name ? slugify(name) : ""
