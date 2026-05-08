@@ -17,6 +17,7 @@ import {
   ServerCog,
   Mail,
   MailOpen,
+  Menu,
   X,
   MessageSquare,
   Plus,
