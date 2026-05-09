@@ -145,7 +145,7 @@ describe.sequential('EventEnrichmentService', () => {
         expect(executePrompt).toHaveBeenCalledTimes(1);
         const requestArg = executePrompt.mock.calls[0][0];
         expect(requestArg.preferredProvider).toBe('gemini');
-        expect(requestArg.fallbackProviders).toEqual(['kairos', 'copilot', 'codex']);
+        expect(requestArg.fallbackProviders).toEqual(['opencode', 'copilot', 'codex']);
         expect(requestArg.prompt).toContain('You are an event enrichment engine.');
         expect(requestArg.prompt).toContain('INPUT_EVENTS=');
         expect(requestArg.prompt).toContain('evt-3');

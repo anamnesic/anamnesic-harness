@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { NextRequest } from 'next/server';
+import { AVAILABLE_MODELS } from '@/src/config/models';
 import { ok, err } from '@/app/api/_lib/response';
 import { getDb } from '@/app/api/_lib/db';
 import { SettingsService } from '@/src/core/services/SettingsService';

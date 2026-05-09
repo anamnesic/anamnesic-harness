@@ -18,8 +18,8 @@ const taskTypeSchema = z.enum([
 
     const routingRuleSchema = z.object({
         taskType: taskTypeSchema,
-        preferredProvider: z.enum(['gemini', 'kairos', 'copilot', 'codex', 'opencode']),
-        fallbackProviders: z.array(z.enum(['gemini', 'kairos', 'copilot', 'codex', 'opencode'])).max(4),
+        preferredProvider: z.enum(['gemini', 'copilot', 'codex', 'opencode']),
+        fallbackProviders: z.array(z.enum(['gemini', 'copilot', 'codex', 'opencode'])).max(4),
         rationale: z.string().min(1),
         confidence: z.number().min(0).max(1),
     });
@@ -70,7 +70,7 @@ export class BenchmarkInterpretationService {
         options: BenchmarkInterpretationServiceOptions = {},
     ) {
         this.preferredProvider = options.preferredProvider ?? 'gemini';
-        this.fallbackProviders = options.fallbackProviders ?? ['kairos', 'copilot', 'codex', 'opencode'];
+        this.fallbackProviders = options.fallbackProviders ?? ['opencode', 'copilot', 'codex'];
         this.dataDir = options.dataDir ?? path.join(process.cwd(), 'data', 'benchmark-interpretation');
     }
 
@@ -153,7 +153,7 @@ export class BenchmarkInterpretationService {
         return [
             'You are a benchmark interpretation engine for multi-provider LLM routing.',
             'Return ONLY one JSON object with this exact schema:',
-            '{"modelExplanations":[{"modelId":"...","strengths":["..."],"weaknesses":["..."],"bestUseCases":["..."]}],"routingPolicy":[{"taskType":"summarization|enrichment|reranking|proactive-planning|sleep-cycle|code-task|deep-analysis|general","preferredProvider":"gemini|kairos|copilot|codex","fallbackProviders":["gemini|kairos|copilot|codex"],"rationale":"...","confidence":0.0}],"summary":"..."}',
+            '{"modelExplanations":[{"modelId":"...","strengths":["..."],"weaknesses":["..."],"bestUseCases":["..."]}],"routingPolicy":[{"taskType":"summarization|enrichment|reranking|proactive-planning|sleep-cycle|code-task|deep-analysis|general","preferredProvider":"gemini|copilot|codex","fallbackProviders":["gemini|copilot|codex"],"rationale":"...","confidence":0.0}],"summary":"..."}',
             'Rules:',
             '- Keep confidence between 0 and 1.',
             '- Use concise rationale grounded in benchmark data.',
@@ -211,14 +211,14 @@ export class BenchmarkInterpretationService {
 
     private mapModelToProvider(modelId: string): LlmCliProvider {
         const id = String(modelId || '').toLowerCase();
-        if (id.includes('kairos')) return 'kairos';
+        if (id.includes('kairos')) return 'opencode';
         if (id.includes('copilot')) return 'copilot';
         if (id.includes('codex')) return 'codex';
         return 'gemini';
     }
 
     private defaultFallback(preferred: LlmCliProvider): LlmCliProvider[] {
-        const ordered: LlmCliProvider[] = ['gemini', 'kairos', 'copilot', 'codex'];
+        const ordered: LlmCliProvider[] = ['gemini', 'copilot', 'codex'];
         return ordered.filter((item) => item !== preferred);
     }
 
