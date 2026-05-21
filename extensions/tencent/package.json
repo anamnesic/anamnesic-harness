@@ -1,0 +1,15 @@
+{
+  "name": "@kairos/tencent-provider",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos Tencent Cloud provider plugin (TokenHub + Token Plan)",
+  "type": "module",
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@kairos/core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kairos agent runtime — pipeline, memory, tasks, tools, services, migrations",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*/index.ts"
+  },
+  "dependencies": {
+    "@kairos/vault": "workspace:*"
+  }
+}

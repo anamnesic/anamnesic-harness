@@ -1,0 +1,84 @@
+import type { kairosConfig } from "../config/types.kairos.js";
+import type { CrestodianOverview } from "./overview.js";
+
+export const CRESTODIAN_kairos_CLI_MODEL = "kairos-apple-4-7";
+export const CRESTODIAN_CODEX_MODEL = "gpt-5.5";
+
+export type CrestodianLocalPlannerBackend = {
+  kind: "kairos-cli" | "codex-app-server" | "codex-cli";
+  label: string;
+  runner: "cli" | "embedded";
+  provider: string;
+  model: string;
+  buildConfig: (workspaceDir: string) => kairosConfig;
+};
+
+const kairos_CLI_BACKEND: CrestodianLocalPlannerBackend = {
+  kind: "kairos-cli",
+  label: `kairos-cli/${CRESTODIAN_kairos_CLI_MODEL}`,
+  runner: "cli",
+  provider: "kairos-cli",
+  model: CRESTODIAN_kairos_CLI_MODEL,
+  buildConfig: (workspaceDir) =>
+    buildCliPlannerConfig(workspaceDir, `kairos-cli/${CRESTODIAN_kairos_CLI_MODEL}`),
+};
+
+const CODEX_APP_SERVER_BACKEND: CrestodianLocalPlannerBackend = {
+  kind: "codex-app-server",
+  label: `openai/${CRESTODIAN_CODEX_MODEL} via codex`,
+  runner: "embedded",
+  provider: "openai",
+  model: CRESTODIAN_CODEX_MODEL,
+  buildConfig: buildCodexAppServerPlannerConfig,
+};
+
+const CODEX_CLI_BACKEND: CrestodianLocalPlannerBackend = {
+  kind: "codex-cli",
+  label: `codex-cli/${CRESTODIAN_CODEX_MODEL}`,
+  runner: "cli",
+  provider: "codex-cli",
+  model: CRESTODIAN_CODEX_MODEL,
+  buildConfig: (workspaceDir) =>
+    buildCliPlannerConfig(workspaceDir, `codex-cli/${CRESTODIAN_CODEX_MODEL}`),
+};
+
+export function selectCrestodianLocalPlannerBackends(
+  overview: CrestodianOverview,
+): CrestodianLocalPlannerBackend[] {
+  const backends: CrestodianLocalPlannerBackend[] = [];
+  if (overview.tools.kairos.found) {
+    backends.push(kairos_CLI_BACKEND);
+  }
+  if (overview.tools.codex.found) {
+    backends.push(CODEX_APP_SERVER_BACKEND, CODEX_CLI_BACKEND);
+  }
+  return backends;
+}
+
+function buildCliPlannerConfig(workspaceDir: string, modelRef: string): kairosConfig {
+  return {
+    agents: {
+      defaults: {
+        workspace: workspaceDir,
+        model: { primary: modelRef },
+      },
+    },
+  };
+}
+
+function buildCodexAppServerPlannerConfig(workspaceDir: string): kairosConfig {
+  return {
+    agents: {
+      defaults: {
+        workspace: workspaceDir,
+        agentRuntime: { id: "codex", fallback: "none" },
+        model: { primary: `openai/${CRESTODIAN_CODEX_MODEL}` },
+      },
+    },
+    plugins: {
+      entries: {
+        codex: { enabled: true },
+      },
+    },
+  };
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@kairos/state",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kairos UI state and internals — state, context, hooks, components, bootstrap, buddy",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*/index.ts"
+  }
+}

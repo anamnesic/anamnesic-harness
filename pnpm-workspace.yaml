@@ -1,7 +1,0 @@
-allowBuilds:
-  '@vscode/vsce-sign': true
-  esbuild: true
-  keytar: true
-  node-pty: true
-  sharp: true
-  sqlite3: true

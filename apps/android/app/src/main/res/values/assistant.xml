@@ -1,0 +1,7 @@
+<resources>
+    <string-array name="ask_kairos_query_patterns">
+        <item>ask kairos $prompt</item>
+        <item>tell kairos to $prompt</item>
+        <item>open kairos and ask $prompt</item>
+    </string-array>
+</resources>

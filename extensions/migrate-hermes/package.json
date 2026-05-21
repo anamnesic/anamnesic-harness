@@ -1,0 +1,27 @@
+{
+  "name": "@kairos/migrate-hermes",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "Hermes to kairos migration provider",
+  "type": "module",
+  "dependencies": {
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*",
+    "kairos": "workspace:*"
+  },
+  "peerDependencies": {
+    "kairos": ">=2026.4.25"
+  },
+  "peerDependenciesMeta": {
+    "kairos": {
+      "optional": true
+    }
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -10,17 +10,15 @@
         "declaration": true,
         "declarationMap": true,
         "outDir": "./dist",
-        "rootDir": "./src"
+        "rootDir": "./packages/core/src/agent"
     },
     "include": [
-        "src"
+        "packages/core/src/agent"
     ],
     "exclude": [
         "node_modules",
         "dist",
         "data",
-        "packages",
-        "app",
         "**/*.test.ts",
         "**/*.spec.ts"
     ]

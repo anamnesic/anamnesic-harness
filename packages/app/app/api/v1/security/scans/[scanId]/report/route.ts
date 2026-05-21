@@ -1,0 +1,146 @@
+export const runtime = 'nodejs';
+
+import { NextRequest } from 'next/server';
+import { getDb } from '@/app/api/_lib/db';
+import { ok, err } from '@/app/api/_lib/response';
+
+export async function GET(
+    req: NextRequest,
+    { params }: { params: Promise<{ scanId: string }> }
+) {
+    try {
+        const { scanId } = await params;
+        const { searchParams } = new URL(req.url);
+        const format = searchParams.get('format') || 'json';
+
+        const db = await getDb();
+        const { SecurityAnalysisService } = await import('@/src/core/services/SecurityAnalysisService');
+        const service = new SecurityAnalysisService(db);
+
+        const scan = await service.getById(scanId);
+        if (!scan) {
+            return err('NOT_FOUND', `Scan ${scanId} not found`, 404);
+        }
+
+        if (format === 'json') {
+            const jsonReport = {
+                scanId: scan.id,
+                targetName: scan.targetName,
+                scanType: scan.type,
+                severity: scan.severity,
+                vulnerabilityCount: scan.vulnerabilityCount,
+                vulnerabilities: scan.vulnerabilities,
+                recommendations: scan.recommendations,
+                scanMethod: scan.scanMethod,
+                durationMs: scan.durationMs,
+                scannerVersion: scan.scannerVersion,
+                analyzedAt: scan.analyzedAt,
+            };
+
+            return new Response(JSON.stringify(jsonReport, null, 2), {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Disposition': `attachment; filename="scan-${scanId}.json"`,
+                },
+            });
+        }
+
+        if (format === 'pdf') {
+            const markdown = generateMarkdownReport(scan);
+            
+            return new Response(markdown, {
+                headers: {
+                    'Content-Type': 'text/markdown',
+                    'Content-Disposition': `attachment; filename="scan-${scanId}.md"`,
+                },
+            });
+        }
+
+        return err('VALIDATION_ERROR', 'Unsupported format. Use json or pdf.', 400);
+    } catch (e: any) {
+        return err('INTERNAL_ERROR', e.message, 500);
+    }
+}
+
+function generateMarkdownReport(scan: any): string {
+    const lines: string[] = [
+        `# Security Scan Report`,
+        ``,
+        `**Target:** ${scan.targetName}`,
+        `**Type:** ${scan.type}`,
+        `**Severity:** ${scan.severity}`,
+        `**Date:** ${new Date(scan.analyzedAt).toLocaleString()}`,
+        `**Scan Duration:** ${scan.durationMs}ms`,
+        ``,
+        `## Summary`,
+        ``,
+        `- **Total Vulnerabilities:** ${scan.vulnerabilityCount}`,
+        `- **Scan Method:** ${scan.scanMethod || 'N/A'}`,
+        `- **Scanner Version:** ${scan.scannerVersion || 'N/A'}`,
+        ``,
+    ];
+
+    if (scan.vulnerabilities?.length > 0) {
+        lines.push(`## Vulnerabilities`, ``);
+        
+        const bySeverity = { critical: [], high: [], medium: [], low: [] };
+        for (const v of scan.vulnerabilities) {
+            if (bySeverity[v.severity]) {
+                bySeverity[v.severity].push(v);
+            }
+        }
+
+        for (const severity of ['critical', 'high', 'medium', 'low'] as const) {
+            const vulns = bySeverity[severity];
+            if (!vulns?.length) continue;
+
+            lines.push(`### ${severity.toUpperCase()} (${vulns.length})`, ``);
+            
+            for (const v of vulns) {
+                lines.push(`#### ${v.title}`, ``);
+                lines.push(`- **Type:** ${v.type}`);
+                lines.push(`- **Severity:** ${v.severity}`);
+                if (v.location?.file) {
+                    lines.push(`- **Location:** ${v.location.file}:${v.location.line}`);
+                }
+                lines.push(``, ``);
+                lines.push(`**Description:**`, ``);
+                lines.push(v.description || 'N/A', ``);
+
+                if (v.remediationSteps?.length) {
+                    lines.push(`**Remediation:**`, ``);
+                    for (const step of v.remediationSteps) {
+                        lines.push(`1. ${step}`);
+                    }
+                    lines.push(``);
+                }
+
+                lines.push(``);
+            }
+        }
+    }
+
+    if (scan.recommendations?.length > 0) {
+        lines.push(`## Recommendations`, ``);
+        
+        for (const rec of scan.recommendations) {
+            lines.push(`### ${rec.title}`, ``);
+            lines.push(`**Priority:** ${rec.priority}`, ``);
+            lines.push(rec.description || '', ``);
+            lines.push(``, ``);
+
+            if (rec.steps?.length) {
+                lines.push(`**Steps:**`, ``);
+                for (const step of rec.steps) {
+                    lines.push(`1. ${step}`);
+                }
+                lines.push(``);
+            }
+
+            lines.push(``);
+        }
+    }
+
+    lines.push(`---\nGenerated by KAIROS Security Scanner`);
+    return lines.join('\n');
+}

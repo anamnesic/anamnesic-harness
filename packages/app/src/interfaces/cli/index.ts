@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+
+import { Command } from 'commander';
+import { registerProjectCommands } from './commands/project';
+import { registerContextCommands } from './commands/context';
+import { registerDecisionCommands } from './commands/decision';
+import { registerExportCommands } from './commands/export';
+import { registerInitCommand } from './commands/init';
+import { registerWorkflowCommands } from './commands/workflow';
+import { registerTriggerCommands } from './commands/trigger';
+import { registerMetricsCommands } from './commands/metrics';
+import { registerDiagnosticCommands } from './commands/diagnostic';
+import { registerSweAgentCommands } from './commands/swe-agent';
+
+const program = new Command();
+
+program
+  .name('think')
+  .description('Kairos CLI - Manage AI context from the terminal')
+  .version('1.0.0');
+
+// Core commands
+registerProjectCommands(program);
+registerContextCommands(program);
+registerDecisionCommands(program);
+registerExportCommands(program);
+registerInitCommand(program);
+
+// Advanced orchestration commands (Phase 8)
+registerWorkflowCommands(program);
+registerTriggerCommands(program);
+registerMetricsCommands(program);
+registerDiagnosticCommands(program);
+registerSweAgentCommands(program);
+
+program.parse();

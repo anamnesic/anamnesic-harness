@@ -1,0 +1,11 @@
+{
+  "name": "@kairos/cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kairos CLI / Terminal — commands, ink, tui, screens, entrypoints",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*/index.ts"
+  }
+}

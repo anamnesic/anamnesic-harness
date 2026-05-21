@@ -1,0 +1,21 @@
+{
+  "name": "@kairos/webhooks",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos webhook bridge plugin",
+  "type": "module",
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "bundle": {
+      "stageRuntimeDependencies": true
+    },
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

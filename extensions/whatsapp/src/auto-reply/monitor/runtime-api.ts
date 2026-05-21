@@ -1,0 +1,40 @@
+export { resolveIdentityNamePrefix } from "kairos/plugin-sdk/agent-runtime";
+export {
+  formatInboundEnvelope,
+  resolveEnvelopeFormatOptions,
+} from "kairos/plugin-sdk/channel-envelope";
+export { resolveInboundSessionEnvelopeContext } from "kairos/plugin-sdk/channel-inbound";
+export { toLocationContext } from "kairos/plugin-sdk/channel-location";
+export { createChannelReplyPipeline } from "kairos/plugin-sdk/channel-reply-pipeline";
+export { shouldComputeCommandAuthorized } from "kairos/plugin-sdk/command-detection";
+export {
+  recordSessionMetaFromInbound,
+  resolveChannelContextVisibilityMode,
+} from "../config.runtime.js";
+export { getAgentScopedMediaLocalRoots } from "kairos/plugin-sdk/media-runtime";
+export type LoadConfigFn = typeof import("../config.runtime.js").getRuntimeConfig;
+export {
+  buildHistoryContextFromEntries,
+  type HistoryEntry,
+} from "kairos/plugin-sdk/reply-history";
+export { resolveSendableOutboundReplyParts } from "kairos/plugin-sdk/reply-payload";
+export {
+  dispatchReplyWithBufferedBlockDispatcher,
+  finalizeInboundContext,
+  resolveChunkMode,
+  resolveTextChunkLimit,
+  type getReplyFromConfig,
+  type ReplyPayload,
+} from "kairos/plugin-sdk/reply-runtime";
+export {
+  resolveInboundLastRouteSessionKey,
+  type resolveAgentRoute,
+} from "kairos/plugin-sdk/routing";
+export { logVerbose, shouldLogVerbose, type getChildLogger } from "kairos/plugin-sdk/runtime-env";
+export {
+  readStoreAllowFromForDmPolicy,
+  resolveDmGroupAccessWithCommandGate,
+  resolvePinnedMainDmOwnerFromAllowlist,
+} from "kairos/plugin-sdk/security-runtime";
+export { resolveMarkdownTableMode } from "kairos/plugin-sdk/markdown-table-runtime";
+export { jidToE164, normalizeE164 } from "../../text-runtime.js";

@@ -1,0 +1,22 @@
+{
+  "name": "@kairos/google-plugin",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos Google plugin",
+  "type": "module",
+  "dependencies": {
+    "@google/genai": "^1.50.1",
+    "@mariozechner/pi-ai": "0.70.6"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "bundle": {
+      "stageRuntimeDependencies": true
+    },
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

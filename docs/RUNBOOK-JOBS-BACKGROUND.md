@@ -21,7 +21,7 @@ Body completo (opcional):
   "prompt": "...",
   "taskType": "proactive-planning",
   "preferredProvider": "gemini",
-  "fallbackProviders": ["claude", "copilot", "codex"],
+  "fallbackProviders": ["kairos", "copilot", "codex"],
   "abTestKey": "workspace-123",
   "promptClass": "operational"
 }

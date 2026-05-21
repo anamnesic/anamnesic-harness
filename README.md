@@ -1,237 +1,227 @@
 # KAIROS
 
-> Persistent, proactive AI agent with continuous memory, observation, and autonomous action.
+> Plataforma de agentes de IA — terminal-native, multi-canal, com memória persistente, vault criptografado e 65+ skills internas.
 
 ---
 
-## Overview
+## O que é
 
-KAIROS is an AI agent architecture designed to move beyond reactive assistants into **continuous, context-aware, and proactive systems**.
+**Kairos** é uma plataforma de desenvolvimento e execução de agentes de IA construída como monorepo TypeScript/Node.js.
 
-Unlike traditional assistants that require explicit prompts, KAIROS operates as a **background cognitive layer** — observing, recording, reasoning, and acting over time.
+Vai além de assistentes reativos: opera como uma **camada cognitiva contínua** — observando, memorizando, planejando e agindo de forma autônoma ao longo do tempo.
 
----
+Componentes principais:
 
-## Core Principles
-
-* **Persistence over statelessness**
-* **Observation over instruction**
-* **Proactivity over reactivity**
-* **Memory over context windows**
-
----
-
-## Getting Started
-
-### Requirements
-
-* Node.js 20+
-* pnpm 9+
-
-### Install
-
-```bash
-pnpm install
-```
-
-### Build
-
-```bash
-pnpm build
-```
-
-### Run
-
-```bash
-# Start the main agent
-node dist/main.js
-
-# Start the MCP/API interface
-node dist/interfaces/api.js
-
-# Start the CLI interface
-node dist/interfaces/cli.js
-```
-
-### Development (watch mode)
-
-```bash
-pnpm dev
-```
-
-### Tests
-
-```bash
-pnpm test           # integration tests
-pnpm test:unit      # unit tests with coverage
-```
+- **Runtime de agentes** com pipeline, memória, tarefas e ferramentas
+- **Gateway multi-canal** (Discord, Slack, WhatsApp, Telegram, e 120+ extensões)
+- **CLI/TUI terminal-native** com interface Ink/Go
+- **UI web/desktop** (Next.js, Tauri, apps mobile iOS/Android/macOS)
+- **Vault criptografado** (AES-256-GCM) para dados sensíveis em runtime
+- **65 skills internas Kairos** baseadas em referências externas anonimizadas
 
 ---
 
-## Project Structure
+## Princípios
+
+- **Persistência** sobre statelessness
+- **Observação** sobre instrução explícita
+- **Proatividade** sobre reatividade
+- **Memória longa** sobre janela de contexto
+
+---
+
+## Monorepo — Estrutura de Código
 
 ```
 kairos/
-├── src/
-│   ├── core/               # Agent loop, decision engine, action engine, scheduler
-│   ├── memory/             # Memory manager, vector store, metadata store, summaries
-│   ├── observation/        # Event bus, file watcher, observers (code, terminal, api)
-│   ├── recall/             # Retriever, ranking, context builder
-│   ├── sleep/              # Consolidator, summarizer, pruning
-│   ├── actions/            # Base action, code, notification, system actions
-│   ├── policies/           # Permissions, guardrails, approval flow
-│   ├── config/             # Settings, feature flags
-│   ├── interfaces/
-│   │   ├── cli.ts          # CLI interface (Commander.js)
-│   │   ├── api.ts          # MCP server interface
-│   │   └── dashboard/      # VS Code extension
-│   ├── utils/              # Logger, time, embeddings
-│   └── main.ts             # Entry point
-├── data/                   # Runtime persistence (outside src)
-│   ├── logs/               # Append-only observation logs
-│   ├── index/              # Vector and metadata indexes
-│   └── summaries/          # Daily summaries from sleep cycle
-├── tests/
-├── package.json
-├── tsconfig.json
-└── README.md
+├── packages/                   # Pacotes workspace (pnpm)
+│   ├── core/                   # Runtime do agente — pipeline, memória, tarefas, serviços, migrações
+│   ├── cli/                    # CLI/TUI terminal — comandos, Ink, telas, entrypoints
+│   ├── ui/                     # Interface — app, desktop, enterprise, web, console, Storybook
+│   │   └── public/             # Assets estáticos (favicon, logo, manifest PWA)
+│   ├── vault/                  # Vault AES-256-GCM — dados criptografados em runtime
+│   ├── plugins/                # Sistema de plugins — runtime, SDK, contrato, OpenAPI
+│   ├── state/                  # Estado da UI — context, hooks, componentes, boot
+│   ├── integrations/           # Integrações externas — skills, Slack, funções, voz
+│   ├── editor/                 # Integrações de editor — keybindings, vim, bridge, native
+│   ├── infra/                  # Infraestrutura — protocolo, tipos, constantes, schemas, proxy
+│   ├── kairoscode/             # Runtime Kairos Code (v1.14.30)
+│   ├── devtools/               # Dev tooling — scripts, containers, vendor, patches, QA
+│   └── ...
+│
+├── apps/                       # Aplicações clientes
+│   ├── ios/                    # App iOS (Swift)
+│   ├── android/                # App Android (Kotlin)
+│   ├── macos/                  # App macOS nativo
+│   ├── macos-mlx-tts/          # TTS local via MLX (Apple Silicon)
+│   └── shared/                 # Kit compartilhado (OpenClawKit)
+│
+├── extensions/                 # 120+ extensões de providers/canais
+│   ├── openai/, anthropic/, google/, xai/, mistral/, ...
+│   ├── discord/, slack/, telegram/, whatsapp/, signal/, ...
+│   ├── browser/, brave/, memory-core/, memory-lancedb/, ...
+│   └── ...
+│
+├── sdks/
+│   └── vscode/                 # Extensão VS Code (publisher: sst-dev)
+│
+├── github/                     # GitHub Action (uses: sst/kairos/github@latest)
+│
+├── data/                       # Runtime — gitignored, criptografado via vault
+│   └── skills/kairos/          # 65 skills internas (.md com frontmatter YAML)
+│
+├── docs/                       # Documentação
+│   └── specs/                  # Especificações do projeto
+│
+├── infra/                      # Deploy — SST / Fly.io / Render
+├── src-tauri/                  # App desktop Tauri (Rust)
+├── nix/                        # Builds reproduzíveis (Nix flakes)
+├── assets/                     # Assets visuais (logo, DMG background)
+├── scripts/                    # Scripts de release, CI, build, publicação
+└── patches/                    # Patches pnpm
 ```
 
 ---
 
-## Key Features
+## Skills Internas (Vault)
 
-### 1. Append-Only Memory Logs
+65 skills em `data/skills/kairos/` no formato `kairos_nome_versao.md`:
 
-* Immutable daily logs of observations
-* Full traceability of agent perception
-* Time-based memory indexing
+| Categoria | Skill | Capacidades |
+|-----------|-------|-------------|
+| `coding` | KairosForge, KairosEngineer, KairosFlow, KairosDroid, KairosCloud | Pair programming, LSP, refatoração, contexto de editor |
+| `agent` | KairosAgent, KairosBuilder, KairosOrbit | Execução autônoma, scaffold de projetos, orquestração |
+| `conversation` | KairosAurora, KairosNova, KairosEcho, KairosLingua | Raciocínio, ética, multilíngue, chat avançado |
+| `research` | KairosPrism, KairosDawn, KairosScout | Busca profunda, raciocínio, web research |
+| `ui` | KairosCanvas, KairosStudio, KairosArtisan | Geração de UI, componentes, design systems |
+| `browser` | KairosNavigator, KairosCompass, KairosGuard | Automação web, extração, privacidade |
+| `multimodal` | KairosSpectrum, KairosEdge | Imagem, áudio, tempo real |
+| `voice` | KairosEmpathy | IA de voz empática |
+| `analysis` | KairosLens | Análise contextual, overlay |
 
-### 2. Continuous Observation
-
-* Monitors environment (code, files, workflows)
-* Detects changes and behavioral patterns
-* Builds long-term contextual understanding
-
-### 3. Proactive Execution
-
-* Triggers actions without explicit prompts
-* Suggests improvements and optimizations
-* Alerts on anomalies, risks, or opportunities
-
-### 4. Memory Consolidation (Sleep Cycle)
-
-* Periodic background process (typically nightly)
-* Summarizes and compresses daily logs
-* Prunes irrelevant or redundant data
-* Extracts patterns and long-term insights
-
-### 5. Contextual Recall Engine
-
-* Retrieves relevant memory across time
-* Prioritizes high-signal information
-* Enables continuity across sessions
-
-### 6. Self-Optimization
-
-* Continuously refines memory relevance
-* Improves decision-making over time
-* Adapts to user behavior and workflows
-
-### 7. Background Runtime Layer
-
-* Runs independently of user prompts
-* Acts as a persistent cognitive daemon
-* Maintains awareness even when idle
-
+Skills são criptografadas pelo vault em runtime. Formato:
+```yaml
 ---
-
-## Architecture
-
-```
-                ┌────────────────────┐
-                │   Observation Layer│
-                └────────┬───────────┘
-                         │
-                         ▼
-                ┌────────────────────┐
-                │  Append-Only Logs  │
-                └────────┬───────────┘
-                         │
-                         ▼
-                ┌────────────────────┐
-                │ Memory Indexing    │
-                └────────┬───────────┘
-                         │
-          ┌──────────────┴──────────────┐
-          ▼                             ▼
-┌────────────────────┐       ┌────────────────────┐
-│ Recall Engine      │       │ Sleep Cycle Engine │
-└────────┬───────────┘       └────────┬───────────┘
-         │                            │
-         ▼                            ▼
-   ┌────────────────────────────────────────┐
-   │        Decision & Action Layer         │
-   └────────────────────────────────────────┘
+id: kairosforge-cursor-2-0-sys-prompt
+name: KairosForge
+version: "1.0.0"
+category: coding
+capabilities:
+  - pair-programming
+  - lsp-diagnostics
+use_for:
+  - "Pair programming com contexto total do editor"
+---
+# System prompt...
 ```
 
 ---
 
-## Safety & Control
+## Vault (Segurança)
 
-KAIROS is designed with strict internal gating due to the implications of continuous observation and autonomous action.
+Todos os dados sensíveis em `data/` são criptografados via `@kairos/vault`:
 
-Safeguards include:
+- **Algoritmo**: AES-256-GCM
+- **Chave**: variável de ambiente `KAIROS_VAULT_KEY` (hex 64 chars = 32 bytes)
+- **Fallback**: fail-closed (erro se chave ausente, a menos que `KAIROS_VAULT_ALLOW_PLAINTEXT=1`)
 
-* Feature flag restrictions (`src/config/featureFlags.ts`)
-* Scoped observation boundaries
-* Action approval layers (optional, via `src/policies/approvalFlow.ts`)
-* Full audit logs of all decisions and actions
+```bash
+# Gerar chave
+pnpm vault:init
 
----
+# Migrar dados plaintext para vault
+KAIROS_VAULT_KEY=<hex> pnpm vault:migrate
 
-## Known Challenges
-
-### Privacy
-
-Continuous observation requires:
-
-* Explicit user consent
-* Clear data boundaries
-* Secure storage
-
-### Autonomy Control
-
-Balancing:
-
-* Helpfulness vs intrusiveness
-* Automation vs user authority
-
-### Memory Scaling
-
-* Long-term storage costs
-* Efficient retrieval mechanisms
-* Avoiding memory bloat
-
-### Trust & Interpretability
-
-* Explaining why actions were taken
-* Avoiding incorrect pattern inference
+# Migrar skills para vault
+KAIROS_VAULT_KEY=<hex> pnpm vault:skills
+```
 
 ---
 
-## Capability Summary
+## Instalação
 
-| Capability       | Traditional Assistants | KAIROS     |
-| ---------------- | ---------------------- | ---------- |
-| Memory           | Limited                | Persistent |
-| Interaction      | Prompt-based           | Continuous |
-| Behavior         | Reactive               | Proactive  |
-| Context Handling | Session-based          | Long-term  |
-| Execution        | On-demand              | Autonomous |
+```bash
+# Requisitos: Node.js 22+, pnpm 9+
+pnpm install
+```
+
+### Desenvolvimento
+
+```bash
+pnpm dev            # Next.js UI (packages/ui)
+pnpm build          # Build da UI
+pnpm build:backend  # Build do backend TypeScript
+```
+
+### Agentes
+
+```bash
+node dist/agent/interfaces/api/start-api.js     # API/MCP
+node dist/agent/interfaces/cli/index.js         # CLI
+node dist/agent/interfaces/cli/index.js swe-agent run \
+  --objective "Refatorar o módulo de logging" \
+  --provider openai --model gpt-4o-mini \
+  --api-key $KAIROS_API_KEY
+```
+
+### Testes
+
+```bash
+pnpm test           # Integração
+pnpm test:unit      # Unit com cobertura
+pnpm typecheck      # Type-check
+pnpm check          # Lint + format (oxlint + oxfmt)
+```
 
 ---
 
-KAIROS is less of a tool and more of a **system layer** — one that challenges current assumptions about agency, control, and human–AI interaction.
+## Variáveis de Ambiente
+
+```env
+KAIROS_VAULT_KEY=<hex64>            # Chave do vault (obrigatório em produção)
+KAIROS_VAULT_ALLOW_PLAINTEXT=1      # Permite fallback plaintext (dev apenas)
+
+KAIROS_PROVIDER=openai
+KAIROS_MODEL=gpt-4o-mini
+KAIROS_API_KEY=...
+KAIROS_BASE_URL=https://api.openai.com
+```
 
 ---
+
+## Arquitetura
+
+```
+  ┌─────────────────────────────────────────────────────┐
+  │                  Clients / Interfaces               │
+  │  CLI/TUI  │  Web UI  │  Desktop  │  iOS/Android     │
+  └──────────────────────┬──────────────────────────────┘
+                         │
+  ┌──────────────────────▼──────────────────────────────┐
+  │                  @kairos/core                       │
+  │  Agent Pipeline · Memory · Tasks · Tools · Services │
+  └──────┬──────────────────────────────────┬───────────┘
+         │                                  │
+  ┌──────▼──────────┐              ┌────────▼────────────┐
+  │  @kairos/vault  │              │  extensions/ (120+) │
+  │  AES-256-GCM    │              │  Providers · Canais  │
+  └─────────────────┘              └─────────────────────┘
+```
+
+---
+
+## Segurança
+
+Ver [SECURITY.md](./SECURITY.md).
+
+- Vault criptografado para todos os dados de runtime
+- Skills internas com nomes anonimizados (sem referência a sistemas externos)
+- Feature flags e approval layers para ações autônomas
+- Audit logs de todas as decisões e ações
+
+---
+
+## Licença
+
+[MIT](./LICENSE)
+

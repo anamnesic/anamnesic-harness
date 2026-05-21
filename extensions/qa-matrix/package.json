@@ -1,0 +1,31 @@
+{
+  "name": "@kairos/qa-matrix",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos Matrix QA runner plugin",
+  "type": "module",
+  "dependencies": {
+    "undici": "8.1.0"
+  },
+  "devDependencies": {
+    "@kairos/matrix": "workspace:*",
+    "@kairos/plugin-sdk": "workspace:*",
+    "kairos": "workspace:*"
+  },
+  "peerDependencies": {
+    "kairos": ">=2026.4.25"
+  },
+  "peerDependenciesMeta": {
+    "kairos": {
+      "optional": true
+    }
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "compat": {
+      "pluginApi": ">=2026.4.25"
+    }
+  }
+}

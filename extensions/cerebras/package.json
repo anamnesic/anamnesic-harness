@@ -1,0 +1,15 @@
+{
+  "name": "@kairos/cerebras-provider",
+  "version": "2026.4.26",
+  "private": true,
+  "description": "kairos Cerebras provider plugin",
+  "type": "module",
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

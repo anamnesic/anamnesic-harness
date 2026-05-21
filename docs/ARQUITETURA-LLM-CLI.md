@@ -3,7 +3,7 @@
 ## Objetivo
 Este documento descreve a arquitetura de inferencia em CLI do Kairos com foco em:
 - gemini-cli como padrao inicial;
-- compatibilidade estrutural com claude, copilot e codex;
+- compatibilidade estrutural com kairos, copilot e codex;
 - roteamento por tipo de tarefa com fallback e A/B test.
 
 ## Componentes Principais
@@ -12,7 +12,7 @@ Este documento descreve a arquitetura de inferencia em CLI do Kairos com foco em
 - src/core/llm-cli/types.ts
   - Tipos centrais: provider, request, result, task de fila.
 - src/core/llm-cli/adapters.ts
-  - Adaptadores por provider (gemini, claude, copilot, codex).
+  - Adaptadores por provider (gemini, kairos, copilot, codex).
 - src/core/llm-cli/LlmCliRegistry.ts
   - Registro de providers e verificacao de disponibilidade.
 - src/core/llm-cli/CliInferenceService.ts

@@ -16,7 +16,7 @@ Template (resumo):
 
 Schema ID: event-enrichment.v1
 Provider default: gemini
-Fallback: claude, copilot, codex
+Fallback: kairos, copilot, codex
 
 ## 2) Sleep Cycle Summary
 Servico: SleepInferenceService
@@ -29,7 +29,7 @@ Template (resumo):
 
 Schema ID: summary.v1
 Provider default: gemini
-Fallback: claude, copilot, codex
+Fallback: kairos, copilot, codex
 
 ## 3) Proactive Planner
 Servico: ProactivePlannerService
@@ -42,7 +42,7 @@ Template (resumo):
 
 Schema ID: proactive-plan.v1
 Provider default: gemini
-Fallback: claude, copilot, codex
+Fallback: kairos, copilot, codex
 
 ## 4) Semantic Rerank
 Servico: SemanticRerankService / Recall
@@ -54,7 +54,7 @@ Template (resumo):
 
 Schema ID: rerank.v1
 Provider default: gemini
-Fallback: claude, copilot, codex
+Fallback: kairos, copilot, codex
 
 ## 5) Benchmark Interpretation
 Servico: BenchmarkInterpretationService
@@ -67,7 +67,7 @@ Template (resumo):
 
 Schema ID: analysis.v1 (interpretacao/routing)
 Provider default: gemini
-Fallback: claude, copilot, codex
+Fallback: kairos, copilot, codex
 
 ## 6) Code Automation
 Roteamento por taskType: code-automation
@@ -75,7 +75,7 @@ Objetivo: tarefas de codigo e automacao de repositorio.
 
 Schema ID: code-automation.v1
 Provider default: copilot
-Fallback: claude, gemini, codex
+Fallback: kairos, gemini, codex
 
 ## Boas praticas de manutencao
 - Versionar schema IDs em mudancas breaking (ex: *.v2).

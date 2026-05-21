@@ -1,0 +1,20 @@
+{
+  "name": "@kairos/tokenjuice",
+  "version": "2026.4.25",
+  "description": "Bundled tokenjuice exec output compaction plugin",
+  "type": "module",
+  "dependencies": {
+    "tokenjuice": "0.7.0"
+  },
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "bundle": {
+      "stageRuntimeDependencies": true
+    }
+  }
+}

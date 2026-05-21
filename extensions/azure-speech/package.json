@@ -1,0 +1,15 @@
+{
+  "name": "@kairos/azure-speech",
+  "version": "2026.4.16",
+  "private": true,
+  "description": "kairos Azure Speech plugin",
+  "type": "module",
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

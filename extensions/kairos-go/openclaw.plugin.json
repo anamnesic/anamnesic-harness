@@ -1,0 +1,106 @@
+{
+  "id": "kairos-go",
+  "activation": {
+    "onStartup": false
+  },
+  "enabledByDefault": true,
+  "providers": ["kairos-go"],
+  "providerEndpoints": [
+    {
+      "endpointClass": "kairos-native",
+      "hostSuffixes": ["kairos.ai"]
+    }
+  ],
+  "providerRequest": {
+    "providers": {
+      "kairos-go": {
+        "family": "kairos"
+      }
+    }
+  },
+  "modelCatalog": {
+    "providers": {
+      "kairos-go": {
+        "baseUrl": "https://kairos.ai/zen/go/v1",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "deepseek-v4-pro",
+            "name": "DeepSeek V4 Pro",
+            "reasoning": true,
+            "input": ["text"],
+            "contextWindow": 1000000,
+            "maxTokens": 384000,
+            "cost": {
+              "input": 1.74,
+              "output": 3.48,
+              "cacheRead": 0.145,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "supportsUsageInStreaming": true,
+              "supportsReasoningEffort": true,
+              "maxTokensField": "max_tokens"
+            }
+          },
+          {
+            "id": "deepseek-v4-flash",
+            "name": "DeepSeek V4 Flash",
+            "reasoning": true,
+            "input": ["text"],
+            "contextWindow": 1000000,
+            "maxTokens": 384000,
+            "cost": {
+              "input": 0.14,
+              "output": 0.28,
+              "cacheRead": 0.028,
+              "cacheWrite": 0
+            },
+            "compat": {
+              "supportsUsageInStreaming": true,
+              "supportsReasoningEffort": true,
+              "maxTokensField": "max_tokens"
+            }
+          }
+        ]
+      }
+    },
+    "discovery": {
+      "kairos-go": "refreshable"
+    }
+  },
+  "providerAuthEnvVars": {
+    "kairos-go": ["kairos_API_KEY", "kairos_ZEN_API_KEY"]
+  },
+  "providerAuthChoices": [
+    {
+      "provider": "kairos-go",
+      "method": "api-key",
+      "choiceId": "kairos-go",
+      "choiceLabel": "kairos Go catalog",
+      "groupId": "kairos",
+      "groupLabel": "kairos",
+      "groupHint": "Shared API key for Zen + Go catalogs",
+      "optionKey": "kairosGoApiKey",
+      "cliFlag": "--kairos-go-api-key",
+      "cliOption": "--kairos-go-api-key <key>",
+      "cliDescription": "kairos API key (Go catalog)"
+    }
+  ],
+  "contracts": {
+    "mediaUnderstandingProviders": ["kairos-go"]
+  },
+  "mediaUnderstandingProviderMetadata": {
+    "kairos-go": {
+      "capabilities": ["image"],
+      "defaultModels": {
+        "image": "kimi-k2.6"
+      }
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

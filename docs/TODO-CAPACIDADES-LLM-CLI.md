@@ -7,7 +7,7 @@ Implementar as capacidades centrais do README usando `gemini-cli` como backend p
 Meta de arquitetura:
 
 - `gemini-cli` primeiro;
-- compatibilidade estrutural com `claude`, `copilot` e futuras CLIs;
+- compatibilidade estrutural com `kairos`, `copilot` e futuras CLIs;
 - reuse da base existente de memoria, observacao, recall, politicas e terminal.
 
 ---
@@ -19,7 +19,7 @@ Meta de arquitetura:
 - [x] Criar pasta `src/core/llm-cli/`
 - [x] Criar interface `LlmCliAdapter`
 - [x] Criar `GeminiCliAdapter`
-- [x] Criar `ClaudeCliAdapter`
+- [x] Criar `kairosCliAdapter`
 - [x] Criar `CopilotCliAdapter`
 - [x] Criar `LlmCliRegistry`
 - [x] Criar `CliInferenceService`
@@ -259,7 +259,7 @@ Meta de arquitetura:
 ### Matriz minima desejada
 
 - [x] `gemini-cli` para sumarizacao, enrichment, reranking, proactive planning
-- [x] `claude` para tasks longas e analise/reflexao profunda
+- [x] `kairos` para tasks longas e analise/reflexao profunda
 - [x] `copilot` para tarefas de codigo e automacao em repositorio
 - [x] `codex` como opcional quando instalado
 

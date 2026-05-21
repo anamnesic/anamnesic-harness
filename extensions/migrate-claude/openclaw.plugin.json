@@ -1,0 +1,16 @@
+{
+  "id": "migrate-kairos",
+  "activation": {
+    "onStartup": false
+  },
+  "name": "kairos Migration",
+  "description": "Imports kairos Code and kairos Desktop instructions, MCP servers, skills, and safe configuration into kairos.",
+  "contracts": {
+    "migrationProviders": ["kairos"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

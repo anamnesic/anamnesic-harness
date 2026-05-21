@@ -1,0 +1,19 @@
+import type { kairosConfig } from "kairos/plugin-sdk/config-types";
+import { generateConversationLabel } from "kairos/plugin-sdk/reply-dispatch-runtime";
+export {
+  AUTO_TOPIC_LABEL_DEFAULT_PROMPT,
+  resolveAutoTopicLabelConfig,
+} from "./auto-topic-label-config.js";
+
+export async function generateTelegramTopicLabel(params: {
+  userMessage: string;
+  prompt: string;
+  cfg: kairosConfig;
+  agentId?: string;
+  agentDir?: string;
+}): Promise<string | null> {
+  return await generateConversationLabel({
+    ...params,
+    maxLength: 128,
+  });
+}

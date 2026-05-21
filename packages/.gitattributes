@@ -1,0 +1,3 @@
+* text=auto eol=lf
+kairos.md -text
+src/gateway/server-methods/kairos.md -text

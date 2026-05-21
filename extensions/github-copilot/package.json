@@ -1,0 +1,19 @@
+{
+  "name": "@kairos/github-copilot-provider",
+  "version": "2026.4.25",
+  "private": true,
+  "description": "kairos GitHub Copilot provider plugin",
+  "type": "module",
+  "dependencies": {
+    "@clack/prompts": "^1.2.0"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-ai": "0.70.6",
+    "@kairos/plugin-sdk": "workspace:*"
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

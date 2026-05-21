@@ -1,0 +1,22 @@
+{
+  "name": "@kairos-ai/app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "cd ../.. && bun typecheck packages/app",
+    "build:exe": "node scripts/build-exe.js"
+  },
+  "dependencies": {
+    "next": "^16.2.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "pkg": {
+    "scripts": "server-wrapper.js",
+    "assets": "standalone/**/*"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@kairos/migrate-kairos",
+  "version": "2026.4.26",
+  "private": true,
+  "description": "kairos to kairos migration provider",
+  "type": "module",
+  "devDependencies": {
+    "@kairos/plugin-sdk": "workspace:*",
+    "kairos": "workspace:*"
+  },
+  "peerDependencies": {
+    "kairos": ">=2026.4.26"
+  },
+  "peerDependenciesMeta": {
+    "kairos": {
+      "optional": true
+    }
+  },
+  "kairos": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

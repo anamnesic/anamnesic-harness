@@ -1,0 +1,94 @@
+{
+  "extends": "../tsconfig.package-boundary.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "kairos/extension-api": [
+        "../../src/extensionAPI.ts"
+      ],
+      "kairos/plugin-sdk": [
+        "../../dist/plugin-sdk/src/plugin-sdk/index.d.ts"
+      ],
+      "kairos/plugin-sdk/*": [
+        "../../dist/plugin-sdk/src/plugin-sdk/*.d.ts"
+      ],
+      "kairos/plugin-sdk/account-id": [
+        "../../dist/plugin-sdk/src/plugin-sdk/account-id.d.ts"
+      ],
+      "kairos/plugin-sdk/channel-entry-contract": [
+        "../../dist/plugin-sdk/src/plugin-sdk/channel-entry-contract.d.ts"
+      ],
+      "kairos/plugin-sdk/browser-maintenance": [
+        "../../dist/plugin-sdk/src/plugin-sdk/browser-maintenance.d.ts"
+      ],
+      "kairos/plugin-sdk/channel-secret-runtime": [
+        "../../dist/plugin-sdk/src/plugin-sdk/channel-secret-runtime.d.ts"
+      ],
+      "kairos/plugin-sdk/channel-streaming": [
+        "../../dist/plugin-sdk/src/plugin-sdk/channel-streaming.d.ts"
+      ],
+      "kairos/plugin-sdk/cli-runtime": [
+        "../../dist/plugin-sdk/src/plugin-sdk/cli-runtime.d.ts"
+      ],
+      "kairos/plugin-sdk/error-runtime": [
+        "../../dist/plugin-sdk/src/plugin-sdk/error-runtime.d.ts"
+      ],
+      "kairos/plugin-sdk/provider-catalog-shared": [
+        "../../dist/plugin-sdk/src/plugin-sdk/provider-catalog-shared.d.ts"
+      ],
+      "kairos/plugin-sdk/provider-env-vars": [
+        "../../dist/plugin-sdk/src/plugin-sdk/provider-env-vars.d.ts"
+      ],
+      "kairos/plugin-sdk/provider-entry": [
+        "../../dist/plugin-sdk/src/plugin-sdk/provider-entry.d.ts"
+      ],
+      "kairos/plugin-sdk/provider-web-search-contract": [
+        "../../dist/plugin-sdk/src/plugin-sdk/provider-web-search-contract.d.ts"
+      ],
+      "kairos/plugin-sdk/secret-ref-runtime": [
+        "../../dist/plugin-sdk/src/plugin-sdk/secret-ref-runtime.d.ts"
+      ],
+      "kairos/plugin-sdk/ssrf-runtime": [
+        "../../dist/plugin-sdk/src/plugin-sdk/ssrf-runtime.d.ts"
+      ],
+      "@kairos/qa-channel/api.js": [
+        "../../dist/plugin-sdk/extensions/qa-channel/api.d.ts"
+      ],
+      "@kairos/*.js": [
+        "../../packages/plugin-sdk/dist/extensions/*.d.ts",
+        "../*"
+      ],
+      "@kairos/*": [
+        "../*"
+      ],
+      "@kairos/plugin-sdk/*": [
+        "../../dist/plugin-sdk/src/plugin-sdk/*.d.ts"
+      ],
+      "@kairos/anthropic-vertex/api.js": [
+        "./.boundary-stubs/anthropic-vertex-api.d.ts"
+      ],
+      "@kairos/ollama/api.js": [
+        "./.boundary-stubs/ollama-api.d.ts"
+      ],
+      "@kairos/ollama/runtime-api.js": [
+        "./.boundary-stubs/ollama-runtime-api.d.ts"
+      ],
+      "@kairos/speech-core/runtime-api.js": [
+        "./.boundary-stubs/speech-core-runtime-api.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "./*.ts",
+    "./src/**/*.ts"
+  ],
+  "exclude": [
+    "./**/*.test.ts",
+    "./dist/**",
+    "./node_modules/**",
+    "./src/test-support/**",
+    "./src/**/*test-helpers.ts",
+    "./src/**/*test-harness.ts",
+    "./src/**/*test-support.ts"
+  ]
+}

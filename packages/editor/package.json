@@ -1,0 +1,11 @@
+{
+  "name": "@kairos/editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kairos editor integrations — keybindings, vim, bridge, native bindings, extensions",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*/index.ts"
+  }
+}
