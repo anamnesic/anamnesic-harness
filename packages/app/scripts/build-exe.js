@@ -3,11 +3,29 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const appDir = process.cwd();
+const appDir = path.join(__dirname, '..');
 const distDir = path.join(appDir, 'dist');
 const standaloneDir = path.join(appDir, 'out', 'standalone');
 
 console.log('Building Windows executable for Kairos...');
+
+// Run Next.js production build
+console.log('\nRunning Next.js production build...');
+try {
+  const cleanEnv = { ...process.env };
+  delete cleanEnv.INIT_CWD;
+  delete cleanEnv.PNPM_WORKSPACE_PATH;
+  delete cleanEnv.npm_config_local_prefix;
+
+  execSync('npx next build --webpack', {
+    cwd: appDir,
+    env: cleanEnv,
+    stdio: 'inherit'
+  });
+} catch (err) {
+  console.error('Next.js build failed:', err.message);
+  process.exit(1);
+}
 
 // Check if standalone build exists
 if (!fs.existsSync(standaloneDir)) {
@@ -85,7 +103,7 @@ const pkgPackageJson = {
   pkg: {
     scripts: 'launcher.js',
     assets: ['**/*'],
-    targets: ['node22-win-x64']
+    targets: ['node18-win-x64']
   }
 };
 
@@ -108,7 +126,7 @@ console.log('\nRunning pkg to create executable...');
 try {
   const outputExe = path.join(distDir, 'kairos.exe');
   execSync(
-    `pkg "${standaloneDir}" --targets node22-win-x64 --output "${outputExe}"`,
+    `pkg "${standaloneDir}" --targets node18-win-x64 --output "${outputExe}"`,
     { stdio: 'inherit' }
   );
   console.log('\n✅ Executable built successfully!');

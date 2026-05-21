@@ -1,10 +1,12 @@
 import type { NextConfig } from "next"
+import path from "path"
 
 const isCapacitor = process.env.CAPACITOR_BUILD === 'true'
 
 const nextConfig: NextConfig = {
   output: isCapacitor ? "export" : "standalone",
   distDir: isCapacitor ? undefined : "out",
+  outputFileTracingRoot: isCapacitor ? undefined : path.join(__dirname, '../../'),
   staticPageGenerationTimeout: 60,
   serverExternalPackages: isCapacitor ? [] : ["typeorm", "sqlite3", "reflect-metadata", "bcrypt", "node-pty"],
   transpilePackages: ["@kairos/vault"],
