@@ -6,7 +6,6 @@ O diretório `packages/` contém todos os pacotes internos do monorepo Kairos. C
 
 | Diretório | Descrição |
 |---|---|
-| `app/` | Web app Next.js — UI principal do Kairos, utilizada também em mobile via Capacitor |
 | `brain/` | Documentação interna do módulo Brain |
 | `cli/` | Interface de linha de comando (CLI) do Kairos |
 | `contract/` | Contratos de tipos compartilhados entre os pacotes do monorepo |

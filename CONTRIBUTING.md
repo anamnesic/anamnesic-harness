@@ -72,7 +72,6 @@ Replace `<platform>` with your platform (e.g., `darwin-arm64`, `linux-x64`).
 - Core pieces:
   - `packages/kairos`: kairos core business logic & server.
   - `packages/kairos/src/cli/cmd/tui/`: The TUI code, written in SolidJS with [opentui](https://github.com/sst/opentui)
-  - `packages/app`: The shared web UI components, written in SolidJS
   - `packages/plugin`: Source for `@kairos-ai/plugin`
 
 ### Understanding bun dev vs kairos
@@ -115,7 +114,6 @@ To test UI changes during development:
 2. **Then run the web app:**
 
 ```bash
-bun run --cwd packages/app dev
 ```
 
 This starts a local dev server at http://localhost:5173 (or similar port shown in output). Most UI changes can be tested here, but the server must be running for full functionality.

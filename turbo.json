@@ -1,31 +1,40 @@
 {
   "$schema": "https://v2-8-13.turborepo.dev/schema.json",
-  "globalEnv": ["CI", "kairos_DISABLE_SHARE"],
-  "globalPassThroughEnv": ["CI", "kairos_DISABLE_SHARE"],
+  "globalEnv": [
+    "CI",
+    "kairos_DISABLE_SHARE"
+  ],
+  "globalPassThroughEnv": [
+    "CI",
+    "kairos_DISABLE_SHARE"
+  ],
   "tasks": {
     "typecheck": {},
     "build": {
       "dependsOn": [],
-      "outputs": ["dist/**"]
+      "outputs": [
+        "dist/**"
+      ]
     },
     "kairos#test": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": [],
-      "passThroughEnv": ["*"]
+      "passThroughEnv": [
+        "*"
+      ]
     },
     "kairos#test:ci": {
-      "dependsOn": ["^build"],
-      "outputs": [".artifacts/unit/junit.xml"],
-      "passThroughEnv": ["*"]
-    },
-    "@kairos-ai/app#test": {
-      "dependsOn": ["^build"],
-      "outputs": []
-    },
-    "@kairos-ai/app#test:ci": {
-      "dependsOn": ["^build"],
-      "outputs": [".artifacts/unit/junit.xml"],
-      "passThroughEnv": ["*"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".artifacts/unit/junit.xml"
+      ],
+      "passThroughEnv": [
+        "*"
+      ]
     }
   }
 }

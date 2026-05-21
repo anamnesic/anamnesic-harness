@@ -58,11 +58,3 @@ new sst.cloudflare.x.Astro("Web", {
   },
 })
 
-new sst.cloudflare.StaticSite("WebApp", {
-  domain: "app." + domain,
-  path: "packages/app",
-  build: {
-    command: "bun turbo build",
-    output: "./dist",
-  },
-})

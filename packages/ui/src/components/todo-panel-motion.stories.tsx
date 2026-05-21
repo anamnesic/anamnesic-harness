@@ -16,7 +16,6 @@ export default {
 This playground renders the real session composer region from app code.
 
 ### Source path
-- \`packages/app/src/pages/session/composer/session-composer-region.tsx\`
 
 ### Includes
 - \`SessionTodoDock\` (real)

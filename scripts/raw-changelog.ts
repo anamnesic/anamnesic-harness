@@ -115,7 +115,7 @@ async function commits(from: string, to: string) {
   }
 
   const log =
-    await $`git log ${base}..${head} --format=%H -- packages/kairos packages/sdk packages/plugin packages/app sdks/vscode packages/extensions github`.text()
+    await $`git log ${base}..${head} --format=%H -- packages/kairos packages/sdk packages/plugin sdks/vscode packages/extensions github`.text()
 
   const list: Commit[] = []
   for (const hash of log.split("\n").filter(Boolean)) {
@@ -129,7 +129,6 @@ async function commits(from: string, to: string) {
     for (const file of diff.split("\n").filter(Boolean)) {
       if (file.startsWith("packages/kairos/src/cli/cmd/")) areas.add("tui")
       else if (file.startsWith("packages/kairos/")) areas.add("core")
-      else if (file.startsWith("packages/app/")) areas.add("app")
       else if (file.startsWith("packages/sdk/") || file.startsWith("packages/plugin/")) areas.add("sdk")
       else if (file.startsWith("packages/extensions/")) areas.add("extensions/zed")
       else if (file.startsWith("sdks/vscode/") || file.startsWith("github/")) areas.add("extensions/vscode")

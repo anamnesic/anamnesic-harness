@@ -64,7 +64,6 @@ Cada pasta significativa do projeto tem um `README.md` explicando seu conteúdo.
 ### Pacotes (`packages/`)
 | Pasta | README | O que contem |
 |---|---|---|
-| `packages/app/` | [packages/app/README.md](packages/app/README.md) | Aplicação web principal do Kairos, construída com **Next.js** (App Router). O mesmo código-fonte é compartilhado com as plataformas móveis **iOS** e **Android** por meio do [Capacitor](https://capacitorjs.com/), que empacota o bundle web gerado como um aplicativo nativo. |
 | `packages/brain/` | [packages/brain/README.md](packages/brain/README.md) | Documentacao e codigo do modulo Brain. |
 | `packages/cli/` | [packages/cli/README.md](packages/cli/README.md) | Kairos CLI / Terminal - commands, ink, tui, screens, entrypoints. |
 | `packages/contract/` | [packages/contract/README.md](packages/contract/README.md) | Contratos internos de empacotamento e validacao de plugins. |
