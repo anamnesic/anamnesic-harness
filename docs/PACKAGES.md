@@ -53,8 +53,6 @@ src/
 ```
 src/
 ├── app/                # App principal React/web do Kairos
-├── desktop/            # App desktop com Tauri bindings (entry, i18n, bindings)
-├── desktop-electron/   # Shell Electron (main, preload, renderer)
 ├── enterprise/         # Versão enterprise da aplicação
 ├── web/                # Site de marketing e docs (assets, components, content, i18n)
 ├── components-ui/      # Biblioteca de componentes UI compartilhados
@@ -183,10 +181,9 @@ src/
 ├── patches/        # Patches de dependências npm (pnpm patch)
 ├── qa/             # Cenários e harness de QA (frontier-harness, scenarios)
 ├── security/       # Ferramentas de análise de segurança (opengrep)
-├── test/           # Testes de integração e arquitetura (e2e, boundary, appcast)
+├── test/           # Testes de integração e arquitetura (e2e, boundary)
 ├── fixtures/       # Fixtures reutilizáveis para testes
 ├── tsconfigs/      # Configurações TypeScript do monorepo (projetos, extensões, plugins, ui)
-├── github-desktop/ # Dependências de build do GitHub Desktop
 └── legacy-*/       # Configs herdados do inner monorepo (referência)
 ```
 

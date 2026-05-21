@@ -15,7 +15,7 @@ Componentes principais:
 - **Runtime de agentes** com pipeline, memória, tarefas e ferramentas
 - **Gateway multi-canal** (Discord, Slack, WhatsApp, Telegram, e 120+ extensões)
 - **CLI/TUI terminal-native** com interface Ink/Go
-- **UI web/desktop** (Next.js, Tauri, apps mobile iOS/Android/macOS)
+- **UI web/mobile** (Next.js, apps mobile iOS/Android)
 - **Vault criptografado** (AES-256-GCM) para dados sensíveis em runtime
 - **65 skills internas Kairos** baseadas em referências externas anonimizadas
 
@@ -52,8 +52,6 @@ kairos/
 ├── apps/                       # Aplicações clientes
 │   ├── ios/                    # App iOS (Swift)
 │   ├── android/                # App Android (Kotlin)
-│   ├── macos/                  # App macOS nativo
-│   ├── macos-mlx-tts/          # TTS local via MLX (Apple Silicon)
 │   └── shared/                 # Kit compartilhado (OpenClawKit)
 │
 ├── extensions/                 # 120+ extensões de providers/canais
@@ -74,7 +72,6 @@ kairos/
 │   └── specs/                  # Especificações do projeto
 │
 ├── infra/                      # Deploy — SST / Fly.io / Render
-├── src-tauri/                  # App desktop Tauri (Rust)
 ├── nix/                        # Builds reproduzíveis (Nix flakes)
 ├── assets/                     # Assets visuais (logo, DMG background)
 ├── scripts/                    # Scripts de release, CI, build, publicação
@@ -194,7 +191,7 @@ KAIROS_BASE_URL=https://api.openai.com
 ```
   ┌─────────────────────────────────────────────────────┐
   │                  Clients / Interfaces               │
-  │  CLI/TUI  │  Web UI  │  Desktop  │  iOS/Android     │
+  │  CLI/TUI  │  Web UI  │  iOS/Android                 │
   └──────────────────────┬──────────────────────────────┘
                          │
   ┌──────────────────────▼──────────────────────────────┐

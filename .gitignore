@@ -95,8 +95,5 @@ data/self-optimization/
 data/vault/
 packages/app/data/
 
-# Tauri build artifacts
-src-tauri/server-bundle/
-
 # Generated skills data
 packages/skills/

@@ -51,7 +51,7 @@ A pasta `packages/` contém uma mistura de:
 
 ### O que pode ser unificado
 - Similar a `protocol` e `plugins`, não há conteúdo real.
-- Se quiser manter um namespace de apps, implemente-o no root ou use `app/` e `src-tauri/` existentes para o front-end.
+- Se quiser manter um namespace de apps, implemente-o no root ou use `app/` existente para o front-end.
 - Caso contrário, este pacote não adiciona valor e pode ser removido.
 
 ## 5. `packages/tui`

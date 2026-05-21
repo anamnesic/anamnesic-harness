@@ -14,14 +14,4 @@ updates:
         reason: "Indirect dep via @vscode/vsce dev dependency"
       - dependency-name: "uuid"
         versions: ["8.3.2"]
-        reason: "Indirect dep via @vscode/vsce dev dependency"
-
-  - package-ecosystem: "cargo"
-    directory: "/src-tauri"
-    schedule:
-      interval: "weekly"
-    ignore:
-      - dependency-name: "glib"
-        reason: "No patched version available yet"
-      - dependency-name: "rand"
-        reason: "No patched version available yet"
+        reason: "Indirect dep via @vscode/vsce dev dependency"

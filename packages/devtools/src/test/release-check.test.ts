@@ -11,7 +11,6 @@ import {
 } from "../scripts/lib/workspace-bootstrap-smoke.mjs";
 import { collectInstalledRootDependencyManifestErrors } from "../scripts/kairos-npm-postpublish-verify.ts";
 import {
-  collectAppcastSparkleVersionErrors,
   collectBundledExtensionManifestErrors,
   collectBundledPluginRootRuntimeMirrorErrors,
   collectCriticalPluginSdkEntrypointSizeErrors,
@@ -38,9 +37,7 @@ import {
   PACKAGE_DIST_INVENTORY_RELATIVE_PATH,
 } from "../src/infra/package-dist-inventory.ts";
 
-function makeItem(shortVersion: string, sparkleVersion: string): string {
-  return `<item><title>${shortVersion}</title><sparkle:shortVersionString>${shortVersion}</sparkle:shortVersionString><sparkle:version>${sparkleVersion}</sparkle:version></item>`;
-}
+
 
 function makePackResult(filename: string, unpackedSize: number) {
   return { filename, unpackedSize };
@@ -49,27 +46,6 @@ function makePackResult(filename: string, unpackedSize: number) {
 const requiredPluginSdkPackPaths = [...listPluginSdkDistArtifacts(), "dist/plugin-sdk/compat.js"];
 const requiredBundledPluginPackPaths = listBundledPluginPackArtifacts();
 
-describe("collectAppcastSparkleVersionErrors", () => {
-  it("accepts legacy 9-digit calver builds before lane-floor cutover", () => {
-    const xml = `<rss><channel>${makeItem("2026.2.26", "202602260")}</channel></rss>`;
-
-    expect(collectAppcastSparkleVersionErrors(xml)).toEqual([]);
-  });
-
-  it("requires lane-floor builds on and after lane-floor cutover", () => {
-    const xml = `<rss><channel>${makeItem("2026.3.1", "202603010")}</channel></rss>`;
-
-    expect(collectAppcastSparkleVersionErrors(xml)).toEqual([
-      "appcast item '2026.3.1' has sparkle:version 202603010 below lane floor 2026030190.",
-    ]);
-  });
-
-  it("accepts canonical stable lane builds on and after lane-floor cutover", () => {
-    const xml = `<rss><channel>${makeItem("2026.3.1", "2026030190")}</channel></rss>`;
-
-    expect(collectAppcastSparkleVersionErrors(xml)).toEqual([]);
-  });
-});
 
 describe("packed CLI smoke", () => {
   it("keeps the expected packaged CLI smoke command list", () => {

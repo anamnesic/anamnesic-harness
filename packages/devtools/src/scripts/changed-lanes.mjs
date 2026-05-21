@@ -5,7 +5,7 @@ import { booleanFlag, parseFlagArgs, stringFlag } from "./lib/arg-utils.mjs";
 const GIT_OUTPUT_MAX_BUFFER = 64 * 1024 * 1024;
 
 const DOCS_PATH_RE = /^(?:docs\/|README\.md$|AGENTS\.md$|.*\.mdx?$)/u;
-const APP_PATH_RE = /^(?:apps\/|Swabble\/|appcast\.xml$)/u;
+const APP_PATH_RE = /^(?:apps\/|Swabble\/)/u;
 const EXTENSION_PATH_RE = /^extensions\/[^/]+(?:\/|$)/u;
 const CORE_PATH_RE = /^(?:src\/|ui\/|packages\/)/u;
 const TOOLING_PATH_RE =
@@ -26,7 +26,6 @@ export const RELEASE_METADATA_PATHS = new Set([
   "apps/ios/Config/Version.xcconfig",
   "apps/ios/fastlane/metadata/en-US/release_notes.txt",
   "apps/ios/version.json",
-  "apps/macos/Sources/OpenClaw/Resources/Info.plist",
   "docs/.generated/config-baseline.sha256",
   "docs/install/updating.md",
   "package.json",

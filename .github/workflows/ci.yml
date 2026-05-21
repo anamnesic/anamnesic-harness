@@ -273,7 +273,7 @@ jobs:
             macos_node_matrix: createMatrix(
               runMacos ? [{ check_name: "macos-node", runtime: "node", task: "test" }] : [],
             ),
-            run_macos_swift: runMacos,
+            run_macos_swift: false,
             run_android_job: runAndroid,
             android_matrix: createMatrix(
               runAndroid
@@ -1913,103 +1913,6 @@ jobs:
               exit 1
               ;;
           esac
-
-  macos-swift:
-    permissions:
-      contents: read
-    name: "macos-swift"
-    needs: [preflight]
-    if: needs.preflight.outputs.run_macos_swift == 'true'
-    runs-on: ${{ github.repository == 'kairos/kairos' && 'blacksmith-12vcpu-macos-latest' || 'macos-latest' }}
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.checkout_revision }}
-          persist-credentials: false
-          submodules: false
-
-      - name: Install XcodeGen / SwiftLint / SwiftFormat
-        run: brew install xcodegen swiftlint swiftformat
-
-      - name: Detect Swift toolchain cache key
-        id: swift-toolchain
-        run: |
-          set -euo pipefail
-          xcode_version="$(xcodebuild -version | tr '\n' ' ' | sed 's/  */ /g; s/ $//')"
-          swift_version="$(swift --version | head -n 1)"
-          toolchain_key="$(printf '%s\n%s\n' "$xcode_version" "$swift_version" | shasum -a 256 | awk '{print $1}')"
-          echo "key=$toolchain_key" >> "$GITHUB_OUTPUT"
-
-      - name: Cache SwiftPM
-        uses: actions/cache@v5
-        with:
-          path: ~/Library/Caches/org.swift.swiftpm
-          key: ${{ runner.os }}-swiftpm-${{ hashFiles('apps/macos/Package.resolved') }}
-          restore-keys: |
-            ${{ runner.os }}-swiftpm-
-
-      - name: Cache Swift build directory
-        id: swift-build-cache
-        uses: actions/cache@v5
-        with:
-          path: apps/macos/.build
-          key: ${{ runner.os }}-swift-build-v2-${{ steps.swift-toolchain.outputs.key }}-${{ hashFiles('apps/macos/Package.swift', 'apps/macos/Package.resolved', 'apps/macos/Sources/**', 'apps/macos/Tests/**', 'apps/shared/kairosKit/Package.swift', 'apps/shared/kairosKit/Sources/**', 'Swabble/Package.swift', 'Swabble/Sources/**') }}
-          restore-keys: |
-            ${{ runner.os }}-swift-build-v2-${{ steps.swift-toolchain.outputs.key }}-
-
-      - name: Preserve Swift build cache hit
-        if: steps.swift-build-cache.outputs.cache-hit == 'true'
-        run: |
-          set -euo pipefail
-          # Exact source-hash cache hits already match these inputs; checkout
-          # mtimes are the only reason SwiftPM rebuilds cached products.
-          find apps/macos/Sources apps/macos/Tests apps/shared/kairosKit/Sources Swabble/Sources apps/macos/.build/checkouts \
-            -type f -exec touch -t 200001010000 {} +
-          touch -t 200001010000 \
-            apps/macos/Package.swift \
-            apps/macos/Package.resolved \
-            apps/shared/kairosKit/Package.swift \
-            Swabble/Package.swift
-
-      - name: Show toolchain
-        run: |
-          sw_vers
-          xcodebuild -version
-          swift --version
-
-      - name: Swift lint
-        run: |
-          swiftlint --config .swiftlint.yml
-          swiftformat --lint apps/macos/Sources --config .swiftformat
-
-      - name: Swift build (release)
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3; do
-            # The macOS lane validates the desktop app build; the CLI product is
-            # intentionally left to its own narrower surfaces instead of making
-            # this lane rebuild the whole package graph.
-            if swift build --package-path apps/macos --product kairos --configuration release; then
-              exit 0
-            fi
-            echo "swift build failed (attempt $attempt/3). Retrying…"
-            sleep $((attempt * 20))
-          done
-          exit 1
-
-      - name: Swift test
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3; do
-            if swift test --package-path apps/macos --parallel --enable-code-coverage --show-codecov-path; then
-              exit 0
-            fi
-            echo "swift test failed (attempt $attempt/3). Retrying…"
-            sleep $((attempt * 20))
-          done
-          exit 1
 
   android:
     permissions:

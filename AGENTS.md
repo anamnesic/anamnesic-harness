@@ -25,6 +25,42 @@ This repo treats code + docs/ as the source of truth. If you are unsure, start w
 - docs/worktrees.md - isolated worktree sessions.
 - docs/architecture.md - layout and boundary rules.
 
+## Índice de READMEs por Pasta
+
+Cada pasta principal do repositório tem um `README.md` explicando seu conteúdo.
+Use este índice para navegar rapidamente.
+
+### Raiz do Repositório
+| Pasta | README | O que contém |
+|---|---|---|
+| `apps/` | [apps/README.md](apps/README.md) | Aplicações cliente nativas (iOS, Android, shared kit) |
+| `apps/android/` | [apps/android/README.md](apps/android/README.md) | App Android via Capacitor |
+| `apps/ios/` | [apps/ios/README.md](apps/ios/README.md) | App iOS nativo em Swift |
+| `apps/shared/` | [apps/shared/README.md](apps/shared/README.md) | Kit Swift compartilhado entre iOS e Android (OpenClawKit) |
+| `assets/` | [assets/README.md](assets/README.md) | Assets visuais: logos, ícones, imagens de instalador |
+| `docs/` | [docs/README.md](docs/README.md) | Documentação completa do projeto |
+| `extensions/` | [extensions/README.md](extensions/README.md) | 120+ extensões: providers de IA, canais, ferramentas |
+| `infra/` | [infra/README.md](infra/README.md) | Infraestrutura e deploy (SST/AWS, Fly.io, Render) |
+| `nix/` | [nix/README.md](nix/README.md) | Builds reproduzíveis com Nix Flakes |
+| `packages/` | [packages/README.md](packages/README.md) | Todos os pacotes internos do monorepo |
+| `scripts/` | [scripts/README.md](scripts/README.md) | Scripts de release, changelog, versão, CI |
+| `sdks/` | [sdks/README.md](sdks/README.md) | SDKs para plataformas externas |
+| `src/` | [src/README.md](src/README.md) | Backend TypeScript: API, CLI, memória, interfaces |
+
+### Pacotes (`packages/`)
+| Pacote | README | O que contém |
+|---|---|---|
+| `packages/app/` | [packages/app/README.md](packages/app/README.md) | Web app Next.js + mobile Capacitor (UI principal) |
+| `packages/brain/` | [packages/brain/README.md](packages/brain/README.md) | Documentação do módulo Brain |
+| `packages/core/` | [packages/core/README.md](packages/core/README.md) | Lógica de agentes reutilizável (core) |
+| `packages/devtools/` | [packages/devtools/README.md](packages/devtools/README.md) | Ferramentas de CI, release, scripts, QA |
+| `packages/editor/` | [packages/editor/README.md](packages/editor/README.md) | Extensão VS Code do Kairos |
+| `packages/kairoscode/` | [packages/kairoscode/README.md](packages/kairoscode/README.md) | Runtime principal: CLI, servidor, TUI, storage |
+| `packages/sdk/` | [packages/sdk/README.md](packages/sdk/README.md) | SDK público do Kairos (`@kairos/sdk`) |
+| `packages/vault/` | [packages/vault/README.md](packages/vault/README.md) | Vault criptografado AES-256-GCM |
+
+
+
 
 - To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.

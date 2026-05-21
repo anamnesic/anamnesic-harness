@@ -10,7 +10,6 @@ O repositório combina:
 - backend de agentes, memória e observação em **src/**
 - extensões e integradores em **extensions/**
 - documentação em **docs/**
-- suporte nativo e desktop em **src-tauri/**
 
 ## Estrutura principal
 

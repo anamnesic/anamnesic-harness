@@ -8,9 +8,8 @@ O repositório está em um estado híbrido entre monorepo e aplicação root ún
 
 - O repositório contém:
   - `app/` e `src/` como aplicação Next.js / frontend
-  - `src-tauri/` para integração Tauri
   - `packages/` com subprojetos como `core`, `tui`, `protocol`, `plugins`, `apps/**`
-  - `package.json` raiz com scripts de build/Dev/test para Next/VSCODE/Tauri
+  - `package.json` raiz com scripts de build/Dev/test para Next/VSCODE
   - `packages/package.json` como agregador de monorepo
   - `packages/pnpm-workspace.yaml` com padrões de workspace adequados
   - `pnpm-lock.yaml` no root e outro em `packages/`
@@ -74,7 +73,6 @@ Opção B: Projeto único concluído
 ### 4.3. Definição de camadas claras
 
 - `app/` / `src/`: aplicação frontend/Next.js / VS Code
-- `src-tauri/`: empacotamento Tauri / shell nativo
 - `packages/core`: lógica compartilhada do serviço/agent
 - `packages/tui`: interface TUI
 - `packages/protocol`: contratos e tipos compartilhados
@@ -92,7 +90,7 @@ Opção B: Projeto único concluído
 7. Criar um documento de arquitetura simples e canônico que explique:
    - `Root workspace` -> gerencia dependências e build
    - `packages/` -> bibliotecas reutilizáveis / serviços comuns
-   - `app/` e `src-tauri/` -> aplicações
+   - `app/` -> aplicação
 
 ## 6. Observações de prioridade
 

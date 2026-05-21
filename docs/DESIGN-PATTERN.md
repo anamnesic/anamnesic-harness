@@ -11,12 +11,10 @@
 | Superfície       | Tecnologia atual             |
 |------------------|------------------------------|
 | Web app          | Next.js (`app/`)             |
-| Desktop          | Tauri (`src-tauri/`) + Electron (`packages/desktop-electron/`) |
 | CLI              | Commander (`src/interfaces/cli/`) |
 | VS Code          | Extension (`sdks/vscode/`, `src/interfaces/dashboard/`) |
 | API/MCP          | Hono + Express (`src/interfaces/api/`) |
 | Mobile           | Android/iOS nativos (`apps/android/`, `apps/ios/`) |
-| macOS            | Swift/MLX (`apps/macos/`, `apps/macos-mlx-tts/`) |
 
 **Núcleo do agente** (`src/`):
 
@@ -43,9 +41,7 @@ kairos/
 │
 ├── apps/                          # Superfícies deployáveis (não importáveis)
 │   ├── android/                   # Android nativo
-│   ├── ios/                       # iOS nativo
-│   ├── macos/                     # macOS nativo
-│   └── macos-mlx-tts/             # macOS com MLX TTS
+│   └── ios/                       # iOS nativo
 │
 ├── packages/              # Todos os pacotes com escopo @kairos/*
 │   ├── core/           @kairos/core          # Runtime do agente de IA
@@ -61,7 +57,6 @@ kairos/
 │
 ├── src/                           # Núcleo legado (em migração para @kairos/core)
 ├── app/                           # Next.js app legado (em migração para @kairos/ui)
-├── src-tauri/                     # Desktop Tauri (em migração para @kairos/ui/src/desktop)
 ├── sdks/vscode/                   # VS Code extension
 │
 ├── infra/                         # Infraestrutura SST/Cloudflare (app, console, enterprise)
@@ -98,7 +93,7 @@ O motor do agente segue um padrão de **pipeline orientado a eventos** com camad
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │              Interfaces (@kairos/ui, @kairos/cli, apps/)         │
-│        Web    Desktop    CLI    VS Code    API    Mobile          │
+│        Web               CLI    VS Code    API    Mobile          │
 └───────────────────────────┬─────────────────────────────────────┘
                             │ usa
 ┌───────────────────────────▼─────────────────────────────────────┐
@@ -196,7 +191,6 @@ packages:
 
 ### Fase 3 — Separar os apps
 - [ ] Mover `app/` → `apps/web/` (Next.js)
-- [ ] Mover `src-tauri/` → `apps/desktop/`
 - [ ] Mover `src/interfaces/cli/` → `apps/cli/`
 - [ ] Mover `sdks/vscode/` + `src/interfaces/dashboard/` → `apps/vscode/`
 - [ ] Mover `src/interfaces/api/` → `apps/api/`

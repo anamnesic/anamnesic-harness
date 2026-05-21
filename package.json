@@ -104,9 +104,7 @@
     "vault:skills": "node --experimental-strip-types packages/vault/scripts/skills-migrate.ts",
     "dev": "cd packages/app && next dev",
     "build": "cd packages/app && next build --webpack",
-    "build:windows": "node packages/app/scripts/build-exe.js",
     "export": "cd packages/app && next build",
-    "tauri:build": "pnpm run export && node scripts/tauri-prepare-server.mjs && pnpm tauri build",
     "start": "cd packages/app && next start",
     "postinstall": "pnpm rebuild node-pty",
     "build:backend": "tsc --project tsconfig.build.json",
@@ -165,8 +163,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
-    "@tauri-apps/api": "^2.10.1",
-    "@tauri-apps/cli": "^2.10.1",
     "@types/adm-zip": "^0.5.8",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",

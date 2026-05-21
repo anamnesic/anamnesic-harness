@@ -155,11 +155,11 @@ describe("test-projects args", () => {
   });
 
   it("routes top-level repo tests to the contracts config", () => {
-    expect(buildVitestRunPlans(["test/appcast.test.ts"])).toEqual([
+    expect(buildVitestRunPlans(["test/architecture-smells.test.ts"])).toEqual([
       {
         config: "test/vitest/vitest.tooling.config.ts",
         forwardedArgs: [],
-        includePatterns: ["test/appcast.test.ts"],
+        includePatterns: ["test/architecture-smells.test.ts"],
         watchMode: false,
       },
     ]);
