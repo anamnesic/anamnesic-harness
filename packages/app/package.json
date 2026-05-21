@@ -8,9 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "cd ../.. && bun typecheck packages/app",
-    "build:exe": "node scripts/build-exe.js"
+    "build:exe": "node scripts/build-exe.js",
+    "cap:sync": "npx cap sync",
+    "build:capacitor": "node scripts/build-capacitor.js"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "next": "^16.2.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
@@ -18,5 +22,10 @@
   "pkg": {
     "scripts": "server-wrapper.js",
     "assets": "standalone/**/*"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "@kairos/vault": "workspace:*",
+    "cross-env": "^10.1.0"
   }
 }

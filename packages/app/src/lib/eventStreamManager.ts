@@ -92,8 +92,16 @@ class EventStreamManager {
     }
 
     private buildUrl(): string {
+        let streamUrl = this.url;
+        if (typeof window !== 'undefined') {
+            const baseUrl = localStorage.getItem('kairos-api-base-url');
+            if (baseUrl) {
+                streamUrl = `${baseUrl.replace(/\/$/, '')}${this.url}`;
+            }
+        }
+
         if (typeof window === 'undefined') {
-            return this.url;
+            return streamUrl;
         }
 
         const token = localStorage.getItem('kairos-token');
@@ -106,7 +114,7 @@ class EventStreamManager {
         if (projectId) params.set('projectId', projectId);
 
         const qs = params.toString();
-        return qs ? `${this.url}?${qs}` : this.url;
+        return qs ? `${streamUrl}?${qs}` : streamUrl;
     }
 
     private handleEvent(eventName: string, ev: MessageEvent) {

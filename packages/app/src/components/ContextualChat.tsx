@@ -147,7 +147,14 @@ export function ContextualChat({
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('kairos-token') : null;
-      const res = await fetch('/api/chat/stream', {
+      let streamPath = '/api/chat/stream';
+      if (typeof window !== 'undefined') {
+        const baseUrl = localStorage.getItem('kairos-api-base-url');
+        if (baseUrl) {
+          streamPath = `${baseUrl.replace(/\/$/, '')}${streamPath}`;
+        }
+      }
+      const res = await fetch(streamPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

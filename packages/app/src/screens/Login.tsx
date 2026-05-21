@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { LogIn, Mail, Lock, Activity, ArrowRight, Loader2 } from 'lucide-react';
+import { LogIn, Mail, Lock, Activity, ArrowRight, Loader2, ServerCog } from 'lucide-react';
 import { apiFetch } from '@/src/lib/api';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/components/Toast';
@@ -28,6 +28,9 @@ export function Login({ onNavigateToSignup }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
+  const [apiBaseUrl, setApiBaseUrl] = useState(
+    typeof window !== 'undefined' ? localStorage.getItem('kairos-api-base-url') || '' : ''
+  );
 
   const authenticate = async (loginEmail: string, loginSenha: string) => {
     const res = await apiFetch<LoginResponse>('/api/v1/auth/login', {
@@ -121,6 +124,31 @@ export function Login({ onNavigateToSignup }: LoginProps) {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="label-caps px-1">Endereço da API (Opcional)</label>
+              <div className="relative group">
+                <ServerCog className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-text-dim group-focus-within:text-primary transition-colors" />
+                <input
+                  type="url"
+                  value={apiBaseUrl}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setApiBaseUrl(val);
+                    if (val) {
+                      localStorage.setItem('kairos-api-base-url', val);
+                    } else {
+                      localStorage.removeItem('kairos-api-base-url');
+                    }
+                  }}
+                  className="w-full pl-12 pr-4 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary/60 transition-all placeholder:text-text-dim/50"
+                  placeholder="http://10.0.2.2:18789"
+                />
+              </div>
+              <p className="text-[10px] text-text-dim px-1 leading-normal">
+                Deixe em branco para usar o servidor padrão do painel web.
+              </p>
             </div>
           </div>
 

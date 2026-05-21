@@ -1,3 +1,31 @@
+# AGENTS.md
+
+This repo treats code + docs/ as the source of truth. If you are unsure, start with docs/README.md.
+
+## Entry points
+- docs/README.md - documentation index and where to look next.
+- README.md - project overview and provider list.
+- INSTALL.md - install and verify steps.
+- KAIROS.md - agent guidance and command hints.
+- KAIROS_FEATURES_STATUS.md - feature gates and build flags.
+- TODOCOPILOT.md - porting decisions and history.
+- chronos.md - Chronos orchestration details.
+- BUILD_REPORT.md - build notes and known issues.
+
+## Key areas
+- source/src - main CLI runtime (extracted upstream source).
+- providers/* - provider plugins (each self-contained).
+- packages/vscode - VS Code extension.
+- packages/nextjs - Next.js UI (optional).
+- dist/ - generated bundle output.
+- .kairos/agents - local agent prompt inventory.
+
+## Ops
+- docs/observability.md - logs, metrics, traces.
+- docs/worktrees.md - isolated worktree sessions.
+- docs/architecture.md - layout and boundary rules.
+
+
 - To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
 - The default branch in this repo is `dev`.

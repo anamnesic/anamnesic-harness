@@ -39,7 +39,15 @@ async function refreshToken(): Promise<string | null> {
             const currentToken = localStorage.getItem('kairos-token');
             if (!currentToken) return null;
 
-            const res = await fetch('/api/v1/auth/refresh', {
+            let refreshPath = '/api/v1/auth/refresh';
+            if (typeof window !== 'undefined') {
+                const baseUrl = localStorage.getItem('kairos-api-base-url');
+                if (baseUrl) {
+                    refreshPath = `${baseUrl.replace(/\/$/, '')}${refreshPath}`;
+                }
+            }
+
+            const res = await fetch(refreshPath, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -107,7 +115,15 @@ export async function apiFetch<T = unknown>(
         headers['X-Project-Id'] = projectId;
     }
 
-    const res = await fetch(path, {
+    let finalPath = path;
+    if (typeof window !== 'undefined' && path.startsWith('/api')) {
+        const baseUrl = localStorage.getItem('kairos-api-base-url');
+        if (baseUrl) {
+            finalPath = `${baseUrl.replace(/\/$/, '')}${path}`;
+        }
+    }
+
+    const res = await fetch(finalPath, {
         headers,
         ...init,
     });
