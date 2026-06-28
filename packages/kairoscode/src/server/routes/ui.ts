@@ -1,4 +1,4 @@
-import { Flag } from "@kairos-ai/core/flag/flag"
+import { Flag } from "@kairos/core/flag/flag"
 import { Hono } from "hono"
 import { proxy } from "hono/proxy"
 import { getMimeType } from "hono/utils/mime"

@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test"
 import { Project } from "@/project/project"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { $ } from "bun"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
 import { GlobalBus } from "../../src/bus/global"
 import { ProjectID } from "../../src/project/schema"
-import { Hash } from "@kairos-ai/core/util/hash"
-import { Global } from "@kairos-ai/core/global"
+import { Hash } from "@kairos/core/util/hash"
+import { Global } from "@kairos/core/global"
 import { Effect, Layer, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { NodePath } from "@effect/platform-node"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
-import { CrossSpawnSpawner } from "@kairos-ai/core/cross-spawn-spawner"
+import { AppFileSystem } from "@kairos/core/filesystem"
+import { CrossSpawnSpawner } from "@kairos/core/cross-spawn-spawner"
 
 void Log.init({ print: false })
 

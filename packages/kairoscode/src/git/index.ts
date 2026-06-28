@@ -1,4 +1,4 @@
-import { CrossSpawnSpawner } from "@kairos-ai/core/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@kairos/core/cross-spawn-spawner"
 import { Effect, Layer, Context, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 

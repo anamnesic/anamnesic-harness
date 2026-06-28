@@ -1,10 +1,10 @@
 import path from "path"
 import { fileURLToPath } from "url"
 
-import { Flag } from "@kairos-ai/core/flag/flag"
-import { Global } from "@kairos-ai/core/global"
+import { Flag } from "@kairos/core/flag/flag"
+import { Global } from "@kairos/core/global"
 import { Filesystem } from "@/util/filesystem"
-import { Flock } from "@kairos-ai/core/util/flock"
+import { Flock } from "@kairos/core/util/flock"
 
 import { parsePluginSpecifier, pluginSource } from "./shared"
 

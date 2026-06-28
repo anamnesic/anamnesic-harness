@@ -1,4 +1,4 @@
-import { Flag } from "@kairos-ai/core/flag/flag"
+import { Flag } from "@kairos/core/flag/flag"
 import { lazy } from "@/util/lazy"
 import { Filesystem } from "@/util/filesystem"
 import { which } from "@/util/which"

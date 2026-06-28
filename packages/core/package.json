@@ -9,6 +9,6 @@
     "./*": "./src/*/index.ts"
   },
   "dependencies": {
-    "@kairos/vault": "workspace:*"
+    "@kairos-ai/core": "catalog:"
   }
 }

@@ -79,7 +79,7 @@ delete process.env["kairos_SERVER_USERNAME"]
 process.env["kairos_DB"] = ":memory:"
 
 // Now safe to import from src/
-const Log = await import("@kairos-ai/core/util/log")
+const Log = await import("@kairos/core/util/log")
 const { initProjectors } = await import("../src/server/projectors")
 
 void Log.init({

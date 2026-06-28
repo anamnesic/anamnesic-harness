@@ -4,7 +4,7 @@ import npa from "npm-package-arg"
 import semver from "semver"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
-import { Npm } from "@kairos-ai/core/npm"
+import { Npm } from "@kairos/core/npm"
 
 // Old npm package names for plugins that are now built-in
 export const DEPRECATED_PLUGIN_PACKAGES = ["kairos-openai-codex-auth", "kairos-copilot-auth"]

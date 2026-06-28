@@ -8,7 +8,7 @@ import { zodObject } from "@/util/effect-zod"
 import { Instance } from "@/project/instance"
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { errorData } from "@/util/error"
 
 const log = Log.create({ service: "server.workspace" })

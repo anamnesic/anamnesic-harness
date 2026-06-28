@@ -1,17 +1,17 @@
 import { Effect, Layer, Schema, Context, Stream } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
-import { CrossSpawnSpawner } from "@kairos-ai/core/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@kairos/core/cross-spawn-spawner"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import path from "path"
 import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
-import { Flag } from "@kairos-ai/core/flag/flag"
-import * as Log from "@kairos-ai/core/util/log"
-import { makeRuntime } from "@kairos-ai/core/effect/runtime"
+import { Flag } from "@kairos/core/flag/flag"
+import * as Log from "@kairos/core/util/log"
+import { makeRuntime } from "@kairos/core/effect/runtime"
 import semver from "semver"
-import { InstallationChannel, InstallationVersion } from "@kairos-ai/core/installation/version"
-import { NpmConfig } from "@kairos-ai/core/npm-config"
+import { InstallationChannel, InstallationVersion } from "@kairos/core/installation/version"
+import { NpmConfig } from "@kairos/core/npm-config"
 
 const log = Log.create({ service: "installation" })
 

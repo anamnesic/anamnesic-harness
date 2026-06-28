@@ -7,7 +7,7 @@ import { tmpdir } from "../fixture/fixture"
 const disableDefault = process.env.kairos_DISABLE_DEFAULT_PLUGINS
 process.env.kairos_DISABLE_DEFAULT_PLUGINS = "1"
 
-const { Flag } = await import("@kairos-ai/core/flag/flag")
+const { Flag } = await import("@kairos/core/flag/flag")
 const { Plugin } = await import("../../src/plugin/index")
 const { Workspace } = await import("../../src/control-plane/workspace")
 const { Instance } = await import("../../src/project/instance")

@@ -4,7 +4,7 @@ import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
 import { Session as SessionNs } from "@/session/session"
 import type { SessionID } from "../../src/session/schema"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 void Log.init({ print: false })

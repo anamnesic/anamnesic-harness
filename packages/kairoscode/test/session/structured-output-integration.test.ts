@@ -3,7 +3,7 @@ import path from "path"
 import { Effect, Layer } from "effect"
 import { Session } from "@/session/session"
 import { SessionPrompt } from "../../src/session/prompt"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { Instance } from "../../src/project/instance"
 import { MessageV2 } from "../../src/session/message-v2"
 

@@ -1,5 +1,5 @@
 import { Bus } from "@/bus"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { Effect, Schema } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpRouter, HttpServerResponse } from "effect/unstable/http"

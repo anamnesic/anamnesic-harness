@@ -11,7 +11,7 @@ export {}
 // import { Instance } from "../../src/project/instance"
 // import { Provider } from "@/provider/provider"
 // import { Env } from "../../src/env"
-// import { Global } from "@kairos-ai/core/global"
+// import { Global } from "@kairos/core/global"
 // import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 
 // test("GitLab Duo: loads provider with API key from environment", async () => {

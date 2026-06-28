@@ -4,17 +4,17 @@ import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import { Config } from "@/config/config"
 import { ConfigManaged } from "@/config/managed"
 import { ConfigParse } from "../../src/config/parse"
-import { EffectFlock } from "@kairos-ai/core/util/effect-flock"
+import { EffectFlock } from "@kairos/core/util/effect-flock"
 
 import { Instance } from "../../src/project/instance"
 import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
 import { AccessToken, AccountID, OrgID } from "../../src/account/schema"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { AppFileSystem } from "@kairos/core/filesystem"
 import { Env } from "../../src/env"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { tmpdir } from "../fixture/fixture"
-import { CrossSpawnSpawner } from "@kairos-ai/core/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@kairos/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 
 /** Infra layer that provides FileSystem, Path, ChildProcessSpawner for test fixtures */
@@ -24,11 +24,11 @@ const infra = CrossSpawnSpawner.defaultLayer.pipe(
 import path from "path"
 import fs from "fs/promises"
 import { pathToFileURL } from "url"
-import { Global } from "@kairos-ai/core/global"
+import { Global } from "@kairos/core/global"
 import { ProjectID } from "../../src/project/schema"
 import { Filesystem } from "@/util/filesystem"
 import { ConfigPlugin } from "@/config/plugin"
-import { Npm } from "@kairos-ai/core/npm"
+import { Npm } from "@kairos/core/npm"
 
 const emptyAccount = Layer.mock(Account.Service)({
   active: () => Effect.succeed(Option.none()),

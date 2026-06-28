@@ -4,7 +4,7 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { tmpdir } from "../../fixture/fixture"
 import { createTuiPluginApi } from "../../fixture/tui-plugin"
-import { Global } from "@kairos-ai/core/global"
+import { Global } from "@kairos/core/global"
 import { TuiConfig } from "../../../src/cli/cmd/tui/config/tui"
 import { Filesystem } from "@/util/filesystem"
 

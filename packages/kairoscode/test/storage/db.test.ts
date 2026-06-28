@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { Global } from "@kairos-ai/core/global"
-import { InstallationChannel } from "@kairos-ai/core/installation/version"
+import { Global } from "@kairos/core/global"
+import { InstallationChannel } from "@kairos/core/installation/version"
 import { Database } from "@/storage/db"
 
 describe("Database.Path", () => {

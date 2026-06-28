@@ -12,8 +12,8 @@ import type { Permission } from "../../src/permission"
 import { Agent } from "../../src/agent/agent"
 import { Truncate } from "@/tool/truncate"
 import { SessionID, MessageID } from "../../src/session/schema"
-import { CrossSpawnSpawner } from "@kairos-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { CrossSpawnSpawner } from "@kairos/core/cross-spawn-spawner"
+import { AppFileSystem } from "@kairos/core/filesystem"
 import { Plugin } from "../../src/plugin"
 
 const runtime = ManagedRuntime.make(

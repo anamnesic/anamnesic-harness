@@ -1,4 +1,4 @@
 import path from "path"
-import { Global } from "@kairos-ai/core/global"
+import { Global } from "@kairos/core/global"
 
 export const TRUNCATION_DIR = path.join(Global.Path.data, "tool-output")

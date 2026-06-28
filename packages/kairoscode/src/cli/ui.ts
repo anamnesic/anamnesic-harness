@@ -1,6 +1,6 @@
 import z from "zod"
 import { EOL } from "os"
-import { NamedError } from "@kairos-ai/core/util/error"
+import { NamedError } from "@kairos/core/util/error"
 import { logo as glyphs } from "./logo"
 
 const wordmark = [

@@ -3,10 +3,10 @@ import { type ParseError as JsoncParseError, applyEdits, modify, parse as parseJ
 import { unique } from "remeda"
 import z from "zod"
 import { TuiInfo, TuiOptions } from "./tui-schema"
-import { Flag } from "@kairos-ai/core/flag/flag"
-import { Global } from "@kairos-ai/core/global"
+import { Flag } from "@kairos/core/flag/flag"
+import { Global } from "@kairos/core/global"
 import { Filesystem } from "@/util/filesystem"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import * as ConfigPaths from "@/config/paths"
 
 const log = Log.create({ service: "tui.migrate" })

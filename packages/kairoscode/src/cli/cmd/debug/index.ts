@@ -1,4 +1,4 @@
-import { Global } from "@kairos-ai/core/global"
+import { Global } from "@kairos/core/global"
 import { bootstrap } from "../../bootstrap"
 import { cmd } from "../cmd"
 import { ConfigCommand } from "./config"

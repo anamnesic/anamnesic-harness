@@ -13,7 +13,7 @@ const { Plugin } = await import("../../src/plugin/index")
 const { PluginLoader } = await import("../../src/plugin/loader")
 const { readPackageThemes } = await import("../../src/plugin/shared")
 const { Instance } = await import("../../src/project/instance")
-const { Npm } = await import("@kairos-ai/core/npm")
+const { Npm } = await import("@kairos/core/npm")
 
 afterAll(() => {
   if (disableDefault === undefined) {

@@ -1,4 +1,4 @@
-import { Glob } from "@kairos-ai/core/util/glob"
+import { Glob } from "@kairos/core/util/glob"
 
 const FOLDERS = new Set([
   "node_modules",

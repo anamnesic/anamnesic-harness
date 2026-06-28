@@ -2,12 +2,12 @@ export * as ConfigPaths from "./paths"
 
 import path from "path"
 import { Filesystem } from "@/util/filesystem"
-import { Flag } from "@kairos-ai/core/flag/flag"
-import { Global } from "@kairos-ai/core/global"
+import { Flag } from "@kairos/core/flag/flag"
+import { Global } from "@kairos/core/global"
 import { unique } from "remeda"
 import { JsonError } from "./error"
 import * as Effect from "effect/Effect"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { AppFileSystem } from "@kairos/core/filesystem"
 
 export const files = Effect.fn("ConfigPaths.projectFiles")(function* (
   name: string,

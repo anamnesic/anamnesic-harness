@@ -3,7 +3,7 @@ import { mkdir, unlink } from "fs/promises"
 import path from "path"
 
 import { tmpdir } from "../fixture/fixture"
-import { Global } from "@kairos-ai/core/global"
+import { Global } from "@kairos/core/global"
 import { Instance } from "../../src/project/instance"
 import { Plugin } from "../../src/plugin/index"
 import { ModelsDev } from "@/provider/models"

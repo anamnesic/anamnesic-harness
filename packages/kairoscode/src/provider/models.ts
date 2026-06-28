@@ -1,13 +1,13 @@
-import { Global } from "@kairos-ai/core/global"
-import * as Log from "@kairos-ai/core/util/log"
+import { Global } from "@kairos/core/global"
+import * as Log from "@kairos/core/util/log"
 import path from "path"
 import { Schema } from "effect"
 import { Installation } from "../installation"
-import { Flag } from "@kairos-ai/core/flag/flag"
+import { Flag } from "@kairos/core/flag/flag"
 import { lazy } from "@/util/lazy"
 import { Filesystem } from "@/util/filesystem"
-import { Flock } from "@kairos-ai/core/util/flock"
-import { Hash } from "@kairos-ai/core/util/hash"
+import { Flock } from "@kairos/core/util/flock"
+import { Hash } from "@kairos/core/util/hash"
 
 // Try to import bundled snapshot (generated at build time)
 // Falls back to undefined in dev mode when snapshot doesn't exist

@@ -16,7 +16,7 @@ import { Format } from "../format"
 import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectoryEffect } from "./external-directory"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { AppFileSystem } from "@kairos/core/filesystem"
 import * as Bom from "@/util/bom"
 
 function normalizeLineEndings(text: string): string {

@@ -1,8 +1,8 @@
 import { afterEach, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
-import { Global } from "@kairos-ai/core/global"
-import * as Log from "@kairos-ai/core/util/log"
+import { Global } from "@kairos/core/global"
+import * as Log from "@kairos/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 const log = Global.Path.log

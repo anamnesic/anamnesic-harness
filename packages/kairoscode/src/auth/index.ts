@@ -2,8 +2,8 @@ import path from "path"
 import { Effect, Layer, Record, Result, Schema, Context } from "effect"
 import { zod } from "@/util/effect-zod"
 import { NonNegativeInt } from "@/util/schema"
-import { Global } from "@kairos-ai/core/global"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { Global } from "@kairos/core/global"
+import { AppFileSystem } from "@kairos/core/filesystem"
 
 export const OAUTH_DUMMY_KEY = "kairos-oauth-dummy-key"
 

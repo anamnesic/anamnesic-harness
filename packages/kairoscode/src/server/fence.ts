@@ -4,7 +4,7 @@ import { inArray } from "drizzle-orm"
 import { EventSequenceTable } from "@/sync/event.sql"
 import { Workspace } from "@/control-plane/workspace"
 import type { WorkspaceID } from "@/control-plane/schema"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 
 const HEADER = "x-kairos-sync"
 type State = Record<string, number>

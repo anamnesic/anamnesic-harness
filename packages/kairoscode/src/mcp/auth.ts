@@ -1,8 +1,8 @@
 import path from "path"
 import z from "zod"
-import { Global } from "@kairos-ai/core/global"
+import { Global } from "@kairos/core/global"
 import { Effect, Layer, Context } from "effect"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { AppFileSystem } from "@kairos/core/filesystem"
 
 export const Tokens = z.object({
   accessToken: z.string(),

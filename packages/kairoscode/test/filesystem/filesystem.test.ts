@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { NodeFileSystem } from "@effect/platform-node"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { AppFileSystem } from "@kairos/core/filesystem"
 import { testEffect } from "../lib/effect"
 import path from "path"
 

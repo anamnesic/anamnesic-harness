@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
-import { Flag } from "@kairos-ai/core/flag/flag"
+import { Flag } from "@kairos/core/flag/flag"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
 import { SyncPaths } from "../../src/server/routes/instance/httpapi/groups/sync"
 import { Session } from "@/session/session"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 

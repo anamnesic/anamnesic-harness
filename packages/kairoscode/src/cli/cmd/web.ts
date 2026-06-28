@@ -2,7 +2,7 @@ import { Server } from "../../server/server"
 import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
-import { Flag } from "@kairos-ai/core/flag/flag"
+import { Flag } from "@kairos/core/flag/flag"
 import open from "open"
 import { networkInterfaces } from "os"
 

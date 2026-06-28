@@ -6,7 +6,7 @@ import DESCRIPTION from "./lsp.txt"
 import { Instance } from "../project/instance"
 import { pathToFileURL } from "url"
 import { assertExternalDirectoryEffect } from "./external-directory"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { AppFileSystem } from "@kairos/core/filesystem"
 
 const operations = [
   "goToDefinition",

@@ -1,4 +1,4 @@
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { Bonjour } from "bonjour-service"
 
 const log = Log.create({ service: "mdns" })

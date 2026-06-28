@@ -10,7 +10,7 @@ import { LLM } from "../../src/session/llm"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Token } from "@/util/token"
 import { Instance } from "../../src/project/instance"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { provideTmpdirInstance, tmpdir } from "../fixture/fixture"
@@ -25,7 +25,7 @@ import * as SessionProcessorModule from "../../src/session/processor"
 import { Snapshot } from "../../src/snapshot"
 import { ProviderTest } from "../fake/provider"
 import { testEffect } from "../lib/effect"
-import { CrossSpawnSpawner } from "@kairos-ai/core/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@kairos/core/cross-spawn-spawner"
 
 void Log.init({ print: false })
 

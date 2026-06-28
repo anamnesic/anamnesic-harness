@@ -7,7 +7,7 @@ import { SyncEvent } from "../../src/sync"
 import { Database } from "@/storage/db"
 import { EventTable } from "../../src/sync/event.sql"
 import { Identifier } from "../../src/id/id"
-import { Flag } from "@kairos-ai/core/flag/flag"
+import { Flag } from "@kairos/core/flag/flag"
 import { initProjectors } from "../../src/server/projectors"
 
 const original = Flag.kairos_EXPERIMENTAL_WORKSPACES

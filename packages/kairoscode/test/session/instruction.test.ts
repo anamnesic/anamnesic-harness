@@ -6,7 +6,7 @@ import { Instruction } from "../../src/session/instruction"
 import type { MessageV2 } from "../../src/session/message-v2"
 import { Instance } from "../../src/project/instance"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
-import { Global } from "@kairos-ai/core/global"
+import { Global } from "@kairos/core/global"
 import { tmpdir } from "../fixture/fixture"
 
 const run = <A>(effect: Effect.Effect<A, any, Instruction.Service>) =>

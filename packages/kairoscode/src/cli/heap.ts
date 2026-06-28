@@ -1,8 +1,8 @@
 import path from "path"
 import { writeHeapSnapshot } from "node:v8"
-import { Flag } from "@kairos-ai/core/flag/flag"
-import { Global } from "@kairos-ai/core/global"
-import * as Log from "@kairos-ai/core/util/log"
+import { Flag } from "@kairos/core/flag/flag"
+import { Global } from "@kairos/core/global"
+import * as Log from "@kairos/core/util/log"
 
 const log = Log.create({ service: "heap" })
 const MINUTE = 60_000

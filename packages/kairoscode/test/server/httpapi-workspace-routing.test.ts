@@ -1,5 +1,5 @@
 import { NodeHttpServer, NodeServices } from "@effect/platform-node"
-import { Flag } from "@kairos-ai/core/flag/flag"
+import { Flag } from "@kairos/core/flag/flag"
 import { describe, expect } from "bun:test"
 import { Context, Effect, Layer, Queue } from "effect"
 import {

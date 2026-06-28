@@ -5,7 +5,7 @@ import { type rpc } from "./worker"
 import path from "path"
 import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { errorMessage } from "@/util/error"
 import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network"
@@ -20,7 +20,7 @@ import {
   KAIROS_RUN_ID,
   ensureRunID,
   sanitizedProcessEnv,
-} from "@kairos-ai/core/util/kairos-process"
+} from "@kairos/core/util/kairos-process"
 import { validateSession } from "./validate-session"
 
 declare global {

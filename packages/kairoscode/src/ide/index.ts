@@ -1,8 +1,8 @@
 import { BusEvent } from "@/bus/bus-event"
 import z from "zod"
 import { Schema } from "effect"
-import { NamedError } from "@kairos-ai/core/util/error"
-import * as Log from "@kairos-ai/core/util/log"
+import { NamedError } from "@kairos/core/util/error"
+import * as Log from "@kairos/core/util/log"
 import { Process } from "@/util/process"
 
 const SUPPORTED_IDES = [

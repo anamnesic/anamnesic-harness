@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { AppFileSystem } from "@kairos-ai/core/filesystem"
+import { AppFileSystem } from "@kairos/core/filesystem"
 
 const BOM_CODE = 0xfeff
 const BOM = String.fromCharCode(BOM_CODE)

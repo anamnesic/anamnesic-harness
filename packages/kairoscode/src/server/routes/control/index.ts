@@ -1,6 +1,6 @@
 import { Auth } from "@/auth"
 import { AppRuntime } from "@/effect/app-runtime"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 import { Effect } from "effect"
 import { ProviderID } from "@/provider/schema"
 import { Hono } from "hono"

@@ -8,9 +8,9 @@ import {
 } from "jsonc-parser"
 
 import * as ConfigPaths from "@/config/paths"
-import { Global } from "@kairos-ai/core/global"
+import { Global } from "@kairos/core/global"
 import { Filesystem } from "@/util/filesystem"
-import { Flock } from "@kairos-ai/core/util/flock"
+import { Flock } from "@kairos/core/util/flock"
 import { isRecord } from "@/util/record"
 
 import { parsePluginSpecifier, readPackageThemes, readPluginPackage, resolvePluginTarget } from "./shared"

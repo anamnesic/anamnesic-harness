@@ -1,5 +1,5 @@
-import { Flag } from "@kairos-ai/core/flag/flag"
-import { InstallationChannel, InstallationVersion } from "@kairos-ai/core/installation/version"
+import { Flag } from "@kairos/core/flag/flag"
+import { InstallationChannel, InstallationVersion } from "@kairos/core/installation/version"
 
 export type Backend = "effect-httpapi" | "hono"
 

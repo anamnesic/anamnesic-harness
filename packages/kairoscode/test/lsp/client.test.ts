@@ -5,7 +5,7 @@ import { tmpdir } from "../fixture/fixture"
 import { LSPClient } from "@/lsp/client"
 import * as LSPServer from "@/lsp/server"
 import { Instance } from "../../src/project/instance"
-import * as Log from "@kairos-ai/core/util/log"
+import * as Log from "@kairos/core/util/log"
 
 function spawnFakeServer() {
   const { spawn } = require("child_process")
