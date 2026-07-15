@@ -1,49 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "esnext",
-    "lib": [
-      "ES2020",
-      "dom",
-      "dom.iterable"
-    ],
+    "target": "ES2024",
+    "module": "ESNext",
     "moduleResolution": "bundler",
-    "jsx": "react-jsx",
+    "lib": ["ES2024"],
+    "types": ["bun-types"],
     "strict": true,
-    "strictPropertyInitialization": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "downlevelIteration": true,
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
-    "allowJs": true,
-    "noEmit": true,
-    "isolatedModules": true
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true
   },
-  "include": [
-    "packages/ui/src/nextjs/next-env.d.ts",
-    "packages/**/*.ts",
-    "packages/**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "data"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

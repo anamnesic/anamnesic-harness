@@ -1,6 +1,0 @@
-packages:
-  - "core"
-  - "tui"
-  - "protocol"
-  - "plugins"
-  - "apps/**"

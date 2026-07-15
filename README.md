@@ -1,224 +1,112 @@
 # KAIROS
 
-> Plataforma de agentes de IA — terminal-native, multi-canal, com memória persistente, vault criptografado e 65+ skills internas.
+> Harness para LLMs locais. Tool calling que funciona com modelos pequenos.
 
----
+## O problema
 
-## O que é
+Ferramentas como Claude Code, GitHub Copilot e opencode são otimizadas para **modelos cloud** (Claude 3.5, GPT-4o) — modelos que seguem instruções e fazem tool calling confiável.
 
-**Kairos** é uma plataforma de desenvolvimento e execução de agentes de IA construída como monorepo TypeScript/Node.js.
+Quando você usa **modelos locais** (Llama, Qwen, Mistral, Nemotron via Ollama/LM Studio/vLLM), essas ferramentas não funcionam bem. Os modelos locais:
 
-Vai além de assistentes reativos: opera como uma **camada cognitiva contínua** — observando, memorizando, planejando e agindo de forma autônoma ao longo do tempo.
+- Produzem JSON malformado nos tool calls
+- Não respeitam schemas de parâmetros
+- Se perdem em tarefas multi-step
+- Têm context windows menores
+- Seguem instruções de forma inconsistente
 
-Componentes principais:
+**Nenhuma ferramenta existente resolve isso.** O mercado de "local LLM agent harness" tem 10 projetos no GitHub, nenhum com adoção real.
 
-- **Runtime de agentes** com pipeline, memória, tarefas e ferramentas
-- **Gateway multi-canal** (Discord, Slack, WhatsApp, Telegram, e 120+ extensões)
-- **CLI/TUI terminal-native** com interface Ink/Go
-- **UI web/mobile** (Next.js, apps mobile iOS/Android)
-- **Vault criptografado** (AES-256-GCM) para dados sensíveis em runtime
-- **65 skills internas Kairos** baseadas em referências externas anonimizadas
+## O que o Kairos faz
 
----
+Kairos é um agente CLI que **compensa as fraquezas de modelos locais** com um harness de tool calling elaborado:
 
-## Princípios
+- **Schema enforcement** — valida todo input de tool com Zod antes de executar
+- **Tool call repair** — corrige JSON malformado automaticamente (aspas, chaves, escaping)
+- **Multi-step orchestration** — o SDK orquestra turns automaticamente, executando tools e alimentando resultados de volta
+- **Context management** — (planejado) compaction e priorização para janelas pequenas
+- **Multi-pass verification** — (planejado) modelos locais são grátis, então pode-se rodar verificações extras sem custo
 
-- **Persistência** sobre statelessness
-- **Observação** sobre instrução explícita
-- **Proatividade** sobre reatividade
-- **Memória longa** sobre janela de contexto
+## Status
 
----
+Funcionando e testado com:
+- **nvidia/nemotron-3-nano-4b** via LM Studio (4B params)
+- Qualquer endpoint OpenAI-compatible (Ollama, vLLM, SGLang, LM Studio)
 
-## Monorepo — Estrutura de Código
+Tools disponíveis: `read`, `write`, `bash`, `list`
+
+## Quick start
+
+```bash
+# Dependências
+bun install
+
+# LM Studio (já com modelo carregado)
+KAIROS_BASE_URL=http://localhost:1234/v1 \
+KAIROS_MODEL=nvidia/nemotron-3-nano-4b \
+bun src/cli.ts "list files in this directory"
+
+# Ollama
+KAIROS_BASE_URL=http://localhost:11434/v1 \
+KAIROS_MODEL=qwen2.5-coder:14b \
+bun src/cli.ts
+
+# vLLM / SGLang
+KAIROS_BASE_URL=http://localhost:8000/v1 \
+KAIROS_MODEL=Qwen/Qwen2.5-Coder-32B-Instruct \
+bun src/cli.ts "explain the architecture of this project"
+```
+
+## Configuração
+
+| Variável | Default | Descrição |
+|---|---|---|
+| `KAIROS_BASE_URL` | `http://localhost:11434/v1` | URL do servidor (Ollama, LM Studio, vLLM, SGLang) |
+| `KAIROS_MODEL` | `qwen2.5-coder:14b` | ID do modelo no servidor |
+| `KAIROS_API_KEY` | (none) | API key se o servidor exigir |
+
+Flags: `--model <name>`, `--base-url <url>`
+
+## Estrutura
 
 ```
 kairos/
-├── packages/                   # Pacotes workspace (pnpm)
-│   ├── core/                   # Runtime do agente — pipeline, memória, tarefas, serviços, migrações
-│   ├── cli/                    # CLI/TUI terminal — comandos, Ink, telas, entrypoints
-│   ├── ui/                     # Interface — app, desktop, enterprise, web, console, Storybook
-│   │   └── public/             # Assets estáticos (favicon, logo, manifest PWA)
-│   ├── vault/                  # Vault AES-256-GCM — dados criptografados em runtime
-│   ├── plugins/                # Sistema de plugins — runtime, SDK, contrato, OpenAPI
-│   ├── state/                  # Estado da UI — context, hooks, componentes, boot
-│   ├── integrations/           # Integrações externas — skills, Slack, funções, voz
-│   ├── editor/                 # Integrações de editor — keybindings, vim, bridge, native
-│   ├── infra/                  # Infraestrutura — protocolo, tipos, constantes, schemas, proxy
-│   ├── kairoscode/             # Runtime Kairos Code (v1.14.30)
-│   ├── devtools/               # Dev tooling — scripts, containers, vendor, patches, QA
-│   └── ...
-│
-├── apps/                       # Aplicações clientes
-│   ├── ios/                    # App iOS (Swift)
-│   ├── android/                # App Android (Kotlin)
-│   └── shared/                 # Kit compartilhado (OpenClawKit)
-│
-├── extensions/                 # 120+ extensões de providers/canais
-│   ├── openai/, anthropic/, google/, xai/, mistral/, ...
-│   ├── discord/, slack/, telegram/, whatsapp/, signal/, ...
-│   ├── browser/, brave/, memory-core/, memory-lancedb/, ...
-│   └── ...
-│
-├── sdks/
-│   └── vscode/                 # Extensão VS Code (publisher: sst-dev)
-│
-├── github/                     # GitHub Action (uses: sst/kairos/github@latest)
-│
-├── data/                       # Runtime — gitignored, criptografado via vault
-│   └── skills/kairos/          # 65 skills internas (.md com frontmatter YAML)
-│
-├── docs/                       # Documentação
-│   └── specs/                  # Especificações do projeto
-│
-├── infra/                      # Deploy — SST / Fly.io / Render
-├── nix/                        # Builds reproduzíveis (Nix flakes)
-├── assets/                     # Assets visuais (logo, DMG background)
-├── scripts/                    # Scripts de release, CI, build, publicação
-└── patches/                    # Patches pnpm
+├── src/
+│   ├── cli.ts              # Entry point + REPL interativo
+│   ├── harness.ts          # Core: orquestra planner → router → LLM → tools
+│   ├── planner.ts          # Divide tarefas em steps (LLM call separada)
+│   ├── router.ts           # Tool Router: filtra tools por intenção (heurística)
+│   ├── context.ts          # Context Cache: seleciona arquivos relevantes
+│   ├── providers/
+│   │   └── local.ts        # Conector OpenAI-compatible
+│   └── tools/
+│       ├── registry.ts     # Tool registry + Zod validation + JSON repair
+│       └── builtin.ts      # read, write, bash, list
+├── docs/
+│   └── adr/                # Decision records
+├── package.json            # ai (Vercel AI SDK) + zod
+└── tsconfig.json
 ```
 
----
+## Roadmap
 
-## Skills Internas (Vault)
+### Pronto
+- [x] CLI com query única e REPL
+- [x] Conector OpenAI-compatible (Ollama, LM Studio, vLLM, SGLang)
+- [x] Tools: read, write, bash, list
+- [x] Tool call repair (JSON malformado)
+- [x] Multi-step automático via Vercel AI SDK
+- [x] **Planner externo** — divide tarefas em steps (LLM não planeja sozinho)
+- [x] **Tool Router** — filtra tools por intenção (reduz erros em modelos 4B)
+- [x] **Context Cache** — envia só arquivos relevantes (economiza tokens)
 
-65 skills em `data/skills/kairos/` no formato `kairos_nome_versao.md`:
+### Próximo
+- [ ] Validator — verifica resultado de cada step antes de continuar
+- [ ] Model-adaptive prompting (ajustar strategy por modelo)
+- [ ] Context window management (compaction para janelas pequenas)
+- [ ] Mais tools: grep, glob, edit, web_search
 
-| Categoria | Skill | Capacidades |
-|-----------|-------|-------------|
-| `coding` | KairosForge, KairosEngineer, KairosFlow, KairosDroid, KairosCloud | Pair programming, LSP, refatoração, contexto de editor |
-| `agent` | KairosAgent, KairosBuilder, KairosOrbit | Execução autônoma, scaffold de projetos, orquestração |
-| `conversation` | KairosAurora, KairosNova, KairosEcho, KairosLingua | Raciocínio, ética, multilíngue, chat avançado |
-| `research` | KairosPrism, KairosDawn, KairosScout | Busca profunda, raciocínio, web research |
-| `ui` | KairosCanvas, KairosStudio, KairosArtisan | Geração de UI, componentes, design systems |
-| `browser` | KairosNavigator, KairosCompass, KairosGuard | Automação web, extração, privacidade |
-| `multimodal` | KairosSpectrum, KairosEdge | Imagem, áudio, tempo real |
-| `voice` | KairosEmpathy | IA de voz empática |
-| `analysis` | KairosLens | Análise contextual, overlay |
-
-Skills são criptografadas pelo vault em runtime. Formato:
-```yaml
----
-id: kairosforge-cursor-2-0-sys-prompt
-name: KairosForge
-version: "1.0.0"
-category: coding
-capabilities:
-  - pair-programming
-  - lsp-diagnostics
-use_for:
-  - "Pair programming com contexto total do editor"
----
-# System prompt...
-```
-
----
-
-## Vault (Segurança)
-
-Todos os dados sensíveis em `data/` são criptografados via `@kairos/vault`:
-
-- **Algoritmo**: AES-256-GCM
-- **Chave**: variável de ambiente `KAIROS_VAULT_KEY` (hex 64 chars = 32 bytes)
-- **Fallback**: fail-closed (erro se chave ausente, a menos que `KAIROS_VAULT_ALLOW_PLAINTEXT=1`)
-
-```bash
-# Gerar chave
-pnpm vault:init
-
-# Migrar dados plaintext para vault
-KAIROS_VAULT_KEY=<hex> pnpm vault:migrate
-
-# Migrar skills para vault
-KAIROS_VAULT_KEY=<hex> pnpm vault:skills
-```
-
----
-
-## Instalação
-
-```bash
-# Requisitos: Node.js 22+, pnpm 9+
-pnpm install
-```
-
-### Desenvolvimento
-
-```bash
-pnpm dev            # Next.js UI (packages/ui)
-pnpm build          # Build da UI
-pnpm build:backend  # Build do backend TypeScript
-```
-
-### Agentes
-
-```bash
-node dist/agent/interfaces/api/start-api.js     # API/MCP
-node dist/agent/interfaces/cli/index.js         # CLI
-node dist/agent/interfaces/cli/index.js swe-agent run \
-  --objective "Refatorar o módulo de logging" \
-  --provider openai --model gpt-4o-mini \
-  --api-key $KAIROS_API_KEY
-```
-
-### Testes
-
-```bash
-pnpm test           # Integração
-pnpm test:unit      # Unit com cobertura
-pnpm typecheck      # Type-check
-pnpm check          # Lint + format (oxlint + oxfmt)
-```
-
----
-
-## Variáveis de Ambiente
-
-```env
-KAIROS_VAULT_KEY=<hex64>            # Chave do vault (obrigatório em produção)
-KAIROS_VAULT_ALLOW_PLAINTEXT=1      # Permite fallback plaintext (dev apenas)
-
-KAIROS_PROVIDER=openai
-KAIROS_MODEL=gpt-4o-mini
-KAIROS_API_KEY=...
-KAIROS_BASE_URL=https://api.openai.com
-```
-
----
-
-## Arquitetura
-
-```
-  ┌─────────────────────────────────────────────────────┐
-  │                  Clients / Interfaces               │
-  │  CLI/TUI  │  Web UI  │  iOS/Android                 │
-  └──────────────────────┬──────────────────────────────┘
-                         │
-  ┌──────────────────────▼──────────────────────────────┐
-  │                  @kairos/core                       │
-  │  Agent Pipeline · Memory · Tasks · Tools · Services │
-  └──────┬──────────────────────────────────┬───────────┘
-         │                                  │
-  ┌──────▼──────────┐              ┌────────▼────────────┐
-  │  @kairos/vault  │              │  extensions/ (120+) │
-  │  AES-256-GCM    │              │  Providers · Canais  │
-  └─────────────────┘              └─────────────────────┘
-```
-
----
-
-## Segurança
-
-Ver [SECURITY.md](./SECURITY.md).
-
-- Vault criptografado para todos os dados de runtime
-- Skills internas com nomes anonimizados (sem referência a sistemas externos)
-- Feature flags e approval layers para ações autônomas
-- Audit logs de todas as decisões e ações
-
----
-
-## Licença
-
-[MIT](./LICENSE)
-
+### Futuro
+- [ ] MCP client (conectar servidores MCP)
+- [ ] Checkpointing (salvar/resumir sessões)
+- [ ] Frontend app (Next.js)
+- [ ] Plugin system
